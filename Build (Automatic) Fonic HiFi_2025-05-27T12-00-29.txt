@@ -1,0 +1,843 @@
+
+Showing Recent Issues
+
+Build target Fonic HiFi of project Fonic HiFi with configuration Debug
+
+SwiftCompile normal arm64 Compiling\ BitPerfectValidatorService.swift,\ PlaybackDiagnostics.swift,\ AudioMonitoringService.swift,\ Track.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/Track.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineType.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueueManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueShuffleMode.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/Track.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/FonicHiFiApp.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/ContentView.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueRepeatMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioMetrics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueue.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateStore.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineFactory.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioDevice.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFileInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/SFBAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/DACCompatibilityInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/supplementaryOutputs-72 -emit-localized-strings -emit-localized-strings-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64 -target arm64-apple-ios18.4-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -I /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -F /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 6 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Fonic\ HiFi_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -Xcc -ivfsstatcache -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-generated-files.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-own-target-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-all-target-headers.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-project-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources-normal/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources -Xcc -DDEBUG\=1 -module-name Fonic_HiFi -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.4 -target-sdk-name iphonesimulator18.4 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/BitPerfectValidatorService.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/PlaybackDiagnostics.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioMonitoringService.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Track.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/BitPerfectValidatorService.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/PlaybackDiagnostics.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioMonitoringService.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Track.o -index-store-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Index.noindex/DataStore -index-system-modules
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift:179:78: error: binary operator '==' cannot be applied to operands of type 'IssueSeverity' and 'TaskPriority'
+        return activeIssues.filter { $0.severity == .critical || $0.severity == .high }
+                                                                 ~~~~~~~~~~~ ^  ~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift:179:78: note: overloads for '==' exist with these partially matching parameter lists: (DispatchQueue.GlobalQueuePriority, DispatchQueue.GlobalQueuePriority), (TaskPriority, TaskPriority)
+        return activeIssues.filter { $0.severity == .critical || $0.severity == .high }
+                                                                             ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift:180:93: error: value of type 'IssueSeverity' has no member 'priority'
+            .sorted { (issue1: DiagnosticIssue, issue2: DiagnosticIssue) in issue1.severity.priority > issue2.severity.priority }
+                                                                            ~~~~~~~~~~~~~~~ ^~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift:180:120: error: value of type 'IssueSeverity' has no member 'priority'
+            .sorted { (issue1: DiagnosticIssue, issue2: DiagnosticIssue) in issue1.severity.priority > issue2.severity.priority }
+                                                                                                       ~~~~~~~~~~~~~~~ ^~~~~~~~
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift:179:78: Binary operator '==' cannot be applied to operands of type 'IssueSeverity' and 'TaskPriority'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift:180:93: Value of type 'IssueSeverity' has no member 'priority'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift:180:120: Value of type 'IssueSeverity' has no member 'priority'
+
+SwiftCompile normal arm64 Compiling\ AudioSessionInterruption.swift,\ AudioEngineType.swift,\ AudioMonitor.swift,\ AudioSessionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineType.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineType.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueueManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueShuffleMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/Track.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/FonicHiFiApp.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/ContentView.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueRepeatMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioMetrics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueue.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateStore.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineFactory.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioDevice.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFileInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/SFBAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/DACCompatibilityInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/supplementaryOutputs-70 -emit-localized-strings -emit-localized-strings-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64 -target arm64-apple-ios18.4-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -I /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -F /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 6 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Fonic\ HiFi_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -Xcc -ivfsstatcache -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-generated-files.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-own-target-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-all-target-headers.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-project-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources-normal/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources -Xcc -DDEBUG\=1 -module-name Fonic_HiFi -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.4 -target-sdk-name iphonesimulator18.4 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioSessionInterruption.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioEngineType.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioMonitor.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioSessionManager.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioSessionInterruption.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioEngineType.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioMonitor.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioSessionManager.o -index-store-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Index.noindex/DataStore -index-system-modules
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift:123:22: error: cannot convert value of type '[String : Any]' to expected argument type '[String : String]'
+            context: context
+                     ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift:123:22: note: arguments to generic parameter 'Value' ('Any' and 'String') are expected to be equal
+            context: context
+                     ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift:237:9: warning: switch must be exhaustive
+        switch reason {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift:237:9: note: add missing case: '.routeDisconnected'
+        switch reason {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift:295:13: warning: initialization of immutable value 'typeDesc' was never used; consider replacing with assignment to '_' or removing it
+        let typeDesc = type.description
+        ~~~~^~~~~~~~
+        _
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift:123:22: Cannot convert value of type '[String : Any]' to expected argument type '[String : String]'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift:237:9: Switch must be exhaustive
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift:295:13: Initialization of immutable value 'typeDesc' was never used; consider replacing with assignment to '_' or removing it
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:85:14: error: capture of 'self' in a closure that outlives deinit
+        Task { @MainActor in
+             ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:500:29: error: value of type 'any AudioEngineService' has no member 'collectMetrics'
+        return await engine.collectMetrics()
+                     ~~~~~~ ^~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:657:33: error: type 'InterruptionType' has no member 'unknown'
+            interruptionType = .unknown
+                               ~^~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:659:33: error: type 'InterruptionType' has no member 'unknown'
+            interruptionType = .unknown
+                               ~^~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:661:33: error: type 'InterruptionType' has no member 'unknown'
+            interruptionType = .unknown
+                               ~^~~~~~~
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:85:14: Capture of 'self' in a closure that outlives deinit
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:500:29: Value of type 'any AudioEngineService' has no member 'collectMetrics'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:657:33: Type 'InterruptionType' has no member 'unknown'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:659:33: Type 'InterruptionType' has no member 'unknown'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:661:33: Type 'InterruptionType' has no member 'unknown'
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:237:30: error: extra argument 'maxBitDepth' in call
+                maxBitDepth: 24, // Assume 24-bit for most iOS devices
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:236:41: error: missing argument for parameter 'isOutput' in call
+                supportedSampleRates: [], // AVAudioSession doesn't expose this directly
+                                        ^
+                                        , isOutput: <#Bool#>
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioDevice.swift:118:12: note: 'init(id:name:type:isOutput:isAvailable:connectionType:supportedSampleRates:supportedBitDepths:maxChannels:supportsBitPerfect:minBufferSize:maxBufferSize:preferredBufferSize:manufacturer:model:transport:hardwareLatency:isDefault:qualityRating:)' declared here
+    public init(
+           ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:252:38: error: extra argument 'maxBitDepth' in call
+                        maxBitDepth: 24,
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:251:49: error: missing argument for parameter 'isOutput' in call
+                        supportedSampleRates: [],
+                                                ^
+                                                , isOutput: <#Bool#>
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioDevice.swift:118:12: note: 'init(id:name:type:isOutput:isAvailable:connectionType:supportedSampleRates:supportedBitDepths:maxChannels:supportsBitPerfect:minBufferSize:maxBufferSize:preferredBufferSize:manufacturer:model:transport:hardwareLatency:isDefault:qualityRating:)' declared here
+    public init(
+           ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:301:51: error: type 'AVAudioSession' has no member 'interruptionTypeKey'
+              let typeValue = info[AVAudioSession.interruptionTypeKey] as? UInt,
+                                   ~~~~~~~~~~~~~~ ^~~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:323:53: error: type 'AVAudioSession' has no member 'routeChangeReasonKey'
+              let reasonValue = info[AVAudioSession.routeChangeReasonKey] as? UInt,
+                                     ~~~~~~~~~~~~~~ ^~~~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:328:50: error: type 'AVAudioSession' has no member 'routeChangePreviousRouteKey'
+        let previousRoute = (info[AVAudioSession.routeChangePreviousRouteKey] as? AVAudioSessionRouteDescription)?
+                                  ~~~~~~~~~~~~~~ ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:361:21: error: type 'AudioDeviceType' has no member 'builtin'
+            return .builtin
+                   ~^~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:365:21: error: type 'AudioDeviceType' has no member 'airplay'
+            return .airplay
+                   ~^~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:367:21: error: type 'AudioDeviceType' has no member 'usb'
+            return .usb
+                   ~^~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:369:21: error: type 'AudioDeviceType' has no member 'hdmi'
+            return .hdmi
+                   ~^~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:371:21: error: type 'AudioDeviceType' has no member 'builtin'
+            return .builtin
+                   ~^~~~~~~
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:237:30: Extra argument 'maxBitDepth' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:236:41: Missing argument for parameter 'isOutput' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:252:38: Extra argument 'maxBitDepth' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:251:49: Missing argument for parameter 'isOutput' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:301:51: Type 'AVAudioSession' has no member 'interruptionTypeKey'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:323:53: Type 'AVAudioSession' has no member 'routeChangeReasonKey'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:328:50: Type 'AVAudioSession' has no member 'routeChangePreviousRouteKey'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:361:21: Type 'AudioDeviceType' has no member 'builtin'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:365:21: Type 'AudioDeviceType' has no member 'airplay'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:367:21: Type 'AudioDeviceType' has no member 'usb'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:369:21: Type 'AudioDeviceType' has no member 'hdmi'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:371:21: Type 'AudioDeviceType' has no member 'builtin'
+
+SwiftCompile normal arm64 Compiling\ AudioFormatDetectionManager.swift,\ FonicHiFiApp.swift,\ AVAudioEngineConfig.swift,\ ContentView.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/FonicHiFiApp.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/ContentView.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineType.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueueManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueShuffleMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/Track.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/FonicHiFiApp.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/ContentView.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueRepeatMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioMetrics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueue.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateStore.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineFactory.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioDevice.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFileInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/SFBAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/DACCompatibilityInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/supplementaryOutputs-73 -emit-localized-strings -emit-localized-strings-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64 -target arm64-apple-ios18.4-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -I /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -F /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 6 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Fonic\ HiFi_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -Xcc -ivfsstatcache -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-generated-files.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-own-target-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-all-target-headers.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-project-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources-normal/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources -Xcc -DDEBUG\=1 -module-name Fonic_HiFi -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.4 -target-sdk-name iphonesimulator18.4 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioFormatDetectionManager.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/FonicHiFiApp.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AVAudioEngineConfig.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/ContentView.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioFormatDetectionManager.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/FonicHiFiApp.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AVAudioEngineConfig.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/ContentView.o -index-store-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Index.noindex/DataStore -index-system-modules
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:75:9: error: switch must be exhaustive
+        switch format {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:75:9: note: add missing case: '.unknown'
+        switch format {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:84:9: error: switch must be exhaustive
+        switch format {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:84:9: note: add missing case: '.unknown'
+        switch format {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:212:33: error: incorrect argument labels in call (have 'format:sampleRate:bitDepth:channels:bitrate:duration:fileSize:', expected 'url:format:duration:bitDepth:sampleRate:channels:fileSize:bitrate:metadata:codec:container:supportsGapless:timestamp:')
+            return AudioFileInfo(
+                                ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:213:17: error: missing argument for parameter 'url' in call
+                format: format,
+                ^
+                url: <#URL#>, 
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFileInfo.swift:186:12: note: 'init(url:format:duration:bitDepth:sampleRate:channels:fileSize:bitrate:metadata:codec:container:supportsGapless:timestamp:)' declared here
+    public init(
+           ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:215:27: error: cannot convert value of type 'Int' to expected argument type 'UInt16'
+                bitDepth: bitDepth,
+                          ^
+                          UInt16( )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:214:29: error: cannot convert value of type 'Int' to expected argument type 'Double'
+                sampleRate: sampleRate,
+                            ^
+                            Double(   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:216:27: error: cannot convert value of type 'Int' to expected argument type 'UInt8'
+                channels: channels,
+                          ^
+                          UInt8(  )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:219:27: error: cannot convert value of type 'Int64' to expected argument type 'UInt64'
+                fileSize: fileSize
+                          ^
+                          UInt64( )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:217:26: error: cannot convert value of type 'Int?' to expected argument type 'UInt64?'
+                bitrate: bitrate,
+                         ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:189:42: error: non-sendable result type '[AVAssetTrack]' cannot be sent from nonisolated context in call to instance method 'load'
+            let tracks = try await asset.load(.tracks)
+                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk/System/Library/Frameworks/AVFoundation.framework/Headers/AVAssetTrack.h:35:12: note: class 'AVAssetTrack' does not conform to the 'Sendable' protocol
+@interface AVAssetTrack : NSObject <NSCopying, AVAsynchronousKeyValueLoading>
+           ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:9:1: warning: add '@preconcurrency' to treat 'Sendable'-related errors from module 'AVFoundation' as warnings
+import AVFoundation
+^
+@preconcurrency 
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:75:9: Switch must be exhaustive
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:84:9: Switch must be exhaustive
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:212:33: Incorrect argument labels in call (have 'format:sampleRate:bitDepth:channels:bitrate:duration:fileSize:', expected 'url:format:duration:bitDepth:sampleRate:channels:fileSize:bitrate:metadata:codec:container:supportsGapless:timestamp:')
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:213:17: Missing argument for parameter 'url' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:215:27: Cannot convert value of type 'Int' to expected argument type 'UInt16'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:214:29: Cannot convert value of type 'Int' to expected argument type 'Double'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:216:27: Cannot convert value of type 'Int' to expected argument type 'UInt8'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:219:27: Cannot convert value of type 'Int64' to expected argument type 'UInt64'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:217:26: Cannot convert value of type 'Int?' to expected argument type 'UInt64?'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:189:42: Non-sendable result type '[AVAssetTrack]' cannot be sent from nonisolated context in call to instance method 'load'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:9:1: Add '@preconcurrency' to treat 'Sendable'-related errors from module 'AVFoundation' as warnings
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift:159:9: error: switch must be exhaustive
+        switch format {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift:159:9: note: add missing case: '.unknown'
+        switch format {
+        ^
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift:159:9: Switch must be exhaustive
+
+SwiftCompile normal arm64 Compiling\ AudioQueue.swift,\ PlaybackStateStore.swift,\ AudioEngineConfiguration.swift,\ FormatDetectionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueue.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateStore.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineType.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueueManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueShuffleMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/Track.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/FonicHiFiApp.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/ContentView.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueRepeatMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioMetrics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueState.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueue.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateStore.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineFactory.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioDevice.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFileInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/SFBAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/DACCompatibilityInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/supplementaryOutputs-75 -emit-localized-strings -emit-localized-strings-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64 -target arm64-apple-ios18.4-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -I /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -F /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 6 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Fonic\ HiFi_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -Xcc -ivfsstatcache -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-generated-files.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-own-target-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-all-target-headers.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-project-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources-normal/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources -Xcc -DDEBUG\=1 -module-name Fonic_HiFi -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.4 -target-sdk-name iphonesimulator18.4 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioQueue.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/PlaybackStateStore.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioEngineConfiguration.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/FormatDetectionService.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioQueue.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/PlaybackStateStore.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioEngineConfiguration.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/FormatDetectionService.o -index-store-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Index.noindex/DataStore -index-system-modules
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:140:29: error: incorrect argument labels in call (have 'format:sampleRate:bitDepth:channels:bitrate:duration:fileSize:', expected 'url:format:duration:bitDepth:sampleRate:channels:fileSize:bitrate:metadata:codec:container:supportsGapless:timestamp:')
+        return AudioFileInfo(
+                            ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:141:13: error: missing argument for parameter 'url' in call
+            format: format,
+            ^
+            url: <#URL#>, 
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFileInfo.swift:186:12: note: 'init(url:format:duration:bitDepth:sampleRate:channels:fileSize:bitrate:metadata:codec:container:supportsGapless:timestamp:)' declared here
+    public init(
+           ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:143:23: error: cannot convert value of type 'Int' to expected argument type 'UInt16'
+            bitDepth: bitDepth,
+                      ^
+                      UInt16( )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:142:25: error: cannot convert value of type 'Int' to expected argument type 'Double'
+            sampleRate: sampleRate,
+                        ^
+                        Double(   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:144:23: error: cannot convert value of type 'Int' to expected argument type 'UInt8'
+            channels: channels,
+                      ^
+                      UInt8(  )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:147:23: error: cannot convert value of type 'Int64' to expected argument type 'UInt64'
+            fileSize: fileSize
+                      ^
+                      UInt64( )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:145:22: error: cannot convert value of type 'Int?' to expected argument type 'UInt64?'
+            bitrate: bitrate,
+                     ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:163:43: error: binary operator '*' cannot be applied to operands of type 'Double' and 'UInt8'
+        let samplesPerSecond = sampleRate * channels
+                               ~~~~~~~~~~ ^ ~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:163:43: note: overloads for '*' exist with these partially matching parameter lists: (Double, Double), (UInt8, UInt8)
+        let samplesPerSecond = sampleRate * channels
+                                          ^
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:140:29: Incorrect argument labels in call (have 'format:sampleRate:bitDepth:channels:bitrate:duration:fileSize:', expected 'url:format:duration:bitDepth:sampleRate:channels:fileSize:bitrate:metadata:codec:container:supportsGapless:timestamp:')
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:141:13: Missing argument for parameter 'url' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:143:23: Cannot convert value of type 'Int' to expected argument type 'UInt16'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:142:25: Cannot convert value of type 'Int' to expected argument type 'Double'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:144:23: Cannot convert value of type 'Int' to expected argument type 'UInt8'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:147:23: Cannot convert value of type 'Int64' to expected argument type 'UInt64'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:145:22: Cannot convert value of type 'Int?' to expected argument type 'UInt64?'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift:163:43: Binary operator '*' cannot be applied to operands of type 'Double' and 'UInt8'
+
+SwiftCompile normal arm64 Compiling\ BitPerfectValidator.swift,\ AudioFormat.swift,\ PlaybackStateManager.swift,\ AudioEngineFactory.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineFactory.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineType.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueueManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueShuffleMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/Track.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/FonicHiFiApp.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/ContentView.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueRepeatMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioMetrics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueue.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateStore.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateManager.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineFactory.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioDevice.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFileInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/SFBAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/DACCompatibilityInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/supplementaryOutputs-76 -emit-localized-strings -emit-localized-strings-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64 -target arm64-apple-ios18.4-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -I /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -F /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 6 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Fonic\ HiFi_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -Xcc -ivfsstatcache -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-generated-files.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-own-target-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-all-target-headers.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-project-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources-normal/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources -Xcc -DDEBUG\=1 -module-name Fonic_HiFi -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.4 -target-sdk-name iphonesimulator18.4 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/BitPerfectValidator.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioFormat.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/PlaybackStateManager.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioEngineFactory.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/BitPerfectValidator.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioFormat.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/PlaybackStateManager.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioEngineFactory.o -index-store-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Index.noindex/DataStore -index-system-modules
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:69:57: error: binary operator '==' cannot be applied to operands of type 'Double' and 'Int'
+        let sampleRateMatches = sourceFormat.sampleRate == actualSampleRate
+                                ~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:69:57: note: overloads for '==' exist with these partially matching parameter lists: (Int, Int)
+        let sampleRateMatches = sourceFormat.sampleRate == actualSampleRate
+                                                        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:142:98: error: cannot convert value of type 'Double' to expected argument type 'Int'
+        let deviceSupportsFormat = deviceCapabilities.supportedSampleRates.contains(sourceFormat.sampleRate) &&
+                                                                                                 ^
+                                                                                    Int(                   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:200:46: error: cannot convert value of type 'Double' to expected argument type 'Int'
+            expectedSampleRate: sourceFormat.sampleRate,
+                                             ^
+                                Int(                   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:202:44: error: cannot convert value of type 'UInt16' to expected argument type 'Int'
+            expectedBitDepth: sourceFormat.bitDepth,
+                                           ^
+                              Int(                 )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:204:44: error: cannot convert value of type 'UInt8' to expected argument type 'Int'
+            expectedChannels: sourceFormat.channels,
+                                           ^
+                              Int(                 )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:235:46: error: incorrect argument labels in call (have 'format:sampleRate:bitDepth:channels:bitrate:duration:fileSize:', expected 'url:format:duration:bitDepth:sampleRate:channels:fileSize:bitrate:metadata:codec:container:supportsGapless:timestamp:')
+        let syntheticFileInfo = AudioFileInfo(
+                                             ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:236:13: error: missing argument for parameter 'url' in call
+            format: format,
+            ^
+            url: <#URL#>, 
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFileInfo.swift:186:12: note: 'init(url:format:duration:bitDepth:sampleRate:channels:fileSize:bitrate:metadata:codec:container:supportsGapless:timestamp:)' declared here
+    public init(
+           ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:238:23: error: cannot convert value of type 'Int' to expected argument type 'UInt16'
+            bitDepth: bitDepth,
+                      ^
+                      UInt16( )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:237:25: error: cannot convert value of type 'Int' to expected argument type 'Double'
+            sampleRate: sampleRate,
+                        ^
+                        Double(   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:265:30: error: extra argument 'maxBitDepth' in call
+                maxBitDepth: 24, // Estimate for iOS devices
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:264:41: error: missing argument for parameter 'isOutput' in call
+                supportedSampleRates: [], // Not available from AVAudioSession
+                                        ^
+                                        , isOutput: <#Bool#>
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioDevice.swift:118:12: note: 'init(id:name:type:isOutput:isAvailable:connectionType:supportedSampleRates:supportedBitDepths:maxChannels:supportsBitPerfect:minBufferSize:maxBufferSize:preferredBufferSize:manufacturer:model:transport:hardwareLatency:isDefault:qualityRating:)' declared here
+    public init(
+           ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:310:30: error: extra argument 'maxBitDepth' in call
+                maxBitDepth: getEstimatedMaxBitDepth(for: output),
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:309:75: error: missing argument for parameter 'isOutput' in call
+                supportedSampleRates: getEstimatedSampleRates(for: output),
+                                                                          ^
+                                                                          , isOutput: <#Bool#>
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioDevice.swift:118:12: note: 'init(id:name:type:isOutput:isAvailable:connectionType:supportedSampleRates:supportedBitDepths:maxChannels:supportsBitPerfect:minBufferSize:maxBufferSize:preferredBufferSize:manufacturer:model:transport:hardwareLatency:isDefault:qualityRating:)' declared here
+    public init(
+           ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:309:39: error: cannot convert value of type '[Int]' to expected argument type '[Double]'
+                supportedSampleRates: getEstimatedSampleRates(for: output),
+                                      ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:309:39: note: arguments to generic parameter 'Element' ('Int' and 'Double') are expected to be equal
+                supportedSampleRates: getEstimatedSampleRates(for: output),
+                                      ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:328:47: error: value of type 'AudioDeviceType' has no member 'supportsBitPerfect'
+        let connectionSupported = device.type.supportsBitPerfect
+                                  ~~~~~~~~~~~ ^~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:372:28: error: value of type 'AudioDeviceType' has no member 'supportsBitPerfect'
+            if !deviceType.supportsBitPerfect {
+                ~~~~~~~~~~ ^~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:424:42: error: cannot convert value of type 'Double' to expected argument type 'Int'
+            .filter { $0 >= sourceFormat.sampleRate }
+                                         ^
+                            Int(                   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:460:30: error: cannot convert value of type '[String : Any]' to expected argument type '[String : String]'
+            sessionSettings: sessionSettings,
+                             ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:460:30: note: arguments to generic parameter 'Value' ('Any' and 'String') are expected to be equal
+            sessionSettings: sessionSettings,
+                             ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:517:30: error: cannot convert value of type '[String : Any]' to expected argument type '[String : String]'
+            currentSettings: currentSettings,
+                             ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:517:30: note: arguments to generic parameter 'Value' ('Any' and 'String') are expected to be equal
+            currentSettings: currentSettings,
+                             ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:533:75: error: cannot convert value of type 'Double' to expected argument type 'Int'
+        if !outputCapabilities.supportedSampleRates.contains(sourceFormat.sampleRate) {
+                                                                          ^
+                                                             Int(                   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:622:15: error: type 'AVAudioSession.Port' has no member 'USB'
+        case .USB, .thunderbolt, .lineOut:
+             ~^~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:712:15: error: type 'AVAudioSession.Port' has no member 'USB'
+        case .USB:
+             ~^~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:756:15: error: type 'AVAudioSession.Port' has no member 'USB'
+        case .USB:
+             ~^~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:769:15: error: type 'AVAudioSession.Port' has no member 'USB'
+        case .USB:
+             ~^~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:792:15: error: type 'AVAudioSession.Port' has no member 'USB'
+        case .USB:
+             ~^~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:783:21: error: type 'AudioDeviceType' has no member 'builtInSpeaker'
+            return .builtInSpeaker
+                   ~^~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:785:21: error: type 'AudioDeviceType' has no member 'builtInReceiver'
+            return .builtInReceiver
+                   ~^~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:793:21: error: type 'AudioDeviceType' has no member 'usb'
+            return .usb
+                   ~^~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:797:21: error: type 'AudioDeviceType' has no member 'hdmi'
+            return .hdmi
+                   ~^~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:799:21: error: type 'AudioDeviceType' has no member 'lineOut'
+            return .lineOut
+                   ~^~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:815:15: error: type 'AVAudioSession.Port' has no member 'USB'
+        case .USB:
+             ~^~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:833:20: error: binary operator '??' cannot be applied to operands of type 'Int?' and 'Double'
+            .min() ?? sourceFormat.sampleRate
+~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:832:42: error: cannot convert value of type 'Double' to expected argument type 'Int'
+            .filter { $0 >= sourceFormat.sampleRate }
+                                         ^
+                            Int(                   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:835:31: error: conflicting arguments to generic parameter 'T' ('UInt16' vs. 'Int')
+        let optimalBitDepth = min(sourceFormat.bitDepth, deviceCapabilities.maxBitDepth)
+                              ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:862:48: error: cannot convert value of type 'UInt8' to expected argument type 'Int'
+                    channels: min(sourceFormat.channels, deviceCapabilities.maxChannels)
+                                               ^
+                                  Int(                 )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:865:41: error: cannot convert value of type 'Double' to expected argument type 'Int'
+                tradeoffs: sourceFormat.sampleRate > maxSampleRate ? ["Sample rate downsampling required"] : []
+                                        ^
+                           Int(                   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:893:75: error: cannot convert value of type 'Double' to expected argument type 'Int'
+        if !outputCapabilities.supportedSampleRates.contains(sourceFormat.sampleRate) {
+                                                                          ^
+                                                             Int(                   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:895:50: error: cannot convert value of type 'Double' to expected argument type 'Int'
+                .min(by: { abs($0 - sourceFormat.sampleRate) < abs($1 - sourceFormat.sampleRate) }) {
+                                                 ^
+                                    Int(                   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:895:86: error: cannot convert value of type 'Double' to expected argument type 'Int'
+                .min(by: { abs($0 - sourceFormat.sampleRate) < abs($1 - sourceFormat.sampleRate) }) {
+                                                                                     ^
+                                                                        Int(                   )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:901:52: error: cannot convert value of type 'UInt16' to expected argument type 'Int'
+                        bitDepth: min(sourceFormat.bitDepth, outputCapabilities.maxBitDepth),
+                                                   ^
+                                      Int(                 )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:902:52: error: cannot convert value of type 'UInt8' to expected argument type 'Int'
+                        channels: min(sourceFormat.channels, outputCapabilities.maxChannels)
+                                                   ^
+                                      Int(                 )
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:936:23: error: type 'PerformanceRating' has no member 'acceptable'
+            rating = .acceptable
+                     ~^~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:938:23: error: type 'PerformanceRating' has no member 'poor'
+            rating = .poor
+                     ~^~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:940:23: error: type 'PerformanceRating' has no member 'unacceptable'
+            rating = .unacceptable
+                     ~^~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:943:33: error: extra arguments at positions #1, #2, #3, #4, #5 in call
+        return PerformanceImpact(
+                                ^
+Fonic_HiFi.PerformanceImpact.init:2:19: note: 'init(rawValue:)' declared here
+@inlinable public init?(rawValue: String)}
+                  ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:944:13: error: missing argument for parameter 'rawValue' in call
+            cpuImpact: cpuImpact,
+            ^
+            rawValue: <#String#>, 
+Fonic_HiFi.PerformanceImpact.init:2:19: note: 'init(rawValue:)' declared here
+@inlinable public init?(rawValue: String)}
+                  ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:943:16: error: value of optional type 'PerformanceImpact?' must be unwrapped to a value of type 'PerformanceImpact'
+        return PerformanceImpact(
+               ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:943:16: note: coalesce using '??' to provide a default when the optional value contains 'nil'
+        return PerformanceImpact(
+               ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:943:16: note: force-unwrap using '!' to abort execution if the optional value contains 'nil'
+        return PerformanceImpact(
+               ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1012:63: error: reference to property 'dacCompatibilityCache' in closure requires explicit use of 'self' to make capture semantics explicit
+        logger.debug("DAC compatibility database saved with \(dacCompatibilityCache.count) entries")
+                                                              ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1012:63: note: reference 'self.' explicitly
+        logger.debug("DAC compatibility database saved with \(dacCompatibilityCache.count) entries")
+                                                              ^
+                                                              self.
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:69:57: Binary operator '==' cannot be applied to operands of type 'Double' and 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:142:98: Cannot convert value of type 'Double' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:200:46: Cannot convert value of type 'Double' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:202:44: Cannot convert value of type 'UInt16' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:204:44: Cannot convert value of type 'UInt8' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:235:46: Incorrect argument labels in call (have 'format:sampleRate:bitDepth:channels:bitrate:duration:fileSize:', expected 'url:format:duration:bitDepth:sampleRate:channels:fileSize:bitrate:metadata:codec:container:supportsGapless:timestamp:')
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:236:13: Missing argument for parameter 'url' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:238:23: Cannot convert value of type 'Int' to expected argument type 'UInt16'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:237:25: Cannot convert value of type 'Int' to expected argument type 'Double'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:265:30: Extra argument 'maxBitDepth' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:264:41: Missing argument for parameter 'isOutput' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:310:30: Extra argument 'maxBitDepth' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:309:75: Missing argument for parameter 'isOutput' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:309:39: Cannot convert value of type '[Int]' to expected argument type '[Double]'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:328:47: Value of type 'AudioDeviceType' has no member 'supportsBitPerfect'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:372:28: Value of type 'AudioDeviceType' has no member 'supportsBitPerfect'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:424:42: Cannot convert value of type 'Double' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:460:30: Cannot convert value of type '[String : Any]' to expected argument type '[String : String]'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:517:30: Cannot convert value of type '[String : Any]' to expected argument type '[String : String]'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:533:75: Cannot convert value of type 'Double' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:622:15: Type 'AVAudioSession.Port' has no member 'USB'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:712:15: Type 'AVAudioSession.Port' has no member 'USB'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:756:15: Type 'AVAudioSession.Port' has no member 'USB'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:769:15: Type 'AVAudioSession.Port' has no member 'USB'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:792:15: Type 'AVAudioSession.Port' has no member 'USB'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:783:21: Type 'AudioDeviceType' has no member 'builtInSpeaker'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:785:21: Type 'AudioDeviceType' has no member 'builtInReceiver'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:793:21: Type 'AudioDeviceType' has no member 'usb'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:797:21: Type 'AudioDeviceType' has no member 'hdmi'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:799:21: Type 'AudioDeviceType' has no member 'lineOut'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:815:15: Type 'AVAudioSession.Port' has no member 'USB'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:833:20: Binary operator '??' cannot be applied to operands of type 'Int?' and 'Double'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:832:42: Cannot convert value of type 'Double' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:835:31: Conflicting arguments to generic parameter 'T' ('UInt16' vs. 'Int')
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:862:48: Cannot convert value of type 'UInt8' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:865:41: Cannot convert value of type 'Double' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:893:75: Cannot convert value of type 'Double' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:895:50: Cannot convert value of type 'Double' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:895:86: Cannot convert value of type 'Double' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:901:52: Cannot convert value of type 'UInt16' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:902:52: Cannot convert value of type 'UInt8' to expected argument type 'Int'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:936:23: Type 'PerformanceRating' has no member 'acceptable'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:938:23: Type 'PerformanceRating' has no member 'poor'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:940:23: Type 'PerformanceRating' has no member 'unacceptable'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:943:33: Extra arguments at positions #1, #2, #3, #4, #5 in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:944:13: Missing argument for parameter 'rawValue' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:943:16: Value of optional type 'PerformanceImpact?' must be unwrapped to a value of type 'PerformanceImpact'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1012:63: Reference to property 'dacCompatibilityCache' in closure requires explicit use of 'self' to make capture semantics explicit
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFormat.swift:36:9: error: switch must be exhaustive
+        switch self {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFormat.swift:36:9: note: add missing case: '.unknown'
+        switch self {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFormat.swift:80:9: error: switch must be exhaustive
+        switch self {
+        ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFormat.swift:80:9: note: add missing case: '.unknown'
+        switch self {
+        ^
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFormat.swift:36:9: Switch must be exhaustive
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFormat.swift:80:9: Switch must be exhaustive
+
+SwiftCompile normal arm64 Compiling\ SFBAudioEngineAdapter.swift,\ NowPlayingInfo+Extensions.swift,\ AVAudioEngineAdapter.swift,\ AudioError.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/SFBAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineType.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueueManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueShuffleMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/Track.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/FonicHiFiApp.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/ContentView.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueRepeatMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioMetrics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueue.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateStore.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineFactory.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioDevice.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFileInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/SFBAudioEngineAdapter.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/DACCompatibilityInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/supplementaryOutputs-78 -emit-localized-strings -emit-localized-strings-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64 -target arm64-apple-ios18.4-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -I /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -F /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 6 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Fonic\ HiFi_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -Xcc -ivfsstatcache -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-generated-files.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-own-target-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-all-target-headers.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-project-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources-normal/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources -Xcc -DDEBUG\=1 -module-name Fonic_HiFi -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.4 -target-sdk-name iphonesimulator18.4 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/SFBAudioEngineAdapter.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/NowPlayingInfo+Extensions.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AVAudioEngineAdapter.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioError.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/SFBAudioEngineAdapter.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/NowPlayingInfo+Extensions.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AVAudioEngineAdapter.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioError.o -index-store-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Index.noindex/DataStore -index-system-modules
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioError.swift:92:65: error: value of type 'BitPerfectFailureReason' has no member 'description'
+            return "Bit-perfect playback not possible: \(reason.description)"
+                                                         ~~~~~~ ^~~~~~~~~~~
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioError.swift:92:65: Value of type 'BitPerfectFailureReason' has no member 'description'
+
+SwiftCompile normal arm64 Compiling\ AudioDevice.swift,\ AudioFileInfo.swift,\ FFmpegEngineAdapter.swift,\ BitPerfectValidationResult.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioDevice.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFileInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineType.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueueManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueShuffleMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/Track.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/FonicHiFiApp.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/ContentView.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueRepeatMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioMetrics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueue.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateStore.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineFactory.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioDevice.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFileInfo.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/SFBAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/DACCompatibilityInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/supplementaryOutputs-77 -emit-localized-strings -emit-localized-strings-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64 -target arm64-apple-ios18.4-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -I /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -F /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 6 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Fonic\ HiFi_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -Xcc -ivfsstatcache -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-generated-files.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-own-target-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-all-target-headers.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-project-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources-normal/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources -Xcc -DDEBUG\=1 -module-name Fonic_HiFi -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.4 -target-sdk-name iphonesimulator18.4 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioDevice.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioFileInfo.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/FFmpegEngineAdapter.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/BitPerfectValidationResult.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioDevice.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioFileInfo.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/FFmpegEngineAdapter.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/BitPerfectValidationResult.o -index-store-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Index.noindex/DataStore -index-system-modules
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift:203:50: error: value of type 'AudioDeviceType' has no member 'displayName'
+            report += "- Type: \(deviceInfo.type.displayName)\n"
+                                 ~~~~~~~~~~~~~~~ ^~~~~~~~~~~
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift:203:50: Value of type 'AudioDeviceType' has no member 'displayName'
+
+SwiftCompile normal arm64 Compiling\ AudioEngineFacade.swift,\ QueueRepeatMode.swift,\ AudioMetrics.swift,\ QueueState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueRepeatMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioMetrics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueState.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineType.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitor.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueueManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueShuffleMode.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/Track.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/FonicHiFiApp.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/ContentView.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueRepeatMode.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioMetrics.swift -primary-file /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/QueueState.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Queue/AudioQueue.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateStore.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/FormatDetectionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFormat.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Playback/PlaybackStateManager.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Factory/AudioEngineFactory.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioDevice.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioFileInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/SFBAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/AudioError.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Services/AudioSessionService.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Diagnostics/DACCompatibilityInfo.swift /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/supplementaryOutputs-74 -emit-localized-strings -emit-localized-strings-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64 -target arm64-apple-ios18.4-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -I /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -F /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 6 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/Fonic\ HiFi_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/keiran/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi -Xcc -ivfsstatcache -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-generated-files.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-own-target-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-all-target-headers.hmap -Xcc -iquote -Xcc /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Fonic\ HiFi-project-headers.hmap -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources-normal/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources/arm64 -Xcc -I/Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/DerivedSources -Xcc -DDEBUG\=1 -module-name Fonic_HiFi -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.4 -target-sdk-name iphonesimulator18.4 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioEngineFacade.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/QueueRepeatMode.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioMetrics.o -o /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Build/Intermediates.noindex/Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/QueueState.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioEngineFacade.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/QueueRepeatMode.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/AudioMetrics.o -index-unit-output-path /Fonic\ HiFi.build/Debug-iphonesimulator/Fonic\ HiFi.build/Objects-normal/arm64/QueueState.o -index-store-path /Users/keiran/Library/Developer/Xcode/DerivedData/Fonic_HiFi-cqrbrowdqlvugabxvgaatafsrnmi/Index.noindex/DataStore -index-system-modules
+
+SwiftCompile normal arm64 /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi/Fonic\ HiFi/Core/Audio/Engine/AudioEngineFacade.swift (in target 'Fonic HiFi' from project 'Fonic HiFi')
+    cd /Users/keiran/Desktop/Fonic\ HiFi/Fonic\ HiFi
+    
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:80:55: error: value of type 'AudioEngineConfiguration' has no member 'with'
+            engineConfiguration = engineConfiguration.with(performanceMode: newValue)
+                                  ~~~~~~~~~~~~~~~~~~~ ^~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:106:49: error: 'AudioSessionManager' initializer is inaccessible due to 'private' protection level
+        self.sessionManager = sessionManager ?? AudioSessionManager()
+                                                ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift:39:22: note: 'init()' declared here
+    private override init() {
+                     ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:107:65: error: 'AudioFormatDetectionManager' initializer is inaccessible due to 'private' protection level
+        self.formatDetectionManager = formatDetectionManager ?? AudioFormatDetectionManager()
+                                                                ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift:31:13: note: 'init()' declared here
+    private init() {
+            ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:128:38: error: value of type 'AudioSessionManager' has no member 'configureSession'
+            try await sessionManager.configureSession(for: engineConfiguration)
+                      ~~~~~~~~~~~~~~ ^~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:147:30: error: thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+            throw AudioError.engineInitializationFailed
+                  ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:163:44: error: argument passed to call that takes no arguments
+            await monitor.detachFromEngine(engine)
+                                          ~^~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:182:30: error: thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+            throw AudioError.engineNotReady
+                  ~~~~~~~~~~~^~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:189:75: error: incorrect argument label in call (have 'from:', expected 'at:')
+            let formatInfo = try await formatDetectionManager.detectFormat(from: track.url)
+                                                                          ^~~~~
+                                                                           at
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:214:34: error: thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+                throw AudioError.engineNotReady
+                      ~~~~~~~~~~~^~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:228:70: error: member 'playbackFailed(reason:)' expects argument of type 'String'
+            stateManager.updateState(.error(error as? AudioError ?? .playbackFailed, lastKnownTime: nil))
+                                                                     ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:236:30: error: thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+            throw AudioError.engineNotReady
+                  ~~~~~~~~~~~^~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:240:30: error: thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+            throw AudioError.engineNotReady
+                  ~~~~~~~~~~~^~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:259:70: error: member 'playbackFailed(reason:)' expects argument of type 'String'
+            stateManager.updateState(.error(error as? AudioError ?? .playbackFailed, lastKnownTime: nil))
+                                                                     ^
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:298:30: error: thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+            throw AudioError.engineNotReady
+                  ~~~~~~~~~~~^~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:302:30: error: thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+            throw AudioError.invalidOperation
+                  ~~~~~~~~~~~^~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:338:44: error: value of type 'AudioQueueManager' has no member 'getNextTrack'
+        guard let nextTrack = queueManager.getNextTrack() else {
+                              ~~~~~~~~~~~~ ^~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:344:22: error: value of type 'AudioQueueManager' has no member 'moveToNext'
+        queueManager.moveToNext()
+        ~~~~~~~~~~~~ ^~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:350:48: error: value of type 'AudioQueueManager' has no member 'getPreviousTrack'
+        guard let previousTrack = queueManager.getPreviousTrack() else {
+                                  ~~~~~~~~~~~~ ^~~~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:355:22: error: value of type 'AudioQueueManager' has no member 'moveToPrevious'
+        queueManager.moveToPrevious()
+        ~~~~~~~~~~~~ ^~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:362:30: error: missing argument label 'tracks:' in call
+        queueManager.enqueue(tracks)
+                             ^
+                             tracks: 
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:369:34: error: missing argument label 'track:' in call
+        queueManager.enqueueNext(track)
+                                 ^
+                                 track: 
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:376:22: error: value of type 'AudioQueueManager' has no member 'setShuffleMode'
+        queueManager.setShuffleMode(mode)
+        ~~~~~~~~~~~~ ^~~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:383:22: error: value of type 'AudioQueueManager' has no member 'setRepeatMode'
+        queueManager.setRepeatMode(mode)
+        ~~~~~~~~~~~~ ^~~~~~~~~~~~~
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:396:75: error: incorrect argument label in call (have 'from:', expected 'at:')
+            let formatInfo = try await formatDetectionManager.detectFormat(from: currentTrack.url)
+                                                                          ^~~~~
+                                                                           at
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:441:16: warning: value 'engine' was defined but never used; consider replacing with boolean test
+        if let engine = currentEngine {
+           ~~~~^~~~~~~~~
+                                      != nil
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:461:19: warning: value 'engine' was defined but never used; consider replacing with boolean test
+        guard let engine = currentEngine else { return }
+              ~~~~^~~~~~~~~
+                                         != nil
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:487:24: error: value of type 'AudioSessionManager' has no member 'interruptionPublisher'
+        sessionManager.interruptionPublisher
+        ~~~~~~~~~~~~~~ ^~~~~~~~~~~~~~~~~~~~~
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:80:55: Value of type 'AudioEngineConfiguration' has no member 'with'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:106:49: 'AudioSessionManager' initializer is inaccessible due to 'private' protection level
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:107:65: 'AudioFormatDetectionManager' initializer is inaccessible due to 'private' protection level
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:128:38: Value of type 'AudioSessionManager' has no member 'configureSession'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:147:30: Thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:163:44: Argument passed to call that takes no arguments
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:182:30: Thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:189:75: Incorrect argument label in call (have 'from:', expected 'at:')
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:214:34: Thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:228:70: Member 'playbackFailed(reason:)' expects argument of type 'String'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:236:30: Thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:240:30: Thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:259:70: Member 'playbackFailed(reason:)' expects argument of type 'String'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:298:30: Thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:302:30: Thrown expression type '@Sendable (String) -> AudioError' does not conform to 'Error'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:338:44: Value of type 'AudioQueueManager' has no member 'getNextTrack'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:344:22: Value of type 'AudioQueueManager' has no member 'moveToNext'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:350:48: Value of type 'AudioQueueManager' has no member 'getPreviousTrack'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:355:22: Value of type 'AudioQueueManager' has no member 'moveToPrevious'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:362:30: Missing argument label 'tracks:' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:369:34: Missing argument label 'track:' in call
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:376:22: Value of type 'AudioQueueManager' has no member 'setShuffleMode'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:383:22: Value of type 'AudioQueueManager' has no member 'setRepeatMode'
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:396:75: Incorrect argument label in call (have 'from:', expected 'at:')
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:441:16: Value 'engine' was defined but never used; consider replacing with boolean test
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:461:19: Value 'engine' was defined but never used; consider replacing with boolean test
+
+/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:487:24: Value of type 'AudioSessionManager' has no member 'interruptionPublisher'
+
+
+
+Build failed    5/27/25, 12:00 PM    2.5 seconds

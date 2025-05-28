@@ -57,7 +57,10 @@ public final class SFBAudioEngineAdapter: NSObject, AudioEngineService {
     
     public var isPlaying: Bool {
         get async {
-            return playbackState == .playing
+            if case .playing = playbackState {
+                return true
+            }
+            return false
         }
     }
     
@@ -104,12 +107,12 @@ public final class SFBAudioEngineAdapter: NSObject, AudioEngineService {
         }
         
         // TODO: Implement with SFBAudioEngine
-        playbackState = .playing
+        playbackState = .playing(currentTime: 0.0, duration: mockDuration)
     }
     
     public func pause() async {
         // TODO: Implement with SFBAudioEngine
-        playbackState = .paused
+        playbackState = .paused(currentTime: mockCurrentTime, duration: mockDuration)
     }
     
     public func stop() async {

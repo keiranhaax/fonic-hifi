@@ -1,0 +1,28 @@
+{
+  "" : {
+    "diagnostics" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic HiFiUITests-master.dia",
+    "emit-module-dependencies" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic HiFiUITests-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic HiFiUITests-master-emit-module.dia",
+    "swift-dependencies" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic HiFiUITests-master.swiftdeps"
+  },
+  "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFiUITests/Fonic_HiFiUITests.swift" : {
+    "const-values" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITests.swiftconstvalues",
+    "dependencies" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITests.d",
+    "diagnostics" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITests.dia",
+    "index-unit-output-path" : "/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITests.o",
+    "llvm-bc" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITests.bc",
+    "object" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITests.o",
+    "swift-dependencies" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITests.swiftdeps",
+    "swiftmodule" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITests~partial.swiftmodule"
+  },
+  "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFiUITests/Fonic_HiFiUITestsLaunchTests.swift" : {
+    "const-values" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITestsLaunchTests.swiftconstvalues",
+    "dependencies" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITestsLaunchTests.d",
+    "diagnostics" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITestsLaunchTests.dia",
+    "index-unit-output-path" : "/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITestsLaunchTests.o",
+    "llvm-bc" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITestsLaunchTests.bc",
+    "object" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITestsLaunchTests.o",
+    "swift-dependencies" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITestsLaunchTests.swiftdeps",
+    "swiftmodule" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFiUITests.build/Objects-normal/arm64/Fonic_HiFiUITestsLaunchTests~partial.swiftmodule"
+  }
+}

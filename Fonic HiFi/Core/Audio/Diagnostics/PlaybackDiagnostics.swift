@@ -176,8 +176,8 @@ public struct PlaybackDiagnostics: Sendable {
     
     /// Priority issues that need immediate attention
     public var priorityIssues: [DiagnosticIssue] {
-        return activeIssues.filter { $0.severity == .critical || $0.severity == .high }
-            .sorted { $0.severity.priority > $1.severity.priority }
+        return activeIssues.filter { $0.severity == .critical || $0.severity == .major }
+            .sorted { (issue1: DiagnosticIssue, issue2: DiagnosticIssue) in issue1.severity.sortOrder > issue2.severity.sortOrder }
     }
     
     /// High-impact recommendations
@@ -361,7 +361,7 @@ public struct AudioEngineInfo: Sendable {
     public let capabilities: [String]
     
     /// Current configuration
-    public let configuration: [String: Any]
+    public let configuration: [String: String]
     
     /// Performance characteristics
     public let performanceProfile: String
@@ -373,7 +373,7 @@ public struct AudioEngineInfo: Sendable {
         type: String,
         version: String,
         capabilities: [String],
-        configuration: [String: Any],
+        configuration: [String: String],
         performanceProfile: String,
         lastInitialized: Date
     ) {
@@ -843,21 +843,7 @@ public enum DiagnosticIssueType: String, Sendable {
 }
 
 /// Issue severity levels
-public enum IssueSeverity: String, Sendable {
-    case low = "low"
-    case medium = "medium"
-    case high = "high"
-    case critical = "critical"
-    
-    public var priority: Int {
-        switch self {
-        case .low: return 1
-        case .medium: return 2
-        case .high: return 3
-        case .critical: return 4
-        }
-    }
-}
+// IssueSeverity is defined in DACCompatibilityInfo.swift
 
 /// Session statistics summary
 public struct SessionStatisticsSummary: Sendable {
@@ -1304,21 +1290,10 @@ public struct PerformanceLimitation: Sendable {
 }
 
 /// Types of performance limitations
-public enum LimitationType: String, Sendable {
-    case cpu = "cpu"
-    case memory = "memory"
-    case audio = "audio"
-    case thermal = "thermal"
-    case power = "power"
-}
+// LimitationType is defined in BitPerfectValidatorService.swift
 
 /// Performance impact levels
-public enum PerformanceImpact: String, Sendable {
-    case minimal = "minimal"
-    case moderate = "moderate"
-    case significant = "significant"
-    case severe = "severe"
-}
+// PerformanceImpact is defined in AudioEngineType.swift
 
 /// Upgrade recommendation
 public struct UpgradeRecommendation: Sendable {
@@ -1461,15 +1436,15 @@ public struct AudioStackDebugInfo: Sendable {
     public let activeAudioUnits: [String]
     
     /// Audio session details
-    public let sessionDetails: [String: Any]
+    public let sessionDetails: [String: String]
     
     /// Engine configuration
-    public let engineConfiguration: [String: Any]
+    public let engineConfiguration: [String: String]
     
     /// Buffer information
     public let bufferInfo: BufferDebugInfo
     
-    public init(activeAudioUnits: [String], sessionDetails: [String: Any], engineConfiguration: [String: Any], bufferInfo: BufferDebugInfo) {
+    public init(activeAudioUnits: [String], sessionDetails: [String: String], engineConfiguration: [String: String], bufferInfo: BufferDebugInfo) {
         self.activeAudioUnits = activeAudioUnits
         self.sessionDetails = sessionDetails
         self.engineConfiguration = engineConfiguration
@@ -1528,9 +1503,9 @@ public struct DiagnosticLogEntry: Sendable {
     public let message: String
     
     /// Additional context
-    public let context: [String: Any]
+    public let context: [String: String]
     
-    public init(timestamp: Date, level: LogLevel, category: String, message: String, context: [String: Any]) {
+    public init(timestamp: Date, level: LogLevel, category: String, message: String, context: [String: String]) {
         self.timestamp = timestamp
         self.level = level
         self.category = category
@@ -1551,26 +1526,26 @@ public enum LogLevel: String, Sendable {
 /// Configuration dump for support
 public struct ConfigurationDump: Sendable {
     /// Audio engine configuration
-    public let engineConfig: [String: Any]
+    public let engineConfig: [String: String]
     
     /// Audio session configuration
-    public let sessionConfig: [String: Any]
+    public let sessionConfig: [String: String]
     
     /// Device configuration
-    public let deviceConfig: [String: Any]
+    public let deviceConfig: [String: String]
     
     /// User preferences
-    public let userPreferences: [String: Any]
+    public let userPreferences: [String: String]
     
     /// System settings
-    public let systemSettings: [String: Any]
+    public let systemSettings: [String: String]
     
     public init(
-        engineConfig: [String: Any],
-        sessionConfig: [String: Any],
-        deviceConfig: [String: Any],
-        userPreferences: [String: Any],
-        systemSettings: [String: Any]
+        engineConfig: [String: String],
+        sessionConfig: [String: String],
+        deviceConfig: [String: String],
+        userPreferences: [String: String],
+        systemSettings: [String: String]
     ) {
         self.engineConfig = engineConfig
         self.sessionConfig = sessionConfig

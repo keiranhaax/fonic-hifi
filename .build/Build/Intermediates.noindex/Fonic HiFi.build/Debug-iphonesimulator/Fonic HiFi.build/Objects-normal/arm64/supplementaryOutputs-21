@@ -1,0 +1,24 @@
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioDevice.swift":
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioDevice.dia"
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioDevice.o"
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioDevice.swiftconstvalues"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioDevice.d"
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioDevice.swiftdeps"
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift":
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioSessionManager.swiftconstvalues"
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioSessionManager.swiftdeps"
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioSessionManager.o"
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioSessionManager.dia"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioSessionManager.d"
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Playback/PlaybackState.swift":
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/PlaybackState.o"
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/PlaybackState.swiftdeps"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/PlaybackState.d"
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/PlaybackState.dia"
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/PlaybackState.swiftconstvalues"
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift":
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/LibraryImportService.o"
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/LibraryImportService.swiftdeps"
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/LibraryImportService.dia"
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/LibraryImportService.swiftconstvalues"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/LibraryImportService.d"

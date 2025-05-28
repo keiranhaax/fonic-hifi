@@ -288,7 +288,7 @@ public enum DACConnectionInterface: String, Sendable, Codable {
     case coaxial = "coaxial"
     case ethernet = "ethernet"
     case wireless = "wireless"
-    case internal = "internal"
+    case `internal` = "internal"
     case unknown = "unknown"
     
     /// Whether this interface typically supports bit-perfect audio
@@ -364,6 +364,16 @@ public enum IssueSeverity: String, Sendable, Codable {
     case moderate = "moderate"
     case major = "major"
     case critical = "critical"
+    
+    /// Sort order for severity (higher = more severe)
+    public var sortOrder: Int {
+        switch self {
+        case .minor: return 1
+        case .moderate: return 2
+        case .major: return 3
+        case .critical: return 4
+        }
+    }
 }
 
 /// Recommended settings for optimal DAC performance

@@ -13,13 +13,13 @@ public struct QueueState: Sendable, Equatable {
     // MARK: - Properties
     
     /// All tracks in the queue
-    public let tracks: [Track]
+    public let tracks: [AudioTrack]
     
     /// Current playing index
     public let currentIndex: Int?
     
     /// Current track being played
-    public let currentTrack: Track?
+    public let currentTrack: AudioTrack?
     
     /// Shuffle mode setting
     public let shuffleMode: QueueShuffleMode
@@ -34,7 +34,7 @@ public struct QueueState: Sendable, Equatable {
     public let hasPrevious: Bool
     
     /// Playback history
-    public let history: [Track]
+    public let history: [AudioTrack]
     
     /// Current shuffle sequence (if shuffled)
     public let shuffleSequence: [Int]?
@@ -65,7 +65,7 @@ public struct QueueState: Sendable, Equatable {
     }
     
     /// Remaining tracks in queue after current
-    public var remainingTracks: [Track] {
+    public var remainingTracks: [AudioTrack] {
         guard let currentIndex = currentIndex else { return tracks }
         guard currentIndex < tracks.count - 1 else { return [] }
         return Array(tracks[(currentIndex + 1)...])
@@ -103,13 +103,13 @@ public struct QueueState: Sendable, Equatable {
     // MARK: - Initialization
     
     public init(
-        tracks: [Track] = [],
+        tracks: [AudioTrack] = [],
         currentIndex: Int? = nil,
         shuffleMode: QueueShuffleMode = .off,
         repeatMode: QueueRepeatMode = .none,
         hasNext: Bool = false,
         hasPrevious: Bool = false,
-        history: [Track] = [],
+        history: [AudioTrack] = [],
         shuffleSequence: [Int]? = nil,
         timestamp: Date = Date()
     ) {
@@ -132,7 +132,7 @@ public struct QueueState: Sendable, Equatable {
     /// Get track at specific index safely
     /// - Parameter index: Index to retrieve
     /// - Returns: Track at index, nil if invalid
-    public func track(at index: Int) -> Track? {
+    public func track(at index: Int) -> AudioTrack? {
         guard index >= 0 && index < tracks.count else { return nil }
         return tracks[index]
     }
@@ -140,12 +140,12 @@ public struct QueueState: Sendable, Equatable {
     /// Find index of specific track
     /// - Parameter track: Track to find
     /// - Returns: Index of track, nil if not found
-    public func index(of track: Track) -> Int? {
+    public func index(of track: AudioTrack) -> Int? {
         return tracks.firstIndex { $0.id == track.id }
     }
     
     /// Get tracks in shuffle order (if shuffled)
-    public var shuffledTracks: [Track] {
+    public var shuffledTracks: [AudioTrack] {
         guard let shuffleSequence = shuffleSequence else { return tracks }
         return shuffleSequence.compactMap { index in
             track(at: index)
@@ -153,7 +153,7 @@ public struct QueueState: Sendable, Equatable {
     }
     
     /// Get the next track that would play
-    public var nextTrack: Track? {
+    public var nextTrack: AudioTrack? {
         guard hasNext else { return nil }
         
         if shuffleMode.isActive, let shuffleSequence = shuffleSequence {
@@ -173,7 +173,7 @@ public struct QueueState: Sendable, Equatable {
     }
     
     /// Get the previous track that would play
-    public var previousTrack: Track? {
+    public var previousTrack: AudioTrack? {
         guard hasPrevious else { return nil }
         
         if shuffleMode.isActive, let shuffleSequence = shuffleSequence {
@@ -269,17 +269,20 @@ extension QueueState: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        self.tracks = try container.decode([Track].self, forKey: .tracks)
-        self.currentIndex = try container.decodeIfPresent(Int.self, forKey: .currentIndex)
+        let tracks = try container.decode([AudioTrack].self, forKey: .tracks)
+        let currentIndex = try container.decodeIfPresent(Int.self, forKey: .currentIndex)
+        
+        self.tracks = tracks
+        self.currentIndex = currentIndex
         self.shuffleMode = try container.decode(QueueShuffleMode.self, forKey: .shuffleMode)
         self.repeatMode = try container.decode(QueueRepeatMode.self, forKey: .repeatMode)
         self.hasNext = try container.decode(Bool.self, forKey: .hasNext)
         self.hasPrevious = try container.decode(Bool.self, forKey: .hasPrevious)
-        self.history = try container.decode([Track].self, forKey: .history)
+        self.history = try container.decode([AudioTrack].self, forKey: .history)
         self.shuffleSequence = try container.decodeIfPresent([Int].self, forKey: .shuffleSequence)
         self.timestamp = try container.decode(Date.self, forKey: .timestamp)
         
-        // Computed property
+        // Compute current track
         self.currentTrack = currentIndex.flatMap { index in
             index >= 0 && index < tracks.count ? tracks[index] : nil
         }
@@ -302,7 +305,7 @@ extension QueueState: Codable {
 
 // MARK: - Debug Description
 
-extension QueueState: CustomDebugStringProvider {
+extension QueueState: CustomDebugStringConvertible {
     
     public var debugDescription: String {
         let currentTrackTitle = currentTrack?.title ?? "None"

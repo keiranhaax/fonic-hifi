@@ -1,0 +1,24 @@
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift":
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectValidatorService.swiftconstvalues"
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectValidatorService.swiftdeps"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectValidatorService.d"
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectValidatorService.o"
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectValidatorService.dia"
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Factory/AudioEngineFactory.swift":
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/AudioEngineFactory.swiftconstvalues"
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/AudioEngineFactory.o"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/AudioEngineFactory.d"
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/AudioEngineFactory.swiftdeps"
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/AudioEngineFactory.dia"
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift":
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectFailureReason.dia"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectFailureReason.d"
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectFailureReason.o"
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectFailureReason.swiftconstvalues"
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/BitPerfectFailureReason.swiftdeps"
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Queue/QueueState.swift":
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/QueueState.swiftdeps"
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/QueueState.o"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/QueueState.d"
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/QueueState.swiftconstvalues"
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/x86_64/QueueState.dia"

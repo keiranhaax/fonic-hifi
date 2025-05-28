@@ -60,7 +60,10 @@ public final class FFmpegEngineAdapter: NSObject, AudioEngineService {
     
     public var isPlaying: Bool {
         get async {
-            return playbackState == .playing
+            if case .playing = playbackState {
+                return true
+            }
+            return false
         }
     }
     
@@ -118,12 +121,12 @@ public final class FFmpegEngineAdapter: NSObject, AudioEngineService {
         // 2. Feed PCM to AVAudioEngine
         // 3. Handle synchronization
         
-        playbackState = .playing
+        playbackState = .playing(currentTime: 0.0, duration: mockDuration)
     }
     
     public func pause() async {
         // TODO: Implement with FFmpegKit
-        playbackState = .paused
+        playbackState = .paused(currentTime: mockCurrentTime, duration: mockDuration)
     }
     
     public func stop() async {

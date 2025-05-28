@@ -1,0 +1,65 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildOnly"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "3fc01b9f903446b0cc095a94bfc6cd68ca066820cf4fd0c7a3897d9a146a32ca"
+    }
+  ],
+  "containerPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "undefined_arch",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : true,
+      "platform" : "iphonesimulator",
+      "sdk" : "iphonesimulator18.4",
+      "sdkVariant" : "iphonesimulator",
+      "supportedArchitectures" : [
+        "i386",
+        "x86_64"
+      ],
+      "targetArchitecture" : "undefined_arch"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Products",
+      "derivedDataPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build",
+      "indexDataStoreFolderPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+          "SDKROOT" : "iphonesimulator18.4"
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ACTION" : "build",
+          "CLANG_COVERAGE_MAPPING" : "YES",
+          "CLANG_PROFILE_DATA_DIRECTORY" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/ProfileData",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

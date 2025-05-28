@@ -1,0 +1,24 @@
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Data/Models/Playlist.swift":
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/Playlist.swiftdeps"
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/Playlist.dia"
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/Playlist.swiftconstvalues"
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/Playlist.o"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/Playlist.d"
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Interfaces/AudioFormat.swift":
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioFormat.swiftdeps"
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioFormat.dia"
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioFormat.o"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioFormat.d"
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioFormat.swiftconstvalues"
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift":
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioMonitoringService.dia"
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioMonitoringService.swiftconstvalues"
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioMonitoringService.o"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioMonitoringService.d"
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/AudioMonitoringService.swiftdeps"
+"/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/Core/Audio/Engines/FFmpegEngineAdapter.swift":
+  object: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/FFmpegEngineAdapter.o"
+  dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/FFmpegEngineAdapter.d"
+  diagnostics: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/FFmpegEngineAdapter.dia"
+  const-values: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/FFmpegEngineAdapter.swiftconstvalues"
+  swift-dependencies: "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/Fonic HiFi.build/Debug-iphonesimulator/Fonic HiFi.build/Objects-normal/arm64/FFmpegEngineAdapter.swiftdeps"

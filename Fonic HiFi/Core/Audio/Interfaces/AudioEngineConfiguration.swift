@@ -59,6 +59,11 @@ public struct AudioEngineConfiguration: Sendable {
         self.fadeDuration = fadeDuration
     }
     
+    /// Default configuration with balanced settings
+    public static var `default`: AudioEngineConfiguration {
+        return AudioEngineConfiguration()
+    }
+    
     /// Create configuration optimized for bit-perfect playback
     public static var bitPerfect: AudioEngineConfiguration {
         return AudioEngineConfiguration(
@@ -77,6 +82,21 @@ public struct AudioEngineConfiguration: Sendable {
             performanceMode: .efficiency,
             maxBufferMemoryMB: 50,
             enableHardwareAcceleration: false
+        )
+    }
+    
+    /// Create a copy with modified performance mode
+    public func with(performanceMode: PerformanceMode) -> AudioEngineConfiguration {
+        return AudioEngineConfiguration(
+            bufferSize: self.bufferSize,
+            sampleRate: self.sampleRate,
+            bitDepth: self.bitDepth,
+            enableBitPerfect: self.enableBitPerfect,
+            enableGapless: self.enableGapless,
+            performanceMode: performanceMode,
+            maxBufferMemoryMB: self.maxBufferMemoryMB,
+            enableHardwareAcceleration: self.enableHardwareAcceleration,
+            fadeDuration: self.fadeDuration
         )
     }
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 /// Errors that can occur during audio operations
-public enum AudioError: LocalizedError, Sendable {
+public enum AudioError: LocalizedError, Sendable, Equatable {
     /// The audio format is not supported
     case unsupportedFormat(String)
     
@@ -31,7 +31,7 @@ public enum AudioError: LocalizedError, Sendable {
     case cancelled
     
     /// Network error (for future streaming support)
-    case networkError(Error)
+    case networkError(String)
     
     /// Insufficient permissions to access file
     case permissionDenied(URL)
@@ -74,7 +74,7 @@ public enum AudioError: LocalizedError, Sendable {
             return "Operation was cancelled"
             
         case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
+            return "Network error: \(error)"
             
         case .permissionDenied(let url):
             return "Permission denied to access: \(url.lastPathComponent)"
@@ -89,7 +89,7 @@ public enum AudioError: LocalizedError, Sendable {
             return "Invalid seek position: \(position)"
             
         case .bitPerfectNotPossible(let reason):
-            return "Bit-perfect playback not possible: \(reason.rawValue)"
+            return "Bit-perfect playback not possible: \(reason.description)"
         }
     }
     
@@ -120,7 +120,7 @@ public enum AudioError: LocalizedError, Sendable {
                 return "Select an audio device that supports the file's sample rate"
             case .volumeNotUnity:
                 return "Set volume to 100% for bit-perfect playback"
-            case .equalizerActive:
+            case .audioProcessingEnabled:
                 return "Disable the equalizer for bit-perfect playback"
             default:
                 return "Adjust settings to enable bit-perfect playback"

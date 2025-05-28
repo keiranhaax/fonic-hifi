@@ -14,13 +14,13 @@ public protocol AudioQueue: AnyObject, Sendable {
     // MARK: - Queue State
     
     /// All tracks in the queue
-    var tracks: [Track] { get }
+    var tracks: [AudioTrack] { get }
     
     /// Current playing index
     var currentIndex: Int? { get }
     
     /// Current track being played
-    var currentTrack: Track? { get }
+    var currentTrack: AudioTrack? { get }
     
     /// Shuffle mode setting
     var shuffleMode: QueueShuffleMode { get set }
@@ -35,45 +35,45 @@ public protocol AudioQueue: AnyObject, Sendable {
     var hasPrevious: Bool { get }
     
     /// Playback history (last 50 tracks by default)
-    var history: [Track] { get }
+    var history: [AudioTrack] { get }
     
     // MARK: - Queue Operations
     
     /// Add a track to the end of the queue
     /// - Parameter track: Track to add
-    func enqueue(track: Track)
+    func enqueue(track: AudioTrack)
     
     /// Add multiple tracks to the end of the queue
     /// - Parameter tracks: Tracks to add
-    func enqueue(tracks: [Track])
+    func enqueue(tracks: [AudioTrack])
     
     /// Add a track to play next (after current track)
     /// - Parameter track: Track to play next
-    func enqueueNext(track: Track)
+    func enqueueNext(track: AudioTrack)
     
     /// Add tracks to play next (after current track)
     /// - Parameter tracks: Tracks to play next
-    func enqueueNext(tracks: [Track])
+    func enqueueNext(tracks: [AudioTrack])
     
     /// Add a track to play later (at end of queue)
     /// - Parameter track: Track to play later
-    func enqueueLater(track: Track)
+    func enqueueLater(track: AudioTrack)
     
     /// Add tracks to play later (at end of queue)
     /// - Parameter tracks: Tracks to play later
-    func enqueueLater(tracks: [Track])
+    func enqueueLater(tracks: [AudioTrack])
     
     /// Remove track at specified index
     /// - Parameter index: Index to remove
     /// - Returns: The removed track, if any
     @discardableResult
-    func remove(at index: Int) -> Track?
+    func remove(at index: Int) -> AudioTrack?
     
     /// Remove specific track from queue
     /// - Parameter track: Track to remove
     /// - Returns: Whether track was found and removed
     @discardableResult
-    func remove(track: Track) -> Bool
+    func remove(track: AudioTrack) -> Bool
     
     /// Move track from one position to another
     /// - Parameters:
@@ -91,11 +91,11 @@ public protocol AudioQueue: AnyObject, Sendable {
     
     /// Get the next track to play
     /// - Returns: Next track, respecting shuffle and repeat modes
-    func next() -> Track?
+    func next() -> AudioTrack?
     
     /// Get the previous track to play
     /// - Returns: Previous track, respecting shuffle and repeat modes
-    func previous() -> Track?
+    func previous() -> AudioTrack?
     
     /// Set current track by index
     /// - Parameter index: Index to set as current
@@ -107,7 +107,7 @@ public protocol AudioQueue: AnyObject, Sendable {
     /// - Parameter track: Track to set as current
     /// - Returns: Whether the track was found and set
     @discardableResult
-    func setCurrentTrack(_ track: Track?) -> Bool
+    func setCurrentTrack(_ track: AudioTrack?) -> Bool
     
     // MARK: - Queue Manipulation
     
@@ -115,13 +115,13 @@ public protocol AudioQueue: AnyObject, Sendable {
     /// - Parameters:
     ///   - tracks: New tracks for the queue
     ///   - startIndex: Index to start playing from
-    func replaceQueue(with tracks: [Track], startIndex: Int?)
+    func replaceQueue(with tracks: [AudioTrack], startIndex: Int?)
     
     /// Insert tracks at specific position
     /// - Parameters:
     ///   - tracks: Tracks to insert
     ///   - index: Position to insert at
-    func insert(tracks: [Track], at index: Int)
+    func insert(tracks: [AudioTrack], at index: Int)
     
     /// Shuffle the queue while preserving current track
     func shuffle()
@@ -140,17 +140,17 @@ public protocol AudioQueue: AnyObject, Sendable {
 public extension AudioQueue {
     
     /// Convenience method to enqueue single track using array method
-    func enqueue(track: Track) {
+    func enqueue(track: AudioTrack) {
         enqueue(tracks: [track])
     }
     
     /// Convenience method to enqueue next single track using array method
-    func enqueueNext(track: Track) {
+    func enqueueNext(track: AudioTrack) {
         enqueueNext(tracks: [track])
     }
     
     /// Convenience method to enqueue later single track using array method
-    func enqueueLater(track: Track) {
+    func enqueueLater(track: AudioTrack) {
         enqueueLater(tracks: [track])
     }
     
@@ -165,13 +165,13 @@ public extension AudioQueue {
     }
     
     /// Get track at specific index safely
-    func track(at index: Int) -> Track? {
+    func track(at index: Int) -> AudioTrack? {
         guard index >= 0 && index < tracks.count else { return nil }
         return tracks[index]
     }
     
     /// Find index of specific track
-    func index(of track: Track) -> Int? {
+    func index(of track: AudioTrack) -> Int? {
         return tracks.firstIndex { $0.id == track.id }
     }
 }
@@ -186,14 +186,14 @@ public protocol AudioQueueDelegate: AnyObject, Sendable {
     /// - Parameters:
     ///   - queue: The audio queue
     ///   - tracks: New tracks array
-    func audioQueue(_ queue: AudioQueue, didUpdateTracks tracks: [Track])
+    func audioQueue(_ queue: AudioQueue, didUpdateTracks tracks: [AudioTrack])
     
     /// Called when the current track changes
     /// - Parameters:
     ///   - queue: The audio queue
     ///   - track: New current track (nil if none)
     ///   - index: New current index (nil if none)
-    func audioQueue(_ queue: AudioQueue, didChangeCurrentTrack track: Track?, at index: Int?)
+    func audioQueue(_ queue: AudioQueue, didChangeCurrentTrack track: AudioTrack?, at index: Int?)
     
     /// Called when shuffle mode changes
     /// - Parameters:
@@ -211,7 +211,7 @@ public protocol AudioQueueDelegate: AnyObject, Sendable {
     /// - Parameters:
     ///   - queue: The audio queue
     ///   - track: Track added to history
-    func audioQueue(_ queue: AudioQueue, didAddToHistory track: Track)
+    func audioQueue(_ queue: AudioQueue, didAddToHistory track: AudioTrack)
     
     /// Called when an error occurs in queue operations
     /// - Parameters:
@@ -223,10 +223,10 @@ public protocol AudioQueueDelegate: AnyObject, Sendable {
 // MARK: - Default Delegate Implementations
 
 public extension AudioQueueDelegate {
-    func audioQueue(_ queue: AudioQueue, didUpdateTracks tracks: [Track]) {}
-    func audioQueue(_ queue: AudioQueue, didChangeCurrentTrack track: Track?, at index: Int?) {}
+    func audioQueue(_ queue: AudioQueue, didUpdateTracks tracks: [AudioTrack]) {}
+    func audioQueue(_ queue: AudioQueue, didChangeCurrentTrack track: AudioTrack?, at index: Int?) {}
     func audioQueue(_ queue: AudioQueue, didChangeShuffleMode shuffleMode: QueueShuffleMode) {}
     func audioQueue(_ queue: AudioQueue, didChangeRepeatMode repeatMode: QueueRepeatMode) {}
-    func audioQueue(_ queue: AudioQueue, didAddToHistory track: Track) {}
+    func audioQueue(_ queue: AudioQueue, didAddToHistory track: AudioTrack) {}
     func audioQueue(_ queue: AudioQueue, didEncounterError error: AudioError) {}
 } 

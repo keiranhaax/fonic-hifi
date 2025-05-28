@@ -121,7 +121,7 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
         applicationVolume: Float = 1.0,
         recommendedSettings: BitPerfectSettings = BitPerfectSettings(),
         alternatives: [AlternativeConfiguration] = [],
-        performanceImpact: PerformanceImpact = PerformanceImpact()
+        performanceImpact: PerformanceImpact = .low
     ) {
         self.isValid = isValid
         self.confidence = confidence
@@ -477,7 +477,7 @@ public enum DeviceConnectionType: String, Sendable {
     case usb = "usb"
     case thunderbolt = "thunderbolt"
     case lightning = "lightning"
-    case internal = "internal"
+    case `internal` = "internal"
     case unknown = "unknown"
     
     /// Whether this connection type typically supports bit-perfect audio
@@ -514,7 +514,7 @@ public struct BitPerfectSettings: Sendable, Equatable {
     public let sessionCategory: String
     
     /// Additional configuration options
-    public let additionalSettings: [String: Any]
+    public let additionalSettings: [String: String]
     
     public init(
         sampleRate: Int = 44100,
@@ -523,7 +523,7 @@ public struct BitPerfectSettings: Sendable, Equatable {
         useExclusiveMode: Bool = false,
         bypassSystemVolume: Bool = false,
         sessionCategory: String = "playback",
-        additionalSettings: [String: Any] = [:]
+        additionalSettings: [String: String] = [:]
     ) {
         self.sampleRate = sampleRate
         self.bitDepth = bitDepth
@@ -545,7 +545,8 @@ public struct BitPerfectSettings: Sendable, Equatable {
 }
 
 /// Performance impact assessment of bit-perfect configuration
-public struct PerformanceImpact: Sendable, Equatable {
+// PerformanceImpact is defined in AudioEngineType.swift
+public struct PerformanceMetrics: Sendable, Equatable {
     /// CPU usage impact (0.0 to 1.0)
     public let cpuImpact: Double
     
@@ -576,27 +577,4 @@ public struct PerformanceImpact: Sendable, Equatable {
     }
 }
 
-/// Performance rating categories
-public enum PerformanceRating: String, Sendable {
-    case excellent = "excellent"
-    case good = "good"
-    case acceptable = "acceptable"
-    case poor = "poor"
-    case unacceptable = "unacceptable"
-    
-    /// User-friendly description
-    public var description: String {
-        switch self {
-        case .excellent:
-            return "Excellent performance with minimal impact"
-        case .good:
-            return "Good performance with low impact"
-        case .acceptable:
-            return "Acceptable performance with moderate impact"
-        case .poor:
-            return "Poor performance with high impact"
-        case .unacceptable:
-            return "Unacceptable performance, not recommended"
-        }
-    }
-} 
+// PerformanceRating is defined in PlaybackDiagnostics.swift 

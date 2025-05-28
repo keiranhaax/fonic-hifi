@@ -75,10 +75,10 @@ public enum QueueShuffleMode: String, CaseIterable, Sendable {
     ///   - currentIndex: Current playing index (to preserve if needed)
     ///   - tracks: Track array for smart shuffle logic (optional)
     /// - Returns: Array of indices representing the shuffle order
-    public func generateShuffleSequence(
+    public func generateShuffleSequence<T: TrackProtocol>(
         trackCount: Int,
         currentIndex: Int? = nil,
-        tracks: [Track]? = nil
+        tracks: [T]? = nil
     ) -> [Int] {
         guard trackCount > 0 else { return [] }
         
@@ -119,7 +119,7 @@ public enum QueueShuffleMode: String, CaseIterable, Sendable {
     }
     
     /// Generate a smart shuffle that avoids artist/album clustering
-    private func generateSmartShuffle(tracks: [Track], currentIndex: Int?) -> [Int] {
+    private func generateSmartShuffle<T: TrackProtocol>(tracks: [T], currentIndex: Int?) -> [Int] {
         let trackCount = tracks.count
         guard trackCount > 1 else { return Array(0..<trackCount) }
         
@@ -159,10 +159,10 @@ public enum QueueShuffleMode: String, CaseIterable, Sendable {
     }
     
     /// Check if a track is a good choice to play next in smart shuffle
-    private func isGoodNextChoice(
+    private func isGoodNextChoice<T: TrackProtocol>(
         candidateIndex: Int,
         after lastIndex: Int?,
-        tracks: [Track],
+        tracks: [T],
         remaining: Set<Int>
     ) -> Bool {
         guard let lastIndex = lastIndex else { return true }
@@ -171,7 +171,7 @@ public enum QueueShuffleMode: String, CaseIterable, Sendable {
         let candidateTrack = tracks[candidateIndex]
         
         // Avoid same artist consecutively
-        if lastTrack.artist == candidateTrack.artist && lastTrack.artist != nil {
+        if lastTrack.artist == candidateTrack.artist && !lastTrack.artist.isEmpty {
             // Allow if it's the only artist left
             let otherArtistExists = remaining.contains { index in
                 tracks[index].artist != candidateTrack.artist
@@ -180,7 +180,7 @@ public enum QueueShuffleMode: String, CaseIterable, Sendable {
         }
         
         // Avoid same album consecutively
-        if lastTrack.album == candidateTrack.album && lastTrack.album != nil {
+        if lastTrack.album == candidateTrack.album && !lastTrack.album.isEmpty {
             // Allow if it's the only album left
             let otherAlbumExists = remaining.contains { index in
                 tracks[index].album != candidateTrack.album

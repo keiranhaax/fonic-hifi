@@ -145,46 +145,7 @@ public protocol AudioMonitoringService: AnyObject, Sendable {
 
 // MARK: - Supporting Types
 
-/// Overall health status of audio playback
-public enum PlaybackHealthStatus: String, Sendable, CaseIterable {
-    case excellent = "excellent"
-    case good = "good"
-    case fair = "fair"
-    case poor = "poor"
-    case critical = "critical"
-    
-    /// Human-readable description
-    public var description: String {
-        switch self {
-        case .excellent:
-            return "Excellent - Optimal performance"
-        case .good:
-            return "Good - Minor issues detected"
-        case .fair:
-            return "Fair - Some performance concerns"
-        case .poor:
-            return "Poor - Performance issues affecting quality"
-        case .critical:
-            return "Critical - Severe performance problems"
-        }
-    }
-    
-    /// Color indicator for UI display
-    public var colorIndicator: String {
-        switch self {
-        case .excellent:
-            return "green"
-        case .good:
-            return "lightGreen"
-        case .fair:
-            return "yellow"
-        case .poor:
-            return "orange"
-        case .critical:
-            return "red"
-        }
-    }
-}
+// PlaybackHealthStatus is defined in AudioMetrics.swift
 
 /// Critical playback alerts
 public struct PlaybackAlert: Sendable, Equatable {
@@ -639,36 +600,7 @@ public struct InterruptionStatistics: Sendable {
     }
 }
 
-/// Types of audio interruptions
-public enum InterruptionType: String, Sendable, CaseIterable {
-    case phoneCall = "phone_call"
-    case notification = "notification"
-    case siri = "siri"
-    case alarm = "alarm"
-    case otherApp = "other_app"
-    case systemAlert = "system_alert"
-    case unknown = "unknown"
-    
-    /// User-friendly description
-    public var description: String {
-        switch self {
-        case .phoneCall:
-            return "Phone Call"
-        case .notification:
-            return "Notification"
-        case .siri:
-            return "Siri"
-        case .alarm:
-            return "Alarm"
-        case .otherApp:
-            return "Other App"
-        case .systemAlert:
-            return "System Alert"
-        case .unknown:
-            return "Unknown"
-        }
-    }
-}
+// InterruptionType is defined in AudioSessionInterruption.swift
 
 /// Detailed performance profile from profiling session
 public struct PerformanceProfile: Sendable {

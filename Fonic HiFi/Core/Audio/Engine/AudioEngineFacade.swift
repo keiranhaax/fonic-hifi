@@ -15,7 +15,7 @@ import AVFoundation
 /// validation, and monitoring
 @MainActor
 @Observable
-public final class AudioEngineFacade: Sendable {
+public final class AudioEngineFacade: ObservableObject, Sendable {
     
     // MARK: - Core Services
     
@@ -56,7 +56,7 @@ public final class AudioEngineFacade: Sendable {
     }
     
     /// Current track being played
-    public var currentTrack: Track? {
+    public var currentTrack: AudioTrack? {
         queueManager.currentTrack
     }
     
@@ -74,7 +74,7 @@ public final class AudioEngineFacade: Sendable {
     public private(set) var engineConfiguration: AudioEngineConfiguration
     
     /// Performance mode setting
-    public var performanceMode: AudioEngineConfiguration.PerformanceMode {
+    public var performanceMode: PerformanceMode {
         get { engineConfiguration.performanceMode }
         set {
             engineConfiguration = engineConfiguration.with(performanceMode: newValue)
@@ -125,7 +125,7 @@ public final class AudioEngineFacade: Sendable {
         
         do {
             // 1. Initialize audio session
-            try await sessionManager.configureSession(for: engineConfiguration)
+            try await sessionManager.configureAudioSession()
             logger.debug("Audio session configured")
             
             // 2. Setup service integrations
@@ -144,7 +144,7 @@ public final class AudioEngineFacade: Sendable {
         } catch {
             logger.error("AudioEngineFacade initialization failed: \(error.localizedDescription)")
             isReady = false
-            throw AudioError.engineInitializationFailed
+            throw AudioError.engineInitializationFailed(reason: error.localizedDescription)
         }
     }
     
@@ -160,7 +160,7 @@ public final class AudioEngineFacade: Sendable {
         
         // Cleanup engine
         if let engine = currentEngine {
-            await monitor.detachFromEngine(engine)
+            await monitor.detachFromEngine()
             currentEngine = nil
         }
         
@@ -179,14 +179,14 @@ public final class AudioEngineFacade: Sendable {
     /// - Parameter track: The track to play
     public func play(track: Track) async throws {
         guard isReady else {
-            throw AudioError.engineNotReady
+            throw AudioError.engineInitializationFailed(reason: "Engine not ready")
         }
         
         logger.info("Playing track: \(track.title)")
         
         do {
             // 1. Detect format
-            let formatInfo = try await formatDetectionManager.detectFormat(from: track.url)
+            let formatInfo = try await formatDetectionManager.detectFormat(at: track.url)
             logger.debug("Format detected: \(formatInfo.format.displayName)")
             
             // 2. Validate bit-perfect capability if needed
@@ -206,12 +206,12 @@ public final class AudioEngineFacade: Sendable {
             
             // 4. Update queue if this is a new track
             if queueManager.currentTrack?.id != track.id {
-                queueManager.setCurrentTrack(track)
+                queueManager.setCurrentTrack(track.toAudioTrack())
             }
             
             // 5. Load and play
             guard let engine = currentEngine else {
-                throw AudioError.engineNotReady
+                throw AudioError.engineInitializationFailed(reason: "Engine not ready")
             }
             
             stateManager.updateState(.loading())
@@ -225,7 +225,7 @@ public final class AudioEngineFacade: Sendable {
             
         } catch {
             logger.error("Failed to play track: \(error.localizedDescription)")
-            stateManager.updateState(.error(error as? AudioError ?? .playbackFailed, lastKnownTime: nil))
+            stateManager.updateState(.error(error as? AudioError ?? .playbackFailed(reason: error.localizedDescription), lastKnownTime: nil))
             throw error
         }
     }
@@ -233,11 +233,11 @@ public final class AudioEngineFacade: Sendable {
     /// Resume playback from current position
     public func resume() async throws {
         guard isReady else {
-            throw AudioError.engineNotReady
+            throw AudioError.engineInitializationFailed(reason: "Engine not ready")
         }
         
         guard let engine = currentEngine else {
-            throw AudioError.engineNotReady
+            throw AudioError.engineInitializationFailed(reason: "Engine not ready")
         }
         
         logger.info("Resuming playback")
@@ -256,7 +256,7 @@ public final class AudioEngineFacade: Sendable {
             
         } catch {
             logger.error("Failed to resume playback: \(error.localizedDescription)")
-            stateManager.updateState(.error(error as? AudioError ?? .playbackFailed, lastKnownTime: nil))
+            stateManager.updateState(.error(error as? AudioError ?? .playbackFailed(reason: error.localizedDescription), lastKnownTime: nil))
             throw error
         }
     }
@@ -295,11 +295,11 @@ public final class AudioEngineFacade: Sendable {
     /// - Parameter time: Target time in seconds
     public func seek(to time: TimeInterval) async throws {
         guard isReady, let engine = currentEngine else {
-            throw AudioError.engineNotReady
+            throw AudioError.engineInitializationFailed(reason: "Engine not ready")
         }
         
         guard currentState.canSeek else {
-            throw AudioError.invalidOperation
+            throw AudioError.playbackFailed(reason: "Cannot seek in current state")
         }
         
         logger.info("Seeking to \(time)s")
@@ -335,52 +335,61 @@ public final class AudioEngineFacade: Sendable {
     
     /// Play the next track in the queue
     public func playNext() async throws {
-        guard let nextTrack = queueManager.getNextTrack() else {
+        guard let nextTrack = queueManager.next() else {
             logger.info("No next track available")
             await stop()
             return
         }
         
-        queueManager.moveToNext()
-        try await play(track: nextTrack)
+        queueManager.setCurrentTrack(nextTrack)
+        
+        // Convert AudioTrack back to Track for engine compatibility
+        // For now, we'll create a temporary Track from AudioTrack data
+        // In a real implementation, you'd want to maintain a mapping or store full Track objects
+        let track = createTrackFromAudioTrack(nextTrack)
+        try await play(track: track)
     }
     
     /// Play the previous track in the queue
     public func playPrevious() async throws {
-        guard let previousTrack = queueManager.getPreviousTrack() else {
+        guard let previousTrack = queueManager.previous() else {
             logger.info("No previous track available")
             return
         }
         
-        queueManager.moveToPrevious()
-        try await play(track: previousTrack)
+        queueManager.setCurrentTrack(previousTrack)
+        
+        // Convert AudioTrack back to Track for engine compatibility
+        let track = createTrackFromAudioTrack(previousTrack)
+        try await play(track: track)
     }
     
     /// Add tracks to the queue
     /// - Parameter tracks: Tracks to add
     public func enqueue(_ tracks: [Track]) {
-        queueManager.enqueue(tracks)
+        let audioTracks = tracks.map { $0.toAudioTrack() }
+        queueManager.enqueue(tracks: audioTracks)
         logger.info("Enqueued \(tracks.count) tracks")
     }
     
     /// Add a track to play next
     /// - Parameter track: Track to play next
     public func enqueueNext(_ track: Track) {
-        queueManager.enqueueNext(track)
+        queueManager.enqueueNext(tracks: [track.toAudioTrack()])
         logger.info("Enqueued next: \(track.title)")
     }
     
     /// Set shuffle mode
     /// - Parameter mode: Shuffle mode to set
     public func setShuffleMode(_ mode: QueueShuffleMode) {
-        queueManager.setShuffleMode(mode)
+        queueManager.shuffleMode = mode
         logger.info("Shuffle mode set to: \(mode)")
     }
     
     /// Set repeat mode
     /// - Parameter mode: Repeat mode to set
     public func setRepeatMode(_ mode: QueueRepeatMode) {
-        queueManager.setRepeatMode(mode)
+        queueManager.repeatMode = mode
         logger.info("Repeat mode set to: \(mode)")
     }
     
@@ -393,7 +402,7 @@ public final class AudioEngineFacade: Sendable {
         }
         
         do {
-            let formatInfo = try await formatDetectionManager.detectFormat(from: currentTrack.url)
+            let formatInfo = try await formatDetectionManager.detectFormat(at: currentTrack.url)
             return await validator.validateBitPerfectPlayback(
                 sourceFormat: formatInfo,
                 outputDevice: nil
@@ -430,8 +439,8 @@ public final class AudioEngineFacade: Sendable {
             await monitor.attachToEngine(engine)
         }
         
-        // 4. Session interruption handling
-        setupSessionInterruptionHandling()
+        // 4. Session delegate for interruption handling
+        sessionManager.delegate = self
         
         logger.debug("Service integrations complete")
     }
@@ -483,27 +492,30 @@ public final class AudioEngineFacade: Sendable {
         .store(in: &cancellables)
     }
     
-    private func setupSessionInterruptionHandling() {
-        sessionManager.interruptionPublisher
-            .sink { [weak self] interruption in
-                Task { @MainActor in
-                    await self?.handleSessionInterruption(interruption)
-                }
-            }
-            .store(in: &cancellables)
-    }
-    
-    private func handleSessionInterruption(_ interruption: AudioSessionInterruption) async {
-        switch interruption.type {
+    private func handleSessionInterruption(_ interruption: AudioInterruptionType) async {
+        switch interruption {
         case .began:
             logger.info("Audio session interrupted - pausing playback")
             await pause()
-        case .ended:
-            if interruption.shouldResume {
+        case .ended(let shouldResume):
+            if shouldResume {
                 logger.info("Audio session interruption ended - resuming playback")
                 try? await resume()
             }
         }
+    }
+    
+    /// Helper method to create a Track from AudioTrack data
+    /// This is a temporary solution for type conversion compatibility
+    private func createTrackFromAudioTrack(_ audioTrack: AudioTrack) -> Track {
+        return Track(
+            url: audioTrack.url,
+            title: audioTrack.title,
+            artist: audioTrack.artist,
+            album: audioTrack.album,
+            audioFormat: audioTrack.audioFormat,
+            duration: audioTrack.duration
+        )
     }
 }
 
@@ -517,18 +529,46 @@ private class QueueToStateBridge: AudioQueueDelegate {
         self.stateManager = stateManager
     }
     
-    func audioQueue(_ queue: AudioQueueManager, didChangeCurrentTrack track: Track?) {
+    func audioQueue(_ queue: AudioQueue, didChangeCurrentTrack track: AudioTrack?, at index: Int?) {
         // Queue changed, but we don't automatically change state here
         // The facade will handle this through explicit play commands
     }
     
-    func audioQueue(_ queue: AudioQueueManager, didUpdateState state: QueueState) {
-        // Queue state updated - no immediate action needed
-    }
-    
-    func audioQueue(_ queue: AudioQueueManager, didEncounterError error: AudioError) {
+    func audioQueue(_ queue: AudioQueue, didEncounterError error: AudioError) {
         // Forward queue errors to state manager
         stateManager.handleEngineError(error)
+    }
+}
+
+// MARK: - AudioSessionDelegate
+
+extension AudioEngineFacade: AudioSessionDelegate {
+    public func audioSessionDidInterrupt(_ interruption: AudioInterruptionType) async {
+        await handleSessionInterruption(interruption)
+    }
+    
+    public func audioSessionRouteDidChange(_ change: AudioRouteChange) async {
+        logger.info("Audio route changed: \(change.currentRoute) (reason: \(change.reason))")
+        // Handle route changes if needed
+    }
+    
+    public func audioSessionDidReceiveCommand(_ command: RemoteCommand) async {
+        switch command {
+        case .play:
+            try? await resume()
+        case .pause:
+            await pause()
+        case .stop:
+            await stop()
+        case .nextTrack:
+            try? await playNext()
+        case .previousTrack:
+            try? await playPrevious()
+        case .seek(let time):
+            try? await seek(to: time)
+        default:
+            logger.debug("Unhandled remote command: \(command)")
+        }
     }
 }
 

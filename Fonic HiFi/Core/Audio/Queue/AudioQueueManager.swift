@@ -16,7 +16,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
     // MARK: - Published Properties
     
     /// All tracks in the queue
-    public private(set) var tracks: [Track] = []
+    public private(set) var tracks: [AudioTrack] = []
     
     /// Current playing index
     public private(set) var currentIndex: Int?
@@ -42,12 +42,12 @@ public final class AudioQueueManager: AudioQueue, Sendable {
     }
     
     /// Playback history
-    public private(set) var history: [Track] = []
+    public private(set) var history: [AudioTrack] = []
     
     // MARK: - Private Properties
     
     /// Original order of tracks (before shuffle)
-    private var originalOrder: [Track] = []
+    private var originalOrder: [AudioTrack] = []
     
     /// Current shuffle sequence
     private var shuffleSequence: [Int] = []
@@ -68,7 +68,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
     // MARK: - Computed Properties
     
     /// Current track being played
-    public var currentTrack: Track? {
+    public var currentTrack: AudioTrack? {
         guard let index = currentIndex,
               index >= 0 && index < tracks.count else { return nil }
         return tracks[index]
@@ -111,7 +111,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
     
     // MARK: - Queue Operations
     
-    public func enqueue(tracks newTracks: [Track]) {
+    public func enqueue(tracks newTracks: [AudioTrack]) {
         guard !newTracks.isEmpty else { return }
         
         tracks.append(contentsOf: newTracks)
@@ -126,19 +126,19 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         notifyTracksChanged()
     }
     
-    public func enqueueNext(tracks newTracks: [Track]) {
+    public func enqueueNext(tracks newTracks: [AudioTrack]) {
         guard !newTracks.isEmpty else { return }
         
         let insertIndex = currentIndex.map { $0 + 1 } ?? 0
         insert(tracks: newTracks, at: insertIndex)
     }
     
-    public func enqueueLater(tracks newTracks: [Track]) {
+    public func enqueueLater(tracks newTracks: [AudioTrack]) {
         enqueue(tracks: newTracks)
     }
     
     @discardableResult
-    public func remove(at index: Int) -> Track? {
+    public func remove(at index: Int) -> AudioTrack? {
         guard index >= 0 && index < tracks.count else { return nil }
         
         let removedTrack = tracks.remove(at: index)
@@ -177,7 +177,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
     }
     
     @discardableResult
-    public func remove(track: Track) -> Bool {
+    public func remove(track: AudioTrack) -> Bool {
         guard let index = tracks.firstIndex(where: { $0.id == track.id }) else { return false }
         remove(at: index)
         return true
@@ -231,7 +231,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
     
     // MARK: - Navigation
     
-    public func next() -> Track? {
+    public func next() -> AudioTrack? {
         let nextIndex = calculateNextIndex()
         guard let index = nextIndex else { return nil }
         
@@ -244,7 +244,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         return currentTrack
     }
     
-    public func previous() -> Track? {
+    public func previous() -> AudioTrack? {
         let previousIndex = calculatePreviousIndex()
         guard let index = previousIndex else { return nil }
         
@@ -267,7 +267,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
     }
     
     @discardableResult
-    public func setCurrentTrack(_ track: Track?) -> Bool {
+    public func setCurrentTrack(_ track: AudioTrack?) -> Bool {
         guard let track = track else {
             return setCurrentIndex(nil)
         }
@@ -281,7 +281,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
     
     // MARK: - Queue Manipulation
     
-    public func replaceQueue(with newTracks: [Track], startIndex: Int?) {
+    public func replaceQueue(with newTracks: [AudioTrack], startIndex: Int?) {
         tracks = newTracks
         originalOrder = newTracks
         
@@ -296,7 +296,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         notifyCurrentTrackChanged()
     }
     
-    public func insert(tracks newTracks: [Track], at index: Int) {
+    public func insert(tracks newTracks: [AudioTrack], at index: Int) {
         guard !newTracks.isEmpty else { return }
         guard index >= 0 && index <= tracks.count else { return }
         
@@ -465,7 +465,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         navigationStateDirty = true
     }
     
-    private func addToHistory(track: Track) {
+    private func addToHistory(track: AudioTrack) {
         // Remove if already in history to avoid duplicates
         history.removeAll { $0.id == track.id }
         
@@ -538,5 +538,49 @@ extension AudioQueueManager {
         }
         
         return issues
+    }
+    
+    // MARK: - Navigation Methods
+    
+    /// Get the next track in the queue
+    /// - Returns: The next track, or nil if no next track
+    public func getNextTrack() -> AudioTrack? {
+        guard hasNext else { return nil }
+        guard let currentIndex = currentIndex else { return nil }
+        
+        if repeatMode == .one {
+            return currentTrack
+        }
+        
+        let nextIndex = currentIndex + 1
+        if nextIndex < tracks.count {
+            return tracks[nextIndex]
+        } else if repeatMode == .all && !tracks.isEmpty {
+            return tracks[0]
+        }
+        
+        return nil
+    }
+    
+    /// Move to the next track in the queue
+    /// - Returns: True if moved successfully, false otherwise
+    public func moveToNext() -> Bool {
+        guard hasNext else { return false }
+        return next() != nil
+    }
+    
+    /// Get the previous track in the queue
+    /// - Returns: The previous track, or nil if no previous track
+    public func getPreviousTrack() -> AudioTrack? {
+        guard hasPrevious else { return nil }
+        guard let currentIndex = currentIndex, currentIndex > 0 else { return nil }
+        return tracks[currentIndex - 1]
+    }
+    
+    /// Move to the previous track in the queue
+    /// - Returns: True if moved successfully, false otherwise
+    public func moveToPrevious() -> Bool {
+        guard hasPrevious else { return false }
+        return previous() != nil
     }
 } 

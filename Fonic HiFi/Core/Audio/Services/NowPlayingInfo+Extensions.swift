@@ -87,12 +87,8 @@ extension Track {
         var builder = NowPlayingInfoBuilder()
         
         builder.setTitle(title)
-        if let artist = artist {
-            builder.setArtist(artist)
-        }
-        if let album = album {
-            builder.setAlbum(album)
-        }
+        builder.setArtist(artist)
+        builder.setAlbum(album)
         builder.setDuration(duration)
         builder.setElapsedTime(currentTime)
         builder.setPlaybackRate(playbackRate)

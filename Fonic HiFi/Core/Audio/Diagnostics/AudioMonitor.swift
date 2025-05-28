@@ -56,9 +56,9 @@ public final class AudioMonitor: ObservableObject, AudioMonitoringService {
     // MARK: - Performance Tracking
     
     private var performanceCounters: [String: Double] = [:]
-    private var systemMetricsCollector: SystemMetricsCollector
-    private var thermalStateMonitor: ThermalStateMonitor
-    private var interruptionStatsTracker: InterruptionStatsTracker
+    private let systemMetricsCollector: SystemMetricsCollector
+    private let thermalStateMonitor: ThermalStateMonitor
+    private let interruptionStatsTracker: InterruptionStatsTracker
     
     // MARK: - Profiling Data
     
@@ -82,9 +82,7 @@ public final class AudioMonitor: ObservableObject, AudioMonitoringService {
     }
     
     deinit {
-        Task { @MainActor in
-            await stopMonitoring()
-        }
+        // Cleanup is handled by ARC
     }
     
     // MARK: - Monitoring Control
@@ -496,8 +494,35 @@ private extension AudioMonitor {
             return EngineMetrics.default
         }
         
-        // Collect metrics from the current engine
-        return await engine.collectMetrics()
+        // Get metrics from the current engine
+        let audioMetrics = await engine.getMetrics()
+        return EngineMetrics(
+            bufferUnderruns: audioMetrics.bufferUnderruns,
+            decodingLatency: audioMetrics.decodingLatency,
+            bufferFillLevel: audioMetrics.bufferFillLevel,
+            droppedFrames: audioMetrics.droppedFrames,
+            renderLatency: audioMetrics.renderLatency,
+            currentBitrate: audioMetrics.currentBitrate,
+            glitchCount: audioMetrics.glitchCount,
+            sampleRate: audioMetrics.sampleRate,
+            bitDepth: audioMetrics.bitDepth,
+            channelCount: audioMetrics.channelCount,
+            engineType: audioMetrics.engineType,
+            audioFormat: audioMetrics.audioFormat,
+            isBitPerfect: audioMetrics.isBitPerfect,
+            bufferSize: audioMetrics.bufferSize,
+            bufferResets: audioMetrics.bufferResets,
+            threadUtilization: audioMetrics.threadUtilization,
+            estimatedSNR: audioMetrics.estimatedSNR,
+            dynamicRange: audioMetrics.dynamicRange,
+            frequencyResponseScore: audioMetrics.frequencyResponseScore,
+            jitter: audioMetrics.jitter,
+            clockDrift: audioMetrics.clockDrift,
+            recoverableErrors: audioMetrics.recoverableErrors,
+            criticalErrors: audioMetrics.criticalErrors,
+            recoverySuccessRate: audioMetrics.recoverySuccessRate,
+            lastRecoveryTime: audioMetrics.lastRecoveryTime
+        )
     }
     
     func checkForAlerts(metrics: AudioMetrics) async {
@@ -654,11 +679,11 @@ private extension AudioMonitor {
         let interruptionType: InterruptionType
         switch type {
         case .began:
-            interruptionType = .unknown
+            interruptionType = .began
         case .ended:
-            interruptionType = .unknown
+            interruptionType = .ended
         @unknown default:
-            interruptionType = .unknown
+            interruptionType = .began
         }
         
         await interruptionStatsTracker.recordInterruption(type: interruptionType)
@@ -949,7 +974,14 @@ private struct EngineMetrics {
             isBitPerfect: false,
             bufferSize: 512,
             bufferResets: 0,
-            threadUtilization: ThreadUtilization(),
+            threadUtilization: ThreadUtilization(
+                audioThreadCPU: 0.0,
+                decoderThreadCPU: 0.0,
+                ioThreadCPU: 0.0,
+                mainThreadCPU: 0.0,
+                activeThreadCount: 1,
+                threadPriorities: [:]
+            ),
             estimatedSNR: nil,
             dynamicRange: nil,
             frequencyResponseScore: nil,
@@ -1020,6 +1052,7 @@ private class ProfilingData {
 }
 
 /// System metrics collector
+@MainActor
 private class SystemMetricsCollector {
     func startMonitoring() async {
         // Implementation would start system-level monitoring
@@ -1058,6 +1091,7 @@ private class SystemMetricsCollector {
 }
 
 /// Thermal state monitor
+@MainActor
 private class ThermalStateMonitor {
     func startMonitoring() async {
         // Implementation would start thermal monitoring
@@ -1074,6 +1108,7 @@ private class ThermalStateMonitor {
 }
 
 /// Interruption statistics tracker
+@MainActor
 private class InterruptionStatsTracker {
     private var interruptions: [InterruptionRecord] = []
     

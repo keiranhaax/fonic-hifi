@@ -73,6 +73,9 @@ public protocol AudioEngineService: Sendable {
     /// Get current audio metrics for monitoring
     /// - Returns: Current performance metrics
     func getMetrics() async -> AudioMetrics
+    
+    /// Collect and store audio metrics for analysis
+    func collectMetrics() async
 }
 
 /// Extension providing default implementations
@@ -85,6 +88,11 @@ public extension AudioEngineService {
     
     /// Default implementation does nothing for prepareNext
     func prepareNext(url: URL) async {
+        // Optional implementation
+    }
+    
+    /// Default implementation does nothing for collectMetrics
+    func collectMetrics() async {
         // Optional implementation
     }
 }

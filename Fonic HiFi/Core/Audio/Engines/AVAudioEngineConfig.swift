@@ -161,6 +161,8 @@ public struct AVAudioEngineConfig {
             return true
         case .flac, .ape, .dsd:
             return false
+        case .unknown:
+            return false
         }
     }
     

@@ -112,7 +112,7 @@ public protocol BitPerfectValidatorService: AnyObject, Sendable {
 // MARK: - Supporting Types
 
 /// Detailed device capabilities for bit-perfect validation
-public struct DeviceCapabilities: Sendable {
+public struct DeviceCapabilities: Sendable, Equatable {
     /// Supported sample rates in Hz
     public let supportedSampleRates: [Int]
     
@@ -217,7 +217,7 @@ public struct AudioPathAnalysis: Sendable {
 }
 
 /// Detected audio processing stage in the signal path
-public struct AudioProcessingStage: Sendable {
+public struct AudioProcessingStage: Sendable, Equatable {
     /// Type of processing
     public let type: ProcessingType
     
@@ -292,7 +292,7 @@ public enum LimitationSeverity: String, Sendable {
 /// Recommendations for optimal bit-perfect configuration
 public struct BitPerfectRecommendations: Sendable {
     /// Recommended audio session settings
-    public let sessionSettings: [String: Any]
+    public let sessionSettings: [String: String]
     
     /// Recommended buffer size
     public let bufferSize: Int
@@ -307,7 +307,7 @@ public struct BitPerfectRecommendations: Sendable {
     public let expectedImprovement: String
     
     public init(
-        sessionSettings: [String: Any],
+        sessionSettings: [String: String],
         bufferSize: Int,
         recommendedDevice: AudioDevice?,
         requiredChanges: [ConfigurationChange],
@@ -342,7 +342,7 @@ public struct AudioSessionAnalysis: Sendable {
     public let isOptimal: Bool
     
     /// Current session settings
-    public let currentSettings: [String: Any]
+    public let currentSettings: [String: String]
     
     /// Identified issues
     public let issues: [SessionIssue]
@@ -352,7 +352,7 @@ public struct AudioSessionAnalysis: Sendable {
     
     public init(
         isOptimal: Bool,
-        currentSettings: [String: Any],
+        currentSettings: [String: String],
         issues: [SessionIssue],
         recommendations: [SessionRecommendation]
     ) {
@@ -439,7 +439,7 @@ public enum QualityImpact: String, Sendable {
 }
 
 /// Alternative configuration to avoid conversion
-public struct AlternativeConfiguration: Sendable {
+public struct AlternativeConfiguration: Sendable, Equatable {
     public let description: String
     public let outputFormat: AudioOutputFormat
     public let benefits: [String]

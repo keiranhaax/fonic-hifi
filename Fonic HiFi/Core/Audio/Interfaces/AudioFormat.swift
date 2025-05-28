@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents all audio formats supported by Fonic HiFi
-public enum AudioFormat: String, CaseIterable, Sendable {
+public enum AudioFormat: String, CaseIterable, Sendable, Codable {
     // MARK: - Lossy Formats
     case mp3 = "mp3"
     case aac = "aac"
@@ -22,6 +22,9 @@ public enum AudioFormat: String, CaseIterable, Sendable {
     // MARK: - High-Resolution Formats
     case ape = "ape"
     case dsd = "dsd"
+    
+    // MARK: - Unknown Format
+    case unknown = "unknown"
     
     /// File extension for this format
     public var fileExtension: String {
@@ -39,6 +42,7 @@ public enum AudioFormat: String, CaseIterable, Sendable {
         case .aiff: return "AIFF"
         case .ape: return "Monkey's Audio"
         case .dsd: return "DSD"
+        case .unknown: return "Unknown"
         }
     }
     
@@ -83,6 +87,8 @@ public enum AudioFormat: String, CaseIterable, Sendable {
             return 24
         case .dsd:
             return 1 // DSD uses 1-bit samples
+        case .unknown:
+            return 16 // Default to 16-bit
         }
     }
     

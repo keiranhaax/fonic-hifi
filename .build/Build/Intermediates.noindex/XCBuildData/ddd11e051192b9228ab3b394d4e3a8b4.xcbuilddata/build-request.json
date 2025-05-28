@@ -1,0 +1,78 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildAndRun"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "3fc01b9f903446b0cc095a94bfc6cd68aca09e13b5554608887a3e9a4195ff31"
+    },
+    {
+      "guid" : "3fc01b9f903446b0cc095a94bfc6cd688c7dc0950ffa13ae9c0a902fd678676f"
+    },
+    {
+      "guid" : "3fc01b9f903446b0cc095a94bfc6cd68ca066820cf4fd0c7a3897d9a146a32ca"
+    }
+  ],
+  "containerPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "arm64",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : false,
+      "platform" : "iphonesimulator",
+      "sdk" : "iphonesimulator18.4",
+      "sdkVariant" : "iphonesimulator",
+      "supportedArchitectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "targetArchitecture" : "arm64"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Products",
+      "derivedDataPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build",
+      "indexDataStoreFolderPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ASSETCATALOG_FILTER_FOR_DEVICE_MODEL" : "iPhone17,3",
+          "ASSETCATALOG_FILTER_FOR_DEVICE_OS_VERSION" : "18.4",
+          "ASSETCATALOG_FILTER_FOR_THINNING_DEVICE_CONFIGURATION" : "iPhone17,3",
+          "BUILD_ACTIVE_RESOURCES_ONLY" : "YES",
+          "CLANG_COVERAGE_MAPPING" : "YES",
+          "CLANG_PROFILE_DATA_DIRECTORY" : "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/.build/Build/ProfileData",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES",
+          "TARGET_DEVICE_IDENTIFIER" : "ED858C9E-AF67-468D-A8C4-F1E41385DB4D",
+          "TARGET_DEVICE_MODEL" : "iPhone17,3",
+          "TARGET_DEVICE_OS_VERSION" : "18.4",
+          "TARGET_DEVICE_PLATFORM_NAME" : "iphonesimulator"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "test",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

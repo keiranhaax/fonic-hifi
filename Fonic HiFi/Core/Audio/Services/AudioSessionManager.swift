@@ -36,7 +36,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
     
     // MARK: - Initialization
     
-    private override init() {
+    public override init() {
         super.init()
     }
     
@@ -233,10 +233,10 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
             let device = AudioDevice(
                 id: output.uid,
                 name: output.portName,
-                supportedSampleRates: [], // AVAudioSession doesn't expose this directly
-                maxBitDepth: 24, // Assume 24-bit for most iOS devices
-                isDefault: outputs.first?.uid == output.uid,
-                type: audioDeviceType(from: output.portType)
+                type: audioDeviceType(from: output.portType),
+                isOutput: true,
+                supportedSampleRates: [44100, 48000], // Common iOS sample rates
+                supportedBitDepths: [16, 24] // Assume 16 and 24-bit for iOS devices
             )
             devices.append(device)
         }
@@ -248,10 +248,10 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
                     let device = AudioDevice(
                         id: input.uid,
                         name: input.portName,
-                        supportedSampleRates: [],
-                        maxBitDepth: 24,
-                        isDefault: false,
-                        type: audioDeviceType(from: input.portType)
+                        type: audioDeviceType(from: input.portType),
+                        isOutput: false,
+                        supportedSampleRates: [44100, 48000],
+                        supportedBitDepths: [16, 24]
                     )
                     devices.append(device)
                 }
@@ -298,7 +298,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
     
     @objc private func handleInterruptionNotification(_ notification: Notification) {
         guard let info = notification.userInfo,
-              let typeValue = info[AVAudioSession.interruptionTypeKey] as? UInt,
+              let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
             return
         }
@@ -309,7 +309,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
                 await handleInterruption(.began)
                 
             case .ended:
-                let shouldResume = (info[AVAudioSession.interruptionOptionKey] as? UInt) == AVAudioSession.InterruptionOptions.shouldResume.rawValue
+                let shouldResume = (info[AVAudioSessionInterruptionOptionKey] as? UInt) == AVAudioSession.InterruptionOptions.shouldResume.rawValue
                 await handleInterruption(.ended(shouldResume: shouldResume))
                 
             @unknown default:
@@ -320,12 +320,12 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
     
     @objc private func handleRouteChangeNotification(_ notification: Notification) {
         guard let info = notification.userInfo,
-              let reasonValue = info[AVAudioSession.routeChangeReasonKey] as? UInt,
+              let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
               let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
             return
         }
         
-        let previousRoute = (info[AVAudioSession.routeChangePreviousRouteKey] as? AVAudioSessionRouteDescription)?
+        let previousRoute = (info[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription)?
             .outputs.first?.portName
         
         let currentRoute = session.currentRoute.outputs.first?.portName ?? "Unknown"

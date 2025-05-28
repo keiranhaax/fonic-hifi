@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import AVFoundation
+@preconcurrency import AVFoundation
 
 /// Concrete implementation of FormatDetectionService using AVAsset
 @MainActor
@@ -28,7 +28,7 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
     
     // MARK: - Initialization
     
-    private init() {
+    public init() {
         registerDefaultAdapters()
     }
     
@@ -77,6 +77,8 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
             return true // AVAsset supports these
         case .flac, .ape, .dsd:
             return findAdapter(for: format) != nil
+        case .unknown:
+            return false
         }
     }
     
@@ -151,6 +153,9 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
                 supportsChapters: false,
                 requiresSpecializedDecoder: true
             )
+            
+        case .unknown:
+            return nil
         }
     }
     
@@ -210,13 +215,14 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
             let bitrate = try? await calculateBitrate(from: audioTrack, duration: duration, fileSize: fileSize)
             
             return AudioFileInfo(
+                url: url,
                 format: format,
-                sampleRate: sampleRate,
-                bitDepth: bitDepth,
-                channels: channels,
-                bitrate: bitrate,
                 duration: duration.seconds,
-                fileSize: fileSize
+                bitDepth: UInt16(bitDepth),
+                sampleRate: Double(sampleRate),
+                channels: UInt8(channels),
+                fileSize: UInt64(fileSize),
+                bitrate: bitrate != nil ? UInt64(bitrate!) : nil
             )
             
         } catch {

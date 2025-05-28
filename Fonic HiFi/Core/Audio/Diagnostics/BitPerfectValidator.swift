@@ -66,7 +66,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         
         // Check sample rate compatibility
         let actualSampleRate = Int(audioSession.sampleRate)
-        let sampleRateMatches = sourceFormat.sampleRate == actualSampleRate
+        let sampleRateMatches = Int(sourceFormat.sampleRate) == actualSampleRate
         
         if !sampleRateMatches {
             validationIssues.append(ValidationIssue(
@@ -139,7 +139,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         }
         
         // Check device capabilities
-        let deviceSupportsFormat = deviceCapabilities.supportedSampleRates.contains(sourceFormat.sampleRate) &&
+        let deviceSupportsFormat = deviceCapabilities.supportedSampleRates.contains(Int(sourceFormat.sampleRate)) &&
                                   sourceFormat.bitDepth <= deviceCapabilities.maxBitDepth
         
         if !deviceSupportsFormat {
@@ -197,11 +197,11 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         let result = BitPerfectValidationResult(
             isValid: isValid,
             confidence: confidence,
-            expectedSampleRate: sourceFormat.sampleRate,
+            expectedSampleRate: Int(sourceFormat.sampleRate),
             actualSampleRate: actualSampleRate,
-            expectedBitDepth: sourceFormat.bitDepth,
+            expectedBitDepth: Int(sourceFormat.bitDepth),
             actualBitDepth: estimatedBitDepth,
-            expectedChannels: sourceFormat.channels,
+            expectedChannels: Int(sourceFormat.channels),
             actualChannels: Int(audioSession.currentRoute.outputs.first?.channels?.count ?? 2),
             mismatchReason: mismatchReason,
             validationIssues: validationIssues,
@@ -233,13 +233,14 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
     ) async -> BitPerfectValidationResult {
         
         let syntheticFileInfo = AudioFileInfo(
+            url: URL(fileURLWithPath: "/synthetic"),
             format: format,
-            sampleRate: sampleRate,
-            bitDepth: bitDepth,
-            channels: 2,
-            bitrate: nil,
             duration: 0,
-            fileSize: 0
+            bitDepth: UInt16(bitDepth),
+            sampleRate: Double(sampleRate),
+            channels: 2,
+            fileSize: 0,
+            bitrate: nil
         )
         
         return await validateBitPerfectPlayback(
@@ -261,10 +262,15 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
             AudioDevice(
                 id: output.uid,
                 name: output.portName,
-                supportedSampleRates: [], // Not available from AVAudioSession
-                maxBitDepth: 24, // Estimate for iOS devices
-                isDefault: true,
-                type: audioDeviceType(from: output.portType)
+                type: audioDeviceType(from: output.portType),
+                isOutput: true,
+                isAvailable: true,
+                connectionType: audioConnectionTypeFromPortType(output.portType),
+                supportedSampleRates: [44100, 48000],
+                supportedBitDepths: [16, 24],
+                maxChannels: UInt8(output.channels?.count ?? 2),
+                supportsBitPerfect: false,
+                isDefault: true
             )
         }
         
@@ -306,10 +312,15 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
             let device = AudioDevice(
                 id: output.uid,
                 name: output.portName,
-                supportedSampleRates: getEstimatedSampleRates(for: output),
-                maxBitDepth: getEstimatedMaxBitDepth(for: output),
-                isDefault: outputs.first?.uid == output.uid,
-                type: audioDeviceType(from: output.portType)
+                type: audioDeviceType(from: output.portType),
+                isOutput: true,
+                isAvailable: true,
+                connectionType: audioConnectionTypeFromPortType(output.portType),
+                supportedSampleRates: getEstimatedSampleRates(for: output).map { Double($0) },
+                supportedBitDepths: [16, UInt16(getEstimatedMaxBitDepth(for: output))],
+                maxChannels: UInt8(output.channels?.count ?? 2),
+                supportsBitPerfect: [AudioDeviceType.usbDAC, .usb, .thunderbolt].contains(audioDeviceType(from: output.portType)),
+                isDefault: outputs.first?.uid == output.uid
             )
             
             let capabilities = determineDeviceCapabilities(from: output)
@@ -325,7 +336,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
     
     public func supportseBitPerfectPlayback(device: AudioDevice) async -> Bool {
         // Check if device connection type typically supports bit-perfect
-        let connectionSupported = device.type.supportsBitPerfect
+        let connectionSupported = device.type.supportsHighQuality
         
         // Check if we have specific DAC compatibility info
         if let dacInfo = await getDACCompatibility(for: device.id) {
@@ -369,7 +380,8 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         if let device = currentDevice {
             let deviceType = audioDeviceType(from: device.portType)
             
-            if !deviceType.supportsBitPerfect {
+            let supportsBitPerfect = [AudioDeviceType.usbDAC, .usb, .thunderbolt].contains(deviceType)
+            if !supportsBitPerfect {
                 limitations.append(AudioPathLimitation(
                     type: .deviceLimitation,
                     description: "Output device doesn't support bit-perfect audio",
@@ -421,7 +433,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         
         // Find optimal sample rate
         let optimalSampleRate = deviceCapabilities.supportedSampleRates
-            .filter { $0 >= sourceFormat.sampleRate }
+            .filter { $0 >= Int(sourceFormat.sampleRate) }
             .min() ?? deviceCapabilities.supportedSampleRates.max() ?? 48000
         
         // Find optimal buffer size
@@ -449,9 +461,9 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
             ))
         }
         
-        let sessionSettings: [String: Any] = [
-            "sampleRate": optimalSampleRate,
-            "bufferDuration": 0.005, // 5ms for low latency
+        let sessionSettings: [String: String] = [
+            "sampleRate": String(optimalSampleRate),
+            "bufferDuration": "0.005",
             "category": AVAudioSession.Category.playback.rawValue,
             "mode": AVAudioSession.Mode.default.rawValue
         ]
@@ -504,12 +516,12 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
             ))
         }
         
-        let currentSettings: [String: Any] = [
+        let currentSettings: [String: String] = [
             "category": currentCategory.rawValue,
             "mode": audioSession.mode.rawValue,
-            "sampleRate": currentSampleRate,
-            "outputVolume": audioSession.outputVolume,
-            "isOtherAudioPlaying": audioSession.isOtherAudioPlaying
+            "sampleRate": String(currentSampleRate),
+            "outputVolume": String(audioSession.outputVolume),
+            "isOtherAudioPlaying": String(audioSession.isOtherAudioPlaying)
         ]
         
         return AudioSessionAnalysis(
@@ -530,7 +542,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         var performanceImpact: Double = 0.0
         
         // Check sample rate conversion
-        if !outputCapabilities.supportedSampleRates.contains(sourceFormat.sampleRate) {
+        if !outputCapabilities.supportedSampleRates.contains(Int(sourceFormat.sampleRate)) {
             conversionTypes.append(.sampleRate)
             qualityImpact = .moderate
             performanceImpact += 0.3
@@ -619,7 +631,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
             return 16
         case .bluetoothA2DP, .bluetoothHFP, .bluetoothLE:
             return 16
-        case .USB, .thunderbolt, .lineOut:
+        case .thunderbolt:
             return deviceCapabilities.maxBitDepth
         default:
             return 16
@@ -709,7 +721,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
                 supportsExclusiveMode: false
             )
             
-        case .USB:
+        case .usbAudio:
             // Check DAC compatibility database
             if let dacInfo = dacCompatibilityCache[output.uid] {
                 return DeviceCapabilities(
@@ -753,7 +765,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
     
     private func getEstimatedSampleRates(for output: AVAudioSessionPortDescription) -> [Int] {
         switch output.portType {
-        case .USB:
+        case .usbAudio:
             return [44100, 48000, 96000, 192000]
         case .builtInSpeaker, .builtInReceiver, .headphones:
             return [44100, 48000]
@@ -766,7 +778,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
     
     private func getEstimatedMaxBitDepth(for output: AVAudioSessionPortDescription) -> Int {
         switch output.portType {
-        case .USB:
+        case .usbAudio:
             return 24
         case .builtInSpeaker, .builtInReceiver, .headphones:
             return 16
@@ -780,23 +792,44 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
     private func audioDeviceType(from portType: AVAudioSession.Port) -> AudioDeviceType {
         switch portType {
         case .builtInSpeaker:
-            return .builtInSpeaker
+            return .builtin
         case .builtInReceiver:
-            return .builtInReceiver
+            return .builtin
         case .headphones:
             return .headphones
         case .bluetoothA2DP, .bluetoothHFP, .bluetoothLE:
             return .bluetooth
         case .airPlay:
             return .airPlay
-        case .USB:
+        case .usbAudio:
             return .usb
         case .thunderbolt:
             return .thunderbolt
         case .HDMI:
             return .hdmi
         case .lineOut:
-            return .lineOut
+            return .speakers
+        default:
+            return .unknown
+        }
+    }
+    
+    private func audioConnectionTypeFromPortType(_ portType: AVAudioSession.Port) -> AudioConnectionType {
+        switch portType {
+        case .builtInSpeaker, .builtInReceiver:
+            return .builtin
+        case .headphones:
+            return .headphoneJack
+        case .bluetoothA2DP, .bluetoothHFP, .bluetoothLE:
+            return .bluetooth
+        case .airPlay:
+            return .airPlay
+        case .usbAudio:
+            return .usb
+        case .thunderbolt:
+            return .thunderbolt
+        case .lineIn, .lineOut:
+            return .unknown
         default:
             return .unknown
         }
@@ -812,7 +845,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
             return .bluetooth
         case .airPlay:
             return .airplay
-        case .USB:
+        case .usbAudio:
             return .usb
         case .thunderbolt:
             return .thunderbolt
@@ -829,16 +862,17 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
     ) -> BitPerfectSettings {
         
         let optimalSampleRate = deviceCapabilities.supportedSampleRates
-            .filter { $0 >= sourceFormat.sampleRate }
+            .filter { Double($0) >= sourceFormat.sampleRate }
+            .map { Double($0) }
             .min() ?? sourceFormat.sampleRate
         
-        let optimalBitDepth = min(sourceFormat.bitDepth, deviceCapabilities.maxBitDepth)
+        let optimalBitDepth = min(sourceFormat.bitDepth, UInt16(deviceCapabilities.maxBitDepth))
         let optimalBufferSize = deviceCapabilities.bufferSizeRange.lowerBound
         
         return BitPerfectSettings(
-            sampleRate: optimalSampleRate,
-            bitDepth: optimalBitDepth,
-            bufferSize: optimalBufferSize,
+            sampleRate: Int(optimalSampleRate),
+            bitDepth: Int(optimalBitDepth),
+            bufferSize: Int(optimalBufferSize),
             useExclusiveMode: deviceCapabilities.supportsExclusiveMode,
             bypassSystemVolume: deviceCapabilities.bypassesSystemMixer,
             sessionCategory: AVAudioSession.Category.playback.rawValue
@@ -859,10 +893,10 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
                 outputFormat: AudioOutputFormat(
                     sampleRate: maxSampleRate,
                     bitDepth: deviceCapabilities.maxBitDepth,
-                    channels: min(sourceFormat.channels, deviceCapabilities.maxChannels)
+                    channels: min(Int(sourceFormat.channels), Int(deviceCapabilities.maxChannels))
                 ),
                 benefits: ["Highest quality possible on this device"],
-                tradeoffs: sourceFormat.sampleRate > maxSampleRate ? ["Sample rate downsampling required"] : []
+                tradeoffs: sourceFormat.sampleRate > Double(maxSampleRate) ? ["Sample rate downsampling required"] : []
             ))
         }
         
@@ -890,16 +924,16 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         var alternatives: [AlternativeConfiguration] = []
         
         // Find closest supported sample rate
-        if !outputCapabilities.supportedSampleRates.contains(sourceFormat.sampleRate) {
+        if !outputCapabilities.supportedSampleRates.contains(Int(sourceFormat.sampleRate)) {
             if let closestRate = outputCapabilities.supportedSampleRates
-                .min(by: { abs($0 - sourceFormat.sampleRate) < abs($1 - sourceFormat.sampleRate) }) {
+                .min(by: { abs(Double($0) - sourceFormat.sampleRate) < abs(Double($1) - sourceFormat.sampleRate) }) {
                 
                 alternatives.append(AlternativeConfiguration(
                     description: "Closest supported sample rate (\(closestRate)Hz)",
                     outputFormat: AudioOutputFormat(
                         sampleRate: closestRate,
-                        bitDepth: min(sourceFormat.bitDepth, outputCapabilities.maxBitDepth),
-                        channels: min(sourceFormat.channels, outputCapabilities.maxChannels)
+                        bitDepth: min(Int(sourceFormat.bitDepth), outputCapabilities.maxBitDepth),
+                        channels: min(Int(sourceFormat.channels), Int(outputCapabilities.maxChannels))
                     ),
                     benefits: ["Minimal sample rate conversion", "Device native support"],
                     tradeoffs: ["Sample rate conversion required"]
@@ -933,20 +967,21 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         } else if cpuImpact < 0.4 {
             rating = .good
         } else if cpuImpact < 0.6 {
-            rating = .acceptable
+            rating = .adequate
         } else if cpuImpact < 0.8 {
-            rating = .poor
+            rating = .limited
         } else {
-            rating = .unacceptable
+            rating = .limited
         }
         
-        return PerformanceImpact(
-            cpuImpact: cpuImpact,
-            memoryImpact: memoryImpact,
-            batteryImpact: batteryImpact,
-            latency: latency,
-            rating: rating
-        )
+        // Return appropriate performance impact based on CPU usage
+        if cpuImpact < 0.3 {
+            return .low
+        } else if cpuImpact < 0.6 {
+            return .medium
+        } else {
+            return .high
+        }
     }
     
     private func calculateValidationConfidence(
@@ -1009,6 +1044,6 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
     private func saveDACCompatibilityDatabase() async {
         // TODO: Save to persistent storage
         // This could be implemented as JSON file or Core Data store
-        logger.debug("DAC compatibility database saved with \(dacCompatibilityCache.count) entries")
+        logger.debug("DAC compatibility database saved with \(self.dacCompatibilityCache.count) entries")
     }
 } 

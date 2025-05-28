@@ -272,9 +272,9 @@ public struct AudioMetrics: Sendable, Equatable {
             bufferFillLevel: bufferFillLevel,
             droppedFrames: droppedFrames,
             renderLatency: renderLatency,
-            engineType: engineType,
             sampleRate: sampleRate,
             bitDepth: bitDepth,
+            engineType: engineType,
             audioFormat: audioFormat
         )
     }
@@ -523,5 +523,4 @@ public enum PlaybackHealthStatus: String, Sendable, CaseIterable {
     case fair = "fair"
     case poor = "poor"
     case critical = "critical"
-}
 }

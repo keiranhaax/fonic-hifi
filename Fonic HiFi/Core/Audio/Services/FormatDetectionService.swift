@@ -129,6 +129,7 @@ public protocol FormatDetectionAdapter: Sendable {
 public extension AudioFileInfo {
     /// Create AudioFileInfo with common defaults
     static func create(
+        url: URL,
         format: AudioFormat,
         sampleRate: Int = 44100,
         bitDepth: Int = 16,
@@ -138,13 +139,14 @@ public extension AudioFileInfo {
         fileSize: Int64 = 0
     ) -> AudioFileInfo {
         return AudioFileInfo(
+            url: url,
             format: format,
-            sampleRate: sampleRate,
-            bitDepth: bitDepth,
-            channels: channels,
-            bitrate: bitrate,
             duration: duration,
-            fileSize: fileSize
+            bitDepth: UInt16(bitDepth),
+            sampleRate: Double(sampleRate),
+            channels: UInt8(channels),
+            fileSize: UInt64(fileSize),
+            bitrate: bitrate != nil ? UInt64(bitrate!) : nil
         )
     }
     
@@ -159,9 +161,9 @@ public extension AudioFileInfo {
     /// Estimated memory usage for decoding
     var estimatedMemoryUsage: Int64 {
         // Rough estimate: sample rate * bit depth * channels * duration
-        let bytesPerSample = bitDepth / 8
-        let samplesPerSecond = sampleRate * channels
+        let bytesPerSample = Int64(bitDepth) / 8
+        let samplesPerSecond = sampleRate * Double(channels)
         let totalSamples = Int64(samplesPerSecond) * Int64(duration)
-        return totalSamples * Int64(bytesPerSample)
+        return totalSamples * bytesPerSample
     }
 }

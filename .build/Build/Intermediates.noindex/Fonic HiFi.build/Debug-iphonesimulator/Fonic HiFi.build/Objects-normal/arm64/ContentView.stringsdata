@@ -1,0 +1,80 @@
+{
+  "source": "/Users/keiran/Desktop/Fonic HiFi/Fonic HiFi/Fonic HiFi/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Library",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 15
+        }
+      },
+      {
+        "comment": "",
+        "key": "Library",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 16
+        }
+      },
+      {
+        "comment": "",
+        "key": "Library",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 19
+        }
+      },
+      {
+        "comment": "",
+        "key": "Now Playing",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 24
+        }
+      },
+      {
+        "comment": "",
+        "key": "Now Playing",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Now Playing",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 37
+        }
+      }
+    ]
+  },
+  "version": 1
+}

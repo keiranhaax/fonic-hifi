@@ -158,7 +158,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         }
         
         playerNode.play()
-        playbackState = .playing
+        playbackState = .playing(currentTime: await currentTime, duration: await duration)
         
         // Start progress timer
         startProgressTimer()
@@ -170,7 +170,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     
     public func pause() async {
         playerNode.pause()
-        playbackState = .paused
+        playbackState = .paused(currentTime: await currentTime, duration: await duration)
         stopProgressTimer()
     }
     
@@ -392,7 +392,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
     
     deinit {
-        stopProgressTimer()
-        engine.stop()
+        // Swift 6 strict concurrency prevents accessing non-Sendable properties in deinit
+        // Cleanup should be done explicitly via stop() method before deallocation
     }
 }
