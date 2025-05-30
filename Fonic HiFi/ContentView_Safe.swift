@@ -1,22 +1,23 @@
 //
-//  ContentView.swift
+//  ContentView_Safe.swift
 //  Fonic HiFi
 //
-//  Created by Keiran on 5/27/25.
+//  Safer version using sheet presentation instead of overlay
 //
 
 import SwiftUI
 
 @MainActor
-struct ContentView: View {
+struct ContentView_Safe: View {
     @EnvironmentObject private var importService: LibraryImportService
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
+    @Namespace private var animationNamespace
+    
     var body: some View {
-        ZStack {
-            // Main content with scaling effect
-            TabView {
+        TabView {
             // Library Tab
             LibraryView()
                 .tabItem {
@@ -42,23 +43,27 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark) // Dark mode by default
-        .scaleEffect(appState.showingNowPlaying ? 0.95 : 1.0)
-        .animation(
-            reduceMotion ? .none : .interactiveSpring(response: 0.6, dampingFraction: 0.8),
-            value: appState.showingNowPlaying
-        )
-        .disabled(appState.showingNowPlaying)
-        
-        // Now Playing overlay
-        // TEMPORARY: Using no-animation version to debug crash
-        NowPlayingContainer_NoAnimation()
-        // NowPlayingContainer()
+        // Use sheet presentation instead of overlay
+        .sheet(isPresented: $appState.showingNowPlaying) {
+            NowPlayingView(animationNamespace: animationNamespace)
+                .environmentObject(appState)
+                .environmentObject(audioService)
+                .interactiveDismissDisabled(false)
+        }
+        // Mini player at bottom when track is playing but Now Playing is not shown
+        .safeAreaInset(edge: .bottom) {
+            if appState.showMiniPlayer && !appState.showingNowPlaying {
+                MiniPlayerView(animationNamespace: animationNamespace)
+                    .environmentObject(appState)
+                    .environmentObject(audioService)
+            }
         }
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView_Safe()
         .environmentObject(DataManager.makePreviewImportService())
         .environmentObject(AppState())
+        .environmentObject(AudioEngineFacade())
 }

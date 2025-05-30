@@ -48,7 +48,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
             try session.setCategory(
                 .playback,
                 mode: .default,
-                options: [.allowBluetooth, .allowAirPlay, .defaultToSpeaker]
+                options: [.allowBluetooth, .allowAirPlay]
             )
             
             // Set preferred settings for high-quality audio

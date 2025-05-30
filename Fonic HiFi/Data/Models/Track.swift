@@ -313,7 +313,7 @@ extension Track {
     
     /// Convert Track to AudioTrack for compatibility with audio engine
     public func toAudioTrack() -> AudioTrack {
-        return AudioTrack(
+        return LegacyTrack(
             id: id,
             title: title,
             artist: artist,

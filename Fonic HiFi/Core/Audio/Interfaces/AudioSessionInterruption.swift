@@ -292,7 +292,7 @@ extension AudioSessionInterruption {
     
     /// User-friendly description of the interruption
     public var userDescription: String {
-        let typeDesc = type.description
+        let _ = type.description
         let categoryDesc = category?.explanation ?? "An interruption occurred"
         
         switch type {

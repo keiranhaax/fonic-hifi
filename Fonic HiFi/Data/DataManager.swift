@@ -353,3 +353,40 @@ public enum DataManagerError: LocalizedError {
         }
     }
 }
+
+// MARK: - Preview Support
+
+extension DataManager {
+    /// Create a preview container for SwiftUI previews
+    static var previewContainer: ModelContainer {
+        let schema = Schema([
+            Track.self,
+            Artist.self,
+            Album.self,
+            Playlist.self
+        ])
+        
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: true
+        )
+        
+        do {
+            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Could not create ModelContainer: \(error)")
+        }
+    }
+    
+    /// Create a preview import service for SwiftUI previews
+    @MainActor
+    static func makePreviewImportService() -> LibraryImportService {
+        let container = previewContainer
+        let trackDataActor = TrackDataActor(modelContainer: container)
+        let metadataExtractor = MetadataExtractionService(formatDetectionService: AudioFormatDetectionManager())
+        return LibraryImportService(
+            trackDataActor: trackDataActor,
+            metadataExtractor: metadataExtractor
+        )
+    }
+}
