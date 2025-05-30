@@ -68,6 +68,16 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
     /// Whether the facade is properly initialized and ready
     public private(set) var isReady: Bool = false
     
+    // MARK: - Publishers for AppState Binding
+    
+    /// Timer manager for progress updates
+    internal let progressTimerManager = ProgressTimerManager()
+    
+    // MARK: - Thread Management
+    
+    /// Dedicated queue for audio operations to prevent dispatch assertion failures
+    private let audioQueue = DispatchQueue(label: "com.fonichifi.audio.engine", qos: .userInitiated)
+    
     // MARK: - Configuration
     
     /// Current audio engine configuration
@@ -184,12 +194,19 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
         
         logger.info("Playing track: \(track.title)")
         
+        // Ensure we're on MainActor since this is a public API
+        dispatchPrecondition(condition: .onQueue(.main))
+        
         do {
-            // 1. Detect format
+            // 1. Ensure audio session is active first
+            try await sessionManager.activateAudioSession()
+            logger.debug("Audio session activated")
+            
+            // 2. Detect format
             let formatInfo = try await formatDetectionManager.detectFormat(at: track.url)
             logger.debug("Format detected: \(formatInfo.format.displayName)")
             
-            // 2. Validate bit-perfect capability if needed
+            // 3. Validate bit-perfect capability if needed
             if engineConfiguration.performanceMode == .quality {
                 let validationResult = await validator.validateBitPerfectPlayback(
                     sourceFormat: formatInfo,
@@ -201,20 +218,19 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
                 }
             }
             
-            // 3. Create or reconfigure engine if needed
+            // 4. Create or reconfigure engine if needed
             try await ensureEngineForFormat(formatInfo)
             
-            // 4. Update queue if this is a new track
+            // 5. Update queue - we're already on MainActor
             if queueManager.currentTrack?.id != track.id {
                 queueManager.setCurrentTrack(track.toAudioTrack())
             }
+            stateManager.updateState(.loading())
             
-            // 5. Load and play
+            // 6. Load and play
             guard let engine = currentEngine else {
                 throw AudioError.engineInitializationFailed(reason: "Engine not ready")
             }
-            
-            stateManager.updateState(.loading())
             
             try await engine.load(url: track.url)
             stateManager.updateState(.playing(currentTime: 0, duration: formatInfo.duration))
@@ -224,6 +240,7 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
             logger.info("Playback started successfully")
             
         } catch {
+            // Handle errors - we're already on MainActor
             logger.error("Failed to play track: \(error.localizedDescription)")
             stateManager.updateState(.error(error as? AudioError ?? .playbackFailed(reason: error.localizedDescription), lastKnownTime: nil))
             throw error
@@ -476,20 +493,28 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
     
     private func setupPlaybackTimeUpdates() {
         // Set up a timer to periodically update playback time in state manager
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
-            Task { @MainActor in
-                guard let self = self,
-                      let engine = self.currentEngine,
-                      self.currentState.isPlaying else {
-                    return
+        // Use DispatchQueue.main.async to ensure timer callback is on main thread
+        let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
+            // Timer callbacks can run on background threads, so explicitly dispatch to main
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                Task { @MainActor in
+                    guard let engine = self.currentEngine,
+                          self.currentState.isPlaying else {
+                        return
+                    }
+                    
+                    let currentTime = await engine.currentTime
+                    let duration = await engine.duration
+                    self.stateManager.updateTime(currentTime, duration: duration)
                 }
-                
-                let currentTime = await engine.currentTime
-                let duration = await engine.duration
-                self.stateManager.updateTime(currentTime, duration: duration)
             }
         }
-        .store(in: &cancellables)
+        
+        // Store timer for cleanup
+        AnyCancellable {
+            timer.invalidate()
+        }.store(in: &cancellables)
     }
     
     private func handleSessionInterruption(_ interruption: AudioInterruptionType) async {

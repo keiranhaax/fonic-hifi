@@ -403,8 +403,12 @@ private extension AudioMonitor {
     
     func startPeriodicMonitoring() {
         monitoringTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.performPeriodicMonitoring()
+            // Timer callbacks can run on background threads, so explicitly dispatch to main
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                Task { @MainActor in
+                    await self.performPeriodicMonitoring()
+                }
             }
         }
     }
@@ -412,8 +416,12 @@ private extension AudioMonitor {
     func startProfilingTimer() {
         // Higher frequency for profiling (every 100ms)
         profilingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.collectProfilingData()
+            // Timer callbacks can run on background threads, so explicitly dispatch to main
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                Task { @MainActor in
+                    await self.collectProfilingData()
+                }
             }
         }
     }

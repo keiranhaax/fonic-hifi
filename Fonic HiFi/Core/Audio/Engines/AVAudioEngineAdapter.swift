@@ -146,9 +146,16 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         try await sessionManager.activateAudioSession()
         
         // Schedule file for playback
-        playerNode.scheduleFile(file, at: nil) { [weak self] in
-            Task { @MainActor in
-                self?.handlePlaybackCompletion()
+        // CRITICAL: AVAudioPlayerNode completion handlers run on background threads
+        // per Apple documentation. We must explicitly dispatch to main thread.
+        playerNode.scheduleFile(file, at: nil) {
+            // This closure runs on a background thread!
+            // Use explicit dispatch to avoid libdispatch assertion failures
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    await self.handlePlaybackCompletion()
+                }
             }
         }
         
@@ -216,8 +223,13 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             frameCount: AVAudioFrameCount(framesToPlay),
             at: nil
         ) { [weak self] in
-            Task { @MainActor in
-                self?.handlePlaybackCompletion()
+            // This closure runs on a background thread!
+            // Use explicit dispatch to avoid libdispatch assertion failures
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                Task { @MainActor in
+                    await self.handlePlaybackCompletion()
+                }
             }
         }
         
@@ -309,9 +321,13 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         stopProgressTimer()
         
         progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                // Update progress if needed
-                // This could post notifications or update delegates
+            // Timer callbacks can run on background threads, so explicitly dispatch to main
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                Task { @MainActor in
+                    // Update progress if needed
+                    // This could post notifications or update delegates
+                }
             }
         }
     }
@@ -331,8 +347,14 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             format: format
         ) { [weak self] buffer, time in
             // Monitor for buffer underruns
+            // Audio tap handlers run on audio render thread, so dispatch to main for state updates
             if buffer.frameLength == 0 {
-                self?.bufferUnderrunCount += 1
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    Task { @MainActor in
+                        self.bufferUnderrunCount += 1
+                    }
+                }
             }
         }
     }
