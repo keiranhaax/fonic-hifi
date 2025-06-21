@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		386B1C072DE975FD009FBF25 /* AudioKit in Frameworks */ = {isa = PBXBuildFile; productRef = 386B1C062DE975FD009FBF25 /* AudioKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		38D04CF22DE570DA0047CB93 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -65,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				386B1C072DE975FD009FBF25 /* AudioKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +130,7 @@
 			);
 			name = "Fonic HiFi";
 			packageProductDependencies = (
+				386B1C062DE975FD009FBF25 /* AudioKit */,
 			);
 			productName = "Fonic HiFi";
 			productReference = 38D04CDD2DE570D80047CB93 /* Fonic HiFi.app */;
@@ -208,6 +214,9 @@
 			);
 			mainGroup = 38D04CD42DE570D80047CB93;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				386B1C052DE975FD009FBF25 /* XCRemoteSwiftPackageReference "AudioKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 38D04CDE2DE570D80047CB93 /* Products */;
 			projectDirPath = "";
@@ -585,6 +594,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		386B1C052DE975FD009FBF25 /* XCRemoteSwiftPackageReference "AudioKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AudioKit/AudioKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.6.5;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		386B1C062DE975FD009FBF25 /* AudioKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 386B1C052DE975FD009FBF25 /* XCRemoteSwiftPackageReference "AudioKit" */;
+			productName = AudioKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 38D04CD52DE570D80047CB93 /* Project object */;
 }

@@ -148,13 +148,14 @@ private final class MockFormatDetectionAdapter: FormatDetectionAdapter {
     
     func detectFormat(at url: URL) async throws -> AudioFileInfo {
         return AudioFileInfo(
+            url: url,
             format: .flac,
-            sampleRate: 96000,
-            bitDepth: 24,
-            channels: 2,
-            bitrate: nil,
             duration: 180,
-            fileSize: 50_000_000
+            bitDepth: 24,
+            sampleRate: 96000,
+            channels: 2,
+            fileSize: 50_000_000,
+            bitrate: nil
         )
     }
 }

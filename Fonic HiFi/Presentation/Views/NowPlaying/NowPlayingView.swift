@@ -27,6 +27,10 @@ struct NowPlayingView: View {
     @State private var dominantColor: Color = .accentColor
     @State private var hasStartedPlayback = false
     
+    // Slider state for progress control
+    @State private var sliderProgress: Double = 0.0
+    @State private var isUserDragging: Bool = false
+    
     // Constants
     private let artworkSize: CGFloat = 320
     private let dismissThreshold: CGFloat = 150
@@ -85,71 +89,69 @@ struct NowPlayingView: View {
         .scaleEffect(isDragging ? 0.95 : 1.0)
         .animation(reduceMotion ? .none : .interactiveSpring(response: 0.4, dampingFraction: 0.8), value: isDragging)
         .gesture(dismissGesture)
-        .onAppear {
-            print("=== NOW PLAYING VIEW APPEARED ===")
+        .task {
+            print("=== NOW PLAYING VIEW TASK ===")
             print("Has started playback: \(hasStartedPlayback)")
             print("Current track object: \(appState.currentTrackObject?.title ?? "nil")")
             
-            // Ensure state updates happen on MainActor
-            Task { @MainActor in
-                extractDominantColor()
-                
-                // Start audio playback after the view has appeared
-                if !hasStartedPlayback, let track = appState.currentTrackObject {
-                    hasStartedPlayback = true
-                    
-                    print("\n=== AUDIO PLAYBACK DEBUG ===")
-                    print("1. Starting playback for: \(track.title ?? "Unknown")")
-                    print("2. Track file path: \(track.url.path)")
-                    print("3. Track artist: \(track.artist ?? "Unknown")")
-                    print("4. Track duration: \(track.duration)")
-                    print("5. Track format: \(track.audioFormat ?? "Unknown")")
-                    
-                    // Check if file exists
-                    if FileManager.default.fileExists(atPath: track.url.path) {
-                        print("6. ✅ File exists at path")
-                    } else {
-                        print("6. ❌ File NOT found at path")
-                    }
-                    
-                    // Check audio service state
-                    print("7. Audio service ready: \(audioService.isReady)")
-                    print("8. Audio service current track: \(audioService.currentTrack?.title ?? "nil")")
-                    print("9. Audio service is playing: \(audioService.isPlaying)")
-                    
-                    // Ensure audio service is ready
-                    guard audioService.isReady else {
-                        print("10. ❌ Audio service not ready yet")
-                        return
-                    }
-                    
-                    print("11. Calling audioService.play")
-                    
-                    // Start audio playback
-                    do {
-                        try await audioService.play(track: track)
-                        print("12. ✅ audioService.play completed successfully")
-                        
-                        // Check audio state after play
-                        print("13. Post-play is playing: \(audioService.isPlaying)")
-                        print("14. Post-play current track: \(audioService.currentTrack?.title ?? "nil")")
-                        print("15. Post-play app state is playing: \(appState.isPlaying)")
-                        
-                    } catch {
-                        print("12. ❌ Failed to start audio playback: \(error)")
-                        print("    Error type: \(type(of: error))")
-                        print("    Error description: \(error.localizedDescription)")
-                        
-                        // Reset state if playback failed
-                        appState.setCurrentTrack(nil)
-                        appState.hideNowPlaying()
-                    }
-                    
-                    print("=== END AUDIO PLAYBACK DEBUG ===\n")
-                } else {
-                    print("Not starting playback - hasStartedPlayback: \(hasStartedPlayback), track: \(appState.currentTrackObject?.title ?? "nil")")
-                }
+            extractDominantColor()
+            
+            // Start audio playback after the view has loaded
+            guard !hasStartedPlayback, let track = appState.currentTrackObject else {
+                print("Not starting playback - hasStartedPlayback: \(hasStartedPlayback), track: \(appState.currentTrackObject?.title ?? "nil")")
+                return
             }
+            
+            hasStartedPlayback = true
+            
+            print("\n=== AUDIO PLAYBACK DEBUG ===")
+            print("1. Starting playback for: \(track.title ?? "Unknown")")
+            print("2. Track file path: \(track.url.path)")
+            print("3. Track artist: \(track.artist ?? "Unknown")")
+            print("4. Track duration: \(track.duration)")
+            print("5. Track format: \(track.audioFormat ?? "Unknown")")
+            
+            // Check if file exists
+            if FileManager.default.fileExists(atPath: track.url.path) {
+                print("6. ✅ File exists at path")
+            } else {
+                print("6. ❌ File NOT found at path")
+            }
+            
+            // Check audio service state
+            print("7. Audio service ready: \(audioService.isReady)")
+            print("8. Audio service current track: \(audioService.currentTrack?.title ?? "nil")")
+            print("9. Audio service is playing: \(audioService.isPlaying)")
+            
+            // Ensure audio service is ready
+            guard audioService.isReady else {
+                print("10. ❌ Audio service not ready yet")
+                return
+            }
+            
+            print("11. Calling audioService.play")
+            
+            // Start audio playback
+            do {
+                try await audioService.play(track: track)
+                print("12. ✅ audioService.play completed successfully")
+                
+                // Check audio state after play
+                print("13. Post-play is playing: \(audioService.isPlaying)")
+                print("14. Post-play current track: \(audioService.currentTrack?.title ?? "nil")")
+                print("15. Post-play app state is playing: \(appState.isPlaying)")
+                
+            } catch {
+                print("12. ❌ Failed to start audio playback: \(error)")
+                print("    Error type: \(type(of: error))")
+                print("    Error description: \(error.localizedDescription)")
+                
+                // Reset state if playback failed
+                appState.setCurrentTrack(nil)
+                appState.hideNowPlaying()
+            }
+            
+            print("=== END AUDIO PLAYBACK DEBUG ===\n")
         }
     }
     
@@ -195,13 +197,14 @@ struct NowPlayingView: View {
     private var progressView: some View {
         VStack(spacing: 8) {
             // Progress slider
-            Slider(value: $appState.playbackProgress, in: 0...1) { isEditing in
-                if !isEditing {
+            Slider(value: $sliderProgress, in: 0...1) { isDragging in
+                isUserDragging = isDragging
+                if !isDragging {
                     // Seek to position when user finishes dragging
                     // Slider callbacks may run on background thread
                     Task { @MainActor in
                         do {
-                            let seekTime = appState.playbackProgress * appState.duration
+                            let seekTime = sliderProgress * appState.duration
                             try await audioService.seek(to: seekTime)
                         } catch {
                             print("Failed to seek: \(error)")
@@ -210,6 +213,16 @@ struct NowPlayingView: View {
                 }
             }
             .tint(.white)
+            .onChange(of: appState.playbackProgress) { _, newValue in
+                // Update slider only if user is not dragging
+                if !isUserDragging {
+                    sliderProgress = newValue
+                }
+            }
+            .onAppear {
+                // Initialize slider with current progress
+                sliderProgress = appState.playbackProgress
+            }
             
             // Time labels
             HStack {

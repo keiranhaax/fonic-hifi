@@ -43,7 +43,7 @@ final class PlaybackStateTests: XCTestCase {
         
         XCTAssertFalse(PlaybackState.idle.isActive)
         XCTAssertFalse(PlaybackState.stopped.isActive)
-        XCTAssertFalse(PlaybackState.error(AudioError.fileNotFound, lastKnownTime: nil).isActive)
+        XCTAssertFalse(PlaybackState.error(AudioError.fileNotFound(URL(fileURLWithPath: "/test")), lastKnownTime: nil).isActive)
     }
     
     // MARK: - Time and Duration Tests
@@ -53,12 +53,12 @@ final class PlaybackStateTests: XCTestCase {
         XCTAssertEqual(PlaybackState.paused(currentTime: 45, duration: 120).currentTime, 45)
         XCTAssertEqual(PlaybackState.buffering(progress: 0.5, currentTime: 60).currentTime, 60)
         XCTAssertEqual(PlaybackState.seeking(targetTime: 90, currentTime: 30).currentTime, 30)
-        XCTAssertEqual(PlaybackState.error(AudioError.fileNotFound, lastKnownTime: 15).currentTime, 15)
+        XCTAssertEqual(PlaybackState.error(AudioError.fileNotFound(URL(fileURLWithPath: "/test")), lastKnownTime: 15).currentTime, 15)
         
         XCTAssertNil(PlaybackState.idle.currentTime)
         XCTAssertNil(PlaybackState.stopped.currentTime)
         XCTAssertNil(PlaybackState.loading().currentTime)
-        XCTAssertNil(PlaybackState.error(AudioError.fileNotFound, lastKnownTime: nil).currentTime)
+        XCTAssertNil(PlaybackState.error(AudioError.fileNotFound(URL(fileURLWithPath: "/test")), lastKnownTime: nil).currentTime)
     }
     
     func testDurationProperty() {
@@ -165,13 +165,13 @@ final class PlaybackStateTests: XCTestCase {
     func testValidTransitions() {
         // From idle
         XCTAssertTrue(PlaybackState.idle.canTransition(to: .loading()))
-        XCTAssertTrue(PlaybackState.idle.canTransition(to: .error(AudioError.fileNotFound, lastKnownTime: nil)))
+        XCTAssertTrue(PlaybackState.idle.canTransition(to: .error(AudioError.fileNotFound(URL(fileURLWithPath: "/test")), lastKnownTime: nil)))
         
         // From loading
         XCTAssertTrue(PlaybackState.loading().canTransition(to: .playing(currentTime: 0, duration: 120)))
         XCTAssertTrue(PlaybackState.loading().canTransition(to: .paused(currentTime: 0, duration: 120)))
         XCTAssertTrue(PlaybackState.loading().canTransition(to: .stopped))
-        XCTAssertTrue(PlaybackState.loading().canTransition(to: .error(AudioError.fileNotFound, lastKnownTime: nil)))
+        XCTAssertTrue(PlaybackState.loading().canTransition(to: .error(AudioError.fileNotFound(URL(fileURLWithPath: "/test")), lastKnownTime: nil)))
         
         // From playing
         XCTAssertTrue(PlaybackState.playing(currentTime: 30, duration: 120).canTransition(to: .paused(currentTime: 30, duration: 120)))
@@ -263,7 +263,7 @@ final class PlaybackStateTests: XCTestCase {
         XCTAssertEqual(PlaybackState.buffering(progress: 0.6, currentTime: 45).description, "Buffering (60%) at 0:45")
         XCTAssertEqual(PlaybackState.seeking(targetTime: 120, currentTime: 60).description, "Seeking from 1:00 to 2:00")
         
-        let errorState = PlaybackState.error(AudioError.fileNotFound, lastKnownTime: 30)
+        let errorState = PlaybackState.error(AudioError.fileNotFound(URL(fileURLWithPath: "/test")), lastKnownTime: 30)
         XCTAssertTrue(errorState.description.contains("Error"))
         XCTAssertTrue(errorState.description.contains("0:30"))
     }

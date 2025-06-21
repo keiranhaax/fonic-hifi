@@ -12,8 +12,17 @@ import SwiftData
 // @main  // UNCOMMENT THIS AND COMMENT OUT @main IN FonicHiFiApp.swift TO USE
 struct FonicHiFiApp_Debug: App {
     @StateObject private var dataManager = try! DataManager()
-    @StateObject private var appState = AppState()
-    @StateObject private var audioEngine = AudioEngineFacade()
+    @StateObject private var appState: AppState
+    @StateObject private var audioEngine: AudioEngineFacade
+    
+    private let playbackStateManager: PlaybackStateManager
+    
+    init() {
+        let playbackStateManager = PlaybackStateManager()
+        self.playbackStateManager = playbackStateManager
+        self._appState = StateObject(wrappedValue: AppState(playbackStateManager: playbackStateManager))
+        self._audioEngine = StateObject(wrappedValue: AudioEngineFacade(stateManager: playbackStateManager))
+    }
     
     @State private var useDebugMode = true
     @State private var useSafeContentView = false
@@ -74,8 +83,6 @@ struct FonicHiFiApp_Debug: App {
                     // Initialize audio engine
                     do {
                         try await audioEngine.initialize()
-                        // Connect app state
-                        appState.connectAudioService(audioEngine)
                         print("Audio engine initialized successfully")
                     } catch {
                         print("Failed to initialize audio engine: \(error)")

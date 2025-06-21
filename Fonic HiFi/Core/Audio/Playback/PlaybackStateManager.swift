@@ -12,7 +12,7 @@ import Combine
 /// Observable state manager for tracking and broadcasting playback state changes
 @MainActor
 @Observable
-public final class PlaybackStateManager: Sendable {
+public final class PlaybackStateManager {
     
     // MARK: - Published State
     

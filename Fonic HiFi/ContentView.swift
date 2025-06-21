@@ -33,13 +33,10 @@ struct ContentView: View {
             }
             
             // Settings Tab
-            NavigationStack {
-                Text("Settings")
-                    .navigationTitle("Settings")
-            }
-            .tabItem {
-                Label("Settings", systemImage: "gear")
-            }
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
+                }
         }
         .preferredColorScheme(.dark) // Dark mode by default
         .scaleEffect(appState.showingNowPlaying ? 0.95 : 1.0)

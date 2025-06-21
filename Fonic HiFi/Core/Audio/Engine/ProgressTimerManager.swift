@@ -7,28 +7,24 @@
 
 import Foundation
 
-/// Manages the progress timer for AudioEngineFacade
+/// Handles periodic playback-time updates on the MainActor without mixing queues.
 @MainActor
 final class ProgressTimerManager {
-    private var timer: Timer?
-    
-    func start(interval: TimeInterval = 0.1, handler: @escaping @MainActor () -> Void) {
-        stop()
-        
-        // Execute immediately
-        handler()
-        
-        // Start timer
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
-            Task { @MainActor in
-                handler()
+    private var task: Task<Void, Never>?
+
+    func start(pollInterval: TimeInterval = 0.2, update: @escaping @MainActor () -> Void) {
+        task?.cancel()
+        task = Task { @MainActor in
+            while !Task.isCancelled {
+                update()
+                // suspend on the MainActor for the interval
+                try? await Task.sleep(nanoseconds: UInt64(pollInterval * 1_000_000_000))
             }
         }
     }
-    
-    @MainActor
+
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        task?.cancel()
+        task = nil
     }
 }

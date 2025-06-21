@@ -12,6 +12,9 @@ public enum AudioEngineType: String, CaseIterable, Sendable {
     /// Apple's native AVAudioEngine (default)
     case avAudioEngine = "AVAudioEngine"
     
+    /// AudioKit-based engine for enhanced audio features and better scheduling
+    case audioKitEngine = "AudioKitEngine"
+    
     /// SFBAudioEngine for high-res and specialized formats
     case sfbAudioEngine = "SFBAudioEngine"
     
@@ -23,6 +26,8 @@ public enum AudioEngineType: String, CaseIterable, Sendable {
         switch self {
         case .avAudioEngine:
             return "Native Audio Engine"
+        case .audioKitEngine:
+            return "AudioKit Engine"
         case .sfbAudioEngine:
             return "High-Resolution Audio Engine"
         case .ffmpegEngine:
@@ -35,6 +40,8 @@ public enum AudioEngineType: String, CaseIterable, Sendable {
         switch self {
         case .avAudioEngine:
             return "Hardware-accelerated playback for standard formats"
+        case .audioKitEngine:
+            return "Enhanced audio engine with native scheduling and Combine integration"
         case .sfbAudioEngine:
             return "Bit-perfect playback for FLAC, DSD, and high-res audio"
         case .ffmpegEngine:
@@ -47,6 +54,8 @@ public enum AudioEngineType: String, CaseIterable, Sendable {
         switch self {
         case .avAudioEngine:
             return [.mp3, .aac, .alac, .wav, .aiff]
+        case .audioKitEngine:
+            return [.mp3, .aac, .alac, .wav, .aiff, .flac] // AudioKit handles most standard formats well
         case .sfbAudioEngine:
             return [.flac, .dsd, .ape]
         case .ffmpegEngine:
@@ -59,6 +68,8 @@ public enum AudioEngineType: String, CaseIterable, Sendable {
         switch self {
         case .avAudioEngine:
             return AVAudioEngineConfig.isFormatNativelySupported(format)
+        case .audioKitEngine:
+            return [.mp3, .aac, .alac, .wav, .aiff, .flac].contains(format)
         case .sfbAudioEngine:
             return [.flac, .dsd, .ape, .wav, .aiff].contains(format)
         case .ffmpegEngine:
@@ -71,6 +82,8 @@ public enum AudioEngineType: String, CaseIterable, Sendable {
         switch self {
         case .avAudioEngine:
             return .low
+        case .audioKitEngine:
+            return .low // AudioKit is optimized and runs on audio thread
         case .sfbAudioEngine:
             return .medium
         case .ffmpegEngine:

@@ -14,7 +14,7 @@ final class AudioEngineFactoryTests: XCTestCase {
     // MARK: - Properties
     
     var sut: AudioEngineFactory!
-    var mockFormatDetector: MockFormatDetectionService!
+    fileprivate var mockFormatDetector: MockFormatDetectionService!
     
     // MARK: - Setup
     
@@ -119,13 +119,14 @@ final class AudioEngineFactoryTests: XCTestCase {
         // Given a mock file URL
         let url = URL(fileURLWithPath: "/tmp/test.mp3")
         mockFormatDetector.mockFileInfo = AudioFileInfo(
+            url: url,
             format: .mp3,
-            sampleRate: 44100,
-            bitDepth: 16,
-            channels: 2,
-            bitrate: 320000,
             duration: 180,
-            fileSize: 7200000
+            bitDepth: 16,
+            sampleRate: 44100,
+            channels: 2,
+            fileSize: 7200000,
+            bitrate: 320000
         )
         
         let config = AudioEngineConfiguration()
@@ -185,7 +186,7 @@ final class AudioEngineFactoryTests: XCTestCase {
 
 // MARK: - Mock Format Detection Service
 
-private final class MockFormatDetectionService: FormatDetectionService {
+fileprivate final class MockFormatDetectionService: FormatDetectionService {
     var mockFileInfo: AudioFileInfo?
     var shouldThrow = false
     
@@ -195,13 +196,14 @@ private final class MockFormatDetectionService: FormatDetectionService {
         }
         
         return mockFileInfo ?? AudioFileInfo(
+            url: url,
             format: .mp3,
-            sampleRate: 44100,
-            bitDepth: 16,
-            channels: 2,
-            bitrate: 128000,
             duration: 180,
-            fileSize: 2880000
+            bitDepth: 16,
+            sampleRate: 44100,
+            channels: 2,
+            fileSize: 2880000,
+            bitrate: 128000
         )
     }
     

@@ -43,36 +43,18 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
     // MARK: - AudioSessionService Implementation
     
     public func configureAudioSession() async throws {
-        do {
-            // Configure for music playback with AirPlay and Bluetooth support
-            try session.setCategory(
-                .playback,
-                mode: .default,
-                options: [.allowBluetooth, .allowAirPlay]
-            )
-            
-            // Set preferred settings for high-quality audio
-            try session.setPreferredSampleRate(48000) // 48kHz default
-            try session.setPreferredIOBufferDuration(0.005) // 5ms for low latency
-            
-            // Register for notifications if not already done
-            if !hasRegisteredForNotifications {
-                registerForNotifications()
-                hasRegisteredForNotifications = true
-            }
-            
-        } catch {
-            throw AudioError.sessionConfigurationFailed(reason: error.localizedDescription)
+        // ✅ AudioKit handles audio session configuration automatically
+        // Only register for notifications if not already done
+        if !hasRegisteredForNotifications {
+            registerForNotifications()
+            hasRegisteredForNotifications = true
         }
     }
     
     public func activateAudioSession() async throws {
-        do {
-            try session.setActive(true, options: .notifyOthersOnDeactivation)
-            _isSessionActive = true
-        } catch {
-            throw AudioError.sessionConfigurationFailed(reason: "Failed to activate session: \(error.localizedDescription)")
-        }
+        // ✅ AudioKit handles audio session activation automatically
+        // Just update our internal tracking
+        _isSessionActive = true
     }
     
     public func deactivateAudioSession() async throws {
@@ -133,16 +115,21 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
         // Play/Pause
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
-            Task { @MainActor in
-                await self?.delegate?.audioSessionDidReceiveCommand(.play)
+            // Remote commands run on real-time audio threads - must dispatch to main safely
+            DispatchQueue.main.async { [weak self] in
+                Task {
+                    await self?.delegate?.audioSessionDidReceiveCommand(.play)
+                }
             }
             return .success
         }
         
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
-            Task { @MainActor in
-                await self?.delegate?.audioSessionDidReceiveCommand(.pause)
+            DispatchQueue.main.async { [weak self] in
+                Task {
+                    await self?.delegate?.audioSessionDidReceiveCommand(.pause)
+                }
             }
             return .success
         }
@@ -150,16 +137,20 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
         // Next/Previous
         commandCenter.nextTrackCommand.isEnabled = true
         commandCenter.nextTrackCommand.addTarget { [weak self] _ in
-            Task { @MainActor in
-                await self?.delegate?.audioSessionDidReceiveCommand(.nextTrack)
+            DispatchQueue.main.async { [weak self] in
+                Task {
+                    await self?.delegate?.audioSessionDidReceiveCommand(.nextTrack)
+                }
             }
             return .success
         }
         
         commandCenter.previousTrackCommand.isEnabled = true
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            Task { @MainActor in
-                await self?.delegate?.audioSessionDidReceiveCommand(.previousTrack)
+            DispatchQueue.main.async { [weak self] in
+                Task {
+                    await self?.delegate?.audioSessionDidReceiveCommand(.previousTrack)
+                }
             }
             return .success
         }
@@ -170,8 +161,10 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
             guard let seekEvent = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
             }
-            Task { @MainActor in
-                await self?.delegate?.audioSessionDidReceiveCommand(.seek(to: seekEvent.positionTime))
+            DispatchQueue.main.async { [weak self] in
+                Task {
+                    await self?.delegate?.audioSessionDidReceiveCommand(.seek(to: seekEvent.positionTime))
+                }
             }
             return .success
         }
@@ -183,8 +176,10 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
             guard let skipEvent = event as? MPSkipIntervalCommandEvent else {
                 return .commandFailed
             }
-            Task { @MainActor in
-                await self?.delegate?.audioSessionDidReceiveCommand(.skipForward(skipEvent.interval))
+            DispatchQueue.main.async { [weak self] in
+                Task {
+                    await self?.delegate?.audioSessionDidReceiveCommand(.skipForward(skipEvent.interval))
+                }
             }
             return .success
         }
@@ -195,8 +190,10 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
             guard let skipEvent = event as? MPSkipIntervalCommandEvent else {
                 return .commandFailed
             }
-            Task { @MainActor in
-                await self?.delegate?.audioSessionDidReceiveCommand(.skipBackward(skipEvent.interval))
+            DispatchQueue.main.async { [weak self] in
+                Task {
+                    await self?.delegate?.audioSessionDidReceiveCommand(.skipBackward(skipEvent.interval))
+                }
             }
             return .success
         }
@@ -303,17 +300,19 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
             return
         }
         
-        Task { @MainActor in
-            switch type {
-            case .began:
-                await handleInterruption(.began)
-                
-            case .ended:
-                let shouldResume = (info[AVAudioSessionInterruptionOptionKey] as? UInt) == AVAudioSession.InterruptionOptions.shouldResume.rawValue
-                await handleInterruption(.ended(shouldResume: shouldResume))
-                
-            @unknown default:
-                break
+        DispatchQueue.main.async { [weak self] in
+            Task {
+                switch type {
+                case .began:
+                    await self?.handleInterruption(.began)
+                    
+                case .ended:
+                    let shouldResume = (info[AVAudioSessionInterruptionOptionKey] as? UInt) == AVAudioSession.InterruptionOptions.shouldResume.rawValue
+                    await self?.handleInterruption(.ended(shouldResume: shouldResume))
+                    
+                @unknown default:
+                    break
+                }
             }
         }
     }
@@ -336,21 +335,25 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
             currentRoute: currentRoute
         )
         
-        Task { @MainActor in
-            await handleRouteChange(change)
+        DispatchQueue.main.async { [weak self] in
+            Task {
+                await self?.handleRouteChange(change)
+            }
         }
     }
     
     @objc private func handleMediaServicesReset(_ notification: Notification) {
         // Re-configure audio session after media services reset
-        Task { @MainActor in
-            do {
-                try await configureAudioSession()
-                if _isSessionActive {
-                    try await activateAudioSession()
+        DispatchQueue.main.async { [weak self] in
+            Task {
+                do {
+                    try await self?.configureAudioSession()
+                    if self?._isSessionActive == true {
+                        try await self?.activateAudioSession()
+                    }
+                } catch {
+                    print("Failed to reconfigure audio session after media services reset: \(error)")
                 }
-            } catch {
-                print("Failed to reconfigure audio session after media services reset: \(error)")
             }
         }
     }

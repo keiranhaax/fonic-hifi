@@ -29,8 +29,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Last render time for tracking playback position
     private var lastRenderTime: AVAudioTime?
     
-    /// Timer for updating playback progress
-    private var progressTimer: Timer?
+    // Progress updates are handled by AudioEngineFacade's ProgressTimerManager
+    // No local timer needed
     
     /// Current playback state
     private var playbackState: PlaybackState = .idle
@@ -121,6 +121,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
                 throw AudioError.fileNotFound(url)
             }
             
+            print("=== AVAUDIOENGINE PREPARE DEBUG ===")
+            
             // Store total frames for duration calculation
             totalFrames = file.length
             
@@ -128,6 +130,15 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             if !engine.isRunning {
                 try startEngine()
             }
+            
+            let format = file.processingFormat
+            print("1. Attached player node")
+            print("2. Connected player to mixer with format: \(format)")
+            print("3. Sample rate: \(format.sampleRate)")
+            print("4. Channels: \(format.channelCount)")
+            print("5. Main mixer connected to output: \(engine.mainMixerNode.numberOfOutputs > 0)")
+            print("6. Engine prepared")
+            print("=== END PREPARE DEBUG ===")
             
             playbackState = .idle
             
@@ -137,54 +148,69 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
     
     public func play() async throws {
+        assertMainThread()
+        
         guard let file = audioFile else {
             throw AudioError.fileNotFound(URL(fileURLWithPath: ""))
         }
+        
+        print("=== AVAUDIOENGINE PLAY DEBUG ===")
+        print("1. Engine running before start: \(engine.isRunning)")
         
         // Configure audio session
         try await sessionManager.configureAudioSession()
         try await sessionManager.activateAudioSession()
         
-        // Schedule file for playback
-        // CRITICAL: AVAudioPlayerNode completion handlers run on background threads
-        // per Apple documentation. We must explicitly dispatch to main thread.
-        playerNode.scheduleFile(file, at: nil) {
-            // This closure runs on a background thread!
-            // Use explicit dispatch to avoid libdispatch assertion failures
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                Task { @MainActor in
-                    await self.handlePlaybackCompletion()
-                }
-            }
-        }
-        
         // Start playback
         if !engine.isRunning {
             try startEngine()
+            print("2. Engine started")
+        }
+        
+        print("3. Engine running after start: \(engine.isRunning)")
+        print("4. Player node playing state: \(playerNode.isPlaying)")
+        
+        // Schedule file for playback
+        // CRITICAL: AVAudioPlayerNode completion handlers run on background threads
+        // per Apple documentation. We must explicitly dispatch to main actor.
+        playerNode.scheduleFile(file, at: nil) {
+            print("5. File playback completed")
+            // This closure runs on Core Audio's background thread
+            // Use Task to dispatch to MainActor safely
+            Task { @MainActor [weak self] in
+                self?.handlePlaybackCompletionSync()
+            }
         }
         
         playerNode.play()
+        print("6. Called playerNode.play()")
+        print("7. Player node playing after play: \(playerNode.isPlaying)")
+        print("8. Output volume: \(playerNode.volume)")
+        print("9. Engine output node volume: \(engine.mainMixerNode.outputVolume)")
+        print("=== END AVAUDIOENGINE DEBUG ===")
+        
         playbackState = .playing(currentTime: await currentTime, duration: await duration)
         
-        // Start progress timer
-        startProgressTimer()
-        
+        // Progress timer is managed by AudioEngineFacade
         // Record metrics start time
         metricsStartTime = Date()
         bufferUnderrunCount = 0
     }
     
     public func pause() async {
+        assertMainThread()
+        
         playerNode.pause()
         playbackState = .paused(currentTime: await currentTime, duration: await duration)
-        stopProgressTimer()
+        // Progress timer is managed by AudioEngineFacade
     }
     
     public func stop() async {
+        assertMainThread()
+        
         playerNode.stop()
         playbackState = .stopped
-        stopProgressTimer()
+        // Progress timer is managed by AudioEngineFacade
         
         // Reset position
         audioFile = nil
@@ -223,13 +249,10 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             frameCount: AVAudioFrameCount(framesToPlay),
             at: nil
         ) { [weak self] in
-            // This closure runs on a background thread!
-            // Use explicit dispatch to avoid libdispatch assertion failures
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                Task { @MainActor in
-                    await self.handlePlaybackCompletion()
-                }
+            // This closure runs on Core Audio's background thread
+            // Use Task to dispatch to MainActor safely
+            Task { @MainActor [weak self] in
+                self?.handlePlaybackCompletionSync()
             }
         }
         
@@ -313,29 +336,12 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     
     private func handlePlaybackCompletion() {
         playbackState = .stopped
-        stopProgressTimer()
+        // Progress timer is managed by AudioEngineFacade
         completionHandler?()
     }
     
-    private func startProgressTimer() {
-        stopProgressTimer()
-        
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            // Timer callbacks can run on background threads, so explicitly dispatch to main
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                Task { @MainActor in
-                    // Update progress if needed
-                    // This could post notifications or update delegates
-                }
-            }
-        }
-    }
-    
-    private func stopProgressTimer() {
-        progressTimer?.invalidate()
-        progressTimer = nil
-    }
+    // Progress timer functionality moved to AudioEngineFacade's ProgressTimerManager
+    // This eliminates race conditions and centralizes progress updates
     
     private func setupMonitoring() {
         // Install tap on output for monitoring buffer underruns
@@ -347,13 +353,10 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             format: format
         ) { [weak self] buffer, time in
             // Monitor for buffer underruns
-            // Audio tap handlers run on audio render thread, so dispatch to main for state updates
+            // Audio tap handlers run on audio render thread, so dispatch to main actor for state updates
             if buffer.frameLength == 0 {
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    Task { @MainActor in
-                        self.bufferUnderrunCount += 1
-                    }
+                Task { @MainActor [weak self] in
+                    self?.bufferUnderrunCount += 1
                 }
             }
         }
@@ -411,6 +414,28 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Set a completion handler for when playback finishes
     public func setCompletionHandler(_ handler: @escaping () -> Void) {
         completionHandler = handler
+    }
+    
+    /// Handle playback completion synchronously on main thread
+    /// This is called from Task { @MainActor in } to avoid RealtimeMessenger crashes
+    private func handlePlaybackCompletionSync() {
+        assertMainThread()
+        completionHandler?()
+    }
+    
+    /// Assert that we're running on the main thread
+    /// Helps catch threading issues during development
+    private func assertMainThread(
+        file: StaticString = #file,
+        line: UInt = #line,
+        function: StaticString = #function
+    ) {
+        #if DEBUG
+        assert(
+            Thread.isMainThread,
+            "\(function) must be called on the main thread. Called from \(file):\(line)"
+        )
+        #endif
     }
     
     deinit {

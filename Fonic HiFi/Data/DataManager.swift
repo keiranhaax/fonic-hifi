@@ -1,4 +1,4 @@
-//
+// 
 //  DataManager.swift
 //  Fonic HiFi
 //
@@ -375,6 +375,17 @@ extension DataManager {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
+        }
+    }
+    
+    /// Create a preview DataManager for SwiftUI previews
+    @MainActor
+    static func makePreviewDataManager() -> DataManager {
+        do {
+            let previewDataManager = try DataManager()
+            return previewDataManager
+        } catch {
+            fatalError("Could not create preview DataManager: \(error)")
         }
     }
     

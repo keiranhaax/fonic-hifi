@@ -23,6 +23,7 @@ public final class AudioEngineFactory {
     /// Registered engine types and their availability
     private var availableEngines: [AudioEngineType: Bool] = [
         .avAudioEngine: true,
+        .audioKitEngine: true,  // AudioKit adapter available
         .sfbAudioEngine: false, // Will be true when dependency is added
         .ffmpegEngine: false    // Will be true when dependency is added
     ]
@@ -92,17 +93,29 @@ public final class AudioEngineFactory {
             }
             
         case .quality:
-            // Prefer specialized engines for quality
+            // Prefer AudioKit for better scheduling and audio thread management
+            if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
+                return .audioKitEngine
+            }
+            // Fall back to specialized engines for quality
             if format.requiresSpecialEngine && availableEngines[.sfbAudioEngine] == true {
                 return .sfbAudioEngine
             }
             
         case .balanced:
-            // Balance between quality and efficiency
+            // AudioKit provides good balance of quality and performance
+            if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
+                return .audioKitEngine
+            }
             break
         }
         
-        // Standard selection logic
+        // Standard selection logic - prefer AudioKit for better thread management
+        if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
+            return .audioKitEngine
+        }
+        
+        // Fall back to native engine
         if canUseAVAudioEngine(for: format) {
             return .avAudioEngine
         }
@@ -140,6 +153,9 @@ public final class AudioEngineFactory {
         switch type {
         case .avAudioEngine:
             return AVAudioEngineAdapter()
+            
+        case .audioKitEngine:
+            return AudioKitEngineAdapter()
             
         case .sfbAudioEngine:
             // Will be replaced with real implementation when dependency is added

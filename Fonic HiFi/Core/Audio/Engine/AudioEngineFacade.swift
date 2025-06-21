@@ -15,7 +15,7 @@ import AVFoundation
 /// validation, and monitoring
 @MainActor
 @Observable
-public final class AudioEngineFacade: ObservableObject, Sendable {
+public final class AudioEngineFacade: ObservableObject {
     
     // MARK: - Core Services
     
@@ -68,10 +68,10 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
     /// Whether the facade is properly initialized and ready
     public private(set) var isReady: Bool = false
     
-    // MARK: - Publishers for AppState Binding
+    // MARK: - Progress Management
     
-    /// Timer manager for progress updates
-    internal let progressTimerManager = ProgressTimerManager()
+    /// Timer manager for progress updates - no longer needs AppState binding
+    internal let progressTimer = ProgressTimerManager()
     
     // MARK: - Thread Management
     
@@ -162,6 +162,9 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
     public func shutdown() async {
         logger.info("Shutting down AudioEngineFacade...")
         
+        // Stop progress timer
+        progressTimer.stop()
+        
         // Stop monitoring
         await monitor.stopMonitoring()
         
@@ -188,6 +191,8 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
     /// Play a specific track
     /// - Parameter track: The track to play
     public func play(track: Track) async throws {
+        assertMainThread()
+        
         guard isReady else {
             throw AudioError.engineInitializationFailed(reason: "Engine not ready")
         }
@@ -237,6 +242,23 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
             
             try await engine.play()
             
+            // Start progress timer for continuous updates
+            progressTimer.start(pollInterval: 0.1) { [weak self] in
+                guard let self = self else { return }
+                guard let engine = self.currentEngine,
+                      self.currentState.isPlaying else {
+                    return
+                }
+                
+                Task {
+                    let currentTime = await engine.currentTime
+                    let duration = await engine.duration
+                    await MainActor.run {
+                        self.stateManager.updateTime(currentTime, duration: duration)
+                    }
+                }
+            }
+            
             logger.info("Playback started successfully")
             
         } catch {
@@ -249,6 +271,8 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
     
     /// Resume playback from current position
     public func resume() async throws {
+        assertMainThread()
+        
         guard isReady else {
             throw AudioError.engineInitializationFailed(reason: "Engine not ready")
         }
@@ -271,6 +295,23 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
             let duration = await engine.duration
             stateManager.updateState(.playing(currentTime: currentTime, duration: duration))
             
+            // Restart progress timer
+            progressTimer.start(pollInterval: 0.1) { [weak self] in
+                guard let self = self else { return }
+                guard let engine = self.currentEngine,
+                      self.currentState.isPlaying else {
+                    return
+                }
+                
+                Task {
+                    let currentTime = await engine.currentTime
+                    let duration = await engine.duration
+                    await MainActor.run {
+                        self.stateManager.updateTime(currentTime, duration: duration)
+                    }
+                }
+            }
+            
         } catch {
             logger.error("Failed to resume playback: \(error.localizedDescription)")
             stateManager.updateState(.error(error as? AudioError ?? .playbackFailed(reason: error.localizedDescription), lastKnownTime: nil))
@@ -280,12 +321,17 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
     
     /// Pause playback
     public func pause() async {
+        assertMainThread()
+        
         guard isReady, let engine = currentEngine else {
             logger.warning("Cannot pause: engine not ready")
             return
         }
         
         logger.info("Pausing playback")
+        
+        // Stop progress timer
+        progressTimer.stop()
         
         await engine.pause()
         
@@ -297,12 +343,17 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
     
     /// Stop playback completely
     public func stop() async {
+        assertMainThread()
+        
         guard let engine = currentEngine else {
             stateManager.updateState(.stopped)
             return
         }
         
         logger.info("Stopping playback")
+        
+        // Stop progress timer
+        progressTimer.stop()
         
         await engine.stop()
         stateManager.updateState(.stopped)
@@ -311,6 +362,8 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
     /// Seek to a specific time position
     /// - Parameter time: Target time in seconds
     public func seek(to time: TimeInterval) async throws {
+        assertMainThread()
+        
         guard isReady, let engine = currentEngine else {
             throw AudioError.engineInitializationFailed(reason: "Engine not ready")
         }
@@ -448,8 +501,7 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
         // 1. Queue manager delegate for state updates
         queueManager.delegate = QueueToStateBridge(stateManager: stateManager)
         
-        // 2. State manager updates from playback timer
-        setupPlaybackTimeUpdates()
+        // 2. Progress timer will be started when playback begins
         
         // 3. Monitor integration
         if let engine = currentEngine {
@@ -491,31 +543,6 @@ public final class AudioEngineFacade: ObservableObject, Sendable {
         logger.info("Engine configuration updated - may require recreation for some changes")
     }
     
-    private func setupPlaybackTimeUpdates() {
-        // Set up a timer to periodically update playback time in state manager
-        // Use DispatchQueue.main.async to ensure timer callback is on main thread
-        let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
-            // Timer callbacks can run on background threads, so explicitly dispatch to main
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                Task { @MainActor in
-                    guard let engine = self.currentEngine,
-                          self.currentState.isPlaying else {
-                        return
-                    }
-                    
-                    let currentTime = await engine.currentTime
-                    let duration = await engine.duration
-                    self.stateManager.updateTime(currentTime, duration: duration)
-                }
-            }
-        }
-        
-        // Store timer for cleanup
-        AnyCancellable {
-            timer.invalidate()
-        }.store(in: &cancellables)
-    }
     
     private func handleSessionInterruption(_ interruption: AudioInterruptionType) async {
         switch interruption {
@@ -610,6 +637,25 @@ extension Timer {
 extension AudioError {
     static let engineNotReady = AudioError.engineInitializationFailed
     static let invalidOperation = AudioError.playbackFailed
+}
+
+// MARK: - Thread Safety Utilities
+
+extension AudioEngineFacade {
+    /// Assert that we're running on the main thread
+    /// Helps catch threading issues during development
+    private func assertMainThread(
+        file: StaticString = #file,
+        line: UInt = #line,
+        function: StaticString = #function
+    ) {
+        #if DEBUG
+        assert(
+            Thread.isMainThread,
+            "\(function) must be called on the main thread. Called from \(file):\(line)"
+        )
+        #endif
+    }
 }
 
 extension Logger {

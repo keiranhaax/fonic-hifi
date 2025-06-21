@@ -79,7 +79,53 @@ struct FileImportView: View {
     }
     
     private var supportedAudioTypes: [UTType] {
-        [.mp3, .mpeg4Audio, .appleProtectedMPEG4Audio, .wav, .aiff, .audio]
+        var types: [UTType] = [
+            .mp3,
+            .mpeg4Audio,
+            .appleProtectedMPEG4Audio,
+            .wav,
+            .aiff,
+            .audio
+        ]
+        
+        // Add custom audio types for high-quality formats
+        if let flac = UTType("org.xiph.flac") ?? UTType(filenameExtension: "flac") {
+            types.append(flac)
+        }
+        
+        if let alac = UTType("com.apple.lossless-audio") ?? UTType(filenameExtension: "alac") {
+            types.append(alac)
+        }
+        
+        if let m4a = UTType(filenameExtension: "m4a") {
+            types.append(m4a)
+        }
+        
+        if let aac = UTType(filenameExtension: "aac") {
+            types.append(aac)
+        }
+        
+        if let ape = UTType(filenameExtension: "ape") {
+            types.append(ape)
+        }
+        
+        if let wavpack = UTType(filenameExtension: "wv") {
+            types.append(wavpack)
+        }
+        
+        if let ogg = UTType("org.xiph.ogg") ?? UTType(filenameExtension: "ogg") {
+            types.append(ogg)
+        }
+        
+        if let opus = UTType("org.opus-codec.opus") ?? UTType(filenameExtension: "opus") {
+            types.append(opus)
+        }
+        
+        if let aif = UTType(filenameExtension: "aif") {
+            types.append(aif)
+        }
+        
+        return types
     }
 }
 
