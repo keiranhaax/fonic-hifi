@@ -181,14 +181,23 @@ public final class LibraryImportService: ObservableObject {
         var audioFiles: [URL] = []
         
         for url in urls {
+            // Start accessing security-scoped resource
+            let startedAccessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if startedAccessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            
             var isDirectory: ObjCBool = false
             guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
+                logger.warning("File does not exist: \(url.path)")
                 continue
             }
             
             if isDirectory.boolValue {
-                // Recursively scan directory
-                audioFiles.append(contentsOf: await scanDirectory(url))
+                // Recursively scan directory with security scope
+                audioFiles.append(contentsOf: await scanDirectoryWithSecurityScope(url))
             } else if isSupportedAudioFile(url) {
                 audioFiles.append(url)
             }
@@ -197,7 +206,7 @@ public final class LibraryImportService: ObservableObject {
         return audioFiles
     }
     
-    /// Recursively scan a directory for audio files
+    /// Scan a directory for audio files
     private func scanDirectory(_ directoryURL: URL) async -> [URL] {
         var audioFiles: [URL] = []
         
@@ -226,6 +235,49 @@ public final class LibraryImportService: ObservableObject {
         return audioFiles
     }
     
+    /// Scan a directory with security-scoped resource handling
+    private func scanDirectoryWithSecurityScope(_ directoryURL: URL) async -> [URL] {
+        var audioFiles: [URL] = []
+        
+        let startedAccessing = directoryURL.startAccessingSecurityScopedResource()
+        defer {
+            if startedAccessing {
+                directoryURL.stopAccessingSecurityScopedResource()
+            }
+        }
+        
+        do {
+            let resourceKeys: [URLResourceKey] = [.isDirectoryKey, .isRegularFileKey]
+            let contents = try FileManager.default.contentsOfDirectory(
+                at: directoryURL,
+                includingPropertiesForKeys: resourceKeys,
+                options: [.skipsHiddenFiles]
+            )
+            
+            for url in contents {
+                // Each subdirectory/file needs its own security scope
+                let childStartedAccessing = url.startAccessingSecurityScopedResource()
+                defer {
+                    if childStartedAccessing {
+                        url.stopAccessingSecurityScopedResource()
+                    }
+                }
+                
+                let resourceValues = try url.resourceValues(forKeys: Set(resourceKeys))
+                
+                if resourceValues.isDirectory == true {
+                    // Recursively scan subdirectory
+                    audioFiles.append(contentsOf: await scanDirectoryWithSecurityScope(url))
+                } else if resourceValues.isRegularFile == true && isSupportedAudioFile(url) {
+                    audioFiles.append(url)
+                }
+            }
+        } catch {
+            logger.error("Error scanning directory \(directoryURL.path): \(error.localizedDescription)")
+        }
+        
+        return audioFiles
+    }
     
     /// Check if a file is a supported audio format
     private func isSupportedAudioFile(_ url: URL) -> Bool {
@@ -251,6 +303,14 @@ public final class LibraryImportService: ObservableObject {
     
     /// Copy an imported file to the app container
     private func copyImportedFile(_ sourceURL: URL) throws -> URL {
+        // Start accessing security-scoped resource before copying
+        let startedAccessing = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if startedAccessing {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+        
         // Ensure music container exists
         try setupMusicContainer()
         
@@ -360,6 +420,14 @@ public final class LibraryImportService: ObservableObject {
     private func processAudioFile(_ url: URL) async throws -> PersistentIdentifier? {
         statusMessage = "Processing \(url.lastPathComponent)..."
         
+        // Start accessing security-scoped resource
+        let startedAccessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if startedAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        
         // Copy file to app container for persistent access
         let copiedFileURL: URL
         do {
@@ -403,7 +471,6 @@ public struct ImportError: Identifiable, Equatable {
     
 }
 
-
 // MARK: - Extensions
 
 private extension Array {
@@ -413,4 +480,3 @@ private extension Array {
         }
     }
 }
-

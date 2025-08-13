@@ -23,7 +23,7 @@ public final class AudioEngineFactory {
     /// Registered engine types and their availability
     private var availableEngines: [AudioEngineType: Bool] = [
         .avAudioEngine: true,
-        .audioKitEngine: true,  // AudioKit adapter available
+        .audioKitEngine: false,
         .sfbAudioEngine: false, // Will be true when dependency is added
         .ffmpegEngine: false    // Will be true when dependency is added
     ]
@@ -93,9 +93,9 @@ public final class AudioEngineFactory {
             }
             
         case .quality:
-            // Prefer AudioKit for better scheduling and audio thread management
-            if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
-                return .audioKitEngine
+            // Prefer AVAudioEngine for quality since AudioKit is just a mock
+            if canUseAVAudioEngine(for: format) {
+                return .avAudioEngine
             }
             // Fall back to specialized engines for quality
             if format.requiresSpecialEngine && availableEngines[.sfbAudioEngine] == true {
@@ -103,21 +103,21 @@ public final class AudioEngineFactory {
             }
             
         case .balanced:
-            // AudioKit provides good balance of quality and performance
-            if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
-                return .audioKitEngine
+            // Use AVAudioEngine for balanced performance since AudioKit is mock
+            if canUseAVAudioEngine(for: format) {
+                return .avAudioEngine
             }
             break
         }
         
-        // Standard selection logic - prefer AudioKit for better thread management
-        if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
-            return .audioKitEngine
-        }
-        
-        // Fall back to native engine
+        // Standard selection logic - prefer AVAudioEngine since AudioKit is mock
         if canUseAVAudioEngine(for: format) {
             return .avAudioEngine
+        }
+        
+        // Only try AudioKit if explicitly available and format requires it
+        if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
+            return .audioKitEngine
         }
         
         // Try SFBAudioEngine for high-res formats

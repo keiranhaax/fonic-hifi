@@ -10,33 +10,34 @@ import SwiftUI
 /// Container without animations to test if matched geometry is the issue
 @MainActor
 struct NowPlayingContainer_NoAnimation: View {
-    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Binding var showingNowPlaying: Bool
     
     var body: some View {
         ZStack(alignment: .bottom) {
             // Mini player
-            if appState.showMiniPlayer && !appState.showingNowPlaying {
-                MiniPlayerView_NoAnimation()
+            if audioService.showMiniPlayer && !showingNowPlaying {
+                MiniPlayerView_NoAnimation(showingNowPlaying: $showingNowPlaying)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .zIndex(1)
             }
             
             // Full Now Playing view
-            if appState.showingNowPlaying {
-                NowPlayingView_NoAnimation()
+            if showingNowPlaying {
+                NowPlayingView_NoAnimation(showingNowPlaying: $showingNowPlaying)
                     .transition(.opacity)
                     .zIndex(2)
                     .onAppear {
                         print("=== NOW PLAYING CONTAINER APPEARED ===")
-                        print("App state showingNowPlaying: \(appState.showingNowPlaying)")
-                        print("Current track object: \(appState.currentTrackObject?.title ?? "nil")")
+                        print("App state showingNowPlaying: \(showingNowPlaying)")
+                        print("Current track: \(audioService.currentTrack?.title ?? "nil")")
                     }
             }
         }
         .animation(
             reduceMotion ? .none : .easeInOut(duration: 0.3),
-            value: appState.showingNowPlaying
+            value: showingNowPlaying
         )
     }
 }
@@ -44,8 +45,8 @@ struct NowPlayingContainer_NoAnimation: View {
 /// Mini player without matched geometry
 @MainActor
 struct MiniPlayerView_NoAnimation: View {
-    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var audioService: AudioEngineFacade
+    @Binding var showingNowPlaying: Bool
     
     var body: some View {
         VStack(spacing: 0) {
@@ -69,12 +70,12 @@ struct MiniPlayerView_NoAnimation: View {
                 
                 // Track info - NO MATCHED GEOMETRY
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(appState.currentTrack?.title ?? "Not Playing")
+                    Text(audioService.currentTrack?.title ?? "Not Playing")
                         .font(.body)
                         .fontWeight(.medium)
                         .lineLimit(1)
                     
-                    Text(appState.currentTrack?.artist ?? "No Artist")
+                    Text(audioService.currentTrack?.artist ?? "No Artist")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -86,7 +87,7 @@ struct MiniPlayerView_NoAnimation: View {
                 HStack(spacing: 20) {
                     // Play/Pause button - NO MATCHED GEOMETRY
                     Button(action: togglePlayPause) {
-                        Image(systemName: appState.isPlaying ? "pause.fill" : "play.fill")
+                        Image(systemName: audioService.isPlaying ? "pause.fill" : "play.fill")
                             .font(.title3)
                             .frame(width: 24, height: 24)
                     }
@@ -110,13 +111,13 @@ struct MiniPlayerView_NoAnimation: View {
         )
         .onTapGesture {
             print("Mini player tapped - showing Now Playing")
-            appState.showNowPlaying()
+            showingNowPlaying = true
         }
     }
     
     private func togglePlayPause() {
         Task { @MainActor in
-            if appState.isPlaying {
+            if audioService.isPlaying {
                 await audioService.pause()
             } else {
                 try? await audioService.resume()
@@ -134,8 +135,8 @@ struct MiniPlayerView_NoAnimation: View {
 /// Now Playing view without matched geometry
 @MainActor
 struct NowPlayingView_NoAnimation: View {
-    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var audioService: AudioEngineFacade
+    @Binding var showingNowPlaying: Bool
     @State private var hasStartedPlayback = false
     
     var body: some View {
@@ -148,7 +149,7 @@ struct NowPlayingView_NoAnimation: View {
                 // Header with close button
                 HStack {
                     Button("Close") {
-                        appState.hideNowPlaying()
+                        showingNowPlaying = false
                     }
                     .foregroundColor(.white)
                     
@@ -171,19 +172,19 @@ struct NowPlayingView_NoAnimation: View {
                 
                 // Track info - NO MATCHED GEOMETRY
                 VStack(spacing: 8) {
-                    Text(appState.currentTrack?.title ?? "Not Playing")
+                    Text(audioService.currentTrack?.title ?? "Not Playing")
                         .font(.title2)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                     
-                    Text(appState.currentTrack?.artist ?? "No Artist")
+                    Text(audioService.currentTrack?.artist ?? "No Artist")
                         .font(.body)
                         .foregroundColor(.white.opacity(0.7))
                 }
                 
                 // Play button - NO MATCHED GEOMETRY
                 Button(action: togglePlayPause) {
-                    Image(systemName: appState.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    Image(systemName: audioService.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                         .font(.system(size: 64))
                         .foregroundColor(.white)
                 }
@@ -195,19 +196,19 @@ struct NowPlayingView_NoAnimation: View {
         .onAppear {
             print("=== NOW PLAYING VIEW NO ANIMATION APPEARED ===")
             print("Has started playback: \(hasStartedPlayback)")
-            print("Current track object: \(appState.currentTrackObject?.title ?? "nil")")
+            print("Current track: \(audioService.currentTrack?.title ?? "nil")")
             
             // Start audio playback after the view has appeared
-            if !hasStartedPlayback, let track = appState.currentTrackObject {
+            if !hasStartedPlayback, let track = audioService.currentTrack {
                 hasStartedPlayback = true
                 
                 Task { @MainActor in
                     print("\n=== AUDIO PLAYBACK DEBUG (NO ANIMATION) ===")
-                    print("1. Starting playback for: \(track.title ?? "Unknown")")
+                    print("1. Starting playback for: \(track.title)")
                     print("2. Track file path: \(track.url.path)")
-                    print("3. Track artist: \(track.artist ?? "Unknown")")
+                    print("3. Track artist: \(track.artist)")
                     print("4. Track duration: \(track.duration)")
-                    print("5. Track format: \(track.audioFormat ?? "Unknown")")
+                    print("5. Track format: \(track.audioFormat)")
                     
                     // Check if file exists
                     if FileManager.default.fileExists(atPath: track.url.path) {
@@ -237,7 +238,7 @@ struct NowPlayingView_NoAnimation: View {
                         // Check audio state after play
                         print("13. Post-play is playing: \(audioService.isPlaying)")
                         print("14. Post-play current track: \(audioService.currentTrack?.title ?? "nil")")
-                        print("15. Post-play app state is playing: \(appState.isPlaying)")
+                        print("15. Post-play audio service is playing: \(audioService.isPlaying)")
                         
                     } catch {
                         print("12. ❌ Failed to start audio playback: \(error)")
@@ -245,21 +246,21 @@ struct NowPlayingView_NoAnimation: View {
                         print("    Error description: \(error.localizedDescription)")
                         
                         // Reset state if playback failed
-                        appState.setCurrentTrack(nil)
-                        appState.hideNowPlaying()
+                        audioService.setCurrentTrack(nil)
+                        showingNowPlaying = false
                     }
                     
                     print("=== END AUDIO PLAYBACK DEBUG (NO ANIMATION) ===\n")
                 }
             } else {
-                print("Not starting playback - hasStartedPlayback: \(hasStartedPlayback), track: \(appState.currentTrackObject?.title ?? "nil")")
+                print("Not starting playback - hasStartedPlayback: \(hasStartedPlayback), track: \(audioService.currentTrack?.title ?? "nil")")
             }
         }
     }
     
     private func togglePlayPause() {
         Task { @MainActor in
-            if appState.isPlaying {
+            if audioService.isPlaying {
                 await audioService.pause()
             } else {
                 try? await audioService.resume()
@@ -269,7 +270,7 @@ struct NowPlayingView_NoAnimation: View {
 }
 
 #Preview {
-    NowPlayingContainer_NoAnimation()
-        .environmentObject(AppState())
+    @Previewable @State var showingNowPlaying = false
+    return NowPlayingContainer_NoAnimation(showingNowPlaying: $showingNowPlaying)
         .environmentObject(AudioEngineFacade())
 }

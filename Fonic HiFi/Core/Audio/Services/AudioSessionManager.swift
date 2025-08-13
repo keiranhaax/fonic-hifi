@@ -52,7 +52,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
     }
     
     public func activateAudioSession() async throws {
-        // ✅ AudioKit handles audio session activation automatically
+        // ✅ AudioKit handles audio session activation automatically  
         // Just update our internal tracking
         _isSessionActive = true
     }

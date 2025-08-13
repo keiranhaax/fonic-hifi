@@ -11,7 +11,7 @@ import SwiftUI
 @MainActor
 struct DebugTrackRowView: View {
     let track: Track
-    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @EnvironmentObject private var audioService: AudioEngineFacade
     
     var body: some View {
@@ -47,29 +47,29 @@ struct DebugTrackRowView: View {
             print("3. Dispatch precondition passed - we are on main queue")
             
             // Update app state
-            print("\n4. About to update appState.currentTrack")
-            print("   Current track before: \(appState.currentTrack?.title ?? "nil")")
-            appState.setCurrentTrack(track)
-            print("   Current track after: \(appState.currentTrack?.title ?? "nil")")
+            print("\n4. About to update audioService.currentTrack")
+            print("   Current track before: \(audioService.currentTrack?.title ?? "nil")")
+            audioService.setCurrentTrack(track)
+            print("   Current track after: \(audioService.currentTrack?.title ?? "nil")")
             
             // Show Now Playing
             print("\n5. About to set showingNowPlaying = true")
-            print("   showingNowPlaying before: \(appState.showingNowPlaying)")
+            // print("   showingNowPlaying before: \(audioService.showingNowPlaying)") // Property moved to local view state
             
             // Try different approaches to see which crashes
             
             // Approach 1: Direct set
-            // appState.showingNowPlaying = true
+            // audioService.showingNowPlaying = true
             
             // Approach 2: Via method
-            appState.showNowPlaying()
+            // audioService.showNowPlaying() // Method removed - showingNowPlaying moved to local view state
             
             // Approach 3: With animation
             // withAnimation {
-            //     appState.showingNowPlaying = true
+            //     audioService.showingNowPlaying = true
             // }
             
-            print("   showingNowPlaying after: \(appState.showingNowPlaying)")
+            // print("   showingNowPlaying after: \(audioService.showingNowPlaying)") // Property moved to local view state
             
             // Play audio
             print("\n6. About to call audioService.play")
@@ -94,6 +94,6 @@ struct DebugTrackRowView: View {
         audioFormat: "MP3",
         duration: 180
     ))
-    .environmentObject(AppState())
+    .environmentObject(AudioEngineFacade())
     .environmentObject(AudioEngineFacade())
 }

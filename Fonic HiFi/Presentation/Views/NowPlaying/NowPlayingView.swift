@@ -9,7 +9,6 @@ import SwiftUI
 
 @MainActor
 struct NowPlayingView: View {
-    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
@@ -22,10 +21,27 @@ struct NowPlayingView: View {
     @GestureState private var dragOffset: CGFloat = 0
     @State private var isDragging = false
     
-    // UI State
+    // UI State (moved from AppState to local state)
     @State private var showingQueue = false
     @State private var dominantColor: Color = .accentColor
     @State private var hasStartedPlayback = false
+    
+    // UI Preferences (now using @AppStorage for persistence)
+    @AppStorage("volume") private var volumeStorage: Double = 1.0
+    @AppStorage("isShuffleEnabled") private var isShuffleEnabled: Bool = false
+    @AppStorage("repeatMode") private var repeatModeRawValue: String = QueueRepeatMode.none.rawValue
+    
+    // Computed property for volume (convert Double to Float)
+    private var volume: Float {
+        get { Float(volumeStorage) }
+        set { volumeStorage = Double(newValue) }
+    }
+    
+    // Computed property for repeat mode
+    private var repeatMode: QueueRepeatMode {
+        get { QueueRepeatMode(rawValue: repeatModeRawValue) ?? .none }
+        set { repeatModeRawValue = newValue.rawValue }
+    }
     
     // Slider state for progress control
     @State private var sliderProgress: Double = 0.0
@@ -92,24 +108,24 @@ struct NowPlayingView: View {
         .task {
             print("=== NOW PLAYING VIEW TASK ===")
             print("Has started playback: \(hasStartedPlayback)")
-            print("Current track object: \(appState.currentTrackObject?.title ?? "nil")")
+            print("Current track: \(audioService.currentTrack?.title ?? "nil")")
             
             extractDominantColor()
             
             // Start audio playback after the view has loaded
-            guard !hasStartedPlayback, let track = appState.currentTrackObject else {
-                print("Not starting playback - hasStartedPlayback: \(hasStartedPlayback), track: \(appState.currentTrackObject?.title ?? "nil")")
+            guard !hasStartedPlayback, let track = audioService.currentTrack else {
+                print("Not starting playback - hasStartedPlayback: \(hasStartedPlayback), track: \(audioService.currentTrack?.title ?? "nil")")
                 return
             }
             
             hasStartedPlayback = true
             
             print("\n=== AUDIO PLAYBACK DEBUG ===")
-            print("1. Starting playback for: \(track.title ?? "Unknown")")
+            print("1. Starting playback for: \(track.title)")
             print("2. Track file path: \(track.url.path)")
-            print("3. Track artist: \(track.artist ?? "Unknown")")
+            print("3. Track artist: \(track.artist)")
             print("4. Track duration: \(track.duration)")
-            print("5. Track format: \(track.audioFormat ?? "Unknown")")
+            print("5. Track format: \(track.audioFormat)")
             
             // Check if file exists
             if FileManager.default.fileExists(atPath: track.url.path) {
@@ -139,7 +155,7 @@ struct NowPlayingView: View {
                 // Check audio state after play
                 print("13. Post-play is playing: \(audioService.isPlaying)")
                 print("14. Post-play current track: \(audioService.currentTrack?.title ?? "nil")")
-                print("15. Post-play app state is playing: \(appState.isPlaying)")
+                print("15. Post-play audio service is playing: \(audioService.isPlaying)")
                 
             } catch {
                 print("12. ❌ Failed to start audio playback: \(error)")
@@ -147,8 +163,8 @@ struct NowPlayingView: View {
                 print("    Error description: \(error.localizedDescription)")
                 
                 // Reset state if playback failed
-                appState.setCurrentTrack(nil)
-                appState.hideNowPlaying()
+                audioService.setCurrentTrack(nil)
+                dismiss()
             }
             
             print("=== END AUDIO PLAYBACK DEBUG ===\n")
@@ -173,19 +189,19 @@ struct NowPlayingView: View {
     
     private var trackInfoView: some View {
         VStack(spacing: 8) {
-            Text(appState.currentTrack?.title ?? "Not Playing")
+            Text(audioService.currentTrack?.title ?? "Not Playing")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .matchedGeometryEffect(id: "title", in: animationNamespace)
             
-            Text(appState.currentTrack?.artist ?? "No Artist")
+            Text(audioService.currentTrack?.artist ?? "No Artist")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
                 .matchedGeometryEffect(id: "artist", in: animationNamespace)
             
-            if let album = appState.currentTrack?.album {
+            if let album = audioService.currentTrack?.album {
                 Text(album)
                     .font(.caption)
                     .foregroundColor(.secondary.opacity(0.8))
@@ -204,7 +220,7 @@ struct NowPlayingView: View {
                     // Slider callbacks may run on background thread
                     Task { @MainActor in
                         do {
-                            let seekTime = sliderProgress * appState.duration
+                            let seekTime = sliderProgress * audioService.duration
                             try await audioService.seek(to: seekTime)
                         } catch {
                             print("Failed to seek: \(error)")
@@ -213,7 +229,7 @@ struct NowPlayingView: View {
                 }
             }
             .tint(.white)
-            .onChange(of: appState.playbackProgress) { _, newValue in
+            .onChange(of: audioService.playbackProgress) { _, newValue in
                 // Update slider only if user is not dragging
                 if !isUserDragging {
                     sliderProgress = newValue
@@ -221,19 +237,19 @@ struct NowPlayingView: View {
             }
             .onAppear {
                 // Initialize slider with current progress
-                sliderProgress = appState.playbackProgress
+                sliderProgress = audioService.playbackProgress
             }
             
             // Time labels
             HStack {
-                Text(formatTime(appState.currentTime))
+                Text(formatTime(audioService.currentTime))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .monospacedDigit()
                 
                 Spacer()
                 
-                Text(formatTime(appState.duration))
+                Text(formatTime(audioService.duration))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .monospacedDigit()
@@ -247,7 +263,7 @@ struct NowPlayingView: View {
             Button(action: toggleShuffle) {
                 Image(systemName: "shuffle")
                     .font(.title3)
-                    .foregroundColor(appState.isShuffleEnabled ? .accentColor : .white)
+                    .foregroundColor(isShuffleEnabled ? .accentColor : .white)
             }
             
             // Previous button
@@ -258,7 +274,7 @@ struct NowPlayingView: View {
             
             // Play/Pause button
             Button(action: togglePlayPause) {
-                Image(systemName: appState.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                Image(systemName: audioService.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 64))
             }
             .matchedGeometryEffect(id: "playButton", in: animationNamespace)
@@ -273,7 +289,7 @@ struct NowPlayingView: View {
             Button(action: cycleRepeatMode) {
                 Image(systemName: repeatModeIcon)
                     .font(.title3)
-                    .foregroundColor(appState.repeatMode != .none ? .accentColor : .white)
+                    .foregroundColor(repeatMode != .none ? .accentColor : .white)
             }
         }
         .foregroundColor(.white)
@@ -285,11 +301,14 @@ struct NowPlayingView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             
-            Slider(value: $appState.volume, in: 0...1) { _ in
+            Slider(value: Binding(
+                get: { volume },
+                set: { newValue in volumeStorage = Double(newValue) }
+            ), in: 0...1) { _ in
                 // Update volume
                 // TODO: Implement volume control when available in AudioEngineFacade
                 // Task {
-                //     await audioService.setVolume(appState.volume)
+                //     await audioService.setVolume(volume)
                 // }
             }
             .tint(.white)
@@ -327,10 +346,10 @@ struct NowPlayingView: View {
                     let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                     impactFeedback.impactOccurred()
                     
-                        withAnimation(.interactiveSpring(response: 0.6, dampingFraction: 0.8)) {
-                            appState.hideNowPlaying()
-                        }
+                    withAnimation(.interactiveSpring(response: 0.6, dampingFraction: 0.8)) {
+                        dismiss()
                     }
+                }
                 }
             }
     }
@@ -338,7 +357,7 @@ struct NowPlayingView: View {
     // MARK: - Helpers
     
     private var repeatModeIcon: String {
-        switch appState.repeatMode {
+        switch repeatMode {
         case .none:
             return "repeat"
         case .all:
@@ -365,7 +384,7 @@ struct NowPlayingView: View {
     private func togglePlayPause() {
         Task { @MainActor in
             do {
-                if appState.isPlaying {
+                if audioService.isPlaying {
                     await audioService.pause()
                 } else {
                     try await audioService.resume()
@@ -398,16 +417,16 @@ struct NowPlayingView: View {
     
     private func toggleShuffle() {
         Task { @MainActor in
-            let newMode: QueueShuffleMode = appState.isShuffleEnabled ? .off : .random
+            let newMode: QueueShuffleMode = isShuffleEnabled ? .off : .random
             audioService.setShuffleMode(newMode)
-            appState.isShuffleEnabled = newMode != .off
+            isShuffleEnabled = newMode != .off
         }
     }
     
     private func cycleRepeatMode() {
         Task { @MainActor in
             let newMode: QueueRepeatMode
-            switch appState.repeatMode {
+            switch repeatMode {
             case .none:
                 newMode = .all
             case .all:
@@ -416,7 +435,7 @@ struct NowPlayingView: View {
                 newMode = .none
             }
             audioService.setRepeatMode(newMode)
-            appState.repeatMode = newMode
+            repeatModeRawValue = newMode.rawValue
         }
     }
 }

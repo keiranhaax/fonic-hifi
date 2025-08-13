@@ -157,9 +157,13 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         print("=== AVAUDIOENGINE PLAY DEBUG ===")
         print("1. Engine running before start: \(engine.isRunning)")
         
-        // Configure audio session
-        try await sessionManager.configureAudioSession()
-        try await sessionManager.activateAudioSession()
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Failed to configure audio session: \(error)")
+            throw AudioError.sessionConfigurationFailed(reason: error.localizedDescription)
+        }
         
         // Start playback
         if !engine.isRunning {
@@ -216,8 +220,11 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         audioFile = nil
         totalFrames = 0
         
-        // Deactivate audio session
-        try? await sessionManager.deactivateAudioSession()
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("Failed to deactivate audio session: \(error)")
+        }
     }
     
     public func seek(to time: TimeInterval) async throws {
@@ -420,6 +427,10 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// This is called from Task { @MainActor in } to avoid RealtimeMessenger crashes
     private func handlePlaybackCompletionSync() {
         assertMainThread()
+        
+        playbackState = .stopped
+        
+        // Call completion handler if it exists
         completionHandler?()
     }
     

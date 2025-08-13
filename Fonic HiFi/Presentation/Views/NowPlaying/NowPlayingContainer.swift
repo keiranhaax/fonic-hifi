@@ -10,14 +10,15 @@ import SwiftUI
 /// Container view that manages the transition between mini player and full Now Playing view
 @MainActor
 struct NowPlayingContainer: View {
-    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var animationNamespace
+    @Binding var showingNowPlaying: Bool
     
     var body: some View {
         ZStack(alignment: .bottom) {
             // Mini player
-            if appState.showMiniPlayer && !appState.showingNowPlaying {
+            if audioService.showMiniPlayer && !showingNowPlaying {
                 MiniPlayerView(animationNamespace: animationNamespace)
                     .transition(
                         .asymmetric(
@@ -29,7 +30,7 @@ struct NowPlayingContainer: View {
             }
             
             // Full Now Playing view
-            if appState.showingNowPlaying {
+            if showingNowPlaying {
                 NowPlayingView(animationNamespace: animationNamespace)
                     .transition(
                         .asymmetric(
@@ -42,7 +43,13 @@ struct NowPlayingContainer: View {
         }
         .animation(
             reduceMotion ? .none : .interactiveSpring(response: 0.6, dampingFraction: 0.8),
-            value: appState.showingNowPlaying
+            value: showingNowPlaying
         )
     }
+}
+
+#Preview {
+    @Previewable @State var showingNowPlaying = false
+    return NowPlayingContainer(showingNowPlaying: $showingNowPlaying)
+        .environmentObject(AudioEngineFacade())
 }

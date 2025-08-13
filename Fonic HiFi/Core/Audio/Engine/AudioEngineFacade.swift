@@ -13,8 +13,10 @@ import AVFoundation
 /// High-level facade that coordinates all audio infrastructure components
 /// Provides a unified interface for audio playback, state management, queue operations, 
 /// validation, and monitoring
+/// 
+/// Phase 3: Now serves as the single source of truth for all audio-related state,
+/// including UI state previously managed by AppState
 @MainActor
-@Observable
 public final class AudioEngineFacade: ObservableObject {
     
     // MARK: - Core Services
@@ -55,11 +57,6 @@ public final class AudioEngineFacade: ObservableObject {
         queueManager.queueState
     }
     
-    /// Current track being played
-    public var currentTrack: AudioTrack? {
-        queueManager.currentTrack
-    }
-    
     /// Whether audio is currently playing
     public var isPlaying: Bool {
         currentState.isPlaying
@@ -67,6 +64,35 @@ public final class AudioEngineFacade: ObservableObject {
     
     /// Whether the facade is properly initialized and ready
     public private(set) var isReady: Bool = false
+    
+    // MARK: - UI State (merged from AppState)
+    
+    /// Currently playing track (UI representation)
+    @Published public var currentTrack: Track? {
+        didSet {
+            print("currentTrack changed to: \(currentTrack?.title ?? "nil")")
+        }
+    }
+    
+    /// Whether the mini player should be visible
+    @Published public var showMiniPlayer: Bool = false
+    
+    // MARK: - Derived Properties
+    
+    /// Progress of the current track (0.0 to 1.0)
+    public var playbackProgress: Double {
+        currentState.progress ?? 0.0
+    }
+    
+    /// Current playback time in seconds
+    public var currentTime: TimeInterval {
+        currentState.currentTime ?? 0.0
+    }
+    
+    /// Duration of the current track in seconds
+    public var duration: TimeInterval {
+        currentState.duration ?? 0.0
+    }
     
     // MARK: - Progress Management
     
@@ -122,6 +148,9 @@ public final class AudioEngineFacade: ObservableObject {
         self.monitor = monitor ?? AudioMonitor()
         
         logger.info("AudioEngineFacade initialized with \(configuration.performanceMode) performance mode")
+        
+        // Setup playback state observation for UI updates
+        setupPlaybackStateObservation()
     }
     
     /// Initialize the facade and wire up all service integrations
@@ -491,6 +520,53 @@ public final class AudioEngineFacade: ObservableObject {
     /// Get current audio metrics
     public func getCurrentMetrics() async -> AudioMetrics {
         return await monitor.getCurrentMetrics()
+    }
+    
+    // MARK: - UI State Management (merged from AppState)
+    
+    /// Updates the current track and shows mini player
+    public func setCurrentTrack(_ track: Track?) {
+        guard let track = track else {
+            currentTrack = nil
+            showMiniPlayer = false
+            return
+        }
+        
+        // Store the Track object directly
+        currentTrack = track
+        showMiniPlayer = true
+    }
+    
+    /// Setup observation of playback state changes for UI updates
+    private func setupPlaybackStateObservation() {
+        stateManager.statePublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] change in
+                // Update derived UI state when playback state changes
+                self?.handlePlaybackStateChange(change)
+            }
+            .store(in: &cancellables)
+    }
+    
+    /// Handle playback state changes and update UI accordingly
+    private func handlePlaybackStateChange(_ change: PlaybackStateChange) {
+        // Update mini player visibility based on playback state
+        switch change.to {
+        case .idle, .stopped:
+            showMiniPlayer = false
+        case .playing, .paused, .loading, .buffering:
+            showMiniPlayer = true
+        default:
+            break
+        }
+        
+        // Trigger UI updates for derived properties
+        objectWillChange.send()
+    }
+    
+    /// Access to the playback state manager for advanced operations
+    public var playbackManager: PlaybackStateManager {
+        return stateManager
     }
     
     // MARK: - Private Implementation

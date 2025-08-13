@@ -12,7 +12,6 @@ import SwiftData
 // @main  // UNCOMMENT THIS AND COMMENT OUT @main IN FonicHiFiApp.swift TO USE
 struct FonicHiFiApp_Debug: App {
     @StateObject private var dataManager = try! DataManager()
-    @StateObject private var appState: AppState
     @StateObject private var audioEngine: AudioEngineFacade
     
     private let playbackStateManager: PlaybackStateManager
@@ -20,7 +19,6 @@ struct FonicHiFiApp_Debug: App {
     init() {
         let playbackStateManager = PlaybackStateManager()
         self.playbackStateManager = playbackStateManager
-        self._appState = StateObject(wrappedValue: AppState(playbackStateManager: playbackStateManager))
         self._audioEngine = StateObject(wrappedValue: AudioEngineFacade(stateManager: playbackStateManager))
     }
     
@@ -65,13 +63,11 @@ struct FonicHiFiApp_Debug: App {
                     ContentView_Safe()
                         .modelContainer(dataManager.container)
                         .environmentObject(dataManager.importService)
-                        .environmentObject(appState)
                         .environmentObject(audioEngine)
                 } else {
                     ContentView()
                         .modelContainer(dataManager.container)
                         .environmentObject(dataManager.importService)
-                        .environmentObject(appState)
                         .environmentObject(audioEngine)
                 }
             }

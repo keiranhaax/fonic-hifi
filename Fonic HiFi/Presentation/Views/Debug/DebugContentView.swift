@@ -9,7 +9,6 @@ import SwiftUI
 
 @MainActor
 struct DebugContentView: View {
-    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var audioService: AudioEngineFacade
     @State private var testScenario = 0
     @State private var debugLogs: [String] = []
@@ -43,20 +42,20 @@ struct DebugContentView: View {
                     
                     Button("Test Direct State Change") {
                         addLog("Testing direct state change")
-                        appState.showingNowPlaying = true
+                        // appState.showingNowPlaying = true // Property moved to local view state
                     }
                     
                     Button("Test With Animation") {
                         addLog("Testing with animation")
                         withAnimation {
-                            appState.showingNowPlaying = true
+                            // appState.showingNowPlaying = true // Property moved to local view state
                         }
                     }
                     
                     Button("Test Async Update") {
                         Task { @MainActor in
                             addLog("Testing async update")
-                            appState.showingNowPlaying = true
+                            // appState.showingNowPlaying = true // Property moved to local view state
                         }
                     }
                 }
@@ -88,18 +87,18 @@ struct DebugContentView: View {
             // Test presentations
             .sheet(isPresented: $showingSheet) {
                 DebugNowPlayingView()
-                    .environmentObject(appState)
+                    .environmentObject(audioService)
                     .environmentObject(audioService)
             }
             .fullScreenCover(isPresented: $showingFullScreen) {
                 DebugNowPlayingView()
-                    .environmentObject(appState)
+                    .environmentObject(audioService)
                     .environmentObject(audioService)
             }
             .overlay {
                 if showingOverlay {
                     DebugNowPlayingView()
-                        .environmentObject(appState)
+                        .environmentObject(audioService)
                         .environmentObject(audioService)
                         .background(Color.black.opacity(0.8))
                         .onTapGesture {
@@ -144,6 +143,5 @@ struct DebugContentView: View {
 
 #Preview {
     DebugContentView()
-        .environmentObject(AppState())
         .environmentObject(AudioEngineFacade())
 }

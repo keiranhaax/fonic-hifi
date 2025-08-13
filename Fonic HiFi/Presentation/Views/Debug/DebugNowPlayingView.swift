@@ -10,7 +10,7 @@ import SwiftUI
 /// Minimal debug version of Now Playing view to isolate crash
 @MainActor
 struct DebugNowPlayingView: View {
-    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @State private var debugLog: [String] = []
     
     var body: some View {
@@ -24,7 +24,7 @@ struct DebugNowPlayingView: View {
                     addLog("Dispatch queue: \(String(cString: __dispatch_queue_get_label(nil)))")
                 }
             
-            if let track = appState.currentTrack {
+            if let track = audioService.currentTrack {
                 Text("Playing: \(track.title)")
                 Text("by \(track.artist)")
             } else {
@@ -33,7 +33,7 @@ struct DebugNowPlayingView: View {
             
             Button("Close") {
                 addLog("Close button tapped")
-                appState.hideNowPlaying()
+                // audioService.hideNowPlaying() // Method removed - showingNowPlaying moved to local view state
             }
             
             Divider()
@@ -68,5 +68,5 @@ struct DebugNowPlayingView: View {
 
 #Preview {
     DebugNowPlayingView()
-        .environmentObject(AppState())
+        .environmentObject(AudioEngineFacade())
 }

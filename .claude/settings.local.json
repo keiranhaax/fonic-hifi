@@ -86,7 +86,11 @@
       "mcp__memory__create_entities",
       "mcp__zen__debug",
       "Bash(/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme \"Fonic HiFi\" -sdk iphonesimulator -configuration Debug build)",
-      "mcp__zen__listmodels"
+      "mcp__zen__listmodels",
+      "mcp__exa__web_search_exa",
+      "mcp__zen__analyze",
+      "mcp__Ref__ref_search_documentation",
+      "mcp__Ref__ref_read_url"
     ],
     "deny": []
   },

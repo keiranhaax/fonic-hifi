@@ -17,7 +17,6 @@ struct FonicHiFiApp: App {
     @StateObject private var dataManager: DataManager
     @StateObject private var audioService: AudioEngineFacade
     @StateObject private var importService: LibraryImportService
-    @StateObject private var appState: AppState
     
     private let logger = Logger(subsystem: "com.fonichifi.app", category: "FonicHiFiApp")
     
@@ -31,7 +30,6 @@ struct FonicHiFiApp: App {
             let dataManager = try DataManager()
             let playbackStateManager = PlaybackStateManager()  // Shared instance
             let audioService = AudioEngineFacade(stateManager: playbackStateManager)
-            let appState = AppState(playbackStateManager: playbackStateManager)
             let importService = LibraryImportService(
                 trackDataActor: dataManager.trackDataActor,
                 metadataExtractor: dataManager.metadataExtractor
@@ -40,7 +38,6 @@ struct FonicHiFiApp: App {
             self._dataManager = StateObject(wrappedValue: dataManager)
             self._audioService = StateObject(wrappedValue: audioService)
             self._importService = StateObject(wrappedValue: importService)
-            self._appState = StateObject(wrappedValue: appState)
             
         } catch {
             fatalError("Failed to initialize app: \(error.localizedDescription)")
@@ -55,7 +52,6 @@ struct FonicHiFiApp: App {
                 .environmentObject(dataManager)
                 .environmentObject(audioService)
                 .environmentObject(importService)
-                .environmentObject(appState)
                 .modelContext(dataManager.mainContext)
                 .task {
                     await initializeApp()

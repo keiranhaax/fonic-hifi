@@ -11,14 +11,14 @@ import SwiftUI
 @MainActor
 struct TrackRowView: View {
     let track: Track
-    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var audioService: AudioEngineFacade
+    @Environment(\.showingNowPlaying) private var showingNowPlaying
     
     var body: some View {
         HStack(spacing: 12) {
             // Track number or playing indicator
             ZStack {
-                if appState.currentTrack?.id == track.id && appState.isPlaying {
+                if audioService.currentTrack?.id == track.id && audioService.isPlaying {
                     Image(systemName: "speaker.wave.2.fill")
                         .font(.caption)
                         .foregroundColor(.accentColor)
@@ -66,14 +66,14 @@ struct TrackRowView: View {
     @MainActor
     private func playTrack() {
         print("=== TRACK ROW TAP - UI STATE ONLY ===")
-        print("Track to play: \(track.title ?? "Unknown")")
+        print("Track to play: \(track.title)")
         
         // Only update UI state - let NowPlayingView handle audio playback
-        appState.setCurrentTrack(track)
-        appState.showingNowPlaying = true
+        audioService.setCurrentTrack(track)
+        showingNowPlaying.wrappedValue = true
         
-        print("currentTrackObject set: \(appState.currentTrackObject != nil)")
-        print("showingNowPlaying: \(appState.showingNowPlaying)")
+        print("currentTrack set: \(audioService.currentTrack != nil)")
+        print("showingNowPlaying: \(showingNowPlaying.wrappedValue)")
         print("UI state updated - Now Playing view will handle audio playback")
     }
 }
@@ -93,6 +93,5 @@ private func makePreviewTrack() -> Track {
 
 #Preview {
     TrackRowView(track: makePreviewTrack())
-        .environmentObject(AppState())
         .environmentObject(AudioEngineFacade())
 }

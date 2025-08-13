@@ -10,8 +10,11 @@ import SwiftUI
 @MainActor
 struct ContentView: View {
     @EnvironmentObject private var importService: LibraryImportService
-    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    
+    // Now Playing presentation state managed locally
+    @State private var showingNowPlaying = false
     
     var body: some View {
         ZStack {
@@ -19,6 +22,7 @@ struct ContentView: View {
             TabView {
             // Library Tab
             LibraryView()
+                .environment(\.showingNowPlaying, $showingNowPlaying)
                 .tabItem {
                     Label("Library", systemImage: "music.note.list")
                 }
@@ -39,17 +43,17 @@ struct ContentView: View {
                 }
         }
         .preferredColorScheme(.dark) // Dark mode by default
-        .scaleEffect(appState.showingNowPlaying ? 0.95 : 1.0)
+        .scaleEffect(showingNowPlaying ? 0.95 : 1.0)
         .animation(
             reduceMotion ? .none : .interactiveSpring(response: 0.6, dampingFraction: 0.8),
-            value: appState.showingNowPlaying
+            value: showingNowPlaying
         )
-        .disabled(appState.showingNowPlaying)
+        .disabled(showingNowPlaying)
         
         // Now Playing overlay
         // TEMPORARY: Using no-animation version to debug crash
-        NowPlayingContainer_NoAnimation()
-        // NowPlayingContainer()
+        NowPlayingContainer_NoAnimation(showingNowPlaying: $showingNowPlaying)
+        // NowPlayingContainer(showingNowPlaying: $showingNowPlaying)
         }
     }
 }
@@ -57,5 +61,5 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environmentObject(DataManager.makePreviewImportService())
-        .environmentObject(AppState())
+        .environmentObject(AudioEngineFacade())
 }

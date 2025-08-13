@@ -61,7 +61,7 @@ struct FileImportView: View {
             }
             .fileImporter(
                 isPresented: $showingFolderPicker,
-                allowedContentTypes: [.folder],
+                allowedContentTypes: supportedAudioTypes + [.folder],
                 allowsMultipleSelection: true
             ) { result in
                 handleFileSelection(result)
@@ -79,53 +79,21 @@ struct FileImportView: View {
     }
     
     private var supportedAudioTypes: [UTType] {
-        var types: [UTType] = [
+        [
             .mp3,
-            .mpeg4Audio,
-            .appleProtectedMPEG4Audio,
             .wav,
             .aiff,
-            .audio
+            .mpeg4Audio,
+            .audio,
+            UTType(filenameExtension: "m4a") ?? .data,
+            UTType(filenameExtension: "flac") ?? .data,
+            UTType(filenameExtension: "aac") ?? .data,
+            UTType(filenameExtension: "ogg") ?? .data,
+            UTType(filenameExtension: "opus") ?? .data,
+            UTType(filenameExtension: "wv") ?? .data,
+            UTType(filenameExtension: "ape") ?? .data,
+            UTType(filenameExtension: "aif") ?? .data
         ]
-        
-        // Add custom audio types for high-quality formats
-        if let flac = UTType("org.xiph.flac") ?? UTType(filenameExtension: "flac") {
-            types.append(flac)
-        }
-        
-        if let alac = UTType("com.apple.lossless-audio") ?? UTType(filenameExtension: "alac") {
-            types.append(alac)
-        }
-        
-        if let m4a = UTType(filenameExtension: "m4a") {
-            types.append(m4a)
-        }
-        
-        if let aac = UTType(filenameExtension: "aac") {
-            types.append(aac)
-        }
-        
-        if let ape = UTType(filenameExtension: "ape") {
-            types.append(ape)
-        }
-        
-        if let wavpack = UTType(filenameExtension: "wv") {
-            types.append(wavpack)
-        }
-        
-        if let ogg = UTType("org.xiph.ogg") ?? UTType(filenameExtension: "ogg") {
-            types.append(ogg)
-        }
-        
-        if let opus = UTType("org.opus-codec.opus") ?? UTType(filenameExtension: "opus") {
-            types.append(opus)
-        }
-        
-        if let aif = UTType(filenameExtension: "aif") {
-            types.append(aif)
-        }
-        
-        return types
     }
 }
 
@@ -145,7 +113,7 @@ struct EmptyImportView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                 
-                Text("Select audio files or folders to import into your library")
+                Text("Select audio files or browse folders to import into your library")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -154,14 +122,14 @@ struct EmptyImportView: View {
             
             VStack(spacing: 12) {
                 Button(action: { showingDocumentPicker = true }) {
-                    Label("Select Files", systemImage: "doc.badge.plus")
+                    Label("Select Audio Files", systemImage: "doc.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 
                 Button(action: { showingFolderPicker = true }) {
-                    Label("Select Folder", systemImage: "folder.badge.plus")
+                    Label("Browse & Select Files", systemImage: "folder.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -187,12 +155,12 @@ struct SelectedFilesView: View {
                     .font(.headline)
                 
                 HStack(spacing: 12) {
-                    Button("Add Files") {
+                    Button("Add More Files") {
                         showingDocumentPicker = true
                     }
                     .buttonStyle(.bordered)
                     
-                    Button("Add Folder") {
+                    Button("Browse More") {
                         showingFolderPicker = true
                     }
                     .buttonStyle(.bordered)
