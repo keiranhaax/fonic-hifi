@@ -9,7 +9,7 @@ import SwiftUI
 
 @MainActor
 struct MiniPlayerView: View {
-    @EnvironmentObject private var audioService: AudioEngineFacade
+    @Environment(\.audioEngine) private var audioService
     @Environment(\.showingNowPlaying) private var showingNowPlaying
     let animationNamespace: Namespace.ID
     
@@ -36,7 +36,7 @@ struct MiniPlayerView: View {
             // Main content
             HStack(spacing: 12) {
                 // Album artwork
-                if audioService.currentTrack != nil {
+                if audioService?.currentTrack != nil {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.gray.opacity(0.3))
                         .frame(width: albumArtSize, height: albumArtSize)
@@ -53,13 +53,13 @@ struct MiniPlayerView: View {
                 
                 // Track info
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(audioService.currentTrack?.title ?? "Not Playing")
+                    Text(audioService?.currentTrack?.title ?? "Not Playing")
                         .font(.body)
                         .fontWeight(.medium)
                         .lineLimit(1)
                         .matchedGeometryEffect(id: "title", in: animationNamespace)
                     
-                    Text(audioService.currentTrack?.artist ?? "No Artist")
+                    Text(audioService?.currentTrack?.artist ?? "No Artist")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -72,7 +72,7 @@ struct MiniPlayerView: View {
                 HStack(spacing: 20) {
                     // Play/Pause button
                     Button(action: togglePlayPause) {
-                        Image(systemName: audioService.isPlaying ? "pause.fill" : "play.fill")
+                        Image(systemName: audioService?.isPlaying == true ? "pause.fill" : "play.fill")
                             .font(.title3)
                             .frame(width: 24, height: 24)
                     }
@@ -147,6 +147,7 @@ struct MiniPlayerView: View {
     
     private func togglePlayPause() {
         Task { @MainActor in
+            guard let audioService = audioService else { return }
             do {
                 if audioService.isPlaying {
                     await audioService.pause()
@@ -161,6 +162,7 @@ struct MiniPlayerView: View {
     
     private func playNext() {
         Task { @MainActor in
+            guard let audioService = audioService else { return }
             do {
                 try await audioService.playNext()
             } catch {
@@ -175,5 +177,5 @@ struct MiniPlayerView: View {
     @Previewable @State var showingNowPlaying = false
     return MiniPlayerView(animationNamespace: namespace)
         .environment(\.showingNowPlaying, $showingNowPlaying)
-        .environmentObject(AudioEngineFacade())
+        .audioEngine(AudioEngineFacade())
 }

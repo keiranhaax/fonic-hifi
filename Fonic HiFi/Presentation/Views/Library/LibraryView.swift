@@ -23,7 +23,7 @@ struct LibraryView: View {
     @State private var showingImportProgress = false
     @State private var showingCreatePlaylist = false
     
-    @EnvironmentObject private var importService: LibraryImportService
+    @Environment(\.importService) private var importService
     
     enum LibraryTab: String, CaseIterable {
         case tracks = "Tracks"
@@ -86,18 +86,18 @@ struct LibraryView: View {
             }
             .sheet(isPresented: $showingImportView) {
                 FileImportView()
-                    .environmentObject(importService)
+                    .importService(importService!)
             }
             .sheet(isPresented: $showingImportProgress) {
                 ImportProgressView()
-                    .environmentObject(importService)
-                    .interactiveDismissDisabled(importService.isImporting)
+                    .importService(importService!)
+                    .interactiveDismissDisabled(importService?.isImporting ?? false)
             }
             .sheet(isPresented: $showingCreatePlaylist) {
                 CreatePlaylistView()
             }
-            .onChange(of: importService.isImporting) { _, isImporting in
-                if isImporting {
+            .onChange(of: importService?.isImporting) { _, isImporting in
+                if isImporting == true {
                     showingImportView = false
                     showingImportProgress = true
                 }
@@ -165,5 +165,5 @@ struct EmptyLibraryView: View {
 
 #Preview {
     LibraryView()
-        .environmentObject(DataManager.makePreviewImportService())
+        .importService(DataManager.makePreviewImportService())
 }

@@ -9,7 +9,7 @@ import SwiftUI
 
 /// View showing import progress with cancel option
 struct ImportProgressView: View {
-    @EnvironmentObject private var importService: LibraryImportService
+    @Environment(\.importService) private var importService
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -17,30 +17,30 @@ struct ImportProgressView: View {
             VStack(spacing: 30) {
                 // Progress indicator
                 ProgressSection(
-                    progress: importService.importProgress,
-                    filesProcessed: importService.filesProcessed,
-                    totalFiles: importService.totalFiles
+                    progress: importService?.importProgress ?? 0.0,
+                    filesProcessed: importService?.filesProcessed ?? 0,
+                    totalFiles: importService?.totalFiles ?? 0
                 )
                 
                 // Status message
-                Text(importService.statusMessage)
+                Text(importService?.statusMessage ?? "No import service available")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
                 
                 // Error summary if any
-                if !importService.importErrors.isEmpty {
-                    ErrorSummaryView(errors: importService.importErrors)
+                if !(importService?.importErrors.isEmpty ?? true) {
+                    ErrorSummaryView(errors: importService?.importErrors ?? [])
                 }
                 
                 Spacer()
                 
                 // Action buttons
                 HStack(spacing: 16) {
-                    if importService.isImporting {
+                    if importService?.isImporting == true {
                         Button("Cancel Import") {
-                            importService.cancelImport()
+                            importService?.cancelImport()
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.large)
@@ -58,7 +58,7 @@ struct ImportProgressView: View {
             .navigationTitle("Importing Music")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !importService.isImporting {
+                if importService?.isImporting != true {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Done") {
                             dismiss()
@@ -180,5 +180,5 @@ struct ImportErrorDetailsView: View {
 
 #Preview {
     ImportProgressView()
-        .environmentObject(DataManager.makePreviewImportService())
+        .importService(DataManager.makePreviewImportService())
 }

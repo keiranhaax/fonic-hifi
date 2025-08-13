@@ -11,8 +11,7 @@ import SwiftUI
 @MainActor
 struct DebugTrackRowView: View {
     let track: Track
-    @EnvironmentObject private var audioService: AudioEngineFacade
-    @EnvironmentObject private var audioService: AudioEngineFacade
+    @Environment(\.audioEngine) private var audioService
     
     var body: some View {
         HStack {
@@ -47,6 +46,11 @@ struct DebugTrackRowView: View {
             print("3. Dispatch precondition passed - we are on main queue")
             
             // Update app state
+            guard let audioService = audioService else {
+                print("4. ❌ No audioService available")
+                return
+            }
+            
             print("\n4. About to update audioService.currentTrack")
             print("   Current track before: \(audioService.currentTrack?.title ?? "nil")")
             audioService.setCurrentTrack(track)
@@ -94,6 +98,5 @@ struct DebugTrackRowView: View {
         audioFormat: "MP3",
         duration: 180
     ))
-    .environmentObject(AudioEngineFacade())
-    .environmentObject(AudioEngineFacade())
+    .audioEngine(AudioEngineFacade())
 }

@@ -9,8 +9,8 @@ import SwiftUI
 
 @MainActor
 struct ContentView_Safe: View {
-    @EnvironmentObject private var importService: LibraryImportService
-    @EnvironmentObject private var audioService: AudioEngineFacade
+    @Environment(\.importService) private var importService
+    @Environment(\.audioEngine) private var audioService
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     @Namespace private var animationNamespace
@@ -47,16 +47,14 @@ struct ContentView_Safe: View {
         // Use sheet presentation instead of overlay
         .sheet(isPresented: $showingNowPlaying) {
             NowPlayingView(animationNamespace: animationNamespace)
-                .environmentObject(appState)
-                .environmentObject(audioService)
+                .audioEngine(audioService!)
                 .interactiveDismissDisabled(false)
         }
         // Mini player at bottom when track is playing but Now Playing is not shown
         .safeAreaInset(edge: .bottom) {
-            if appState.showMiniPlayer && !showingNowPlaying {
+            if audioService?.currentTrack != nil && !showingNowPlaying {
                 MiniPlayerView(animationNamespace: animationNamespace)
-                    .environmentObject(appState)
-                    .environmentObject(audioService)
+                    .audioEngine(audioService!)
             }
         }
     }
@@ -64,6 +62,6 @@ struct ContentView_Safe: View {
 
 #Preview {
     ContentView_Safe()
-        .environmentObject(DataManager.makePreviewImportService())
-        .environmentObject(AudioEngineFacade())
+        .importService(DataManager.makePreviewImportService())
+        .audioEngine(AudioEngineFacade())
 }

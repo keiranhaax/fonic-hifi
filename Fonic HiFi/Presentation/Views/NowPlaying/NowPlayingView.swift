@@ -9,7 +9,7 @@ import SwiftUI
 
 @MainActor
 struct NowPlayingView: View {
-    @EnvironmentObject private var audioService: AudioEngineFacade
+    @Environment(\.audioEngine) private var audioService: AudioEngineFacade?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -52,6 +52,17 @@ struct NowPlayingView: View {
     private let dismissThreshold: CGFloat = 150
     
     var body: some View {
+        Group {
+            if let audioService = audioService {
+                nowPlayingContent(audioService: audioService)
+            } else {
+                EmptyView()
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func nowPlayingContent(audioService: AudioEngineFacade) -> some View {
         ZStack {
             // Background gradient
             LinearGradient(
@@ -106,70 +117,77 @@ struct NowPlayingView: View {
         .animation(reduceMotion ? .none : .interactiveSpring(response: 0.4, dampingFraction: 0.8), value: isDragging)
         .gesture(dismissGesture)
         .task {
-            print("=== NOW PLAYING VIEW TASK ===")
-            print("Has started playback: \(hasStartedPlayback)")
-            print("Current track: \(audioService.currentTrack?.title ?? "nil")")
-            
-            extractDominantColor()
-            
-            // Start audio playback after the view has loaded
-            guard !hasStartedPlayback, let track = audioService.currentTrack else {
-                print("Not starting playback - hasStartedPlayback: \(hasStartedPlayback), track: \(audioService.currentTrack?.title ?? "nil")")
-                return
-            }
-            
-            hasStartedPlayback = true
-            
-            print("\n=== AUDIO PLAYBACK DEBUG ===")
-            print("1. Starting playback for: \(track.title)")
-            print("2. Track file path: \(track.url.path)")
-            print("3. Track artist: \(track.artist)")
-            print("4. Track duration: \(track.duration)")
-            print("5. Track format: \(track.audioFormat)")
-            
-            // Check if file exists
-            if FileManager.default.fileExists(atPath: track.url.path) {
-                print("6. ✅ File exists at path")
-            } else {
-                print("6. ❌ File NOT found at path")
-            }
-            
-            // Check audio service state
-            print("7. Audio service ready: \(audioService.isReady)")
-            print("8. Audio service current track: \(audioService.currentTrack?.title ?? "nil")")
-            print("9. Audio service is playing: \(audioService.isPlaying)")
-            
-            // Ensure audio service is ready
-            guard audioService.isReady else {
-                print("10. ❌ Audio service not ready yet")
-                return
-            }
-            
-            print("11. Calling audioService.play")
-            
-            // Start audio playback
-            do {
-                try await audioService.play(track: track)
-                print("12. ✅ audioService.play completed successfully")
-                
-                // Check audio state after play
-                print("13. Post-play is playing: \(audioService.isPlaying)")
-                print("14. Post-play current track: \(audioService.currentTrack?.title ?? "nil")")
-                print("15. Post-play audio service is playing: \(audioService.isPlaying)")
-                
-            } catch {
-                print("12. ❌ Failed to start audio playback: \(error)")
-                print("    Error type: \(type(of: error))")
-                print("    Error description: \(error.localizedDescription)")
-                
-                // Reset state if playback failed
-                audioService.setCurrentTrack(nil)
-                dismiss()
-            }
-            
-            print("=== END AUDIO PLAYBACK DEBUG ===\n")
+            await performInitialSetup()
         }
     }
+    
+    private func performInitialSetup() async {
+        guard let audioService = audioService else { return }
+        
+        print("=== NOW PLAYING VIEW TASK ===")
+        print("Has started playback: \(hasStartedPlayback)")
+        print("Current track: \(audioService.currentTrack?.title ?? "nil")")
+        
+        extractDominantColor()
+        
+        // Start audio playback after the view has loaded
+        guard !hasStartedPlayback, let track = audioService.currentTrack else {
+            print("Not starting playback - hasStartedPlayback: \(hasStartedPlayback), track: \(audioService.currentTrack?.title ?? "nil")")
+            return
+        }
+        
+        hasStartedPlayback = true
+        
+        print("\n=== AUDIO PLAYBACK DEBUG ===")
+        print("1. Starting playback for: \(track.title)")
+        print("2. Track file path: \(track.url.path)")
+        print("3. Track artist: \(track.artist)")
+        print("4. Track duration: \(track.duration)")
+        print("5. Track format: \(track.audioFormat)")
+        
+        // Check if file exists
+        if FileManager.default.fileExists(atPath: track.url.path) {
+            print("6. ✅ File exists at path")
+        } else {
+            print("6. ❌ File NOT found at path")
+        }
+        
+        // Check audio service state
+        print("7. Audio service ready: \(audioService.isReady)")
+        print("8. Audio service current track: \(audioService.currentTrack?.title ?? "nil")")
+        print("9. Audio service is playing: \(audioService.isPlaying)")
+        
+        // Ensure audio service is ready
+        guard audioService.isReady else {
+            print("10. ❌ Audio service not ready yet")
+            return
+        }
+        
+        print("11. Calling audioService.play")
+        
+        // Start audio playback
+        do {
+            try await audioService.play(track: track)
+            print("12. ✅ audioService.play completed successfully")
+            
+            // Check audio state after play
+            print("13. Post-play is playing: \(audioService.isPlaying)")
+            print("14. Post-play current track: \(audioService.currentTrack?.title ?? "nil")")
+            print("15. Post-play audio service is playing: \(audioService.isPlaying)")
+            
+        } catch {
+            print("12. ❌ Failed to start audio playback: \(error)")
+            print("    Error type: \(type(of: error))")
+            print("    Error description: \(error.localizedDescription)")
+            
+            // Reset state if playback failed
+            audioService.setCurrentTrack(nil)
+            dismiss()
+        }
+        
+        print("=== END AUDIO PLAYBACK DEBUG ===\n")
+    }
+    
     
     // MARK: - Subviews
     
@@ -189,19 +207,19 @@ struct NowPlayingView: View {
     
     private var trackInfoView: some View {
         VStack(spacing: 8) {
-            Text(audioService.currentTrack?.title ?? "Not Playing")
+            Text(audioService?.currentTrack?.title ?? "Not Playing")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .matchedGeometryEffect(id: "title", in: animationNamespace)
             
-            Text(audioService.currentTrack?.artist ?? "No Artist")
+            Text(audioService?.currentTrack?.artist ?? "No Artist")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
                 .matchedGeometryEffect(id: "artist", in: animationNamespace)
             
-            if let album = audioService.currentTrack?.album {
+            if let album = audioService?.currentTrack?.album {
                 Text(album)
                     .font(.caption)
                     .foregroundColor(.secondary.opacity(0.8))
@@ -220,6 +238,7 @@ struct NowPlayingView: View {
                     // Slider callbacks may run on background thread
                     Task { @MainActor in
                         do {
+                            guard let audioService = audioService else { return }
                             let seekTime = sliderProgress * audioService.duration
                             try await audioService.seek(to: seekTime)
                         } catch {
@@ -229,27 +248,27 @@ struct NowPlayingView: View {
                 }
             }
             .tint(.white)
-            .onChange(of: audioService.playbackProgress) { _, newValue in
+            .onChange(of: audioService?.playbackProgress) { _, newValue in
                 // Update slider only if user is not dragging
-                if !isUserDragging {
+                if !isUserDragging, let newValue = newValue {
                     sliderProgress = newValue
                 }
             }
             .onAppear {
                 // Initialize slider with current progress
-                sliderProgress = audioService.playbackProgress
+                sliderProgress = audioService?.playbackProgress ?? 0.0
             }
             
             // Time labels
             HStack {
-                Text(formatTime(audioService.currentTime))
+                Text(formatTime(audioService?.currentTime ?? 0))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .monospacedDigit()
                 
                 Spacer()
                 
-                Text(formatTime(audioService.duration))
+                Text(formatTime(audioService?.duration ?? 0))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .monospacedDigit()
@@ -274,7 +293,7 @@ struct NowPlayingView: View {
             
             // Play/Pause button
             Button(action: togglePlayPause) {
-                Image(systemName: audioService.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                Image(systemName: audioService?.isPlaying == true ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 64))
             }
             .matchedGeometryEffect(id: "playButton", in: animationNamespace)
@@ -383,6 +402,7 @@ struct NowPlayingView: View {
     
     private func togglePlayPause() {
         Task { @MainActor in
+            guard let audioService = audioService else { return }
             do {
                 if audioService.isPlaying {
                     await audioService.pause()
@@ -397,6 +417,7 @@ struct NowPlayingView: View {
     
     private func playNext() {
         Task { @MainActor in
+            guard let audioService = audioService else { return }
             do {
                 try await audioService.playNext()
             } catch {
@@ -407,6 +428,7 @@ struct NowPlayingView: View {
     
     private func playPrevious() {
         Task { @MainActor in
+            guard let audioService = audioService else { return }
             do {
                 try await audioService.playPrevious()
             } catch {
@@ -417,6 +439,7 @@ struct NowPlayingView: View {
     
     private func toggleShuffle() {
         Task { @MainActor in
+            guard let audioService = audioService else { return }
             let newMode: QueueShuffleMode = isShuffleEnabled ? .off : .random
             audioService.setShuffleMode(newMode)
             isShuffleEnabled = newMode != .off
@@ -425,6 +448,7 @@ struct NowPlayingView: View {
     
     private func cycleRepeatMode() {
         Task { @MainActor in
+            guard let audioService = audioService else { return }
             let newMode: QueueRepeatMode
             switch repeatMode {
             case .none:
@@ -442,7 +466,6 @@ struct NowPlayingView: View {
 
 #Preview {
     @Previewable @Namespace var namespace
-    return NowPlayingView(animationNamespace: namespace)
-        .environmentObject(AppState())
-        .environmentObject(AudioEngineFacade())
+    NowPlayingView(animationNamespace: namespace)
+        .audioEngine(AudioEngineFacade())
 }

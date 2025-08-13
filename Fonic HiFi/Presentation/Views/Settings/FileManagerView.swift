@@ -9,8 +9,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct FileManagerView: View {
-    @EnvironmentObject private var dataManager: DataManager
-    @EnvironmentObject private var importService: LibraryImportService
+    @Environment(\.dataManager) private var dataManager
+    @Environment(\.importService) private var importService
     
     @State private var currentDirectory: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     @State private var directoryContents: [FileItem] = []
@@ -270,6 +270,7 @@ struct FileManagerView: View {
         let urls = audioFiles.map { $0.url }
         
         Task {
+            guard let importService = importService else { return }
             await importService.importFiles(from: urls)
         }
         
@@ -397,6 +398,6 @@ enum SortOption: CaseIterable {
 
 #Preview {
     FileManagerView()
-        .environmentObject(DataManager.makePreviewDataManager())
-        .environmentObject(DataManager.makePreviewImportService())
+        .dataManager(DataManager.makePreviewDataManager())
+        .importService(DataManager.makePreviewImportService())
 }

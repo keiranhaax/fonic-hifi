@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject private var dataManager: DataManager
-    @EnvironmentObject private var importService: LibraryImportService
+    @Environment(\.dataManager) private var dataManager
+    @Environment(\.importService) private var importService
     @State private var selectedTab = 0
     
     var body: some View {
@@ -123,6 +123,6 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
-        .environmentObject(DataManager.makePreviewDataManager())
-        .environmentObject(DataManager.makePreviewImportService())
+        .dataManager(DataManager.makePreviewDataManager())
+        .importService(DataManager.makePreviewImportService())
 }

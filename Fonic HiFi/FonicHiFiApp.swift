@@ -49,9 +49,9 @@ struct FonicHiFiApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(dataManager)
-                .environmentObject(audioService)
-                .environmentObject(importService)
+                .audioEngine(audioService)
+                .dataManager(dataManager)
+                .importService(importService)
                 .modelContext(dataManager.mainContext)
                 .task {
                     await initializeApp()

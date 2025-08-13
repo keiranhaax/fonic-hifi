@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct AudioSettingsView: View {
-    @EnvironmentObject private var audioService: AudioEngineFacade
+    @Environment(\.audioEngine) private var audioService
     @AppStorage("preferredAudioEngine") private var preferredAudioEngine = "AVAudioEngine"
     @AppStorage("enableBitPerfectPlayback") private var enableBitPerfectPlayback = false
     @AppStorage("audioBufferSize") private var audioBufferSize = 512.0
@@ -116,5 +116,5 @@ struct AudioSettingsView: View {
 
 #Preview {
     AudioSettingsView()
-        .environmentObject(AudioEngineFacade(stateManager: PlaybackStateManager()))
+        .audioEngine(AudioEngineFacade(stateManager: PlaybackStateManager()))
 }

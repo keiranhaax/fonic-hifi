@@ -11,14 +11,14 @@ import SwiftUI
 @MainActor
 struct TrackRowView: View {
     let track: Track
-    @EnvironmentObject private var audioService: AudioEngineFacade
+    @Environment(\.audioEngine) private var audioService
     @Environment(\.showingNowPlaying) private var showingNowPlaying
     
     var body: some View {
         HStack(spacing: 12) {
             // Track number or playing indicator
             ZStack {
-                if audioService.currentTrack?.id == track.id && audioService.isPlaying {
+                if audioService?.currentTrack?.id == track.id && audioService?.isPlaying == true {
                     Image(systemName: "speaker.wave.2.fill")
                         .font(.caption)
                         .foregroundColor(.accentColor)
@@ -54,7 +54,7 @@ struct TrackRowView: View {
         .onTapGesture {
             playTrack()
         }
-        .opacity(audioService.isReady ? 1.0 : 0.6) // Visual feedback for initialization state
+        .opacity(audioService?.isReady == true ? 1.0 : 0.6) // Visual feedback for initialization state
     }
     
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -65,6 +65,8 @@ struct TrackRowView: View {
     
     @MainActor
     private func playTrack() {
+        guard let audioService = audioService else { return }
+        
         print("=== TRACK ROW TAP - UI STATE ONLY ===")
         print("Track to play: \(track.title)")
         
@@ -93,5 +95,5 @@ private func makePreviewTrack() -> Track {
 
 #Preview {
     TrackRowView(track: makePreviewTrack())
-        .environmentObject(AudioEngineFacade())
+        .audioEngine(AudioEngineFacade())
 }

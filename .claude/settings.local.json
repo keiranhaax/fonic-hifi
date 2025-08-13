@@ -90,7 +90,8 @@
       "mcp__exa__web_search_exa",
       "mcp__zen__analyze",
       "mcp__Ref__ref_search_documentation",
-      "mcp__Ref__ref_read_url"
+      "mcp__Ref__ref_read_url",
+      "Bash(open:*)"
     ],
     "deny": []
   },

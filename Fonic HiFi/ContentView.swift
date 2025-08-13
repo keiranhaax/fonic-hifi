@@ -9,8 +9,8 @@ import SwiftUI
 
 @MainActor
 struct ContentView: View {
-    @EnvironmentObject private var importService: LibraryImportService
-    @EnvironmentObject private var audioService: AudioEngineFacade
+    @Environment(\.importService) private var importService
+    @Environment(\.audioEngine) private var audioService
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     // Now Playing presentation state managed locally
@@ -60,6 +60,6 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(DataManager.makePreviewImportService())
-        .environmentObject(AudioEngineFacade())
+        .importService(DataManager.makePreviewImportService())
+        .audioEngine(AudioEngineFacade())
 }

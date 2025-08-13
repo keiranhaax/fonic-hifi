@@ -11,7 +11,7 @@ import UniformTypeIdentifiers
 /// Main file import view with document picker and folder selection
 struct FileImportView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var importService: LibraryImportService
+    @Environment(\.importService) private var importService
     
     @State private var showingDocumentPicker = false
     @State private var showingFolderPicker = false
@@ -44,12 +44,13 @@ struct FileImportView: View {
                 
                 ToolbarItem(placement: .primaryAction) {
                     Button("Import") {
+                        guard let importService = importService else { return }
                         Task {
                             await importService.importFiles(from: selectedURLs)
                             dismiss()
                         }
                     }
-                    .disabled(selectedURLs.isEmpty || importService.isImporting)
+                    .disabled(selectedURLs.isEmpty || importService?.isImporting == true)
                 }
             }
             .fileImporter(
@@ -211,5 +212,5 @@ struct SelectedFilesView: View {
 
 #Preview {
     FileImportView()
-        .environmentObject(DataManager.makePreviewImportService())
+        .importService(DataManager.makePreviewImportService())
 }
