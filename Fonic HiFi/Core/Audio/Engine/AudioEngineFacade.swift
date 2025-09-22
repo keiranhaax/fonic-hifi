@@ -573,21 +573,73 @@ public final class AudioEngineFacade: ObservableObject {
     
     private func setupServiceIntegrations() async {
         logger.debug("Setting up service integrations...")
-        
+
         // 1. Queue manager delegate for state updates
         queueManager.delegate = QueueToStateBridge(stateManager: stateManager)
-        
+
         // 2. Progress timer will be started when playback begins
-        
+
         // 3. Monitor integration
         if let engine = currentEngine {
             await monitor.attachToEngine(engine)
         }
-        
+
         // 4. Session delegate for interruption handling
         sessionManager.delegate = self
-        
+
+        // 5. Monitor audio engine preference changes
+        setupPreferenceMonitoring()
+
         logger.debug("Service integrations complete")
+    }
+
+    private func setupPreferenceMonitoring() {
+        // Observe changes to the preferred audio engine setting
+        NotificationCenter.default
+            .publisher(for: UserDefaults.didChangeNotification)
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    await self.handlePreferenceChange()
+                }
+            }
+            .store(in: &cancellables)
+
+        logger.debug("Preference monitoring configured")
+    }
+
+    private func handlePreferenceChange() async {
+        let newPreference = UserDefaults.standard.string(forKey: "preferredAudioEngine") ?? "AVAudioEngine"
+
+        // Determine current engine type
+        let currentEngineType: String
+        if let engine = currentEngine {
+            switch engine {
+            case is AudioKitEngineAdapter:
+                currentEngineType = "AudioKit"
+            case is AVAudioEngineAdapter:
+                currentEngineType = "AVAudioEngine"
+            default:
+                currentEngineType = "Unknown"
+            }
+        } else {
+            currentEngineType = "None"
+        }
+
+        // Check if preference actually changed
+        if currentEngineType == newPreference ||
+           (newPreference == "AudioKitEngine" && currentEngineType == "AudioKit") {
+            return  // No change needed
+        }
+
+        logger.info("Audio engine preference changed from \(currentEngineType) to \(newPreference)")
+
+        // If we're not idle, the engine will be recreated on the next load
+        // The PlaybackCoordinator's ensureEngineForFormat will handle the switch
+        let currentState = await stateManager.currentState
+        if !currentState.isIdle {
+            logger.debug("Engine will be recreated on next playback to honor preference change")
+        }
     }
     
     private func ensureEngineForFormat(_ formatInfo: AudioFileInfo) async throws {
@@ -619,6 +671,12 @@ public final class AudioEngineFacade: ObservableObject {
         logger.info("Engine configuration updated - may require recreation for some changes")
     }
     
+    /// Set the current engine (internal use by coordinators)
+    internal func setCurrentEngine(_ engine: AudioEngineService?) {
+        assertMainThread()
+        currentEngine = engine
+    }
+    
     
     private func handleSessionInterruption(_ interruption: AudioInterruptionType) async {
         switch interruption {
@@ -644,27 +702,6 @@ public final class AudioEngineFacade: ObservableObject {
             audioFormat: audioTrack.audioFormat,
             duration: audioTrack.duration
         )
-    }
-}
-
-// MARK: - Supporting Types
-
-/// Bridge to connect queue changes to state updates
-private class QueueToStateBridge: AudioQueueDelegate {
-    private let stateManager: PlaybackStateManager
-    
-    init(stateManager: PlaybackStateManager) {
-        self.stateManager = stateManager
-    }
-    
-    func audioQueue(_ queue: AudioQueue, didChangeCurrentTrack track: AudioTrack?, at index: Int?) {
-        // Queue changed, but we don't automatically change state here
-        // The facade will handle this through explicit play commands
-    }
-    
-    func audioQueue(_ queue: AudioQueue, didEncounterError error: AudioError) {
-        // Forward queue errors to state manager
-        stateManager.handleEngineError(error)
     }
 }
 

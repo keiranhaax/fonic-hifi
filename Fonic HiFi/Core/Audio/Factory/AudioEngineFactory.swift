@@ -23,7 +23,7 @@ public final class AudioEngineFactory {
     /// Registered engine types and their availability
     private var availableEngines: [AudioEngineType: Bool] = [
         .avAudioEngine: true,
-        .audioKitEngine: false,
+        .audioKitEngine: true,  // AudioKit is now available
         .sfbAudioEngine: false, // Will be true when dependency is added
         .ffmpegEngine: false    // Will be true when dependency is added
     ]
@@ -83,7 +83,28 @@ public final class AudioEngineFactory {
         for format: AudioFormat,
         configuration: AudioEngineConfiguration
     ) -> AudioEngineType {
-        
+
+        // Check user preference first - it overrides performance mode selection
+        let preferredEngine = UserDefaults.standard.string(forKey: "preferredAudioEngine")
+        if let preferredEngine = preferredEngine {
+            switch preferredEngine {
+            case "AudioKit", "AudioKitEngine":
+                if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
+                    return .audioKitEngine
+                }
+            case "SFBAudioEngine":
+                if availableEngines[.sfbAudioEngine] == true && AudioEngineType.sfbAudioEngine.canHandle(format) {
+                    return .sfbAudioEngine
+                }
+            case "FFmpegEngine":
+                if availableEngines[.ffmpegEngine] == true {
+                    return .ffmpegEngine
+                }
+            default:
+                break
+            }
+        }
+
         // Performance mode influences selection
         switch configuration.performanceMode {
         case .efficiency:
@@ -93,7 +114,10 @@ public final class AudioEngineFactory {
             }
             
         case .quality:
-            // Prefer AVAudioEngine for quality since AudioKit is just a mock
+            // Prefer high-quality engines for quality mode
+            if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
+                return .audioKitEngine
+            }
             if canUseAVAudioEngine(for: format) {
                 return .avAudioEngine
             }
@@ -103,21 +127,23 @@ public final class AudioEngineFactory {
             }
             
         case .balanced:
-            // Use AVAudioEngine for balanced performance since AudioKit is mock
+            // Use AudioKit for balanced performance if available
+            if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
+                return .audioKitEngine
+            }
             if canUseAVAudioEngine(for: format) {
                 return .avAudioEngine
             }
             break
         }
         
-        // Standard selection logic - prefer AVAudioEngine since AudioKit is mock
-        if canUseAVAudioEngine(for: format) {
-            return .avAudioEngine
-        }
-        
-        // Only try AudioKit if explicitly available and format requires it
+        // Standard selection logic - try AudioKit first if available
         if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
             return .audioKitEngine
+        }
+
+        if canUseAVAudioEngine(for: format) {
+            return .avAudioEngine
         }
         
         // Try SFBAudioEngine for high-res formats
@@ -153,14 +179,28 @@ public final class AudioEngineFactory {
         switch type {
         case .avAudioEngine:
             return AVAudioEngineAdapter()
-            
+
         case .audioKitEngine:
-            return AudioKitEngineAdapter()
-            
+            let adapter = AudioKitEngineAdapter()
+
+            // Check if AudioKit initialized successfully
+            do {
+                try adapter.checkInitialization()
+                return adapter
+            } catch {
+                // AudioKit failed to initialize, mark as unavailable and fall back
+                Self.logger.error("AudioKit initialization failed: \(error.localizedDescription)")
+                registerEngine(.audioKitEngine, isAvailable: false)
+
+                // Fall back to AVAudioEngine
+                Self.logger.info("Falling back to AVAudioEngine due to AudioKit failure")
+                return AVAudioEngineAdapter()
+            }
+
         case .sfbAudioEngine:
             // Will be replaced with real implementation when dependency is added
             return SFBAudioEngineAdapter()
-            
+
         case .ffmpegEngine:
             // Will be replaced with real implementation when dependency is added
             return FFmpegEngineAdapter()

@@ -8,21 +8,17 @@
 import Foundation
 import AVFoundation
 import Combine
+import AudioKit
 
 /// AudioKit-based implementation of AudioEngineService with native scheduling
 @MainActor
 public final class AudioKitEngineAdapter: NSObject, AudioEngineService, ObservableObject {
     
     // MARK: - AudioKit Components
-    
-    // Note: AudioKit imports will be added when dependency is available
-    // private let engine = AudioEngine()
-    // private let player = AudioPlayer()
-    
-    // For now, we'll use a mock implementation that shows the structure
-    // Replace these with actual AudioKit components when dependency is added
-    private let mockEngine = MockAudioKitEngine()
-    private let mockPlayer = MockAudioKitPlayer()
+
+    private let engine = AudioEngine()
+    private let player = AudioPlayer()
+    private let mixer = Mixer()
     
     // MARK: - State Management
     
@@ -77,10 +73,28 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     }
     
     // MARK: - Initialization
-    
+
+    /// Indicates whether AudioKit initialized successfully
+    public private(set) var isInitialized: Bool = false
+
     public override init() {
         super.init()
-        setupAudioKitEngine()
+        do {
+            try setupAudioKitEngine()
+        } catch {
+            print("AudioKit initialization failed: \(error)")
+            // Factory will check isInitialized to determine if fallback is needed
+        }
+    }
+
+    /// Check if the engine initialized successfully
+    /// - Throws: AudioError if initialization failed
+    public func checkInitialization() throws {
+        guard isInitialized else {
+            throw AudioError.engineInitializationFailed(
+                reason: "AudioKit engine failed to initialize. Audio system may not be available."
+            )
+        }
     }
     
     deinit {
@@ -92,89 +106,70 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     // MARK: - AudioEngineService Implementation
     
     public func load(url: URL) async throws {
+        guard isInitialized else {
+            throw AudioError.engineInitializationFailed(reason: "AudioKit engine is not initialized")
+        }
+
         do {
             // Load the audio file
-            let file = try AVAudioFile(forReading: url)
-            currentFile = file
-            _duration = Double(file.length) / file.fileFormat.sampleRate
+            let avFile = try AVAudioFile(forReading: url)
+            currentFile = avFile
+
+            // Load into AudioKit player
+            try player.load(file: avFile)
+
+            // Calculate duration
+            _duration = Double(avFile.length) / avFile.fileFormat.sampleRate
             _currentTime = 0
-            
-            // Schedule with AudioKit player
-            // player.scheduleFile(file)
-            try mockPlayer.scheduleFile(file)
-            
+
         } catch {
             throw AudioError.decodingFailed(reason: "Failed to load file: \(error.localizedDescription)")
         }
     }
     
     public func play() async throws {
+        guard isInitialized else {
+            throw AudioError.engineInitializationFailed(reason: "AudioKit engine is not initialized")
+        }
         guard currentFile != nil else {
             throw AudioError.playbackFailed(reason: "No file loaded")
         }
-        
-        do {
-            // Start AudioKit playback
-            // player.play()
-            try mockPlayer.play()
-            _isPlaying = true
-            startProgressPolling()
-            
-        } catch {
-            throw AudioError.playbackFailed(reason: "Failed to start playback: \(error.localizedDescription)")
-        }
+
+        player.play()
+        _isPlaying = true
+        startProgressPolling()
     }
     
     public func pause() async {
-        // player.pause()
-        mockPlayer.pause()
+        player.pause()
         _isPlaying = false
         stopProgressPolling()
     }
     
     public func stop() async {
-        // player.stop()
-        mockPlayer.stop()
+        player.stop()
         _isPlaying = false
         _currentTime = 0
         stopProgressPolling()
     }
     
     public func seek(to time: TimeInterval) async throws {
-        guard let file = currentFile else {
+        guard currentFile != nil else {
             throw AudioError.playbackFailed(reason: "No file loaded")
         }
-        
-        let framePosition = AVAudioFramePosition(time * file.fileFormat.sampleRate)
-        
-        do {
-            // Stop current playback
-            // player.stop()
-            mockPlayer.stop()
-            
-            // Schedule from new position
-            let frameCount = AVAudioFrameCount(file.length - framePosition)
-            if frameCount > 0 {
-                // player.scheduleSegment(file, startingFrame: framePosition, frameCount: frameCount)
-                try mockPlayer.scheduleSegment(file, startingFrame: framePosition, frameCount: frameCount)
-                _currentTime = time
-                
-                // Resume playing if we were playing
-                if _isPlaying {
-                    // player.play()
-                    try mockPlayer.play()
-                }
-            }
-            
-        } catch {
-            throw AudioError.playbackFailed(reason: "Seek failed: \(error.localizedDescription)")
+
+        player.play(from: time)
+        _currentTime = time
+
+        // If we were paused, pause again after seeking
+        if !_isPlaying {
+            player.pause()
         }
     }
     
     public func setVolume(_ volume: Float) async {
         let clampedVolume = max(0.0, min(1.0, volume))
-        // player.volume = clampedVolume
-        mockPlayer.volume = clampedVolume
+        player.volume = AUValue(clampedVolume)
         _volume = clampedVolume
     }
     
@@ -256,16 +251,19 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     
     // MARK: - Private Methods
     
-    private func setupAudioKitEngine() {
+    private func setupAudioKitEngine() throws {
         // Configure AudioKit engine
-        // engine.output = player
-        mockEngine.output = mockPlayer
-        
+        mixer.addInput(player)
+        engine.output = mixer
+
         do {
-            // try engine.start()
-            try mockEngine.start()
+            try engine.start()
+            isInitialized = true
         } catch {
-            print("AudioKit engine failed to start: \(error)")
+            isInitialized = false
+            throw AudioError.engineInitializationFailed(
+                reason: "AudioKit failed to start: \(error.localizedDescription)"
+            )
         }
     }
     
@@ -287,14 +285,12 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     
     private func updateProgress() async {
         guard _isPlaying else { return }
-        
+
         // Get current time from AudioKit player
-        // let currentTime = player.currentTime
-        let currentTime = mockPlayer.currentTime
-        _currentTime = currentTime
-        
+        _currentTime = player.currentTime
+
         // Check if we've reached the end
-        if currentTime >= _duration {
+        if _currentTime >= _duration {
             _isPlaying = false
             stopProgressPolling()
             completionHandler?()
@@ -303,59 +299,10 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     
     private func cleanup() async {
         stopProgressPolling()
-        // engine.stop()
-        mockEngine.stop()
+        engine.stop()
     }
 }
 
-// MARK: - Mock AudioKit Implementation
-
-/// Mock implementation of AudioKit components for compilation
-/// Replace with actual AudioKit imports when dependency is available
-private class MockAudioKitEngine {
-    var output: MockAudioKitPlayer?
-    
-    func start() throws {
-        // Mock implementation
-    }
-    
-    func stop() {
-        // Mock implementation
-    }
-}
-
-private class MockAudioKitPlayer {
-    var volume: Float = 1.0
-    var currentTime: TimeInterval = 0
-    private var isPlaying = false
-    private var startTime: Date?
-    
-    func scheduleFile(_ file: AVAudioFile) throws {
-        // Mock implementation
-    }
-    
-    func scheduleSegment(_ file: AVAudioFile, startingFrame: AVAudioFramePosition, frameCount: AVAudioFrameCount) throws {
-        // Mock implementation
-    }
-    
-    func play() throws {
-        isPlaying = true
-        startTime = Date()
-    }
-    
-    func pause() {
-        isPlaying = false
-        if let startTime = startTime {
-            currentTime += Date().timeIntervalSince(startTime)
-        }
-    }
-    
-    func stop() {
-        isPlaying = false
-        currentTime = 0
-        startTime = nil
-    }
-}
 
 // MARK: - Helper Functions
 
