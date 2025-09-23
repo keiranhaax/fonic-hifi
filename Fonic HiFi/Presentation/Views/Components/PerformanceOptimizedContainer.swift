@@ -12,7 +12,7 @@ import SwiftUI
 /// CUSTOM Performance-optimized container (NOT Apple's GlassEffectContainer)
 /// Flattens rendering hierarchy and controls adaptive frame rate
 /// This is a custom implementation for performance optimization
-@available(iOS 26, *)
+
 struct PerformanceOptimizedContainer<Content: View>: View {
   let spacing: CGFloat
   let content: Content
@@ -39,7 +39,7 @@ struct PerformanceOptimizedContainer<Content: View>: View {
 }
 
 /// Wrapper for glass effect with morphing animation
-@available(iOS 26, *)
+
 struct GlassMorphingContainer<Content: View>: View {
   let id: String
   let namespace: Namespace.ID
@@ -63,7 +63,7 @@ struct GlassMorphingContainer<Content: View>: View {
 }
 
 /// Extension for glass effect ID on iOS 26
-@available(iOS 26, *)
+
 extension View {
   func glassEffectID(_ id: String, in namespace: Namespace.ID) -> some View {
     self

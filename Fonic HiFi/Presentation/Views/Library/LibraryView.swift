@@ -42,7 +42,8 @@ struct LibraryView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
+        NavigationStack {
+            VStack(spacing: 0) {
                 // Tab selector
                 Picker("Library View", selection: $selectedTab) {
                     ForEach(LibraryTab.allCases, id: \.self) { tab in
@@ -106,6 +107,7 @@ struct LibraryView: View {
                     EmptyLibraryView(showingImportView: $showingImportView)
                 }
             }
+        }
     }
 
     // MARK: - Filtered Data

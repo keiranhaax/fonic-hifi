@@ -11,7 +11,6 @@ import SwiftUI
 struct MiniPlayerView: View {
     @Environment(\.audioEngine) private var audioService
     @Environment(\.showingNowPlaying) private var showingNowPlaying
-    let animationNamespace: Namespace.ID
     
     // Drag gesture state
     @GestureState private var dragOffset: CGFloat = 0
@@ -44,7 +43,6 @@ struct MiniPlayerView: View {
                             Image(systemName: "music.note")
                                 .foregroundColor(.secondary)
                         )
-                        .matchedGeometryEffect(id: "artwork", in: animationNamespace)
                 } else {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.gray.opacity(0.3))
@@ -57,13 +55,11 @@ struct MiniPlayerView: View {
                         .font(.body)
                         .fontWeight(.medium)
                         .lineLimit(1)
-                        .matchedGeometryEffect(id: "title", in: animationNamespace)
                     
                     Text(audioService?.currentTrack?.artist ?? "No Artist")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
-                        .matchedGeometryEffect(id: "artist", in: animationNamespace)
                 }
                 
                 Spacer()
@@ -76,7 +72,6 @@ struct MiniPlayerView: View {
                             .font(.title3)
                             .frame(width: 24, height: 24)
                     }
-                    .matchedGeometryEffect(id: "playButton", in: animationNamespace)
                     
                     // Next button
                     Button(action: playNext) {
@@ -173,9 +168,8 @@ struct MiniPlayerView: View {
 }
 
 #Preview {
-    @Previewable @Namespace var namespace
     @Previewable @State var showingNowPlaying = false
-    return MiniPlayerView(animationNamespace: namespace)
+    return MiniPlayerView()
         .environment(\.showingNowPlaying, $showingNowPlaying)
         .audioEngine(AudioEngineFacade())
 }

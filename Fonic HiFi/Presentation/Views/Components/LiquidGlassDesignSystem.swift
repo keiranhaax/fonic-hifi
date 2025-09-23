@@ -23,7 +23,7 @@ import os.log
 // These are PROJECT-SPECIFIC implementations, not Apple's official APIs.
 // All modifiers respect accessibility settings and provide appropriate fallbacks.
 
-@available(iOS 26, *)
+
 extension View {
   /// [Custom Implementation] Applies a custom Liquid Glass-style effect
   /// This is NOT Apple's .glassEffect() - it's a custom wrapper using Material effects
@@ -106,7 +106,7 @@ extension View {
 
 // MARK: - Glass Optimization Levels
 
-@available(iOS 26, *)
+
 enum GlassOptimizationLevel {
   case performance  // Minimal effects, best performance
   case balanced     // Balanced effects and performance
@@ -116,7 +116,7 @@ enum GlassOptimizationLevel {
 
 // MARK: - Liquid Glass Styles
 
-@available(iOS 26, *)
+
 enum LiquidGlassStyle {
   case standard
   case thick
@@ -152,7 +152,7 @@ enum LiquidGlassStyle {
 
 // MARK: - View Modifiers
 
-@available(iOS 26, *)
+
 struct LiquidGlassModifier: ViewModifier {
   let style: LiquidGlassStyle
   let intensity: Double
@@ -172,7 +172,7 @@ struct LiquidGlassModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct GlassTransitionModifier: ViewModifier {
   let isActive: Bool
   let duration: Double
@@ -186,7 +186,7 @@ struct GlassTransitionModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct PlayingParticlesModifier: ViewModifier {
   let isPlaying: Bool
   let particleCount: Int
@@ -253,7 +253,7 @@ struct PlayingParticlesModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct AdaptiveBlurModifier: ViewModifier {
   let intensity: Double
   let animated: Bool
@@ -265,7 +265,7 @@ struct AdaptiveBlurModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct EnhancedHapticsModifier: ViewModifier {
   let style: UIImpactFeedbackGenerator.FeedbackStyle
   let intensity: CGFloat
@@ -281,7 +281,7 @@ struct EnhancedHapticsModifier: ViewModifier {
 
 // MARK: - iOS 26 Beta 6 Enhanced Modifiers
 
-@available(iOS 26, *)
+
 struct AdaptiveGlassModifier: ViewModifier {
   let cornerRadius: CGFloat
   let borderOpacity: Double
@@ -327,7 +327,7 @@ struct AdaptiveGlassModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct ClearGlassFixModifier: ViewModifier {
   func body(content: Content) -> some View {
     content
@@ -339,7 +339,7 @@ struct ClearGlassFixModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct A11yAwareGlassModifier: ViewModifier {
   let style: LiquidGlassStyle
   let fallbackColor: Color
@@ -407,7 +407,7 @@ struct A11yAwareGlassModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct BatteryOptimizedGlassModifier: ViewModifier {
   let style: LiquidGlassStyle
   let isBackground: Bool
@@ -449,7 +449,7 @@ struct BatteryOptimizedGlassModifier: ViewModifier {
 
 // MARK: - Custom Components
 
-@available(iOS 26, *)
+
 struct LiquidGlassButton<Content: View>: View {
   let action: () -> Void
   let content: Content
@@ -490,7 +490,7 @@ struct LiquidGlassButton<Content: View>: View {
   }
 }
 
-@available(iOS 26, *)
+
 struct LiquidGlassCard<Content: View>: View {
   let content: Content
   let style: LiquidGlassStyle
@@ -516,7 +516,7 @@ struct LiquidGlassCard<Content: View>: View {
   }
 }
 
-@available(iOS 26, *)
+
 struct FluidProgressView: View {
   let progress: Double
   let height: CGFloat
@@ -581,7 +581,7 @@ struct FluidProgressView: View {
 
 // MARK: - Animation Curves
 
-@available(iOS 26, *)
+
 extension Animation {
   /// Liquid Glass smooth animation curve
   static let liquidSmooth = Animation.timingCurve(0.2, 0.0, 0.38, 0.9, duration: 0.6)
@@ -595,7 +595,7 @@ extension Animation {
 
 // MARK: - Color Extensions
 
-@available(iOS 26, *)
+
 extension Color {
   /// Dynamic glass tint that adapts to content
   static var glassTint: Color {
@@ -640,7 +640,7 @@ extension Color {
 
 // MARK: - Performance Utilities
 
-@available(iOS 26, *)
+
 extension View {
   /// Adds performance profiling points for glass effects
   func glassPerformanceProfiled(_ label: String) -> some View {
@@ -653,7 +653,7 @@ extension View {
   }
 }
 
-@available(iOS 26, *)
+
 struct GlassPerformanceProfileModifier: ViewModifier {
   let label: String
   
@@ -668,7 +668,7 @@ struct GlassPerformanceProfileModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct AdaptiveGlassPerformanceModifier: ViewModifier {
   @State private var optimizationLevel: GlassOptimizationLevel = .adaptive
   @State private var isMonitoring = false
@@ -711,7 +711,7 @@ struct AdaptiveGlassPerformanceModifier: ViewModifier {
 
 // MARK: - Glass Performance Profiler
 
-@available(iOS 26, *)
+
 @MainActor
 class GlassPerformanceProfiler: ObservableObject, @unchecked Sendable {
   static let shared = GlassPerformanceProfiler()
@@ -760,7 +760,7 @@ class GlassPerformanceProfiler: ObservableObject, @unchecked Sendable {
   }
 }
 
-@available(iOS 26, *)
+
 struct PerformanceMetric {
   let label: String
   let duration: TimeInterval
@@ -769,7 +769,7 @@ struct PerformanceMetric {
 
 // MARK: - Logging Extensions
 
-@available(iOS 26, *)
+
 extension OSLog {
   static let glassPerformance = OSLog(subsystem: "com.fonichifi.glass", category: "performance")
   static let glassRendering = OSLog(subsystem: "com.fonichifi.glass", category: "rendering")
@@ -778,7 +778,7 @@ extension OSLog {
 
 // MARK: - Backdrop Luminance Detection Utilities
 
-@available(iOS 26, *)
+
 extension Color {
   /// Calculates the relative luminance of a color
   var luminance: Double {
@@ -816,7 +816,7 @@ extension Color {
 
 // MARK: - Battery Optimization Utilities
 
-@available(iOS 26, *)
+
 struct BatteryOptimizedGlassUtilities {
   /// Determines the optimal frame rate based on current power state
   static func optimalFrameRate(
@@ -907,7 +907,7 @@ struct BatteryOptimizedGlassUtilities {
   }
 }
 
-@available(iOS 26, *)
+
 enum GlassElementType {
   case interactive   // Buttons, controls that user interacts with
   case decorative    // Visual elements that enhance appearance
@@ -916,7 +916,7 @@ enum GlassElementType {
 
 // MARK: - Safe Area Detection Utilities
 
-@available(iOS 26, *)
+
 struct SafeAreaUtilities {
   /// Detects if the current device has a home indicator
   @MainActor
@@ -948,7 +948,7 @@ struct SafeAreaUtilities {
 
 // MARK: - Memory Management for Glass Effects
 
-@available(iOS 26, *)
+
 @MainActor
 class GlassEffectMemoryManager: ObservableObject, @unchecked Sendable {
   static let shared = GlassEffectMemoryManager()
@@ -1003,7 +1003,7 @@ class GlassEffectMemoryManager: ObservableObject, @unchecked Sendable {
   }
 }
 
-@available(iOS 26, *)
+
 enum MemoryPressureLevel {
   case normal
   case moderate
@@ -1013,7 +1013,7 @@ enum MemoryPressureLevel {
 
 // MARK: - Frame Rate Control Extensions
 
-@available(iOS 26, *)
+
 extension View {
   /// Sets a preferred frame rate with automatic optimization
   func preferredFrameRate(_ rate: Double) -> some View {
@@ -1021,7 +1021,7 @@ extension View {
   }
 }
 
-@available(iOS 26, *)
+
 struct FrameRateControlModifier: ViewModifier {
   let targetFrameRate: Double
   
@@ -1054,7 +1054,7 @@ struct FrameRateControlModifier: ViewModifier {
 
 // MARK: - Preview Helpers
 
-@available(iOS 26, *)
+
 struct LiquidGlassDesignSystem_Previews: PreviewProvider {
   static var previews: some View {
     ScrollView {

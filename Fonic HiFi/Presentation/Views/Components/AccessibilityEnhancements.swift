@@ -10,7 +10,7 @@ import SwiftUI
 
 // MARK: - iOS 26+ Accessibility Enhancements
 
-@available(iOS 26, *)
+
 extension View {
   /// Enhanced VoiceOver support with contextual descriptions
   func enhancedAccessibility(
@@ -81,7 +81,7 @@ extension View {
 
 // MARK: - Accessibility Modifiers
 
-@available(iOS 26, *)
+
 struct EnhancedAccessibilityModifier: ViewModifier {
   let label: String
   let hint: String?
@@ -104,7 +104,7 @@ struct EnhancedAccessibilityModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct AudioContextAccessibilityModifier: ViewModifier {
   let isPlaying: Bool
   let trackTitle: String?
@@ -147,7 +147,7 @@ struct AudioContextAccessibilityModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct AdaptiveDynamicTypeModifier: ViewModifier {
   let minScale: CGFloat
   let maxScale: CGFloat
@@ -189,7 +189,7 @@ struct AdaptiveDynamicTypeModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct AssistiveAccessModifier: ViewModifier {
   let simplifiedLayout: Bool
   let highContrast: Bool
@@ -221,7 +221,7 @@ struct AssistiveAccessModifier: ViewModifier {
   }
 }
 
-@available(iOS 26, *)
+
 struct KeyboardNavigationModifier: ViewModifier {
   let focusableElement: Bool
   let customFocusAction: (() -> Void)?
@@ -251,7 +251,7 @@ struct KeyboardNavigationModifier: ViewModifier {
 
 // MARK: - Audio Player Accessibility Helpers
 
-@available(iOS 26, *)
+
 struct PlaybackControlAccessibility: ViewModifier {
   let isPlaying: Bool
   let controlType: PlaybackControlType
@@ -327,7 +327,7 @@ struct PlaybackControlAccessibility: ViewModifier {
 
 // MARK: - Progress Control Accessibility
 
-@available(iOS 26, *)
+
 struct ProgressControlAccessibility: ViewModifier {
   let progress: Double
   let duration: Double
@@ -368,7 +368,7 @@ struct ProgressControlAccessibility: ViewModifier {
 
 // MARK: - Search Accessibility
 
-@available(iOS 26, *)
+
 struct SearchAccessibility: ViewModifier {
   let searchText: String
   let resultCount: Int
@@ -415,7 +415,7 @@ extension View {
 
 // MARK: - Preview Helpers
 
-@available(iOS 26, *)
+
 struct AccessibilityEnhancements_Previews: PreviewProvider {
   static var previews: some View {
     VStack(spacing: 20) {

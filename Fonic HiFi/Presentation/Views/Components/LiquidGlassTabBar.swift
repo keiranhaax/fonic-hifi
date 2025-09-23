@@ -10,7 +10,7 @@ import SwiftUI
 
 /// Custom Liquid Glass Tab Bar for iOS 26+
 /// Matches Apple Music's exact visual implementation
-@available(iOS 26, *)
+
 @MainActor
 struct LiquidGlassTabBar: View {
   @Binding var selection: Int
@@ -78,7 +78,7 @@ struct LiquidGlassTabBar: View {
 
 // MARK: - Tab Button Component
 
-@available(iOS 26, *)
+
 private struct TabButton: View {
   let item: TabItem
   let isSelected: Bool
@@ -111,7 +111,7 @@ private struct TabButton: View {
 
 // MARK: - Tab Item Model
 
-@available(iOS 26, *)
+
 struct TabItem: Identifiable {
   let id: Int
   let title: String
@@ -128,7 +128,7 @@ struct TabItem: Identifiable {
 
 // MARK: - Standard Tab Items
 
-@available(iOS 26, *)
+
 extension TabItem {
   static let standardItems = [
     TabItem(id: 0, title: "Library", icon: "music.note.list", selectedIcon: "music.note.list"),

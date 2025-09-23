@@ -31,7 +31,7 @@ struct BottomSearchBar: View {
     
     // MARK: - iOS 26+ Enhanced Search Bar
     
-    @available(iOS 26, *)
+    
     private var enhancedSearchBar: some View {
         VStack(spacing: 0) {
             // Floating search container
@@ -159,7 +159,7 @@ struct BottomSearchBar: View {
         }
     }
     
-    @available(iOS 26, *)
+    
     private func handleFocusChange(_ focused: Bool) {
         isInteracting = focused
         
@@ -175,7 +175,7 @@ struct BottomSearchBar: View {
         }
     }
     
-    @available(iOS 26, *)
+    
     private func animateSearchIcon() {
         // Subtle rotation on text change
         withAnimation(.liquidSmooth) {

@@ -12,7 +12,7 @@ import SwiftUI
 
 // MARK: - Performance-Optimized Now Playing View Example
 
-@available(iOS 26, *)
+
 struct OptimizedNowPlayingView: View {
   @State private var isPlaying = false
   @State private var progress = 0.3
@@ -144,7 +144,7 @@ struct OptimizedNowPlayingView: View {
 
 // MARK: - Battery-Optimized Library View Example
 
-@available(iOS 26, *)
+
 struct OptimizedLibraryView: View {
   @State private var selectedTab = 0
   let tabs = ["Songs", "Albums", "Artists", "Playlists"]
@@ -262,7 +262,7 @@ struct OptimizedLibraryView: View {
 
 // MARK: - Adaptive Performance Example
 
-@available(iOS 26, *)
+
 struct AdaptivePerformanceExample: View {
   @State private var effectCount = 3
   @State private var showPerformanceStats = false
@@ -451,7 +451,7 @@ struct AdaptivePerformanceExample: View {
 
 // MARK: - Safe Area and Home Indicator Example
 
-@available(iOS 26, *)
+
 struct SafeAreaGlassExample: View {
   var body: some View {
     PerformanceOptimizedContainer(spacing: 0) { // Custom performance container
@@ -522,7 +522,7 @@ struct SafeAreaGlassExample: View {
 
 // MARK: - Performance Testing View
 
-@available(iOS 26, *)
+
 struct GlassPerformanceTestView: View {
   @State private var isStressing = false
   @State private var stressLevel = 1
@@ -624,7 +624,7 @@ struct GlassPerformanceTestView: View {
 
 // MARK: - Preview Provider
 
-@available(iOS 26, *)
+
 struct LiquidGlassExamples_Previews: PreviewProvider {
   static var previews: some View {
     Group {

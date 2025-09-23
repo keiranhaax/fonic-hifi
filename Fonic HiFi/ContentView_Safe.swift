@@ -53,7 +53,7 @@ struct ContentView_Safe: View {
         // Mini player at bottom when track is playing but Now Playing is not shown
         .safeAreaInset(edge: .bottom) {
             if audioService?.currentTrack != nil && !showingNowPlaying {
-                MiniPlayerView(animationNamespace: animationNamespace)
+                MiniPlayerView()
                     .audioEngine(audioService!)
             }
         }

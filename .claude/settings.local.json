@@ -23,7 +23,10 @@
       "mcp__apple-rag-mcp__fetch",
       "mcp__exa__deep_researcher_start",
       "mcp__exa__deep_researcher_check",
-      "Read(//Users/keiran/.claude/**)"
+      "Read(//Users/keiran/.claude/**)",
+      "Bash(for:*)",
+      "Bash(do sed -i '' 's/@available(iOS 26, \\*)//g' \"$file\")",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

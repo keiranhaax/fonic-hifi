@@ -13,7 +13,8 @@ struct SettingsView: View {
     @State private var selectedTab = 0
     
     var body: some View {
-        List {
+        NavigationStack {
+            List {
                 // File Manager Section
                 Section {
                     NavigationLink(destination: FileManagerView()) {
@@ -116,6 +117,7 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
+        }
     }
 }
 

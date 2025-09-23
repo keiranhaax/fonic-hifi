@@ -9,7 +9,6 @@ import SwiftUI
 
 /// iOS 26+ Simplified Liquid Glass Mini Player
 /// Compact-only design with matched transition support for morphing
-@available(iOS 26, *)
 @MainActor
 struct LiquidGlassMiniPlayer: View {
   @Environment(\.audioEngine) private var audioService
@@ -173,26 +172,21 @@ struct LiquidGlassMiniPlayer: View {
   @Previewable @State var audioService = AudioEngineFacade()
   @Previewable @State var showingNowPlaying = false
 
-  if #available(iOS 26, *) {
-    VStack {
-      Spacer()
-      LiquidGlassMiniPlayer(
-        namespace: namespace,
-        showingNowPlaying: $showingNowPlaying
-      )
-      .environment(\.audioEngine, audioService)
-      .padding()
-    }
-    .background(
-      LinearGradient(
-        colors: [.black, .blue.opacity(0.3), .purple.opacity(0.2)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
+  VStack {
+    Spacer()
+    LiquidGlassMiniPlayer(
+      namespace: namespace,
+      showingNowPlaying: $showingNowPlaying
     )
-    .preferredColorScheme(.dark)
-  } else {
-    Text("iOS 26+ required for Liquid Glass Mini Player")
-      .foregroundColor(.secondary)
+    .environment(\.audioEngine, audioService)
+    .padding()
   }
+  .background(
+    LinearGradient(
+      colors: [.black, .blue.opacity(0.3), .purple.opacity(0.2)],
+      startPoint: .topLeading,
+      endPoint: .bottomTrailing
+    )
+  )
+  .preferredColorScheme(.dark)
 }

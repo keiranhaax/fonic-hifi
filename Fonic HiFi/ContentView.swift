@@ -14,44 +14,46 @@ struct ContentView: View {
     
     @Namespace private var miniPlayerNamespace
     @State private var showingNowPlaying = false
+    @State private var selectedDetent: PresentationDetent = .medium
     
     var body: some View {
-        if #available(iOS 26, *) {
-            NavigationStack {
-                TabView {
-                    LibraryView()
-                        .environment(\.showingNowPlaying, $showingNowPlaying)
-                        .tabItem {
-                            Label("Library", systemImage: "music.note.list")
-                        }
-
-                    Text("Now Playing")
-                        .tabItem {
-                            Label("Now Playing", systemImage: "play.circle.fill")
-                        }
-
-                    SettingsView()
-                        .tabItem {
-                            Label("Settings", systemImage: "gear")
-                        }
+        TabView {
+            LibraryView()
+                .environment(\.showingNowPlaying, $showingNowPlaying)
+                .tabItem {
+                    Label("Library", systemImage: "music.note.list")
                 }
-                .preferredColorScheme(.dark)
-                .tabBarMinimizeBehavior(.onScrollDown)
-                .tabViewBottomAccessory {
-                    LiquidGlassMiniPlayer(
-                        namespace: miniPlayerNamespace,
-                        showingNowPlaying: $showingNowPlaying
-                    )
+            
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
                 }
-                .navigationDestination(isPresented: $showingNowPlaying) {
-                    NowPlayingView(animationNamespace: miniPlayerNamespace)
-                        .toolbar(.hidden, for: .navigationBar)
-                        .navigationBarBackButtonHidden()
-                }
+        }
+        .preferredColorScheme(.dark)
+        .tabBarMinimizeBehavior(.onScrollDown)
+        .tabViewBottomAccessory {
+            if let audioService, audioService.currentTrack != nil, !showingNowPlaying {
+                LiquidGlassMiniPlayer(
+                    namespace: miniPlayerNamespace,
+                    showingNowPlaying: $showingNowPlaying
+                )
+                .environment(\.audioEngine, audioService)
             }
-        } else {
-            // iOS 26 only - no fallback needed
-            EmptyView()
+        }
+        .sheet(isPresented: $showingNowPlaying) {
+            NavigationStack {
+                NowPlayingView(animationNamespace: miniPlayerNamespace)
+                    .navigationTransition(.zoom(sourceID: "miniplayer", in: miniPlayerNamespace))
+                    .toolbar(.hidden, for: .navigationBar)
+            }
+            .environment(\.audioEngine, audioService)
+            .presentationDetents([
+                .medium,
+                .large
+            ], selection: $selectedDetent)
+            .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(20)
         }
     }
 }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// A liquid glass rail container that supports morphing between states
-@available(iOS 26, *)
+
 struct LiquidGlassRail<Content: View>: View {
     @Binding var isExpanded: Bool
     @Namespace private var namespace
@@ -75,7 +75,7 @@ struct LiquidGlassRail<Content: View>: View {
 }
 
 /// Liquid Glass Segmented Tabs with Rail and Pill pattern
-@available(iOS 26, *)
+
 struct LiquidGlassSegmentedTabs: View {
     struct Tab: Identifiable {
         let id = UUID()
@@ -206,7 +206,7 @@ struct LiquidGlassSegmentedTabs: View {
 }
 
 /// Interactive sheen effect for glass selections
-@available(iOS 26, *)
+
 private struct InteractiveSheen: View {
     let phase: CGFloat
     
@@ -244,7 +244,7 @@ private struct InteractiveSheen: View {
 // MARK: - Liquid Glass Expandable Rail
 
 /// An expandable rail that morphs between compact and expanded states
-@available(iOS 26, *)
+
 struct LiquidGlassExpandableRail<CompactContent: View, ExpandedContent: View>: View {
     @Binding var isExpanded: Bool
     @Namespace private var morphNamespace

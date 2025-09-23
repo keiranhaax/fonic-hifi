@@ -9,7 +9,6 @@
 import SwiftUI
 
 // iOS 26+ Liquid Glass Design System
-@available(iOS 26, *)
 
 @MainActor
 struct NowPlayingView: View {
@@ -67,9 +66,6 @@ struct NowPlayingView: View {
         .onAppear {
             isPlayingParticles = audioService?.isPlaying ?? false
         }
-        .navigationTransition(
-            .zoom(sourceID: "miniplayer", in: animationNamespace)
-        )
     }
     
     @ViewBuilder
@@ -227,7 +223,6 @@ struct NowPlayingView: View {
                 .font(.system(size: 80))
                 .foregroundColor(.white.opacity(0.5))
         }
-        .matchedGeometryEffect(id: "artwork", in: animationNamespace)
         .glassEffectID("artwork", in: animationNamespace)
         .playingParticles(isPlaying: isPlayingParticles, particleCount: 15)
         .glassTransition(isActive: isPlayingParticles)
@@ -252,7 +247,6 @@ struct NowPlayingView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
                 .lineLimit(1)
-                .matchedGeometryEffect(id: "title", in: animationNamespace)
                 .glassEffectID("title", in: animationNamespace)
                 .foregroundColor(.white)
                 .enhancedAccessibility(
@@ -264,7 +258,6 @@ struct NowPlayingView: View {
                 .font(.body)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
-                .matchedGeometryEffect(id: "artist", in: animationNamespace)
                 .glassEffectID("artist", in: animationNamespace)
                 .enhancedAccessibility(
                     label: "Artist name",
@@ -388,7 +381,6 @@ struct NowPlayingView: View {
                     .font(.system(size: 64))
                     .frame(width: 80, height: 80)
             }
-            .matchedGeometryEffect(id: "playButton", in: animationNamespace)
             .glassEffectID("playPause", in: animationNamespace)
             .glassTransition(isActive: audioService?.isPlaying ?? false)
             .modifier(PlaybackControlAccessibility(
