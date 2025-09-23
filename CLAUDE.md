@@ -21,10 +21,12 @@ mcp__sosumi__fetchAppleDocumentation("/path") → Confirm
 ```
 
 ## TOOL PREFERENCES
-- **Search**: Task tool for complex searches > multiple Grep/Glob calls
+- **Search**: `make search PATTERN='text'` > Task tool > multiple Grep/Glob calls
 - **Files**: Read before Edit, MultiEdit > single Edit
-- **Git**: gh CLI for GitHub operations (PRs, issues)
-- **Tests**: XCTest (primary framework) - Swift Testing (@Test) experimental only
+- **Git**: `make pr-create`, `make issues` > gh CLI directly
+- **Tests**: `make test-unit` > manual xcodebuild commands
+- **Lint**: `make lint` after every code change
+- **Format**: `make format` before commits
 - **Context**: /clear between unrelated tasks
 
 ## iOS 26 MODERN API REQUIREMENTS
@@ -45,26 +47,184 @@ mcp__sosumi__fetchAppleDocumentation("/path") → Confirm
 
 A sophisticated iOS 26 audiophile music player built with Swift 6.2, SwiftUI, AVAudioEngine, and AudioKit, focusing on bit-perfect playback and format versatility.
 
-## Build Commands
+### Required Development Tools
 
+**Essential (via Homebrew):**
+- `xcbeautify` - Xcode build output formatting
+- `swiftlint` - Swift code linting
+- `swiftformat` - Swift code formatting
+
+**Enhanced Search & Navigation:**
+- `ripgrep (rg)` - Ultra-fast code search
+- `fd` - Fast file finder
+- `fzf` - Interactive fuzzy finder
+- `bat` - Syntax-highlighted file viewer
+- `eza` - Modern file tree viewer
+
+**Performance & Analysis:**
+- `tokei` - Code statistics
+- `hyperfine` - Benchmarking tool
+- `watchman` - File watching automation
+
+**Install all tools:**
 ```bash
-# Build for Debug (iOS 26 - iPhone 16 Pro Simulator)
-xcodebuild -scheme "Fonic HiFi" -sdk iphonesimulator26.0 -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.0' build
+make install-deps
+```
+
+**Check tool availability:**
+```bash
+make check-deps
+```
+
+## Build Commands - Using Makefile
+
+**MANDATORY**: Always use Makefile commands for consistency and efficiency.
+
+### Primary Build Commands
+```bash
+# Build for Debug (iPhone 16 Pro Simulator, iOS 26)
+make build
 
 # Build for Release
-xcodebuild -scheme "Fonic HiFi" -sdk iphonesimulator26.0 -configuration Release -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.0' build
+make build-release
 
-# Run Unit Tests
-xcodebuild test -scheme "Fonic HiFi" -sdk iphonesimulator26.0 -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.0' -only-testing:"Fonic HiFiTests"
+# Build and run in simulator
+make run
 
-# Run UI Tests
-xcodebuild test -scheme "Fonic HiFi" -sdk iphonesimulator26.0 -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.0' -only-testing:"Fonic HiFiUITests"
+# Clean build artifacts and derived data
+make clean
 
-# Clean Build
-xcodebuild clean -scheme "Fonic HiFi"
+# Open project in Xcode
+make open
+```
 
-# Open in Xcode
-open "Fonic HiFi.xcodeproj"
+### Testing Commands
+```bash
+# Run all tests (unit + UI)
+make test
+
+# Run unit tests only (faster)
+make test-unit
+
+# Run UI tests only
+make test-ui
+
+# Generate test coverage report
+make coverage
+```
+
+### Code Quality Commands
+```bash
+# Run SwiftLint (ALWAYS run after code changes)
+make lint
+
+# Auto-format code with SwiftFormat
+make format
+
+# Run static analysis
+make analyze
+```
+
+### Search & Navigation (ripgrep, fd, fzf)
+```bash
+# Fast code search
+make search PATTERN='your search term'
+
+# Find files by pattern
+make find-files PATTERN='*.swift'
+
+# Find all TODO/FIXME comments
+make find-todos
+
+# Find all ViewModels
+make find-viewmodels
+
+# Find AudioKit/audio references
+make find-audio
+
+# Find Core module references
+make find-core
+
+# Interactive file finder with preview
+make find-interactive
+
+# Interactive code search
+make search-interactive
+```
+
+### Code Analysis (tokei, eza, bat)
+```bash
+# Show code statistics
+make stats
+
+# Statistics per feature module
+make stats-features
+
+# Visual project structure
+make tree
+
+# View file with syntax highlighting
+make view FILE=path/to/file.swift
+```
+
+### Performance Benchmarking (hyperfine)
+```bash
+# Benchmark build performance
+make benchmark-build
+
+# Benchmark test execution
+make benchmark-test
+
+# Full performance analysis
+make benchmark-all
+```
+
+### Simulator Management
+```bash
+# Boot iPhone 16 Pro simulator
+make simulator-boot
+
+# Shutdown all simulators
+make simulator-shutdown
+
+# List available simulators
+make simulator-list
+```
+
+### Dependency Management
+```bash
+# Check if required tools are installed
+make check-deps
+
+# Install missing dependencies via Homebrew
+make install-deps
+```
+
+### AI Assistance (Optional - requires mods/llm)
+```bash
+# Explain code with AI
+make ai-explain FILE=path/to/file.swift
+
+# Generate tests with AI
+make ai-test-generate FILE=path/to/file.swift
+
+# AI code review of staged changes
+make ai-review
+
+# Generate commit message with AI
+make ai-commit
+```
+
+### Git & GitHub Integration
+```bash
+# Create pull request
+make pr-create
+
+# List GitHub issues
+make issues
+
+# Colored git diff
+make diff
 ```
 
 ## Architecture Overview [Verified-Code]
@@ -306,9 +466,45 @@ class MockAudioEngine: AudioEngineProtocol {
 
 **UI Testing for Audio Playback:**
 ```bash
+# Run all UI tests
+make test-ui
+
+# For specific test targeting, use xcodebuild directly:
 xcodebuild test -scheme "Fonic HiFi" -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.0' \
     -only-testing:"Fonic HiFiUITests/AudioControlsUITests/testPlayPauseButton"
 ```
+
+## Makefile Automation Features
+
+### File Watching & Auto-Tasks
+```bash
+# Auto-lint on file changes
+make watch-lint
+
+# Auto-build on changes
+make watch-build
+
+# Auto-test on changes
+make watch-test
+```
+
+### Advanced Workflows
+```bash
+# Full build and test cycle
+make all  # Runs: clean → lint → build → test
+
+# Parse last build for errors
+make parse-errors
+
+# Extract test results as JSON
+make test-json
+```
+
+### Project Navigation Tips
+- Use `make find-interactive` for exploring the codebase with live preview
+- Use `make search-interactive` for real-time search as you type
+- Use `make tree` to understand project structure
+- Use `make stats-features` to see code distribution across modules
 
 ## Current Development Status
 
@@ -339,17 +535,41 @@ xcodebuild test -scheme "Fonic HiFi" -destination 'platform=iOS Simulator,name=i
 
 ### Feature Development Flow
 1. Use TodoWrite for tasks with 3+ steps
-2. Create feature branch from main
-3. Implement with @MainActor boundaries (iOS 26 concurrency)
-4. Add unit tests for business logic
-5. Manual test on iPhone 16 Pro simulator (iOS 26.0)
-6. Profile with Instruments if performance-critical
-7. Update this CLAUDE.md if architecture changes
-8. Ask to commit changes after edits
-9. **NEVER** add backwards compatibility code
-10. **ALWAYS** use modern iOS 26 APIs directly
+2. Run `make check-deps` to ensure tools are installed
+3. Create feature branch from main
+4. Implement with @MainActor boundaries (iOS 26 concurrency)
+5. Run `make lint` to check code quality
+6. Run `make format` to ensure consistent style
+7. Add unit tests for business logic
+8. Run `make test-unit` for fast test validation
+9. Run `make build` to verify compilation
+10. Run `make run` to test in iPhone 16 Pro simulator (iOS 26.0)
+11. Run `make coverage` if code coverage needed
+12. Profile with `make benchmark-build` if performance-critical
+13. Update this CLAUDE.md if architecture changes
+14. Ask to commit changes after edits
+15. **NEVER** add backwards compatibility code
+16. **ALWAYS** use modern iOS 26 APIs directly
 
 ### Debugging Audio Issues
+
+**Quick Debug Commands (via Makefile):**
+```bash
+# Find all audio-related code
+make find-audio
+
+# Search for specific audio patterns
+make search PATTERN='AudioEngine'
+
+# Find all TODO/FIXME in audio code
+make find-todos
+
+# Interactive search for debugging
+make search-interactive
+
+# View specific file with highlighting
+make view FILE=Core/Audio/AudioEngineFacade.swift
+```
 
 **Enhanced Debugging Commands:**
 
