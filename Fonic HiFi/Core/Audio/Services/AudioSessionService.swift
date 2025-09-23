@@ -156,3 +156,69 @@ public enum RemoteCommand: Sendable {
     case dislike
     case bookmark
 }
+
+// MARK: - CustomStringConvertible Conformance
+
+extension AudioRouteChangeReason: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .newDeviceAvailable:
+            return "newDeviceAvailable"
+        case .oldDeviceUnavailable:
+            return "oldDeviceUnavailable"
+        case .categoryChange:
+            return "categoryChange"
+        case .override:
+            return "override"
+        case .wakeFromSleep:
+            return "wakeFromSleep"
+        case .noSuitableRouteForCategory:
+            return "noSuitableRouteForCategory"
+        case .routeConfigurationChange:
+            return "routeConfigurationChange"
+        case .unknown:
+            return "unknown"
+        }
+    }
+}
+
+extension RemoteCommand: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .play:
+            return "play"
+        case .pause:
+            return "pause"
+        case .stop:
+            return "stop"
+        case .togglePlayPause:
+            return "togglePlayPause"
+        case .nextTrack:
+            return "nextTrack"
+        case .previousTrack:
+            return "previousTrack"
+        case .seekForward:
+            return "seekForward"
+        case .seekBackward:
+            return "seekBackward"
+        case .changePlaybackRate(let rate):
+            return "changePlaybackRate(\(rate))"
+        case .seek(let time):
+            return "seek(to: \(time))"
+        case .skipForward(let interval):
+            return "skipForward(\(interval))"
+        case .skipBackward(let interval):
+            return "skipBackward(\(interval))"
+        case .changeRepeatMode:
+            return "changeRepeatMode"
+        case .changeShuffleMode:
+            return "changeShuffleMode"
+        case .like:
+            return "like"
+        case .dislike:
+            return "dislike"
+        case .bookmark:
+            return "bookmark"
+        }
+    }
+}

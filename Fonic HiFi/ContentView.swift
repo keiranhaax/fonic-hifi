@@ -11,49 +11,47 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.importService) private var importService
     @Environment(\.audioEngine) private var audioService
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
-    // Now Playing presentation state managed locally
+    @Namespace private var miniPlayerNamespace
     @State private var showingNowPlaying = false
     
     var body: some View {
-        ZStack {
-            // Main content with scaling effect
-            TabView {
-            // Library Tab
-            LibraryView()
-                .environment(\.showingNowPlaying, $showingNowPlaying)
-                .tabItem {
-                    Label("Library", systemImage: "music.note.list")
-                }
-            
-            // Now Playing Tab
+        if #available(iOS 26, *) {
             NavigationStack {
-                Text("Now Playing")
-                    .navigationTitle("Now Playing")
-            }
-            .tabItem {
-                Label("Now Playing", systemImage: "play.circle.fill")
-            }
-            
-            // Settings Tab
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
+                TabView {
+                    LibraryView()
+                        .environment(\.showingNowPlaying, $showingNowPlaying)
+                        .tabItem {
+                            Label("Library", systemImage: "music.note.list")
+                        }
+
+                    Text("Now Playing")
+                        .tabItem {
+                            Label("Now Playing", systemImage: "play.circle.fill")
+                        }
+
+                    SettingsView()
+                        .tabItem {
+                            Label("Settings", systemImage: "gear")
+                        }
                 }
-        }
-        .preferredColorScheme(.dark) // Dark mode by default
-        .scaleEffect(showingNowPlaying ? 0.95 : 1.0)
-        .animation(
-            reduceMotion ? .none : .interactiveSpring(response: 0.6, dampingFraction: 0.8),
-            value: showingNowPlaying
-        )
-        .disabled(showingNowPlaying)
-        
-        // Now Playing overlay
-        // TEMPORARY: Using no-animation version to debug crash
-        NowPlayingContainer_NoAnimation(showingNowPlaying: $showingNowPlaying)
-        // NowPlayingContainer(showingNowPlaying: $showingNowPlaying)
+                .preferredColorScheme(.dark)
+                .tabBarMinimizeBehavior(.onScrollDown)
+                .tabViewBottomAccessory {
+                    LiquidGlassMiniPlayer(
+                        namespace: miniPlayerNamespace,
+                        showingNowPlaying: $showingNowPlaying
+                    )
+                }
+                .navigationDestination(isPresented: $showingNowPlaying) {
+                    NowPlayingView(animationNamespace: miniPlayerNamespace)
+                        .toolbar(.hidden, for: .navigationBar)
+                        .navigationBarBackButtonHidden()
+                }
+            }
+        } else {
+            // iOS 26 only - no fallback needed
+            EmptyView()
         }
     }
 }

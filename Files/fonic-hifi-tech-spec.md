@@ -8,11 +8,11 @@ The Fonic HiFi application follows a modular architecture with clear separation 
 
 ```
 FonicHiFi/
-├── App/
-│   ├── FonicHiFiApp.swift              # Main app entry point
-│   ├── AppDelegate.swift               # App lifecycle management
-│   ├── SceneDelegate.swift             # Scene management for iOS
-│   └── AppConfiguration.swift          # Global app configuration
+├── [ACTUAL: SwiftUI @main App Structure]
+│   ├── FonicHiFiApp.swift              # Main app entry point (@main)
+│   ├── [NOT IMPLEMENTED] AppDelegate.swift
+│   ├── [NOT IMPLEMENTED] SceneDelegate.swift
+│   └── [NOT IMPLEMENTED] AppConfiguration.swift
 │
 ├── Presentation/                       # Presentation Layer
 │   ├── Views/                         # SwiftUI Views
@@ -20,9 +20,9 @@ FonicHiFi/
 │   │   │   ├── LibraryView.swift     # Main library view
 │   │   │   ├── ArtistListView.swift  # Artists browsing view
 │   │   │   ├── AlbumListView.swift   # Albums browsing view
-│   │   │   ├── GenreListView.swift   # Genres browsing view
-│   │   │   ├── TrackListView.swift   # Tracks browsing view
-│   │   │   ├── QualityFilterView.swift # Audio quality filter view
+│   │   │   ├── [NOT IMPLEMENTED] GenreListView.swift
+│   │   │   ├── TrackListView.swift   # Tracks browsing view [IMPLEMENTED]
+│   │   │   ├── [NOT IMPLEMENTED] QualityFilterView.swift
 │   │   │   └── Components/           # Reusable library components
 │   │   │
 │   │   ├── Player/                    # Playback interface views
@@ -84,9 +84,9 @@ FonicHiFi/
 │   │       └── ...                   # Other settings ViewModels
 │   │
 │   └── UIState/                       # UI State Management
-│       ├── AppState.swift            # Global app state
-│       ├── NavigationState.swift     # Navigation state
-│       └── ThemeManager.swift        # UI theme management
+│       ├── [REMOVED - Merged into AudioEngineFacade] AppState.swift
+│       ├── [NOT IMPLEMENTED] NavigationState.swift
+│       └── [NOT IMPLEMENTED] ThemeManager.swift
 │
 ├── Domain/                            # Domain Layer
 │   ├── Models/                        # Domain Models

@@ -42,8 +42,7 @@ struct LibraryView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
                 // Tab selector
                 Picker("Library View", selection: $selectedTab) {
                     ForEach(LibraryTab.allCases, id: \.self) { tab in
@@ -107,9 +106,8 @@ struct LibraryView: View {
                     EmptyLibraryView(showingImportView: $showingImportView)
                 }
             }
-        }
     }
-    
+
     // MARK: - Filtered Data
     
     private var filteredTracks: [Track] {

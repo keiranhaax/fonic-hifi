@@ -77,7 +77,7 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     /// Indicates whether AudioKit initialized successfully
     public private(set) var isInitialized: Bool = false
 
-    public override init() {
+    override public init() {
         super.init()
         do {
             try setupAudioKitEngine()

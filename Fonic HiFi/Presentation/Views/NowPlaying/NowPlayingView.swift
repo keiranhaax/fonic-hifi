@@ -3,9 +3,13 @@
 //  Fonic HiFi
 //
 //  Created by Claude on 5/29/25.
+//  iOS 26+ Liquid Glass Implementation with Morphing Animations
 //
 
 import SwiftUI
+
+// iOS 26+ Liquid Glass Design System
+@available(iOS 26, *)
 
 @MainActor
 struct NowPlayingView: View {
@@ -46,6 +50,7 @@ struct NowPlayingView: View {
     // Slider state for progress control
     @State private var sliderProgress: Double = 0.0
     @State private var isUserDragging: Bool = false
+    @State private var isPlayingParticles = false
     
     // Constants
     private let artworkSize: CGFloat = 320
@@ -59,55 +64,72 @@ struct NowPlayingView: View {
                 EmptyView()
             }
         }
+        .onAppear {
+            isPlayingParticles = audioService?.isPlaying ?? false
+        }
+        .navigationTransition(
+            .zoom(sourceID: "miniplayer", in: animationNamespace)
+        )
     }
     
     @ViewBuilder
     private func nowPlayingContent(audioService: AudioEngineFacade) -> some View {
-        ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [
-                    dominantColor.opacity(0.6),
-                    dominantColor.opacity(0.3),
-                    Color.black.opacity(0.8)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Drag handle
-                Capsule()
-                    .fill(Color.white.opacity(0.5))
-                    .frame(width: 36, height: 5)
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
+        PerformanceOptimizedContainer(spacing: 0) {
+            ZStack {
+                // Background gradient with glass effect
+                LinearGradient(
+                    colors: [
+                        dominantColor.opacity(0.6),
+                        dominantColor.opacity(0.3),
+                        Color.black.opacity(0.8)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                .clearGlassFix() // iOS 26 Beta 6 fix
+                .glassPerformanceProfiled("NowPlayingBackground")
                 
-                // Main content
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 32) {
-                        // Album artwork
-                        albumArtworkView
-                            .padding(.horizontal, 40)
-                            .padding(.top, 20)
-                        
-                        // Track info
-                        trackInfoView
-                            .padding(.horizontal, 40)
-                        
-                        // Progress bar
-                        progressView
-                            .padding(.horizontal, 40)
-                        
-                        // Playback controls
-                        playbackControlsView
-                            .padding(.horizontal, 40)
-                        
-                        // Volume slider
-                        volumeView
-                            .padding(.horizontal, 40)
-                            .padding(.bottom, 40)
+                VStack(spacing: 0) {
+                    // Drag handle with glass effect
+                    Capsule()
+                        .fill(Color.white.opacity(0.5))
+                        .frame(width: 36, height: 5)
+                        .padding(.top, 8)
+                        .padding(.bottom, 20)
+                        .liquidGlass(style: .ultraThin)
+                        .glassPerformanceProfiled("DragHandle")
+                    
+                    // Main content with glass container
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 32) {
+                            // Album artwork with glass effect
+                            albumArtworkView
+                                .padding(.horizontal, 40)
+                                .padding(.top, 20)
+                                .glassPerformanceProfiled("AlbumArtwork")
+                            
+                            // Track info with glass effect
+                            trackInfoView
+                                .padding(.horizontal, 40)
+                                .glassPerformanceProfiled("TrackInfo")
+                            
+                            // Progress bar with fluid glass effect
+                            progressView
+                                .padding(.horizontal, 40)
+                                .glassPerformanceProfiled("ProgressBar")
+                            
+                            // Playback controls with glass effect
+                            playbackControlsView
+                                .padding(.horizontal, 40)
+                                .glassPerformanceProfiled("PlaybackControls")
+                            
+                            // Volume slider with glass effect
+                            volumeView
+                                .padding(.horizontal, 40)
+                                .padding(.bottom, 40)
+                                .glassPerformanceProfiled("VolumeControl")
+                        }
                     }
                 }
             }
@@ -116,6 +138,7 @@ struct NowPlayingView: View {
         .scaleEffect(isDragging ? 0.95 : 1.0)
         .animation(reduceMotion ? .none : .interactiveSpring(response: 0.4, dampingFraction: 0.8), value: isDragging)
         .gesture(dismissGesture)
+        .adaptiveGlassPerformance()
         .task {
             await performInitialSetup()
         }
@@ -192,17 +215,35 @@ struct NowPlayingView: View {
     // MARK: - Subviews
     
     private var albumArtworkView: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(Color.gray.opacity(0.3))
-            .aspectRatio(1, contentMode: .fit)
-            .frame(maxWidth: artworkSize)
-            .overlay(
-                Image(systemName: "music.note")
-                    .font(.system(size: 80))
-                    .foregroundColor(.white.opacity(0.5))
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.gray.opacity(0.3))
+                .aspectRatio(1, contentMode: .fit)
+                .frame(maxWidth: artworkSize)
+                .liquidGlass(style: .standard, intensity: 0.8)
+                .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+            
+            Image(systemName: "music.note")
+                .font(.system(size: 80))
+                .foregroundColor(.white.opacity(0.5))
+        }
+        .matchedGeometryEffect(id: "artwork", in: animationNamespace)
+        .glassEffectID("artwork", in: animationNamespace)
+        .playingParticles(isPlaying: isPlayingParticles, particleCount: 15)
+        .glassTransition(isActive: isPlayingParticles)
+        .enhancedAccessibility(
+            label: "Album artwork",
+            hint: "Current track album artwork"
+        )
+        .preferredFrameRate(
+            BatteryOptimizedGlassUtilities.optimalFrameRate(
+                for: isPlayingParticles ? .interactive : .decorative
             )
-            .matchedGeometryEffect(id: "artwork", in: animationNamespace)
-            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+        )
+        .onTapGesture {
+            // Tap on artwork could show additional options or do nothing
+            // For now, we'll leave it as a placeholder for future functionality
+        }
     }
     
     private var trackInfoView: some View {
@@ -212,52 +253,66 @@ struct NowPlayingView: View {
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .matchedGeometryEffect(id: "title", in: animationNamespace)
+                .glassEffectID("title", in: animationNamespace)
+                .foregroundColor(.white)
+                .enhancedAccessibility(
+                    label: "Track title",
+                    value: audioService?.currentTrack?.title ?? "Not Playing"
+                )
             
             Text(audioService?.currentTrack?.artist ?? "No Artist")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
                 .matchedGeometryEffect(id: "artist", in: animationNamespace)
+                .glassEffectID("artist", in: animationNamespace)
+                .enhancedAccessibility(
+                    label: "Artist name",
+                    value: audioService?.currentTrack?.artist ?? "No Artist"
+                )
             
             if let album = audioService?.currentTrack?.album {
                 Text(album)
                     .font(.caption)
                     .foregroundColor(.secondary.opacity(0.8))
                     .lineLimit(1)
+                    .enhancedAccessibility(
+                        label: "Album name",
+                        value: album
+                    )
             }
         }
+        .padding()
+        .liquidGlass(style: .thick)
+        .a11yAwareGlass(style: .thick, cornerRadius: 16)
+        .glassEffectID("trackInfo", in: animationNamespace)
+        .audioContextAccessibility(
+            isPlaying: audioService?.isPlaying ?? false,
+            trackTitle: audioService?.currentTrack?.title,
+            artist: audioService?.currentTrack?.artist,
+            progress: audioService?.playbackProgress,
+            duration: audioService?.duration
+        )
     }
     
     private var progressView: some View {
         VStack(spacing: 8) {
-            // Progress slider
-            Slider(value: $sliderProgress, in: 0...1) { isDragging in
-                isUserDragging = isDragging
-                if !isDragging {
-                    // Seek to position when user finishes dragging
-                    // Slider callbacks may run on background thread
-                    Task { @MainActor in
-                        do {
-                            guard let audioService = audioService else { return }
-                            let seekTime = sliderProgress * audioService.duration
-                            try await audioService.seek(to: seekTime)
-                        } catch {
-                            print("Failed to seek: \(error)")
-                        }
+            // Progress slider with fluid glass effect
+            FluidProgressView(progress: sliderProgress)
+                .frame(height: 6)
+                .onAppear {
+                    sliderProgress = audioService?.playbackProgress ?? 0.0
+                }
+                .onChange(of: audioService?.playbackProgress) { _, newValue in
+                    if !isUserDragging, let newValue = newValue {
+                        sliderProgress = newValue
                     }
                 }
-            }
-            .tint(.white)
-            .onChange(of: audioService?.playbackProgress) { _, newValue in
-                // Update slider only if user is not dragging
-                if !isUserDragging, let newValue = newValue {
-                    sliderProgress = newValue
-                }
-            }
-            .onAppear {
-                // Initialize slider with current progress
-                sliderProgress = audioService?.playbackProgress ?? 0.0
-            }
+                .modifier(ProgressControlAccessibility(
+                    progress: sliderProgress,
+                    duration: audioService?.duration ?? 0,
+                    isUserInteracting: isUserDragging
+                ))
             
             // Time labels
             HStack {
@@ -265,6 +320,10 @@ struct NowPlayingView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .monospacedDigit()
+                    .enhancedAccessibility(
+                        label: "Current time",
+                        value: formatTime(audioService?.currentTime ?? 0)
+                    )
                 
                 Spacer()
                 
@@ -272,44 +331,111 @@ struct NowPlayingView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .monospacedDigit()
+                    .enhancedAccessibility(
+                        label: "Total duration",
+                        value: formatTime(audioService?.duration ?? 0)
+                    )
             }
         }
+        .padding()
+        .liquidGlass(style: .standard)
     }
     
     private var playbackControlsView: some View {
         HStack(spacing: 40) {
-            // Shuffle button
-            Button(action: toggleShuffle) {
+            // Shuffle button with glass effect
+            LiquidGlassButton(style: .standard) {
+                toggleShuffle()
+            } content: {
                 Image(systemName: "shuffle")
                     .font(.title3)
                     .foregroundColor(isShuffleEnabled ? .accentColor : .white)
+                    .frame(width: 50, height: 50)
             }
+            .glassEffectID("shuffle", in: animationNamespace)
+            .modifier(PlaybackControlAccessibility(
+                isPlaying: audioService?.isPlaying ?? false,
+                controlType: .shuffle,
+                isEnabled: isShuffleEnabled
+            ))
+            .preferredFrameRate(
+                BatteryOptimizedGlassUtilities.optimalFrameRate(for: .interactive)
+            )
             
             // Previous button
-            Button(action: playPrevious) {
+            LiquidGlassButton(style: .standard) {
+                playPrevious()
+            } content: {
                 Image(systemName: "backward.fill")
                     .font(.title)
+                    .frame(width: 50, height: 50)
             }
+            .glassEffectID("previous", in: animationNamespace)
+            .modifier(PlaybackControlAccessibility(
+                isPlaying: audioService?.isPlaying ?? false,
+                controlType: .previous,
+                isEnabled: true
+            ))
+            .preferredFrameRate(
+                BatteryOptimizedGlassUtilities.optimalFrameRate(for: .interactive)
+            )
             
-            // Play/Pause button
-            Button(action: togglePlayPause) {
+            // Play/Pause button with morphing effect
+            LiquidGlassButton(style: .thick) {
+                togglePlayPause()
+            } content: {
                 Image(systemName: audioService?.isPlaying == true ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 64))
+                    .frame(width: 80, height: 80)
             }
             .matchedGeometryEffect(id: "playButton", in: animationNamespace)
+            .glassEffectID("playPause", in: animationNamespace)
+            .glassTransition(isActive: audioService?.isPlaying ?? false)
+            .modifier(PlaybackControlAccessibility(
+                isPlaying: audioService?.isPlaying ?? false,
+                controlType: .playPause,
+                isEnabled: true
+            ))
+            .preferredFrameRate(
+                BatteryOptimizedGlassUtilities.optimalFrameRate(for: .interactive)
+            )
             
             // Next button
-            Button(action: playNext) {
+            LiquidGlassButton(style: .standard) {
+                playNext()
+            } content: {
                 Image(systemName: "forward.fill")
                     .font(.title)
+                    .frame(width: 50, height: 50)
             }
+            .glassEffectID("next", in: animationNamespace)
+            .modifier(PlaybackControlAccessibility(
+                isPlaying: audioService?.isPlaying ?? false,
+                controlType: .next,
+                isEnabled: true
+            ))
+            .preferredFrameRate(
+                BatteryOptimizedGlassUtilities.optimalFrameRate(for: .interactive)
+            )
             
             // Repeat button
-            Button(action: cycleRepeatMode) {
+            LiquidGlassButton(style: .standard) {
+                cycleRepeatMode()
+            } content: {
                 Image(systemName: repeatModeIcon)
                     .font(.title3)
                     .foregroundColor(repeatMode != .none ? .accentColor : .white)
+                    .frame(width: 50, height: 50)
             }
+            .glassEffectID("repeat", in: animationNamespace)
+            .modifier(PlaybackControlAccessibility(
+                isPlaying: audioService?.isPlaying ?? false,
+                controlType: .repeat,
+                isEnabled: true
+            ))
+            .preferredFrameRate(
+                BatteryOptimizedGlassUtilities.optimalFrameRate(for: .interactive)
+            )
         }
         .foregroundColor(.white)
     }
@@ -319,23 +445,35 @@ struct NowPlayingView: View {
             Image(systemName: "speaker.fill")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .enhancedAccessibility(
+                    label: "Volume control",
+                    hint: "Adjust playback volume"
+                )
             
             Slider(value: Binding(
                 get: { volume },
                 set: { newValue in volumeStorage = Double(newValue) }
             ), in: 0...1) { _ in
                 // Update volume
-                // TODO: Implement volume control when available in AudioEngineFacade
-                // Task {
-                //     await audioService.setVolume(volume)
-                // }
             }
             .tint(.white)
+            .liquidGlass(style: .ultraThin)
+            .modifier(PlaybackControlAccessibility(
+                isPlaying: audioService?.isPlaying ?? false,
+                controlType: .volume,
+                isEnabled: true
+            ))
             
             Image(systemName: "speaker.wave.3.fill")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .enhancedAccessibility(
+                    label: "Volume level indicator",
+                    value: "\(Int(volume * 100)) percent"
+                )
         }
+        .padding()
+        .liquidGlass(style: .standard)
     }
     
     // MARK: - Gestures
@@ -406,8 +544,10 @@ struct NowPlayingView: View {
             do {
                 if audioService.isPlaying {
                     await audioService.pause()
+                    isPlayingParticles = false
                 } else {
                     try await audioService.resume()
+                    isPlayingParticles = true
                 }
             } catch {
                 print("Failed to toggle playback: \(error)")

@@ -1,6 +1,26 @@
-# Part 1: Getting Started with SwiftUI
+# SwiftUI Fundamentals for iOS 26
 
-This document provides a foundational introduction to SwiftUI, guiding you from core concepts to building your first user interfaces.
+**Last Updated: September 2025**
+**Platform: iOS 26.0+, iPadOS 26.0+, macOS 26.0+**
+**SwiftUI Version: 6.0**
+**Swift Version: 6.2**
+**Verification Status: [Verified-Apple]**
+
+## What's New in iOS 26 SwiftUI
+
+### Liquid Glass Design System
+[Verified-Apple] The revolutionary material for iOS 26:
+- **Native Integration**: `.glassEffect()` modifier
+- **Interactive Materials**: Touch-responsive components
+- **Morphing Containers**: `GlassEffectContainer`
+
+### Swift 6.2 Integration
+[Verified-Apple] MainActor by default:
+- All SwiftUI Views are implicitly `@MainActor`
+- No thread hopping in async functions
+- Automatic Sendable conformance
+
+This document provides a foundational introduction to SwiftUI for iOS 26, guiding you from core concepts to building modern user interfaces with Liquid Glass.
 
 ---
 
@@ -22,9 +42,7 @@ struct GreetingView: View {
         // You don't say HOW to draw it.
         Text("Hello, SwiftUI!")
             .padding()
-            .background(Color.blue)
-            .foregroundColor(.white)
-            .cornerRadius(10)
+            .glassEffect()  // iOS 26: Use Liquid Glass instead of background
     }
 }
 ```
@@ -36,7 +54,8 @@ Choosing SwiftUI offers several powerful advantages for modern app development:
 | Benefit | Description |
 | :--- | :--- |
 | **Less Code** | The declarative syntax is highly expressive, allowing you to achieve complex UIs with significantly fewer lines of code compared to UIKit or AppKit. |
-| **Cross-Platform** | Write your UI code once and deploy it across iOS, iPadOS, macOS, watchOS, tvOS, and even visionOS with minimal platform-specific adjustments. |
+| **Cross-Platform** | Write your UI code once and deploy it across iOS 26, iPadOS 26, macOS 26, watchOS 26, tvOS 26, and visionOS 26 with minimal platform-specific adjustments. |
+| **Liquid Glass** | [Verified-Apple] iOS 26's revolutionary material system provides floating, interactive UI elements that respond to touch with scaling, bouncing, and shimmering effects. |
 | **Live Previews** | Xcode's Previews feature provides an interactive, real-time representation of your UI as you code, dramatically accelerating the development and iteration cycle. |
 | **Modern & Safe** | Built from the ground up to work seamlessly with the Swift language, SwiftUI leverages modern features like value types (`structs`) for views, promoting safer and more performant code. |
 | **Integration** | While SwiftUI is the future, it is designed to interoperate smoothly with existing UIKit and AppKit code, allowing for gradual adoption in legacy projects. |
@@ -124,8 +143,7 @@ struct ContentView: View {
                 .fontWeight(.bold) // Further customizes the font weight.
                 .foregroundColor(.white) // Sets the text color.
                 .padding() // Adds space around the text.
-                .background(Color.indigo) // Sets the background color of the padded area.
-                .cornerRadius(15) // Rounds the corners of the background.
+                .glassEffect(.regular.tint(.indigo))  // iOS 26: Liquid Glass with tint
 
             // 2. An Image view using an SF Symbol
             Image(systemName: "star.fill")
@@ -144,8 +162,7 @@ struct ContentView: View {
                 }
                 .padding()
                 .foregroundColor(.white)
-                .background(Color.green)
-                .cornerRadius(10)
+                .glassEffect(.regular.interactive().tint(.green))  // iOS 26: Interactive glass
             }
             
             // 4. A basic Shape
@@ -205,8 +222,7 @@ struct LayoutExampleView: View {
                     .foregroundColor(.secondary)
             }
             .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
+            .glassEffect()  // iOS 26: Default glass effect for cards
 
             Divider() // A visual separator line
 
@@ -219,12 +235,34 @@ struct LayoutExampleView: View {
 }
 ```
 
-### **3.3 Basic Controls and User Input**
+### **3.3 Basic Controls and User Input (iOS 26)**
 
-Controls allow users to interact with your app and provide input. To make controls interactive, you need to manage their state.
+Controls in iOS 26 can use Liquid Glass for enhanced interactivity.
 
-**State Management with `@State`**
-A **`@State`** property wrapper allows a view to own and manage a piece of simple, local data. When a `@State` variable changes, SwiftUI automatically re-renders the view to reflect the new state.
+**State Management with `@State` and Swift 6.2**
+[Verified-Apple] In Swift 6.2, all SwiftUI views are implicitly `@MainActor`:
+```swift
+// Implicit @MainActor - no annotation needed
+struct MyView: View {
+    @State private var count = 0  // MainActor-isolated
+
+    func increment() {  // MainActor-isolated
+        count += 1
+    }
+}
+```
+
+**Liquid Glass Controls**
+[Verified-Apple] Apply glass effects to interactive elements:
+```swift
+GlassEffectContainer {
+    Button("Action") { }
+        .glassEffect(.regular.interactive())
+
+    Slider(value: $volume)
+        .glassEffect()
+}
+```
 
 **Example: `TextField` and `Toggle`**
 

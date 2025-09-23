@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 90;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -52,40 +52,24 @@
 			path = "Fonic HiFi";
 			sourceTree = "<group>";
 		};
-		38D04CF42DE570DA0047CB93 /* Fonic HiFiTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Fonic HiFiTests";
-			sourceTree = "<group>";
-		};
-		38D04CFE2DE570DA0047CB93 /* Fonic HiFiUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Fonic HiFiUITests";
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		38D04CDA2DE570D80047CB93 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				386B1C072DE975FD009FBF25 /* AudioKit in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		38D04CEE2DE570DA0047CB93 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		38D04CF82DE570DA0047CB93 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -94,8 +78,6 @@
 			isa = PBXGroup;
 			children = (
 				38D04CDF2DE570D80047CB93 /* Fonic HiFi */,
-				38D04CF42DE570DA0047CB93 /* Fonic HiFiTests */,
-				38D04CFE2DE570DA0047CB93 /* Fonic HiFiUITests */,
 				38D04CDE2DE570D80047CB93 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -123,8 +105,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			fileSystemSynchronizedGroups = (
 				38D04CDF2DE570D80047CB93 /* Fonic HiFi */,
 			);
@@ -149,12 +129,7 @@
 			dependencies = (
 				38D04CF32DE570DA0047CB93 /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				38D04CF42DE570DA0047CB93 /* Fonic HiFiTests */,
-			);
 			name = "Fonic HiFiTests";
-			packageProductDependencies = (
-			);
 			productName = "Fonic HiFiTests";
 			productReference = 38D04CF12DE570DA0047CB93 /* Fonic HiFiTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -172,12 +147,7 @@
 			dependencies = (
 				38D04CFD2DE570DA0047CB93 /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				38D04CFE2DE570DA0047CB93 /* Fonic HiFiUITests */,
-			);
 			name = "Fonic HiFiUITests";
-			packageProductDependencies = (
-			);
 			productName = "Fonic HiFiUITests";
 			productReference = 38D04CFB2DE570DA0047CB93 /* Fonic HiFiUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -217,7 +187,7 @@
 			packageReferences = (
 				386B1C052DE975FD009FBF25 /* XCRemoteSwiftPackageReference "AudioKit" */,
 			);
-			preferredProjectObjectVersion = 77;
+			preferredProjectObjectVersion = 90;
 			productRefGroup = 38D04CDE2DE570D80047CB93 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -232,48 +202,36 @@
 /* Begin PBXResourcesBuildPhase section */
 		38D04CDB2DE570D80047CB93 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		38D04CEF2DE570DA0047CB93 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		38D04CF92DE570DA0047CB93 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		38D04CD92DE570D80047CB93 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		38D04CED2DE570DA0047CB93 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		38D04CF72DE570DA0047CB93 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
@@ -291,7 +249,7 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		38D04D052DE570DA0047CB93 /* Debug */ = {
+		38D04D052DE570DA0047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFi" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -317,6 +275,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "ai.keiranlabs.Fonic-HiFi";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -332,10 +291,13 @@
 				SWIFT_UPCOMING_FEATURE_ISOLATED_DEFAULT_VALUES = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
-		38D04D062DE570DA0047CB93 /* Release */ = {
+		38D04D062DE570DA0047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFi" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -361,6 +323,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "ai.keiranlabs.Fonic-HiFi";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -376,10 +339,13 @@
 				SWIFT_UPCOMING_FEATURE_ISOLATED_DEFAULT_VALUES = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};
-		38D04D072DE570DA0047CB93 /* Debug */ = {
+		38D04D072DE570DA0047CB93 /* Debug configuration for PBXProject "Fonic HiFi" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -444,7 +410,7 @@
 			};
 			name = Debug;
 		};
-		38D04D082DE570DA0047CB93 /* Release */ = {
+		38D04D082DE570DA0047CB93 /* Release configuration for PBXProject "Fonic HiFi" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -502,7 +468,7 @@
 			};
 			name = Release;
 		};
-		38D04D0A2DE570DA0047CB93 /* Debug */ = {
+		38D04D0A2DE570DA0047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFiTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -525,7 +491,7 @@
 			};
 			name = Debug;
 		};
-		38D04D0B2DE570DA0047CB93 /* Release */ = {
+		38D04D0B2DE570DA0047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFiTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -548,7 +514,7 @@
 			};
 			name = Release;
 		};
-		38D04D0D2DE570DA0047CB93 /* Debug */ = {
+		38D04D0D2DE570DA0047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFiUITests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -569,7 +535,7 @@
 			};
 			name = Debug;
 		};
-		38D04D0E2DE570DA0047CB93 /* Release */ = {
+		38D04D0E2DE570DA0047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFiUITests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -596,37 +562,33 @@
 		38D04CD82DE570D80047CB93 /* Build configuration list for PBXProject "Fonic HiFi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				38D04D072DE570DA0047CB93 /* Debug */,
-				38D04D082DE570DA0047CB93 /* Release */,
+				38D04D072DE570DA0047CB93 /* Debug configuration for PBXProject "Fonic HiFi" */,
+				38D04D082DE570DA0047CB93 /* Release configuration for PBXProject "Fonic HiFi" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		38D04D042DE570DA0047CB93 /* Build configuration list for PBXNativeTarget "Fonic HiFi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				38D04D052DE570DA0047CB93 /* Debug */,
-				38D04D062DE570DA0047CB93 /* Release */,
+				38D04D052DE570DA0047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFi" */,
+				38D04D062DE570DA0047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFi" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		38D04D092DE570DA0047CB93 /* Build configuration list for PBXNativeTarget "Fonic HiFiTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				38D04D0A2DE570DA0047CB93 /* Debug */,
-				38D04D0B2DE570DA0047CB93 /* Release */,
+				38D04D0A2DE570DA0047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFiTests" */,
+				38D04D0B2DE570DA0047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFiTests" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		38D04D0C2DE570DA0047CB93 /* Build configuration list for PBXNativeTarget "Fonic HiFiUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				38D04D0D2DE570DA0047CB93 /* Debug */,
-				38D04D0E2DE570DA0047CB93 /* Release */,
+				38D04D0D2DE570DA0047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFiUITests" */,
+				38D04D0E2DE570DA0047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFiUITests" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */

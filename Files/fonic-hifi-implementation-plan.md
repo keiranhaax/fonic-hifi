@@ -295,14 +295,16 @@ We'll implement the core audio services that will be used by the playback engine
 
 **Detailed technical explanation**
 
-We'll implement the core audio playback engine using AVAudioEngine as the primary backend, with support for SFBAudioEngine and FFmpegKit for extended format support. This will provide the foundation for high-quality audio playback.
+[REVISION NOTE: Currently only AVAudioEngine is implemented. SFBAudioEngine and FFmpegKit exist as stub implementations only]
+
+We'll implement the core audio playback engine using AVAudioEngine as the primary backend, with PLANNED support for SFBAudioEngine and FFmpegKit for extended format support.
 
 **Task Breakdown**
 
 • Set Up Package Dependencies
-  - Add SFBAudioEngine and FFmpegKit dependencies
-  - `/FonicHiFi.xcodeproj/project.pbxproj` - Update
-  - `/Package.swift` (if using Swift Package Manager) - Create or Update
+  - [NOT COMPLETED] Add SFBAudioEngine and FFmpegKit dependencies (only AudioKit added)
+  - `/Fonic HiFi.xcodeproj/project.pbxproj` - Exists
+  - [NOT PRESENT] `/Package.swift` - Package.resolved shows only AudioKit dependency
 
 • Implement Audio Engine Service
   - Create main audio engine service

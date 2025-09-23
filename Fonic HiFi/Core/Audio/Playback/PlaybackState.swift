@@ -8,7 +8,7 @@
 import Foundation
 
 /// Comprehensive playback state with associated data
-public enum PlaybackState: Sendable, Equatable {
+public enum PlaybackState: Sendable, Equatable, CustomStringConvertible {
     /// Engine is idle, no track loaded
     case idle
     

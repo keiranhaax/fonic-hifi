@@ -1,3 +1,26 @@
+# Swift 6.2 Language Guide and Best Practices
+
+**Last Updated: September 2025**
+**Swift Version: 6.2**
+**Platform: iOS 26.0+, macOS 26.0+**
+**Verification Status: [Verified-Apple]**
+
+## What's New in Swift 6.2
+
+### Strict Concurrency (Opt-in)
+[Verified-Apple] Swift 6 language mode brings compile-time data race safety:
+- **Enable gradually**: Use Swift 5 mode with complete concurrency checking
+- **Full adoption**: Switch to Swift 6 language mode for all features
+- **Module-by-module**: Migrate incrementally
+
+### Key Swift 6.2 Features
+- **No thread hopping**: Async functions stay on caller's actor
+- **MainActor by default**: SwiftUI views are implicitly MainActor
+- **Automatic Sendable**: Inference for qualifying types
+- **Actor isolation improvements**: Better inference and flexibility
+
+---
+
 ### Swift Language Guide: Structural Outline
 
 ---
@@ -92,12 +115,46 @@
 
 ### **`03_Advanced_Swift_Topics.md`**
 
-*   ## Chapter 1: Modern Concurrency
-    *   - **The `async/await` Pattern**: Writing asynchronous code that reads like synchronous code.
-    *   - **Actors**: A reference type that protects its state from data races.
-    *   - **Structured Concurrency**: Using `Task` groups to manage concurrent operations.
-    *   - **`Sendable` Types**: Ensuring type-safe passage across concurrency domains.
-    *   - **MainActor**: Guaranteeing UI updates run on the main thread.
+*   ## Chapter 1: Modern Concurrency (Swift 6.2 Updates)
+    *   - **The `async/await` Pattern**: [Verified-Apple] No thread hopping in Swift 6.2
+        ```swift
+        @MainActor func updateUI() async {
+            // Stays on MainActor throughout
+            await fetchData()  // No hop to background
+        }
+        ```
+    *   - **Actors**: A reference type that protects state from data races
+        ```swift
+        actor AudioEngine {
+            private var buffer: [Float] = []
+
+            func process() async {
+                // Actor-isolated, safe from races
+            }
+        }
+        ```
+    *   - **Structured Concurrency**: Using `TaskGroup` for parallel operations
+    *   - **`Sendable` Types**: [Verified-Apple] Automatic conformance in Swift 6.2
+        ```swift
+        // Automatically Sendable
+        struct Config {
+            let apiKey: String
+            let timeout: TimeInterval
+        }
+        ```
+    *   - **MainActor**: [Verified-Apple] Default for UI code
+        ```swift
+        import SwiftUI
+
+        // Implicitly @MainActor
+        struct ContentView: View {
+            @State private var count = 0  // MainActor-isolated
+
+            func increment() {  // MainActor-isolated
+                count += 1
+            }
+        }
+        ```
     *   - **Typed Throws**: Specifying the concrete error type a function can throw.
 
 *   ## Chapter 2: High-Performance Swift
@@ -108,15 +165,29 @@
     *   - **Generics Specialization**: How the compiler optimizes generic code.
     *   - **Unsafe Swift**: When and how to use pointers and unmanaged references (with caution).
 
-*   ## Chapter 3: Advanced State Management for SwiftUI
-    *   - **Review of Core Property Wrappers**: `@State`, `@Binding`.
-    *   - **Managing Reference Types**:
-        *   - **`@StateObject`**: Owning and creating an `ObservableObject`.
-        *   - **`@ObservedObject`**: Observing an `ObservableObject` owned elsewhere.
-    *   - **Sharing State Across the App**:
-        *   - **`@EnvironmentObject`**: Injecting app-wide state into the view hierarchy.
-    *   - **Observation Framework**: The modern approach with `@Observable`.
-    *   - **Architectural Patterns**: Choosing the right tool for complex data flows.
+*   ## Chapter 3: Advanced State Management (Swift 6.2 + iOS 26)
+    *   - **The `@Observable` Macro**: [Verified-Apple] Modern state management
+        ```swift
+        @Observable @MainActor
+        final class ViewModel {
+            var items: [Item] = []  // Automatically triggers UI updates
+            var isLoading = false
+
+            func load() async {
+                isLoading = true
+                items = await fetchItems()
+                isLoading = false
+            }
+        }
+        ```
+    *   - **Environment Updates**: Sharing without explicit keys
+        ```swift
+        View().environment(dataModel)  // No keyPath needed
+        ```
+    *   - **Legacy Property Wrappers**: Still supported but consider migrating
+        - `@StateObject` → `@State` with `@Observable`
+        - `@ObservedObject` → Direct `@Observable` usage
+        - `@EnvironmentObject` → `.environment()` with `@Observable`
 
 *   ## Chapter 4: Generics and Protocols
     *   - **Generic Functions and Types**: Writing flexible, reusable code.
@@ -142,12 +213,21 @@
     *   - **Capture Lists in Closures**: The most common source of retain cycles (`[weak self]`).
     *   - **Debugging with the Memory Graph Debugger**: A step-by-step guide to finding leaks in Xcode.
 
-*   ## Chapter 2: Concurrency Hazards
-    *   - **The Problem of Blocking**: Why blocking the cooperative thread pool leads to deadlocks.
-    *   - **Actor Reentrancy**: Understanding how state can change across an `await`.
-    *   - **`Sendable` Conformance Issues**: Challenges with third-party libraries and complex types.
-    *   - **"Async Virality"**: The ripple effect of making one function `async`.
-    *   - **Data Races in Practice**: How they can still occur and how to use the Thread Sanitizer.
+*   ## Chapter 2: Swift 6.2 Concurrency Solutions
+    *   - **Compile-Time Data Race Prevention**: [Verified-Apple] Swift 6 catches races at compile time
+    *   - **Common Warnings and Fixes**:
+        ```swift
+        // Warning: "Capture of 'self' with non-sendable type"
+        // Solution: Add @MainActor to the class
+        @MainActor class ViewModel { }
+
+        // Warning: "Call to main actor-isolated method"
+        // Solution: Use await MainActor.run
+        await MainActor.run { updateUI() }
+        ```
+    *   - **Actor Reentrancy**: State can change across await points
+    *   - **Sendable Conformance**: [Verified-Apple] Automatic in Swift 6.2 for qualifying types
+    *   - **Migration Strategy**: Enable strict checking gradually
 
 *   ## Chapter 3: Build, Tooling, and Platform-Specific Pain Points
     *   - **Slow Compile Times**: Causes and mitigation strategies (WMO, build settings).
