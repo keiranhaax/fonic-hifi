@@ -1,7 +1,7 @@
 # SwiftUI Fundamentals for iOS 26
 
 **Last Updated: September 2025**
-**Platform: iOS 26.0+, iPadOS 26.0+, macOS 26.0+**
+**Platform Focus: iOS 26.0+, iPadOS 26.0+ (iOS-specific implementation guide)**
 **SwiftUI Version: 6.0**
 **Swift Version: 6.2**
 **Verification Status: [Verified-Apple]**
@@ -54,7 +54,7 @@ Choosing SwiftUI offers several powerful advantages for modern app development:
 | Benefit | Description |
 | :--- | :--- |
 | **Less Code** | The declarative syntax is highly expressive, allowing you to achieve complex UIs with significantly fewer lines of code compared to UIKit or AppKit. |
-| **Cross-Platform** | Write your UI code once and deploy it across iOS 26, iPadOS 26, macOS 26, watchOS 26, tvOS 26, and visionOS 26 with minimal platform-specific adjustments. |
+| **iOS-Optimized** | SwiftUI provides powerful iOS 26-specific features like Liquid Glass, tab bar minimization, and advanced navigation transitions optimized for mobile experiences. |
 | **Liquid Glass** | [Verified-Apple] iOS 26's revolutionary material system provides floating, interactive UI elements that respond to touch with scaling, bouncing, and shimmering effects. |
 | **Live Previews** | Xcode's Previews feature provides an interactive, real-time representation of your UI as you code, dramatically accelerating the development and iteration cycle. |
 | **Modern & Safe** | Built from the ground up to work seamlessly with the Swift language, SwiftUI leverages modern features like value types (`structs`) for views, promoting safer and more performant code. |

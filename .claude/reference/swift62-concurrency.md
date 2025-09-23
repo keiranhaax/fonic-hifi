@@ -2,7 +2,7 @@
 
 **Last Updated: September 2025**
 **Swift Version: 6.2**
-**Platform Requirements: iOS 26.0+, macOS 26.0+**
+**Platform Focus: iOS 26.0+ (This document focuses on iOS implementation)**
 **Verification Status: [Verified-Apple] - From official Swift documentation**
 
 ## Overview

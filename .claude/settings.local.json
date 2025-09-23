@@ -28,5 +28,33 @@
     "deny": [],
     "ask": []
   },
-  "enableAllProjectMcpServers": false
+  "enableAllProjectMcpServers": false,
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/keiran/.claude/hooks/inject-date.sh"
+          },
+          {
+            "type": "command",
+            "command": "/Users/keiran/.claude/hooks/ios26-context.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/keiran/.claude/hooks/code-quality-validator.sh"
+          }
+        ]
+      }
+    ]
+  }
 }

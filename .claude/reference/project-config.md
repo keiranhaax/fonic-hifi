@@ -1,13 +1,14 @@
-# iOS Health App Project Configuration Reference
+# iOS 26 Project Configuration Reference (Fonic HiFi Audio Player)
 
 ## Target Configuration
 
 ### Deployment & Language Settings
-- **iOS Deployment Target**: 26.0+ (required for latest HealthKit features)
-- **Swift Language Version**: 6.0 (strict concurrency enabled)
-- **Xcode Version**: 16.0+ (minimum for Swift 6.0 support)
-- **Supported Devices**: iPhone, iPad, Apple Watch (if companion app)
-- **Architecture Support**: arm64 (Apple Silicon + A12 Bionic+)
+- **iOS Deployment Target**: 26.0 (minimum - NO backwards compatibility)
+- **Swift Language Version**: 6.2 (strict concurrency enabled)
+- **Xcode Version**: 26.0+ (required for iOS 26 SDK)
+- **Supported Devices**: iPhone, iPad (iOS 26 ONLY)
+- **Architecture Support**: arm64 (Apple Silicon)
+- **Platform Focus**: iOS exclusively (not cross-platform)
 
 ### Build Settings
 ```yaml

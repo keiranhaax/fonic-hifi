@@ -1,19 +1,17 @@
-# iOS 26 & iPadOS 26 Key Features and Breaking Changes
+# iOS 26 Key Features and Breaking Changes
 
 **Last Updated: September 2025**
 **Release Date: September 15, 2025**
 **SDK Requirements: Xcode 26**
 **Verification Status: [Verified-Apple] - From official Apple Release Notes**
 
-## Platform Versions
+## iOS 26 Platform Requirements
 
 - **iOS/iPadOS**: 26.0
-- **macOS**: Tahoe 26.0
-- **watchOS**: 26.0
-- **tvOS**: 26.0
-- **visionOS**: 26.0
 - **Xcode**: 26
 - **Swift**: 6.2
+
+**Note**: This document focuses exclusively on iOS 26 features for mobile app development.
 
 ## Major New Features
 
