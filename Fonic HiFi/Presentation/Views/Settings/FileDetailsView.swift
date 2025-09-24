@@ -302,10 +302,10 @@ extension DateFormatter {
     FileDetailsView(
         file: FileItem(
             id: "1",
-            name: "Sample Song.mp3",
-            url: URL(fileURLWithPath: "/path/to/song.mp3"),
+            name: "moonlight_sonata.flac",
+            url: URL(fileURLWithPath: "/Music/Classical/Beethoven/moonlight_sonata.flac"),
             isDirectory: false,
-            size: 3_500_000,
+            size: 58_982_400,
             dateModified: Date()
         )
     )

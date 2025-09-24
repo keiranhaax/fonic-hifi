@@ -26,7 +26,17 @@
       "Read(//Users/keiran/.claude/**)",
       "Bash(for:*)",
       "Bash(do sed -i '' 's/@available(iOS 26, \\*)//g' \"$file\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git commit:*)",
+      "Bash(make:*)",
+      "Bash(xcrun:*)",
+      "Read(//Applications/Xcode.app/Contents/Developer/usr/bin/**)",
+      "Read(//Applications/Xcode.app/**)",
+      "mcp__filesystem__list_directory",
+      "Bash(tee:*)",
+      "Read(//private/tmp/**)",
+      "Bash(swift:*)",
+      "mcp__filesystem__directory_tree"
     ],
     "deny": [],
     "ask": []

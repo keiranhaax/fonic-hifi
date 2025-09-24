@@ -1,0 +1,232 @@
+# Mock Data Cleanup Implementation Plan - Phase 2
+## Continuation of mock.md - PROPER FIXES
+
+**Date**: 2025-09-23
+**Status**: Planning Phase
+**Previous Work**: ~70% complete (stub engines removed, enums updated)
+**Remaining Work**: Proper implementation or removal of placeholders/TODOs
+
+---
+
+## Context
+This plan is a continuation of the original mock data cleanup (`mock.md`). The first phase successfully removed stub engine files (FFmpegEngineAdapter, SFBAudioEngineAdapter) and updated related enums and factories. However, the cleanup was incomplete - many TODO comments and placeholder implementations remain that need PROPER resolution, not just comment removal.
+
+## Critical Principle
+**DO NOT just remove TODO/placeholder words - either IMPLEMENT the functionality or REMOVE the entire code block**
+
+---
+
+## Tasks to Complete
+
+### 1. iOS 26 Documentation Comment - REMOVE ENTIRE OUTDATED SECTION
+**File**: `Fonic HiFi/Presentation/Views/Components/iOS26_Features_Documentation.swift`
+**Line**: 93
+**Current**: `- **@available(iOS 26, *)**: All new features properly gated`
+**Action**: Remove this entire bullet point since iOS 26 is the minimum target - no gating needed
+**Rationale**: iOS 26 is the minimum deployment target, so availability checks are meaningless
+
+### 2. Fix Placeholder Comments - IMPLEMENT OR REMOVE CODE
+
+#### 2.1 AudioFormatDetectionManager.swift
+**Line**: 285
+**Current**: `// MARK: - Placeholder Adapters Removed`
+**Action**: Remove this entire comment section
+**Rationale**: This is just a marker where stub code was deleted - serves no purpose
+
+#### 2.2 NowPlayingView.swift
+**Line**: 240
+**Current**: `// For now, we'll leave it as a placeholder for future functionality`
+**Action**:
+- Investigate what functionality was intended
+- Either implement the feature OR remove the entire commented block
+- Do NOT leave half-implemented code
+
+#### 2.3 SearchPlaylistResultsView.swift
+**Line**: 26
+**Current**: `// Placeholder for future playlist detail view`
+**Action**: Implement actual navigation to playlist detail view
+```swift
+NavigationLink(destination: PlaylistDetailView(playlist: playlist)) {
+    PlaylistRowView(playlist: playlist)
+}
+```
+**Alternative**: If PlaylistDetailView doesn't exist, create a basic implementation or remove playlist search results entirely
+
+#### 2.4 AudioMonitor.swift
+**Line**: 1240
+**Current**: `// Placeholder implementations for all the analysis methods`
+**Action Options**:
+1. **Preferred**: Implement the actual analysis methods with real logic
+2. **Alternative**: If not needed, remove ALL the stub method implementations
+3. **Do NOT**: Leave empty methods with placeholder comments
+
+#### 2.5 StateCoordinator.swift
+**Lines**: 90, 99
+**Current**: Comments about "placeholder content when track is nil"
+**Action**:
+- Review if this is describing actual implemented behavior (OK to keep)
+- If it's marking incomplete implementation, fix the actual behavior
+- These might be legitimate implementation notes - needs investigation
+
+### 3. Clean Build Artifacts Completely
+**Commands**:
+```bash
+rm -rf .build/
+rm -rf build/
+rm -rf DerivedData/
+make clean
+```
+**Rationale**: Build artifacts contain references to deleted stub engines
+
+### 4. Fix Documentation Files - Remove ALL Stub References
+
+#### CLAUDE.md Updates
+- **Line 296-297**: Remove "SFBAudioEngineAdapter - STUB ONLY" and "FFmpegEngineAdapter - STUB ONLY"
+- **Line 483**: Remove example using `SFBAudioEngineAdapter`
+- **Line 739**: Remove mention of SFBAudioEngine from architecture decisions
+
+#### README.md Updates
+- **Line 17**: Remove "SFBAudioEngine for high-res formats"
+- **Line 59-60**: Remove SFBAudioEngineAdapter and FFmpegEngineAdapter from architecture diagram
+- **Line 199**: Remove SFBAudioEngine from dependencies
+
+#### Archive Old Planning Docs
+- Move outdated files in `Plan/` and `Tasks/` to `Archive/` folder
+- Update any that reference stub implementations
+
+### 5. Sample Folder Decision
+**Action**: Keep the sample apps but document their purpose
+**Implementation**:
+1. Create `sample/README.md`:
+```markdown
+# Sample Applications
+
+These are reference implementations demonstrating iOS 26 features:
+
+## AppleMusicBottomBar
+- Demonstrates iOS 26 native tab bar with bottom accessory
+- Shows liquid glass effects without backwards compatibility
+
+## AppleMusicMiniPlayer
+- Reference implementation of expandable mini player
+- Uses iOS 26 navigation transitions
+
+Note: These samples require iOS 26.0+ with no backwards compatibility.
+```
+
+### 6. Implement Missing Functionality (Not Just Remove TODOs)
+
+#### FileManagerView.swift
+**Lines**: 285, 293 - `copyFilesToDocuments` function
+**Action**: Verify this is fully implemented
+- If stub: Implement proper file copying logic
+- If complete: Remove any TODO comments
+
+#### Legitimate UI Placeholders (KEEP THESE)
+These are OK as they represent empty states in the UI:
+- Album artwork placeholders - legitimate fallback UI
+- Artist image placeholders - legitimate fallback UI
+- Empty state messages - legitimate UX pattern
+
+---
+
+## Verification Steps
+
+### Step 1: Verify Stub Removal
+```bash
+make search PATTERN="FFmpeg|SFBAudio"
+# Expected: No results outside of documentation/history
+```
+
+### Step 2: Verify iOS 26 Checks Removed
+```bash
+make search PATTERN="@available.*iOS 26|#available.*iOS 26"
+# Expected: No results in production code
+```
+
+### Step 3: Verify No Incomplete Implementations
+```bash
+make search PATTERN="TODO|FIXME|placeholder.*future|stub.*implementation"
+# Expected: Only legitimate UI placeholders remain
+```
+
+### Step 4: Build Verification
+```bash
+make clean
+make build-check
+# Expected: Build succeeds with exit code 0
+```
+
+### Step 5: Test Verification
+```bash
+make test-unit
+# Expected: All tests pass
+```
+
+---
+
+## Implementation Order
+
+1. **First Pass - Remove Obsolete Code**
+   - Remove the AudioFormatDetectionManager comment
+   - Remove iOS 26 documentation bullet point
+   - Clean build artifacts
+
+2. **Second Pass - Implement Missing Features**
+   - Fix SearchPlaylistResultsView navigation
+   - Implement or remove AudioMonitor analysis methods
+   - Resolve NowPlayingView placeholder functionality
+
+3. **Third Pass - Documentation**
+   - Update CLAUDE.md
+   - Update README.md
+   - Create sample/README.md
+   - Archive old planning documents
+
+4. **Final Pass - Verification**
+   - Run all verification commands
+   - Build and test
+   - Commit changes
+
+---
+
+## Success Criteria
+
+✅ No stub engine references remain in codebase
+✅ No iOS 26 availability checks in production code
+✅ No TODO/FIXME comments for incomplete implementations
+✅ All placeholder functionality either implemented or removed
+✅ Documentation accurately reflects current implementation
+✅ Project builds without errors
+✅ All tests pass
+✅ No half-implemented features remain
+
+---
+
+## Notes
+
+- This is a PROPER cleanup - not just comment removal
+- Each TODO must be resolved by either implementing the feature or removing the code
+- Do not leave any "coming soon" or "future implementation" markers
+- The codebase should be production-ready after this cleanup
+- Any remaining placeholders should only be legitimate UI empty states
+
+---
+
+## Estimated Time
+
+- Code cleanup: 30 minutes
+- Implementation of missing features: 45 minutes
+- Documentation updates: 15 minutes
+- Verification and testing: 15 minutes
+- **Total: ~1.5-2 hours**
+
+---
+
+## Post-Implementation
+
+After completing this cleanup:
+1. Update `logmock.md` with completion status
+2. Run full test suite
+3. Consider creating a pre-commit hook to prevent future TODO/stub code
+4. Document any decisions about deferred features

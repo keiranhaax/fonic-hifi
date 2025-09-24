@@ -22,16 +22,11 @@ struct BottomSearchBar: View {
     @State private var searchFieldScale: CGFloat = 1.0
     
     var body: some View {
-        if #available(iOS 26, *) {
-            enhancedSearchBar
-        } else {
-            classicSearchBar
-        }
+        enhancedSearchBar
     }
     
-    // MARK: - iOS 26+ Enhanced Search Bar
-    
-    
+    // MARK: - Enhanced Search Bar
+
     private var enhancedSearchBar: some View {
         VStack(spacing: 0) {
             // Floating search container
@@ -88,39 +83,6 @@ struct BottomSearchBar: View {
     
     // MARK: - Classic Search Bar (iOS 25 and below)
     
-    private var classicSearchBar: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.secondary)
-                
-                TextField("Search Tracks", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.body)
-                    .focused($isFocused)
-                    .submitLabel(.search)
-                    .onSubmit {
-                        performSearch()
-                    }
-                
-                if !searchText.isEmpty {
-                    Button(action: clearSearch) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: -2)
-        }
-    }
     
     // MARK: - Actions
     
@@ -133,10 +95,8 @@ struct BottomSearchBar: View {
         isFocused = false
         
         // Animation feedback
-        if #available(iOS 26, *) {
-            withAnimation(.liquidBouncy) {
-                searchIconRotation += 360
-            }
+        withAnimation(.liquidBouncy) {
+            searchIconRotation += 360
         }
     }
     

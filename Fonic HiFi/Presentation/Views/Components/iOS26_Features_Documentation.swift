@@ -232,7 +232,6 @@ import SwiftUI
 
 // MARK: - Example Usage Documentation
 
-@available(iOS 26, *)
 struct ExampleUsage: View {
     @State private var isPlaying = false
     @State private var progress: Double = 0.3
@@ -260,11 +259,11 @@ struct ExampleUsage: View {
                     Text("Now Playing")
                         .font(.headline)
                     
-                    Text("Example Song")
+                    Text("Moonlight Sonata")
                         .font(.title2)
                         .fontWeight(.semibold)
-                    
-                    Text("Artist Name")
+
+                    Text("Ludwig van Beethoven")
                         .font(.body)
                         .foregroundStyle(.secondary)
                     
@@ -279,10 +278,10 @@ struct ExampleUsage: View {
             }
             .audioContextAccessibility(
                 isPlaying: isPlaying,
-                trackTitle: "Example Song",
-                artist: "Artist Name",
+                trackTitle: "Moonlight Sonata",
+                artist: "Ludwig van Beethoven",
                 progress: progress,
-                duration: 180
+                duration: 335
             )
             
             // Example 3: Enhanced text with dynamic type

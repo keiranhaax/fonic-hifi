@@ -12,49 +12,52 @@ import OSLog
 /// Centralized data management for the Fonic HiFi app
 @MainActor
 public final class DataManager: ObservableObject {
-    
+
     // MARK: - Properties
-    
+
     /// The SwiftData model container
     public let container: ModelContainer
-    
+
     /// The main model context for UI operations
     public let mainContext: ModelContext
-    
+
     /// Background context for import operations
     public let backgroundContext: ModelContext
-    
+
     /// Track data actor for concurrency-safe operations
     public let trackDataActor: TrackDataActor
-    
+
+    /// Recent searches actor for managing search history
+    public let recentSearchesActor: RecentSearchesActor
+
     /// Metadata extraction service
     public let metadataExtractor: MetadataExtractionService
-    
+
     /// Library import service
     public let importService: LibraryImportService
-    
+
     /// Logger for data operations
     private let logger = Logger(subsystem: "com.fonichifi.data", category: "DataManager")
     
     // MARK: - Initialization
     
     public init() throws {
-        let schema = Schema([
-            Track.self,
-            Artist.self,
-            Album.self,
-            Playlist.self
-        ])
-        
+        let schema = Schema(SchemaV1.models)
+        // Use versioned schema for consistency with migration plan
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
             allowsSave: true,
             cloudKitDatabase: .none // Disable CloudKit for now (privacy-first)
         )
-        
+
         do {
-            container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            // Supply an explicit migration plan with versioned schema
+            container = try ModelContainer(
+                for: schema,
+                migrationPlan: RecentSearchMigrationPlan.self,
+                configurations: [modelConfiguration]
+            )
             mainContext = container.mainContext
             backgroundContext = ModelContext(container)
             
@@ -66,6 +69,7 @@ public final class DataManager: ObservableObject {
             let formatDetectionService = AudioFormatDetectionManager()
             metadataExtractor = MetadataExtractionService(formatDetectionService: formatDetectionService)
             trackDataActor = TrackDataActor(modelContainer: container)
+            recentSearchesActor = RecentSearchesActor(modelContainer: container)
             importService = LibraryImportService(
                 trackDataActor: trackDataActor,
                 metadataExtractor: metadataExtractor
@@ -168,7 +172,7 @@ public final class DataManager: ObservableObject {
     public func searchArtists(_ query: String, limit: Int = 50) async throws -> [Artist] {
         let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !searchQuery.isEmpty else { return [] }
-        
+
         var descriptor = FetchDescriptor<Artist>(
             predicate: #Predicate<Artist> { artist in
                 artist.name.localizedStandardContains(searchQuery) ||
@@ -177,7 +181,7 @@ public final class DataManager: ObservableObject {
             sortBy: [SortDescriptor(\.sortName)]
         )
         descriptor.fetchLimit = limit
-        
+
         do {
             return try mainContext.fetch(descriptor)
         } catch {
@@ -185,7 +189,51 @@ public final class DataManager: ObservableObject {
             throw DataManagerError.searchFailed(error)
         }
     }
+
+    /// Search playlists by query string
+    public func searchPlaylists(_ query: String, limit: Int = 50) async throws -> [Playlist] {
+        let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !searchQuery.isEmpty else { return [] }
+
+        var descriptor = FetchDescriptor<Playlist>(
+            predicate: #Predicate<Playlist> { playlist in
+                playlist.name.localizedStandardContains(searchQuery) ||
+                playlist.playlistDescription?.localizedStandardContains(searchQuery) ?? false
+            },
+            sortBy: [SortDescriptor(\.name)]
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            return try mainContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to search playlists: \(error.localizedDescription)")
+            throw DataManagerError.searchFailed(error)
+        }
+    }
     
+    // MARK: - Recent Search Management
+
+    /// Add a search to recent searches history
+    public func addRecentSearch(_ query: String) async throws {
+        try await recentSearchesActor.addSearch(query)
+    }
+
+    /// Get recent searches
+    public func getRecentSearches(limit: Int = 10) async throws -> [RecentSearchData] {
+        try await recentSearchesActor.getRecentSearches(limit: limit)
+    }
+
+    /// Clear all recent searches
+    public func clearRecentSearches() async throws {
+        try await recentSearchesActor.clearAllSearches()
+    }
+
+    /// Update result count for a search
+    public func updateSearchResultCount(query: String, count: Int) async throws {
+        try await recentSearchesActor.updateResultCount(for: query, count: count)
+    }
+
     // MARK: - Recent Items
     
     /// Get recently added tracks
@@ -359,20 +407,18 @@ public enum DataManagerError: LocalizedError {
 extension DataManager {
     /// Create a preview container for SwiftUI previews
     static var previewContainer: ModelContainer {
-        let schema = Schema([
-            Track.self,
-            Artist.self,
-            Album.self,
-            Playlist.self
-        ])
-        
+        let schema = Schema(SchemaV1.models)
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: true
         )
-        
+
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: RecentSearchMigrationPlan.self,
+                configurations: [modelConfiguration]
+            )
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }

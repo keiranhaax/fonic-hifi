@@ -297,32 +297,29 @@ struct LiquidGlassExpandableRail<CompactContent: View, ExpandedContent: View>: V
 
 #Preview("Liquid Glass Rail") {
     @Previewable @State var isExpanded = false
-    
-    if #available(iOS 26, *) {
-        VStack(spacing: 40) {
-            // Basic rail
-            LiquidGlassRail(isExpanded: $isExpanded) {
-                ForEach(0..<3) { i in
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(.yellow)
-                }
+
+    VStack(spacing: 40) {
+        // Basic rail
+        LiquidGlassRail(isExpanded: $isExpanded) {
+            ForEach(0..<3) { i in
+                Image(systemName: "star.fill")
+                    .foregroundStyle(.yellow)
             }
-            
-            // Toggle expansion
-            Button("Toggle Expansion") {
-                isExpanded.toggle()
-            }
-            .buttonStyle(.borderedProminent)
         }
-        .padding()
-        .background(Color.gray.opacity(0.1))
+
+        // Toggle expansion
+        Button("Toggle Expansion") {
+            isExpanded.toggle()
+        }
+        .buttonStyle(.borderedProminent)
     }
+    .padding()
+    .background(Color.gray.opacity(0.1))
 }
 
 #Preview("Segmented Tabs") {
     @Previewable @State var selection = 0
-    
-    if #available(iOS 26, *) {
+
         VStack(spacing: 40) {
             LiquidGlassSegmentedTabs(
                 tabs: [
@@ -339,5 +336,4 @@ struct LiquidGlassExpandableRail<CompactContent: View, ExpandedContent: View>: V
         }
         .padding()
         .background(Color.gray.opacity(0.1))
-    }
 }

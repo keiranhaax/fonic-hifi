@@ -241,6 +241,8 @@ public enum InterruptionCategory: String, Sendable, CaseIterable {
             return .otherApp
         case .builtInMicMuted:
             return .systemSound
+        case .routeDisconnected:
+            return .routeChange
         @unknown default:
             return .unknown
         }

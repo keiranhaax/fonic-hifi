@@ -82,14 +82,18 @@ struct TrackRowView: View {
 
 private func makePreviewTrack() -> Track {
     let track = Track(
-        url: URL(fileURLWithPath: "/sample.mp3"),
-        title: "Sample Track",
-        artist: "Sample Artist",
-        album: "Sample Album",
+        url: URL(fileURLWithPath: "/Music/Electronic/SynthwaveArtist/electric_dreams.mp3"),
+        title: "Electric Dreams",
+        artist: "Synthwave Artist",
+        album: "Neon Nights",
         audioFormat: "MP3",
-        duration: 180
+        duration: 245.0,
+        sampleRate: 48000,
+        bitDepth: 24,
+        channels: 2,
+        isLossless: false
     )
-    track.trackNumber = 1
+    track.trackNumber = 3
     return track
 }
 

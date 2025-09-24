@@ -91,12 +91,16 @@ struct DebugTrackRowView: View {
 
 #Preview {
     DebugTrackRowView(track: Track(
-        url: URL(fileURLWithPath: "/test.mp3"),
-        title: "Test Track",
-        artist: "Test Artist",
-        album: "Test Album",
-        audioFormat: "MP3",
-        duration: 180
+        url: URL(fileURLWithPath: "/Music/Classical/Beethoven/moonlight.flac"),
+        title: "Moonlight Sonata",
+        artist: "Ludwig van Beethoven",
+        album: "Classical Collection",
+        audioFormat: "FLAC",
+        duration: 335.0,
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        isLossless: true
     ))
     .audioEngine(AudioEngineFacade())
 }

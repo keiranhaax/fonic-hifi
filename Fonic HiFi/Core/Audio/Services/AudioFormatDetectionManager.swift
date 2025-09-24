@@ -282,34 +282,6 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
     }
 }
 
-// MARK: - Placeholder Adapters
-
-/// Placeholder for FLAC detection adapter (to be implemented with SFBAudioEngine)
-private final class FLACDetectionAdapter: FormatDetectionAdapter {
-    let supportedFormats: [AudioFormat] = [.flac]
-    
-    func detectFormat(at url: URL) async throws -> AudioFileInfo {
-        // TODO: Implement with SFBAudioEngine
-        throw DetectionError.unknownFormat(url)
-    }
-}
-
-/// Placeholder for FFmpeg detection adapter
-private final class FFmpegDetectionAdapter: FormatDetectionAdapter {
-    let supportedFormats: [AudioFormat] = [.ape, .dsd]
-    
-    func detectFormat(at url: URL) async throws -> AudioFileInfo {
-        // TODO: Implement with FFmpegKit
-        throw DetectionError.unknownFormat(url)
-    }
-}
-
-/// Placeholder for TagLib detection adapter
-private final class TagLibDetectionAdapter: FormatDetectionAdapter {
-    let supportedFormats: [AudioFormat] = AudioFormat.allCases
-    
-    func detectFormat(at url: URL) async throws -> AudioFileInfo {
-        // TODO: Implement with TagLib
-        throw DetectionError.unknownFormat(url)
-    }
-}
+// MARK: - Placeholder Adapters Removed
+// Stub engine adapters (FLAC, FFmpeg, TagLib) have been removed
+// as these engines are not implemented in this version

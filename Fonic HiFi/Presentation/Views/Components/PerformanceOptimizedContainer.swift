@@ -75,20 +75,18 @@ extension View {
 // MARK: - Preview
 
 #Preview("Performance Optimized Container") {
-  if #available(iOS 26, *) {
-    PerformanceOptimizedContainer {
-      VStack(spacing: 20) {
-        Text("Optimized Glass Effect")
-          .padding()
-          .liquidGlass(style: .standard)
-        
-        Text("Another Glass Element")
-          .padding()
-          .liquidGlass(style: .thick)
-      }
+  PerformanceOptimizedContainer {
+    VStack(spacing: 20) {
+      Text("Optimized Glass Effect")
+        .padding()
+        .liquidGlass(style: .standard)
+
+      Text("Another Glass Element")
+        .padding()
+        .liquidGlass(style: .thick)
     }
-    .padding()
-    .background(Color.black)
-    .preferredColorScheme(.dark)
   }
+  .padding()
+  .background(Color.black)
+  .preferredColorScheme(.dark)
 }

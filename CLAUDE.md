@@ -5,8 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## CRITICAL RULES
 - **MANDATORY**: After file edits, ask: "Would you like me to commit these changes?"
 - **MANDATORY**: Verify all iOS/Swift claims via apple-rag/sosumi BEFORE stating as facts
+- **MANDATORY**: Use `make` commands for ALL build, test, profile, and debug operations
 - **ALWAYS**: Use verification tags: [Verified-Apple], [Verified-Code], [Inference], [Unverified]
 - **ALWAYS**: Use TodoWrite for complex tasks (3+ steps) to track progress
+- **NEVER**: Run xcodebuild, instruments, xctrace, or profiling tools directly
 - **NEVER**: Make unverified claims about iOS/Swift features
 - **NEVER**: Create files unless necessary - prefer editing existing files
 - **NEVER**: Use placeholder, mock, or fake data in code
@@ -28,6 +30,25 @@ mcp__sosumi__fetchAppleDocumentation("/path") → Confirm
 - **Lint**: `make lint` after every code change
 - **Format**: `make format` before commits
 - **Context**: /clear between unrelated tasks
+
+## Implementation Status [Verified-Code]
+
+**Audio Engines:**
+- ✅ AVAudioEngineAdapter - COMPLETE (`Core/Audio/Engines/AVAudioEngineAdapter.swift`)
+- ✅ AudioKitEngineAdapter - COMPLETE (`Core/Audio/Engines/AudioKitEngineAdapter.swift`)
+- 🚧 SFBAudioEngineAdapter - STUB ONLY (method exists, not implemented)
+- 🚧 FFmpegEngineAdapter - STUB ONLY (method exists, not implemented)
+
+**Liquid Glass UI:**
+- ⚠️ Native `.glassEffect()` - iOS 26 API documented but NOT USED IN CODE
+- ✅ `.liquidGlass()` - CUSTOM implementation using Material effects
+- ✅ `PerformanceOptimizedContainer` - CUSTOM container (NOT Apple's GlassEffectContainer)
+
+**Non-Existent References:**
+- ❌ `Core/Audio/Decoders/` - DOES NOT EXIST
+- ❌ `FormatBadge.swift` - DOES NOT EXIST
+- ❌ `AudioSessionActor` - DOES NOT EXIST (uses AudioSessionManager instead)
+- ❌ `Files/TestAudio/` - DOES NOT EXIST
 
 ## iOS 26 MODERN API REQUIREMENTS
 
@@ -79,6 +100,60 @@ make check-deps
 ## Build Commands - Using Makefile
 
 **MANDATORY**: Always use Makefile commands for consistency and efficiency.
+
+### Quick Command Reference
+
+**Most Used Commands:**
+- `make build` - Build the app (Debug)
+- `make build-verify` - Comprehensive build verification with full output
+- `make build-check` - Quick build check (exit code only)
+- `make error-report` - Generate detailed error report
+- `make run` - Build and run in simulator
+- `make test` - Run all tests
+- `make lint` - Check code quality
+- `make format` - Auto-format code
+- `make clean` - Clean build artifacts
+- `make search PATTERN='text'` - Fast code search
+- `make profile-cpu` - CPU profiling
+- `make profile-memory` - Memory profiling
+- `make memory-leaks` - Check for leaks
+- `make logs-stream` - Stream live logs
+
+## Build Verification Best Practices
+
+### DO:
+- Use `make build-check` for quick verification (shows only pass/fail)
+- Use `make build-verify` for comprehensive analysis with full output
+- Use `make error-report` for detailed error extraction when debugging
+- Always check exit codes: `make build; echo $?` (0 = success)
+- Review full output when debugging build issues
+
+### DON'T:
+- Use `tail` or `head` on build output (loses critical information)
+- Rely only on final output messages from formatters
+- Ignore exit codes when verifying builds
+- Trust "Build Succeeded" without checking actual exit status
+
+### Verification Commands:
+```bash
+# Quick check - exit code only
+make build-check
+
+# Full verification - complete output capture
+make build-verify
+
+# Detailed error extraction
+make error-report
+
+# Manual verification
+make build; echo "Exit code: $?"
+```
+
+### Troubleshooting Build Failures:
+1. Run `make build-verify` for full output
+2. Check `build_verify.log` for complete details
+3. Use `make error-report` to extract all errors/warnings
+4. Review `build_errors.log` for filtered issues
 
 ### Primary Build Commands
 ```bash
@@ -234,11 +309,21 @@ make diff
 The audio system uses a sophisticated facade pattern with automatic engine selection based on audio format:
 
 ```
-AudioEngineFacade (Main coordinator)
-├── AVAudioEngineAdapter (Standard formats: MP3, AAC, ALAC) - IMPLEMENTED
-├── AudioKitEngineAdapter (Enhanced playback with AudioKit) - IMPLEMENTED
-├── SFBAudioEngineAdapter - STUB ONLY (TODO implementation)
-└── FFmpegEngineAdapter - STUB ONLY (TODO implementation)
+AudioEngineFacade (Main coordinator) - AudioEngineFacade.swift:20
+├── AVAudioEngineAdapter - IMPLEMENTED (AVAudioEngineAdapter.swift)
+├── AudioKitEngineAdapter - IMPLEMENTED (AudioKitEngineAdapter.swift)
+├── SFBAudioEngineAdapter - STUB ONLY
+└── FFmpegEngineAdapter - STUB ONLY
+```
+
+**ACTUAL CODE** (`AudioEngineFacade.swift:20`):
+```swift
+@MainActor
+public final class AudioEngineFacade: ObservableObject {
+    @Published public private(set) var currentTrack: Track?
+    @Published public private(set) var isPlaying = false
+    // Task { @MainActor in } pattern used throughout - see line 602
+}
 ```
 
 **Engine Selection Logic** (`Core/Audio/Factory/AudioEngineFactory.swift`): [Partially Implemented]
@@ -249,11 +334,19 @@ AudioEngineFacade (Main coordinator)
 
 ### Concurrency Model (Swift 6.2) [Verified-Apple]
 
-**Actor Isolation Boundaries:** [Verified-Apple]
+**Actor Isolation Boundaries:** [Verified-Code]
 ```swift
 @MainActor: All UI components, ViewModels, AudioEngineFacade
-TrackDataActor: SwiftData operations, file I/O
-[Does Not Exist] ~~AudioSessionActor~~ - Uses AudioSessionManager/AudioSessionService instead
+TrackDataActor: SwiftData operations, file I/O (TrackDataActor.swift:13)
+AudioSessionManager: Session management (no actor needed)
+```
+
+**ACTUAL CODE** (`TrackDataActor.swift:13-14`):
+```swift
+@ModelActor
+public actor TrackDataActor {
+    // ModelActor provides automatic isolation for SwiftData
+}
 ```
 
 **Critical Threading Rules:**
@@ -261,6 +354,14 @@ TrackDataActor: SwiftData operations, file I/O
 2. SwiftData operations MUST go through TrackDataActor
 3. Use `Task { @MainActor in ... }` for audio → UI communication
 4. All cross-actor types MUST conform to Sendable
+
+**ACTUAL PATTERN** (`AVAudioEngineAdapter.swift:184`):
+```swift
+// Audio callback on background thread
+Task { @MainActor [weak self] in
+    self?.handlePlaybackCompletionSync()
+}
+```
 
 **Swift 6.2 Concurrency (iOS 26):** [Verified-Apple]
 - **Default Main Actor**: Async functions run on caller's actor by default
@@ -298,11 +399,10 @@ PlaybackStateManager (Single source of truth)
 
 ### Adding a New Audio Format
 
-1. **[Directory Does Not Exist]** ~~Create Decoder in `Core/Audio/Decoders/`~~
-2. **Update Detection** in `AudioFormatDetectionManager.detectFormat()`
-3. **Map to Engine** in `AudioEngineFactory.createEngine()`
-4. **[File Does Not Exist]** ~~Add UI Badge in `Presentation/Components/FormatBadge.swift`~~
-5. **[Directory Does Not Exist]** ~~Test with Sample in `Files/TestAudio/`~~
+1. **Update Detection** in `AudioFormatDetectionManager.detectFormat()`
+2. **Map to Engine** in `AudioEngineFactory.createEngine()`
+3. **Add format support to appropriate engine adapter**
+4. **Test with real audio files**
 
 ### Fixing Audio Playback Issues
 
@@ -321,7 +421,7 @@ PlaybackStateManager (Single source of truth)
 3. **Engine Switching Failures**
    - Review format detection logic
    - Check engine capability matrix
-   - [Method Does Not Exist] ~~Verify proper cleanup in `switchEngine()`~~
+   - Verify engine cleanup in facade coordinators
 
 ### Audio Playback Best Practices
 
@@ -384,19 +484,22 @@ NotificationCenter.default.addObserver(
 3. `AudioEngineFacade`: Cache engine instances
 4. `TrackDataActor`: Implement pagination for large libraries
 
-**Performance Monitoring with Instruments:** [Verified-Apple]
+**Performance Monitoring with Makefile:** [Verified-Apple]
 ```bash
 # Profile CPU usage
-instruments -t "Time Profiler" -D cpu_profile.trace "Fonic HiFi.app"
+make profile-cpu
 
 # Monitor memory allocations
-instruments -t "Allocations" -D memory.trace "Fonic HiFi.app"
+make profile-memory
 
 # Audio latency profiling
-instruments -t "System Trace" -D audio.trace "Fonic HiFi.app"
+make profile-audio
 
 # Memory graph debugging
-xcrun xctrace record --template "Allocations" --output memory_graph.trace --attach "Fonic HiFi"
+make memory-graph
+
+# Check for memory leaks
+make memory-leaks
 ```
 
 **SwiftUI Performance Optimization:** [Verified-Apple]
@@ -581,15 +684,20 @@ make view FILE=Core/Audio/AudioEngineFacade.swift
 
 2. **Console.app Filtering:**
    ```bash
-   log show --predicate 'subsystem == "com.fonichifi.audio"' --last 1h
-   log stream --predicate 'subsystem == "com.fonichifi.audio"' --level debug
-   log collect --device "iPhone 16 Pro" --start '2025-08-12 00:00:00'
+   # Show recent logs
+   make logs-show
+
+   # Stream live logs
+   make logs-stream
+
+   # Filter by subsystem
+   make logs-filter SUBSYSTEM='com.fonichifi.audio'
    ```
 
 3. **Symbolication for Crash Logs:**
    ```bash
-   atos -arch arm64 -o "Fonic HiFi.app.dSYM/Contents/Resources/DWARF/Fonic HiFi" -l 0x100000000 0x1001234567
-   symbolicatecrash crash_log.crash "Fonic HiFi.app.dSYM" > symbolicated.crash
+   # Symbolicate crash logs
+   make symbolicate CRASH_LOG=path/to/crash.log
    ```
 
 4. **Audio Route Debugging:** [Verified-Apple]
@@ -612,8 +720,11 @@ make view FILE=Core/Audio/AudioEngineFacade.swift
 5. **Memory Debugging:**
    ```bash
    # Detect memory leaks
-   leaks --atExit -- "Fonic HiFi.app"
-   
+   make memory-leaks
+
+   # Memory graph debugging
+   make memory-graph
+
    # Memory graph debugging in Xcode
    # Debug > Debug Memory Graph (while app is running)
    ```
@@ -644,25 +755,23 @@ make view FILE=Core/Audio/AudioEngineFacade.swift
 - Privacy-conscious individuals
 - iOS power users
 
-## iOS 26 Liquid Glass Implementation [IMPORTANT]
+## iOS 26 Liquid Glass Implementation [CRITICAL UPDATE]
 
-**CLARIFICATION**: This project uses BOTH native iOS 26 APIs and custom implementations:
+**IMPORTANT**: Native iOS 26 `.glassEffect()` APIs are NOT currently used in the codebase!
 
-### Native iOS 26 APIs (from Apple) [Verified-Apple]:
-- `.glassEffect(_:in:)` - Official SwiftUI modifier for Liquid Glass (USE DIRECTLY)
-- `GlassEffectContainer` - Official Apple container for morphing glass effects (NO FALLBACKS)
-- `Glass.regular`, `Glass.interactive()` - Official glass variants (ALWAYS AVAILABLE)
-- `GlassEffectTransition` - Official transition support (NO COMPATIBILITY CHECKS)
+### Native iOS 26 APIs (Available but NOT USED):
+- `.glassEffect(_:in:)` - iOS 26 API ready to use but NOT IMPLEMENTED
+- `GlassEffectContainer` - iOS 26 API ready to use but NOT IMPLEMENTED
+- `Glass.regular`, `Glass.interactive()` - iOS 26 variants NOT IN CODE
+- `GlassEffectTransition` - iOS 26 transitions NOT IN CODE
 
-**IMPORTANT**: These APIs are ALWAYS available in iOS 26. Never wrap them in availability checks.
+### Custom Implementations (ACTUALLY IN USE):
+- `PerformanceOptimizedContainer` - CUSTOM container (`PerformanceOptimizedContainer.swift:16`)
+- `.liquidGlass()` - CUSTOM modifier using Material (`LiquidGlassDesignSystem.swift:30`)
+- `LiquidGlassStyle` - CUSTOM enum for styling
+- `.glassEffectID()` - CUSTOM extension for animations
 
-### Custom Implementations (Project-Specific):
-- `PerformanceOptimizedContainer` - Custom performance wrapper (uses iOS 26 APIs directly)
-- `.liquidGlass()` modifier - Custom convenience wrapper (NO fallback logic)
-- `LiquidGlassStyle` enum - Custom styling presets (iOS 26 only)
-- Various performance optimization modifiers (assume iOS 26 features)
-
-**NOTE**: The custom `PerformanceOptimizedContainer` was renamed from `GlassEffectContainer` to avoid confusion with Apple's official API of the same name.
+**ACTION REQUIRED**: When implementing Liquid Glass features, use the native iOS 26 APIs directly without compatibility checks. The custom implementations are placeholders.
 
 ## Architecture Decision Records
 

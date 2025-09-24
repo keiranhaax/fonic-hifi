@@ -26,7 +26,7 @@ BREW_PREFIX := $(shell brew --prefix 2>/dev/null || echo /usr/local)
 
 # Tools
 XCODEBUILD = xcodebuild
-XCBEAUTIFY = $(shell command -v xcbeautify 2>/dev/null && echo xcbeautify || echo cat)
+XCBEAUTIFY = $(shell command -v xcbeautify >/dev/null 2>&1 && echo xcbeautify || echo cat)
 SWIFTLINT = $(shell command -v swiftlint 2>/dev/null || echo $(BREW_PREFIX)/bin/swiftlint)
 SWIFTFORMAT = $(shell command -v swiftformat 2>/dev/null || echo $(BREW_PREFIX)/bin/swiftformat)
 INSTRUMENTS = instruments
@@ -54,7 +54,10 @@ LLM = llm
 .PHONY: all help clean build build-release test test-unit test-ui coverage lint format analyze open check-deps install-deps simulator-boot simulator-shutdown simulator-list run
 .PHONY: search find-files find-todos find-viewmodels find-audio find-core stats stats-features tree view
 .PHONY: watch-lint watch-build watch-test benchmark-build benchmark-test benchmark-all
+.PHONY: profile-cpu profile-memory profile-audio memory-graph memory-leaks
+.PHONY: logs-show logs-stream logs-filter symbolicate
 .PHONY: ai-explain ai-test-generate ai-review ai-commit pr-create issues diff find-interactive search-interactive parse-errors test-json
+.PHONY: build-verify build-check error-report
 
 # Help target - displays all available commands
 help:
@@ -63,6 +66,9 @@ help:
 	@echo "Build Commands:"
 	@echo "  make build          - Build the app in Debug configuration"
 	@echo "  make build-release  - Build the app in Release configuration"
+	@echo "  make build-verify   - Comprehensive build verification with full output"
+	@echo "  make build-check    - Quick build check (exit code only)"
+	@echo "  make error-report   - Generate detailed error report from build"
 	@echo "  make run            - Build and run the app in the simulator"
 	@echo "  make clean          - Clean build artifacts and derived data"
 	@echo "  make open           - Open the project in Xcode"
@@ -103,6 +109,19 @@ help:
 	@echo "  make benchmark-build - Measure build performance"
 	@echo "  make benchmark-test  - Compare test execution times"
 	@echo "  make benchmark-all   - Full performance analysis"
+	@echo ""
+	@echo "Profiling & Memory (xctrace):"
+	@echo "  make profile-cpu    - CPU profiling (app must be running)"
+	@echo "  make profile-memory - Memory allocation profiling"
+	@echo "  make profile-audio  - Audio system trace profiling"
+	@echo "  make memory-graph   - Capture memory graph"
+	@echo "  make memory-leaks   - Check for memory leaks"
+	@echo ""
+	@echo "Debugging & Logging:"
+	@echo "  make logs-show      - Show recent app logs"
+	@echo "  make logs-stream    - Stream live debug logs"
+	@echo "  make logs-filter SUBSYSTEM=name - Filter logs by subsystem"
+	@echo "  make symbolicate CRASH_LOG=path - Symbolicate crash logs"
 	@echo ""
 	@echo "AI Assistance (mods, llm):"
 	@echo "  make ai-explain FILE=path - Explain code with AI"
@@ -193,8 +212,17 @@ build: check-deps
 		-derivedDataPath $(BUILD_DIR) \
 		CODE_SIGN_IDENTITY="" \
 		CODE_SIGNING_REQUIRED=NO \
-		| $(XCBEAUTIFY) || exit 1
-	@echo "Build complete"
+		2>&1 | tee .build_output.tmp | $(XCBEAUTIFY); \
+	EXIT_CODE=$${PIPESTATUS[0]}; \
+	if [ $$EXIT_CODE -ne 0 ]; then \
+		echo "❌ Build failed with exit code $$EXIT_CODE"; \
+		echo "First 5 errors:"; \
+		grep -E "error:" .build_output.tmp | head -5 2>/dev/null || echo "Check .build_output.tmp for details"; \
+		rm -f .build_output.tmp; \
+		exit $$EXIT_CODE; \
+	fi; \
+	rm -f .build_output.tmp; \
+	echo "Build complete"
 
 # Build the app in Release configuration
 build-release: check-deps
@@ -209,6 +237,41 @@ build-release: check-deps
 		CODE_SIGNING_REQUIRED=NO \
 		| $(XCBEAUTIFY) || exit 1
 	@echo "Release build complete"
+
+# Comprehensive build verification with full output capture
+build-verify: clean
+	@echo "🔍 Running comprehensive build verification..."
+	@$(MAKE) build > build_verify.log 2>&1; \
+	EXIT_CODE=$$?; \
+	if [ $$EXIT_CODE -ne 0 ]; then \
+		echo "❌ Build failed with exit code $$EXIT_CODE"; \
+		echo "First 10 errors:"; \
+		grep -E "error:" build_verify.log | head -10 || echo "No explicit error messages found"; \
+		echo ""; \
+		echo "See build_verify.log for full output"; \
+		exit 1; \
+	else \
+		echo "✅ Build succeeded"; \
+		if grep -q "error:" build_verify.log; then \
+			echo "⚠️  Warning: Found 'error:' in successful build output:"; \
+			grep "error:" build_verify.log | head -5; \
+		fi; \
+		echo "Full log saved to build_verify.log"; \
+	fi
+
+# Quick build check - exit code only
+build-check:
+	@$(MAKE) build >/dev/null 2>&1 && echo "✅ Build OK" || echo "❌ Build FAILED (exit code: $$?)"
+
+# Detailed error report with filtering
+error-report:
+	@echo "📋 Generating detailed error report..."
+	@$(MAKE) build 2>&1 | tee build_errors.log | grep -E "error:|warning:" || true
+	@ERROR_COUNT=$$(grep -c "error:" build_errors.log 2>/dev/null || echo 0); \
+	WARNING_COUNT=$$(grep -c "warning:" build_errors.log 2>/dev/null || echo 0); \
+	echo ""; \
+	echo "Summary: $$ERROR_COUNT errors, $$WARNING_COUNT warnings"; \
+	echo "Full log saved to build_errors.log"
 
 # Build and run the app in the simulator
 run: build simulator-boot
@@ -402,6 +465,7 @@ stats:
 
 # Statistics per feature module
 stats-features:
+	@command -v $(TOKEI) >/dev/null 2>&1 || { echo "tokei not installed. Install with: brew install tokei"; exit 1; }
 	@echo "Module Statistics:"
 	@echo "\nCore:"
 	@$(TOKEI) "Fonic HiFi/Core" --type=Swift --sort lines || echo "No Core module found"
@@ -414,6 +478,7 @@ stats-features:
 
 # Visual project structure with eza
 tree:
+	@command -v $(EZA) >/dev/null 2>&1 || { echo "eza not installed. Install with: brew install eza"; exit 1; }
 	@echo "Project Structure:"
 	@$(EZA) --tree --level=3 --icons --ignore-glob=".git|build|DerivedData|*.xcodeproj" "Fonic HiFi/"
 
@@ -423,6 +488,7 @@ view:
 		echo "Usage: make view FILE=path/to/file.swift"; \
 		exit 1; \
 	fi
+	@command -v $(BAT) >/dev/null 2>&1 || { echo "bat not installed. Install with: brew install bat"; exit 1; }
 	@$(BAT) --style=full --language=swift "$(FILE)" || echo "File not found: $(FILE)"
 
 # ===== MONITORING & AUTOMATION COMMANDS =====
@@ -430,6 +496,8 @@ view:
 # Auto-lint on file changes
 watch-lint:
 	@echo "Watching for changes to run SwiftLint..."
+	@command -v $(WATCHMAN) >/dev/null 2>&1 || { echo "watchman not installed. Install with: brew install watchman"; exit 1; }
+	@command -v $(JQ) >/dev/null 2>&1 || { echo "jq not installed. Install with: brew install jq"; exit 1; }
 	@$(WATCHMAN) watch-del-all >/dev/null 2>&1 || true
 	@$(WATCHMAN) watch-project . >/dev/null 2>&1
 	@$(WATCHMAN) -- trigger . swiftlint '*.swift' -- make lint
@@ -439,6 +507,8 @@ watch-lint:
 # Auto-build on changes
 watch-build:
 	@echo "Watching for changes to rebuild..."
+	@command -v $(WATCHMAN) >/dev/null 2>&1 || { echo "watchman not installed. Install with: brew install watchman"; exit 1; }
+	@command -v $(JQ) >/dev/null 2>&1 || { echo "jq not installed. Install with: brew install jq"; exit 1; }
 	@$(WATCHMAN) watch-del-all >/dev/null 2>&1 || true
 	@$(WATCHMAN) watch-project . >/dev/null 2>&1
 	@$(WATCHMAN) -- trigger . rebuild '*.swift' '*.storyboard' '*.xib' -- make build
@@ -448,6 +518,8 @@ watch-build:
 # Auto-test on changes
 watch-test:
 	@echo "Watching for changes to run tests..."
+	@command -v $(WATCHMAN) >/dev/null 2>&1 || { echo "watchman not installed. Install with: brew install watchman"; exit 1; }
+	@command -v $(JQ) >/dev/null 2>&1 || { echo "jq not installed. Install with: brew install jq"; exit 1; }
 	@$(WATCHMAN) watch-del-all >/dev/null 2>&1 || true
 	@$(WATCHMAN) watch-project . >/dev/null 2>&1
 	@$(WATCHMAN) -- trigger . test '*.swift' -- make test-unit
@@ -459,6 +531,7 @@ watch-test:
 # Benchmark build performance
 benchmark-build:
 	@echo "Benchmarking build performance..."
+	@command -v $(HYPERFINE) >/dev/null 2>&1 || { echo "hyperfine not installed. Install with: brew install hyperfine"; exit 1; }
 	@$(HYPERFINE) --warmup 1 --runs 3 \
 		'make clean build' \
 		--export-markdown benchmark-build.md
@@ -467,6 +540,7 @@ benchmark-build:
 # Benchmark test execution
 benchmark-test:
 	@echo "Benchmarking test performance..."
+	@command -v $(HYPERFINE) >/dev/null 2>&1 || { echo "hyperfine not installed. Install with: brew install hyperfine"; exit 1; }
 	@$(HYPERFINE) --warmup 1 --runs 3 \
 		'make test-unit' \
 		--export-markdown benchmark-test.md
@@ -475,12 +549,97 @@ benchmark-test:
 # Full performance analysis
 benchmark-all:
 	@echo "Running full performance analysis..."
+	@command -v $(HYPERFINE) >/dev/null 2>&1 || { echo "hyperfine not installed. Install with: brew install hyperfine"; exit 1; }
 	@$(HYPERFINE) --warmup 1 --runs 3 \
 		'make clean build' \
 		'make test-unit' \
 		'make lint' \
 		--export-markdown benchmark-all.md
 	@echo "Results saved to benchmark-all.md"
+
+# ===== PERFORMANCE PROFILING (xctrace) =====
+
+# CPU profiling with xctrace
+profile-cpu:
+	@echo "Starting CPU profiling..."
+	@$(XCRUN) xctrace record --template "CPU Profiler" \
+		--output cpu_profile.trace \
+		--attach "Fonic HiFi" || { echo "Note: App must be running. Use 'make run' first."; exit 1; }
+	@echo "CPU profile saved to cpu_profile.trace"
+	@echo "Open with: open cpu_profile.trace"
+
+# Memory allocation profiling
+profile-memory:
+	@echo "Starting memory allocation profiling..."
+	@$(XCRUN) xctrace record --template "Allocations" \
+		--output memory_allocations.trace \
+		--attach "Fonic HiFi" || { echo "Note: App must be running. Use 'make run' first."; exit 1; }
+	@echo "Memory profile saved to memory_allocations.trace"
+	@echo "Open with: open memory_allocations.trace"
+
+# Audio system trace profiling
+profile-audio:
+	@echo "Starting audio system profiling..."
+	@$(XCRUN) xctrace record --template "Audio System Trace" \
+		--output audio_system.trace \
+		--attach "Fonic HiFi" || { echo "Note: App must be running. Use 'make run' first."; exit 1; }
+	@echo "Audio profile saved to audio_system.trace"
+	@echo "Open with: open audio_system.trace"
+
+# Memory graph debugging
+memory-graph:
+	@echo "Capturing memory graph..."
+	@$(XCRUN) xctrace record --template "Allocations" \
+		--output memory_graph.trace \
+		--time-limit 30s \
+		--attach "Fonic HiFi" || { echo "Note: App must be running. Use 'make run' first."; exit 1; }
+	@echo "Memory graph saved to memory_graph.trace"
+
+# Check for memory leaks
+memory-leaks:
+	@echo "Checking for memory leaks..."
+	@if [ -d "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app" ]; then \
+		leaks --atExit -- "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app/Fonic HiFi" || echo "Leak check complete"; \
+	else \
+		echo "App not found. Run 'make build' first."; \
+		exit 1; \
+	fi
+
+# ===== DEBUGGING & LOGGING =====
+
+# Show recent logs for the app
+logs-show:
+	@echo "Showing recent logs for Fonic HiFi..."
+	@log show --predicate 'process == "Fonic HiFi"' --last 1h --style syslog
+
+# Stream live logs
+logs-stream:
+	@echo "Streaming live logs for Fonic HiFi..."
+	@echo "Press Ctrl+C to stop."
+	@log stream --predicate 'process == "Fonic HiFi"' --level debug
+
+# Filter logs by subsystem
+logs-filter:
+	@if [ -z "$(SUBSYSTEM)" ]; then \
+		echo "Usage: make logs-filter SUBSYSTEM='com.fonichifi.audio'"; \
+		exit 1; \
+	fi
+	@echo "Filtering logs for subsystem: $(SUBSYSTEM)"
+	@log show --predicate 'subsystem == "$(SUBSYSTEM)"' --last 1h
+
+# Symbolicate crash logs
+symbolicate:
+	@if [ -z "$(CRASH_LOG)" ]; then \
+		echo "Usage: make symbolicate CRASH_LOG=path/to/crashlog.crash"; \
+		exit 1; \
+	fi
+	@echo "Symbolicating crash log..."
+	@if [ -f "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app.dSYM/Contents/Resources/DWARF/Fonic HiFi" ]; then \
+		atos -arch arm64 -o "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app.dSYM/Contents/Resources/DWARF/Fonic HiFi" -l 0x100000000 < "$(CRASH_LOG)"; \
+	else \
+		echo "dSYM file not found. Build the app first."; \
+		exit 1; \
+	fi
 
 # ===== AI ASSISTANCE COMMANDS =====
 
@@ -490,6 +649,7 @@ ai-explain:
 		echo "Usage: make ai-explain FILE=path/to/file.swift"; \
 		exit 1; \
 	fi
+	@command -v $(MODS) >/dev/null 2>&1 || { echo "mods not installed. Install with: brew install mods"; exit 1; }
 	@echo "Explaining $(FILE)..."
 	@cat "$(FILE)" | $(MODS) "Explain this Swift code, focusing on audio processing and SwiftUI patterns used"
 
@@ -499,16 +659,19 @@ ai-test-generate:
 		echo "Usage: make ai-test-generate FILE=path/to/file.swift"; \
 		exit 1; \
 	fi
+	@command -v $(MODS) >/dev/null 2>&1 || { echo "mods not installed. Install with: brew install mods"; exit 1; }
 	@echo "Generating tests for $(FILE)..."
 	@cat "$(FILE)" | $(MODS) "Write comprehensive XCTest unit tests for this Swift code, including edge cases"
 
 # AI code review of changes
 ai-review:
+	@command -v $(MODS) >/dev/null 2>&1 || { echo "mods not installed. Install with: brew install mods"; exit 1; }
 	@echo "Running AI code review on staged changes..."
 	@git diff --cached | $(MODS) "Review this code diff for iOS best practices, Swift 6 concurrency, and potential bugs"
 
 # Generate commit message with AI
 ai-commit:
+	@command -v $(MODS) >/dev/null 2>&1 || { echo "mods not installed. Install with: brew install mods"; exit 1; }
 	@echo "Generating commit message..."
 	@git diff --cached | $(MODS) "Generate a concise, conventional commit message for these changes. Format: type(scope): description"
 
@@ -516,16 +679,19 @@ ai-commit:
 
 # Create pull request
 pr-create:
+	@command -v $(GH) >/dev/null 2>&1 || { echo "gh not installed. Install with: brew install gh"; exit 1; }
 	@echo "Creating pull request..."
 	@$(GH) pr create --fill --web
 
 # List GitHub issues
 issues:
+	@command -v $(GH) >/dev/null 2>&1 || { echo "gh not installed. Install with: brew install gh"; exit 1; }
 	@echo "GitHub Issues:"
 	@$(GH) issue list --label "ios" --limit 20
 
 # Colored git diff
 diff:
+	@command -v $(BAT) >/dev/null 2>&1 || { echo "bat not installed. Install with: brew install bat"; exit 1; }
 	@echo "Git diff with syntax highlighting:"
 	@git diff | $(BAT) --language=diff --style=changes
 
@@ -534,13 +700,15 @@ diff:
 # Parse Xcode build output for errors
 parse-errors:
 	@echo "Parsing last build for errors..."
+	@command -v $(RG) >/dev/null 2>&1 || { echo "ripgrep not installed. Install with: brew install ripgrep"; exit 1; }
 	@$(XCODEBUILD) build -project "$(PROJECT_NAME).xcodeproj" -scheme "$(SCHEME)" -destination "$(DESTINATION)" 2>&1 | \
 		$(RG) "error:|warning:" --color=always || echo "No errors or warnings found"
 
 # Extract test results as JSON
 test-json:
 	@echo "Extracting test results as JSON..."
-	@$(XCODEBUILD) test -project "$(PROJECT_NAME).xcodeproj" -scheme "$(SCHEME)" -destination "$(DESTINATION)" -resultBundlePath result.xcresult 2>&1 >/dev/null
+	@command -v $(JQ) >/dev/null 2>&1 || { echo "jq not installed. Install with: brew install jq"; exit 1; }
+	@$(XCODEBUILD) test -project "$(PROJECT_NAME).xcodeproj" -scheme "$(SCHEME)" -destination "$(DESTINATION)" -resultBundlePath result.xcresult >/dev/null 2>&1
 	@xcrun xcresulttool get --format json --path result.xcresult | $(JQ) '.metrics'
 
 # Combined commands for common workflows

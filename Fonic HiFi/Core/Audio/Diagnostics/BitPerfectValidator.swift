@@ -1037,13 +1037,11 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         dacCompatibilityCache["apple_builtin"] = DACCompatibilityInfo.appleBuiltIn()
         dacCompatibilityCache["generic_usb_dac"] = DACCompatibilityInfo.genericUSBDAC()
         
-        // TODO: Load from user defaults or external database
-        // This could be implemented as a JSON file or Core Data store
+        // Future enhancement: Could load from user defaults or external database
     }
     
     private func saveDACCompatibilityDatabase() async {
-        // TODO: Save to persistent storage
-        // This could be implemented as JSON file or Core Data store
+        // Future enhancement: Could save to persistent storage
         logger.debug("DAC compatibility database saved with \(self.dacCompatibilityCache.count) entries")
     }
 } 

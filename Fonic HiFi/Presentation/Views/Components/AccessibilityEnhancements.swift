@@ -433,14 +433,14 @@ struct AccessibilityEnhancements_Previews: PreviewProvider {
       // Audio context example
       VStack {
         Text("Now Playing")
-        Text("Example Song - Artist Name")
+        Text("Moonlight Sonata - Ludwig van Beethoven")
       }
       .audioContextAccessibility(
         isPlaying: true,
-        trackTitle: "Example Song",
-        artist: "Artist Name",
+        trackTitle: "Moonlight Sonata",
+        artist: "Ludwig van Beethoven",
         progress: 0.3,
-        duration: 180
+        duration: 335
       )
       
       // Progress slider example

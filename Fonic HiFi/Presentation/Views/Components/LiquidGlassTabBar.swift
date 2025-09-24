@@ -146,12 +146,10 @@ extension TabItem {
   return VStack {
     Spacer()
     
-    if #available(iOS 26, *) {
-      LiquidGlassTabBar(
-        selection: $selection,
-        items: TabItem.standardItems
-      )
-    }
+    LiquidGlassTabBar(
+      selection: $selection,
+      items: TabItem.standardItems
+    )
   }
   .background(
     LinearGradient(
@@ -166,12 +164,10 @@ extension TabItem {
 #Preview("Tab Bar with Different Selections") {
   VStack(spacing: 20) {
     ForEach(0..<4) { index in
-      if #available(iOS 26, *) {
-        LiquidGlassTabBar(
-          selection: .constant(index),
-          items: TabItem.standardItems
-        )
-      }
+      LiquidGlassTabBar(
+        selection: .constant(index),
+        items: TabItem.standardItems
+      )
     }
   }
   .padding()

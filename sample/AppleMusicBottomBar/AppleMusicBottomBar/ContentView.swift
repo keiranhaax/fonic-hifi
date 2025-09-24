@@ -12,43 +12,15 @@ struct ContentView: View {
     @State private var expandMiniPlayer: Bool = false
     @Namespace private var animation
     var body: some View {
-        Group {
-            if #available(iOS 26, *) {
-                NativeTabView()
-                    .tabBarMinimizeBehavior(.onScrollDown)
-                    .tabViewBottomAccessory {
-                        MiniPlayerView()
-                            .matchedTransitionSource(id: "MINIPLAYER", in: animation)
-                            .onTapGesture {
-                                expandMiniPlayer.toggle()
-                            }
+        NativeTabView()
+            .tabBarMinimizeBehavior(.onScrollDown)
+            .tabViewBottomAccessory {
+                MiniPlayerView()
+                    .matchedTransitionSource(id: "MINIPLAYER", in: animation)
+                    .onTapGesture {
+                        expandMiniPlayer.toggle()
                     }
-            } else {
-                NativeTabView(60)
-                    .overlay(alignment: .bottom) {
-                        MiniPlayerView()
-                            .padding(.vertical, 8)
-                            .background(content: {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                                        .fill(.gray.opacity(0.3))
-                                    
-                                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                                        .fill(.background)
-                                        .padding(1.2)
-                                }
-                                .compositingGroup()
-                            })
-                            .matchedTransitionSource(id: "MINIPLAYER", in: animation)
-                            .onTapGesture {
-                                expandMiniPlayer.toggle()
-                            }
-                            .offset(y: -52)
-                            .padding(.horizontal, 15)
-                    }
-                    .ignoresSafeArea(.keyboard, edges: .all)
             }
-        }
         .fullScreenCover(isPresented: $expandMiniPlayer) {
             ScrollView {
                 

@@ -21,7 +21,6 @@ struct AudioSettingsView: View {
                     Picker("Audio Engine", selection: $preferredAudioEngine) {
                         Text("AVAudioEngine").tag("AVAudioEngine")
                         Text("AudioKit").tag("AudioKit")
-                        Text("SFBAudioEngine").tag("SFBAudioEngine")
                     }
                     .pickerStyle(.menu)
                 } header: {

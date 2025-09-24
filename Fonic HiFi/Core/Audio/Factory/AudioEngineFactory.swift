@@ -23,9 +23,7 @@ public final class AudioEngineFactory {
     /// Registered engine types and their availability
     private var availableEngines: [AudioEngineType: Bool] = [
         .avAudioEngine: true,
-        .audioKitEngine: true,  // AudioKit is now available
-        .sfbAudioEngine: false, // Will be true when dependency is added
-        .ffmpegEngine: false    // Will be true when dependency is added
+        .audioKitEngine: true  // AudioKit is now available
     ]
     
     // MARK: - Initialization
@@ -92,14 +90,6 @@ public final class AudioEngineFactory {
                 if availableEngines[.audioKitEngine] == true && AudioEngineType.audioKitEngine.canHandle(format) {
                     return .audioKitEngine
                 }
-            case "SFBAudioEngine":
-                if availableEngines[.sfbAudioEngine] == true && AudioEngineType.sfbAudioEngine.canHandle(format) {
-                    return .sfbAudioEngine
-                }
-            case "FFmpegEngine":
-                if availableEngines[.ffmpegEngine] == true {
-                    return .ffmpegEngine
-                }
             default:
                 break
             }
@@ -121,10 +111,6 @@ public final class AudioEngineFactory {
             if canUseAVAudioEngine(for: format) {
                 return .avAudioEngine
             }
-            // Fall back to specialized engines for quality
-            if format.requiresSpecialEngine && availableEngines[.sfbAudioEngine] == true {
-                return .sfbAudioEngine
-            }
             
         case .balanced:
             // Use AudioKit for balanced performance if available
@@ -144,18 +130,6 @@ public final class AudioEngineFactory {
 
         if canUseAVAudioEngine(for: format) {
             return .avAudioEngine
-        }
-        
-        // Try SFBAudioEngine for high-res formats
-        if format.requiresSpecialEngine && availableEngines[.sfbAudioEngine] == true {
-            Self.logger.info("Using SFBAudioEngine for high-res format: \(format.displayName)")
-            return .sfbAudioEngine
-        }
-        
-        // Fall back to FFmpeg if available
-        if availableEngines[.ffmpegEngine] == true {
-            Self.logger.warning("Falling back to FFmpegEngine for format: \(format.displayName)")
-            return .ffmpegEngine
         }
         
         // Last resort: try AVAudioEngine anyway
@@ -196,14 +170,6 @@ public final class AudioEngineFactory {
                 Self.logger.info("Falling back to AVAudioEngine due to AudioKit failure")
                 return AVAudioEngineAdapter()
             }
-
-        case .sfbAudioEngine:
-            // Will be replaced with real implementation when dependency is added
-            return SFBAudioEngineAdapter()
-
-        case .ffmpegEngine:
-            // Will be replaced with real implementation when dependency is added
-            return FFmpegEngineAdapter()
         }
     }
     
