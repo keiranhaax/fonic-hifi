@@ -11,21 +11,17 @@ import SwiftUI
 /// This avoids double-filtering issues that can occur with PlaylistListView
 struct SearchPlaylistResultsView: View {
     let playlists: [Playlist]  // Pre-filtered, no internal filtering
-    @State private var selectedPlaylist: Playlist?
 
     var body: some View {
         List(playlists) { playlist in
-            SearchPlaylistRow(playlist: playlist)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                .onTapGesture {
-                    selectedPlaylist = playlist
-                }
+            NavigationLink(value: playlist) {
+                SearchPlaylistRow(playlist: playlist)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            }
         }
         .listStyle(.plain)
-        .navigationDestination(item: $selectedPlaylist) { playlist in
-            // Placeholder for future playlist detail view
-            Text("Playlist: \(playlist.name)")
-                .navigationTitle(playlist.name)
+        .navigationDestination(for: Playlist.self) { playlist in
+            PlaylistDetailView(playlist: playlist)
         }
     }
 }

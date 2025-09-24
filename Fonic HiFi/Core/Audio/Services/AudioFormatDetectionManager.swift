@@ -174,11 +174,8 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
     // MARK: - Private Methods
     
     private func registerDefaultAdapters() {
-        // Register default adapters here when available
-        // Example:
+        // Register default adapters here when available, for example:
         // registerAdapter(FLACDetectionAdapter())
-        // registerAdapter(FFmpegDetectionAdapter())
-        // registerAdapter(TagLibDetectionAdapter())
     }
     
     private func findAdapter(for format: AudioFormat) -> FormatDetectionAdapter? {
@@ -281,7 +278,3 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
         return fileSize.int64Value
     }
 }
-
-// MARK: - Placeholder Adapters Removed
-// Stub engine adapters (FLAC, FFmpeg, TagLib) have been removed
-// as these engines are not implemented in this version

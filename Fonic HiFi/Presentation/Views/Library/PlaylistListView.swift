@@ -42,7 +42,9 @@ struct PlaylistListView: View {
             }
         }
         .sheet(item: $selectedPlaylist) { playlist in
-            PlaylistDetailView(playlist: playlist)
+            NavigationStack {
+                PlaylistDetailView(playlist: playlist, showsDismissButton: true)
+            }
         }
         .sheet(isPresented: $showingCreatePlaylist) {
             CreatePlaylistView()
@@ -130,79 +132,67 @@ struct PlaylistRowView: View {
 /// Playlist detail view
 struct PlaylistDetailView: View {
     let playlist: Playlist
-    @Environment(\.dismiss) private var dismiss
-    @Query private var tracks: [Track]
+    let showsDismissButton: Bool
     
-    var playlistTracks: [Track] {
-        // For now, return empty array as we need to implement playlist track relationships
-        []
+    @Environment(\.dismiss) private var dismiss
+    @Query private var allTracks: [Track]
+    
+    init(playlist: Playlist, showsDismissButton: Bool = false) {
+        self.playlist = playlist
+        self.showsDismissButton = showsDismissButton
+        _allTracks = Query()
+    }
+    
+    private var playlistTracks: [Track] {
+        if playlist.isSmart {
+            let filtered = allTracks.filter { matchesSmartFilters(track: $0) }
+            return limitSmartTracks(sortTracks(filtered, preserveManualOrder: false))
+        } else {
+            guard !playlist.trackIds.isEmpty else { return [] }
+            let lookup = Dictionary(uniqueKeysWithValues: allTracks.map { ($0.id, $0) })
+            let ordered = playlist.trackIds.compactMap { lookup[$0] }
+            return sortTracks(ordered, preserveManualOrder: true)
+        }
+    }
+    
+    private func limitSmartTracks(_ tracks: [Track]) -> [Track] {
+        guard let max = playlist.maxTracks, max > 0 else { return tracks }
+        return Array(tracks.prefix(max))
     }
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Playlist header
-                VStack(spacing: 12) {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(playlist.isSmart ? Color.purple.opacity(0.3) : Color.accentColor.opacity(0.3))
-                        .frame(width: 100, height: 100)
-                        .overlay(
-                            Image(systemName: playlist.isSmart ? "gearshape.fill" : "music.note.list")
-                                .font(.system(size: 40))
-                                .foregroundColor(playlist.isSmart ? .purple : .accentColor)
-                        )
-                    
-                    Text(playlist.name)
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    
-                    if let description = playlist.playlistDescription {
-                        Text(description)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    
-                    HStack {
-                        if playlist.isSmart {
-                            Label("Smart Playlist", systemImage: "gearshape.fill")
-                                .font(.caption)
-                                .foregroundColor(.purple)
-                        }
-                        
-                        Label("\(playlist.trackCount) tracks", systemImage: "music.note")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+        let tracks = playlistTracks
+        let durationText = formattedDuration(for: tracks)
+        
+        return List {
+            Section {
+                headerContent(trackCount: tracks.count, duration: durationText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical)
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+            
+            if tracks.isEmpty {
+                Section {
+                    emptyState
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 32)
                 }
-                .padding()
-                
-                // Track list or empty state
-                if playlistTracks.isEmpty {
-                    Spacer()
-                    
-                    VStack(spacing: 12) {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 40))
-                            .foregroundColor(.secondary)
-                        
-                        Text(playlist.isSmart ? "No matching tracks" : "Empty playlist")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                } else {
-                    List(playlistTracks) { track in
+            } else {
+                Section {
+                    ForEach(tracks) { track in
                         TrackRowView(track: track)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
-                    .listStyle(.plain)
                 }
             }
-            .navigationTitle("Playlist")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(playlist.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if showsDismissButton {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Done") {
                         dismiss()
@@ -210,6 +200,259 @@ struct PlaylistDetailView: View {
                 }
             }
         }
+    }
+    
+    private func headerContent(trackCount: Int, duration: String?) -> some View {
+        VStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(playlist.isSmart ? Color.purple.opacity(0.25) : Color.accentColor.opacity(0.25))
+                .frame(width: 96, height: 96)
+                .overlay(
+                    Image(systemName: playlist.isSmart ? "gearshape.fill" : "music.note.list")
+                        .font(.system(size: 36, weight: .semibold))
+                        .foregroundStyle(playlist.isSmart ? Color.purple : Color.accentColor)
+                )
+            
+            Text(playlist.name)
+                .font(.title3)
+                .fontWeight(.semibold)
+            
+            if let description = playlist.playlistDescription, !description.isEmpty {
+                Text(description)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            
+            HStack(spacing: 12) {
+                if playlist.isSmart {
+                    Label("Smart Playlist", systemImage: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(Color.purple)
+                }
+                
+                Label("\(trackCount) tracks", systemImage: "music.note")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                
+                if let duration {
+                    Label(duration, systemImage: "clock")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+    
+    private func formattedDuration(for tracks: [Track]) -> String? {
+        let totalDuration = tracks.reduce(0) { $0 + $1.duration }
+        guard totalDuration > 0 else { return nil }
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = totalDuration >= 3_600 ? [.hour, .minute] : [.minute, .second]
+        formatter.unitsStyle = .abbreviated
+        return formatter.string(from: totalDuration)
+    }
+    
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: playlist.isSmart ? "sparkles" : "music.note")
+                .font(.system(size: 40))
+                .foregroundStyle(.secondary)
+            
+            Text(playlist.isSmart ? "No matching tracks yet" : "Empty playlist")
+                .font(.body)
+                .foregroundStyle(.secondary)
+            
+            if playlist.isSmart {
+                Text("Adjust your rules or add more music to see results.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            } else {
+                Text("Add tracks from the library to populate this playlist.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal)
+    }
+    
+    private func sortTracks(_ tracks: [Track], preserveManualOrder: Bool) -> [Track] {
+        switch playlist.sortOrder {
+        case .manual:
+            return preserveManualOrder ? tracks : tracks
+        case .dateAdded:
+            return tracks.sorted { $0.dateAdded > $1.dateAdded }
+        case .dateModified:
+            return tracks.sorted { $0.dateModified > $1.dateModified }
+        case .title:
+            return tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .artist:
+            return tracks.sorted { $0.artist.localizedCaseInsensitiveCompare($1.artist) == .orderedAscending }
+        case .album:
+            return tracks.sorted { $0.album.localizedCaseInsensitiveCompare($1.album) == .orderedAscending }
+        case .duration:
+            return tracks.sorted { $0.duration > $1.duration }
+        case .playCount:
+            return tracks.sorted { $0.playCount > $1.playCount }
+        case .rating:
+            return tracks.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
+        case .sampleRate:
+            return tracks.sorted { $0.sampleRate > $1.sampleRate }
+        case .random:
+            return tracks.shuffled()
+        }
+    }
+    
+    private func matchesSmartFilters(track: Track) -> Bool {
+        guard !playlist.smartFilters.isEmpty else { return true }
+        var result = evaluate(rule: playlist.smartFilters[0], for: track)
+        
+        for index in 1..<playlist.smartFilters.count {
+            let nextResult = evaluate(rule: playlist.smartFilters[index], for: track)
+            let logical = playlist.smartFilters[index - 1].logicalOperator
+            switch logical {
+            case .and:
+                result = result && nextResult
+            case .or:
+                result = result || nextResult
+            }
+        }
+        return result
+    }
+    
+    private func evaluate(rule: SmartPlaylistRule, for track: Track) -> Bool {
+        switch rule.field {
+        case .title:
+            return evaluateString(track.title, rule: rule)
+        case .artist:
+            return evaluateString(track.artist, rule: rule)
+        case .album:
+            return evaluateString(track.album, rule: rule)
+        case .genre:
+            return evaluateString(track.genre, rule: rule)
+        case .year:
+            return evaluateNumeric(track.year.map(Double.init), rule: rule)
+        case .duration:
+            return evaluateNumeric(track.duration, rule: rule)
+        case .playCount:
+            return evaluateNumeric(Double(track.playCount), rule: rule)
+        case .rating:
+            return evaluateNumeric(track.rating.map(Double.init), rule: rule)
+        case .dateAdded:
+            return evaluateDate(track.dateAdded, rule: rule)
+        case .lastPlayed:
+            return evaluateOptionalDate(track.lastPlayed, rule: rule)
+        case .audioFormat:
+            return evaluateString(track.audioFormat, rule: rule)
+        case .sampleRate:
+            return evaluateNumeric(track.sampleRate, rule: rule)
+        case .bitDepth:
+            return evaluateNumeric(Double(track.bitDepth), rule: rule)
+        case .isLossless:
+            return evaluateBool(track.isLossless, rule: rule)
+        case .isFavorite:
+            return evaluateBool(track.isFavorite, rule: rule)
+        case .fileSize:
+            return evaluateNumeric(Double(track.fileSize), rule: rule)
+        }
+    }
+    
+    private func evaluateString(_ actual: String?, rule: SmartPlaylistRule) -> Bool {
+        guard let actual = actual?.lowercased() else {
+            return rule.operator == .notEquals || rule.operator == .notContains
+        }
+        let value = rule.value.lowercased()
+        switch rule.operator {
+        case .equals:
+            return actual == value
+        case .notEquals:
+            return actual != value
+        case .contains:
+            return actual.contains(value)
+        case .notContains:
+            return !actual.contains(value)
+        case .startsWith:
+            return actual.hasPrefix(value)
+        case .endsWith:
+            return actual.hasSuffix(value)
+        default:
+            return false
+        }
+    }
+    
+    private func evaluateNumeric(_ actual: Double, rule: SmartPlaylistRule) -> Bool {
+        evaluateNumeric(Optional(actual), rule: rule)
+    }
+    
+    private func evaluateNumeric(_ actual: TimeInterval, rule: SmartPlaylistRule) -> Bool {
+        evaluateNumeric(Optional(actual), rule: rule)
+    }
+    
+    private func evaluateNumeric(_ actual: Double?, rule: SmartPlaylistRule) -> Bool {
+        guard let comparison = Double(rule.value) else { return false }
+        guard let actual = actual else {
+            return rule.operator == .notEquals
+        }
+        switch rule.operator {
+        case .equals:
+            return actual == comparison
+        case .notEquals:
+            return actual != comparison
+        case .greaterThan:
+            return actual > comparison
+        case .greaterThanOrEqual:
+            return actual >= comparison
+        case .lessThan:
+            return actual < comparison
+        case .lessThanOrEqual:
+            return actual <= comparison
+        default:
+            return false
+        }
+    }
+    
+    private func evaluateBool(_ actual: Bool, rule: SmartPlaylistRule) -> Bool {
+        switch rule.operator {
+        case .isTrue:
+            return actual
+        case .isFalse:
+            return !actual
+        case .equals:
+            return actual == (rule.value.lowercased() == "true")
+        case .notEquals:
+            return actual != (rule.value.lowercased() == "true")
+        default:
+            return false
+        }
+    }
+    
+    private func evaluateDate(_ actual: Date, rule: SmartPlaylistRule) -> Bool {
+        switch rule.operator {
+        case .inTheLast, .notInTheLast:
+            guard let days = Double(rule.value) else { return false }
+            let threshold = Date().addingTimeInterval(-days * 86_400)
+            let comparison = actual >= threshold
+            return rule.operator == .inTheLast ? comparison : !comparison
+        case .greaterThan:
+            guard let days = Double(rule.value) else { return false }
+            let comparisonDate = Date().addingTimeInterval(-days * 86_400)
+            return actual > comparisonDate
+        case .lessThan:
+            guard let days = Double(rule.value) else { return false }
+            let comparisonDate = Date().addingTimeInterval(-days * 86_400)
+            return actual < comparisonDate
+        default:
+            return false
+        }
+    }
+    
+    private func evaluateOptionalDate(_ actual: Date?, rule: SmartPlaylistRule) -> Bool {
+        guard let actual = actual else {
+            return rule.operator == .notEquals || rule.operator == .notInTheLast
+        }
+        return evaluateDate(actual, rule: rule)
     }
 }
 

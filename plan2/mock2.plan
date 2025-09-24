@@ -8,6 +8,15 @@
 
 ---
 
+## Current Assessment (2025-09-24)
+- Stub engine source files are already gone (`Core/Audio/Engines/` now only ships real adapters), but generated build artifacts still mention them until we clean DerivedData.
+- Documentation continues to reference the deleted adapters (`README.md`, `Core/Audio/CLAUDE.md`, and four specs under `Files/`).
+- `AudioMonitor.swift` keeps placeholder logic for profiling, bottleneck identification, optimizations, recommendations, milestones, device info, and log export helpers.
+- View-layer placeholders remain: the album-art tap handler in `NowPlayingView.swift` is a comment-only stub, `SearchPlaylistResultsView.swift` navigates to a text placeholder, and `PlaylistDetailView` inside `PlaylistListView.swift` returns an empty track list (no restored detail screen).
+- `plan2/logmock.md` still reports Phase 2 at 60% complete and claims stub adapters exist; it needs a full rewrite once work finishes.
+
+---
+
 ## Context
 This plan is a continuation of the original mock data cleanup (`mock.md`). The first phase successfully removed stub engine files (FFmpegEngineAdapter, SFBAudioEngineAdapter) and updated related enums and factories. However, the cleanup was incomplete - many TODO comments and placeholder implementations remain that need PROPER resolution, not just comment removal.
 
@@ -37,28 +46,25 @@ This plan is a continuation of the original mock data cleanup (`mock.md`). The f
 **Line**: 240
 **Current**: `// For now, we'll leave it as a placeholder for future functionality`
 **Action**:
-- Investigate what functionality was intended
-- Either implement the feature OR remove the entire commented block
-- Do NOT leave half-implemented code
+- Decide on concrete behavior when album artwork is tapped (e.g., toggle lyrics, quick actions sheet, or remove gesture entirely).
+- Implement the chosen behavior or eliminate the gesture to avoid dangling comments.
+- Do NOT leave half-implemented code.
 
-#### 2.3 SearchPlaylistResultsView.swift
-**Line**: 26
-**Current**: `// Placeholder for future playlist detail view`
-**Action**: Implement actual navigation to playlist detail view
-```swift
-NavigationLink(destination: PlaylistDetailView(playlist: playlist)) {
-    PlaylistRowView(playlist: playlist)
-}
-```
-**Alternative**: If PlaylistDetailView doesn't exist, create a basic implementation or remove playlist search results entirely
+#### 2.3 SearchPlaylistResultsView.swift & PlaylistDetailView
+**Lines**: Search view line 26, PlaylistListView.swift lines 140ff
+**Current**: Search destination renders a text placeholder; the inline `PlaylistDetailView` returns an empty array for tracks.
+**Action**:
+- Restore a functional playlist detail experience (either bring back the standalone view or flesh out the inline one to fetch playlist tracks from SwiftData).
+- Update the search navigation to push the real detail view rather than a placeholder `Text`.
+- Ensure preview support still compiles after the move.
 
 #### 2.4 AudioMonitor.swift
-**Line**: 1240
-**Current**: `// Placeholder implementations for all the analysis methods`
+**Lines**: 1193, 1216, 1235, 1240, 1245, 1540, 1544, 1548, 1575
+**Current**: Device/profiling collectors, `finalizeProfilingData`, bottleneck/optimization analyzers, recommendations, and milestones all return hard-coded defaults or empty arrays.
 **Action Options**:
-1. **Preferred**: Implement the actual analysis methods with real logic
-2. **Alternative**: If not needed, remove ALL the stub method implementations
-3. **Do NOT**: Leave empty methods with placeholder comments
+1. **Preferred**: Implement the actual analysis methods with real logic (define/update `ProfilingData` so metrics can be processed, compute trend summaries, produce actionable recommendations).
+2. **Alternative**: If diagnostics are out of scope, remove the entire diagnostic surface instead of shipping empty methods.
+3. **Do NOT**: Leave empty methods with placeholder comments.
 
 #### 2.5 StateCoordinator.swift
 **Lines**: 90, 99
@@ -76,7 +82,7 @@ rm -rf build/
 rm -rf DerivedData/
 make clean
 ```
-**Rationale**: Build artifacts contain references to deleted stub engines
+**Rationale**: Generated headers still mention the deleted stub engines; clearing artifacts prevents stale references during verification.
 
 ### 4. Fix Documentation Files - Remove ALL Stub References
 
@@ -89,6 +95,13 @@ make clean
 - **Line 17**: Remove "SFBAudioEngine for high-res formats"
 - **Line 59-60**: Remove SFBAudioEngineAdapter and FFmpegEngineAdapter from architecture diagram
 - **Line 199**: Remove SFBAudioEngine from dependencies
+
+#### Files/ Specs Updates
+- `Files/fonic-hifi-implementation-plan.md`
+- `Files/fonic-hifi-tech-spec.md`
+- `Files/music-app-project-md.md`
+- `Files/ios-music-player-architecture.md`
+  - Strip references to FFmpeg/SFBA stubs or relocate these docs to an archive folder with a deprecation notice.
 
 #### Archive Old Planning Docs
 - Move outdated files in `Plan/` and `Tasks/` to `Archive/` folder
@@ -121,6 +134,10 @@ Note: These samples require iOS 26.0+ with no backwards compatibility.
 **Action**: Verify this is fully implemented
 - If stub: Implement proper file copying logic
 - If complete: Remove any TODO comments
+
+#### plan2/logmock.md
+**Status**: Reports outdated progress (claims stub adapters exist, marks Phase 2 at 60%).
+**Action**: Rewrite after implementing the above work to reflect accurate completion notes, evidence, and verification output.
 
 #### Legitimate UI Placeholders (KEEP THESE)
 These are OK as they represent empty states in the UI:

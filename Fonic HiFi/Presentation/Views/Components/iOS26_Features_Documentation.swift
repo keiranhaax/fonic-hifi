@@ -90,7 +90,6 @@ import SwiftUI
  ## 🏗️ Architecture Patterns
  
  ### Backwards Compatibility
- - **@available(iOS 26, *)**: All new features properly gated
  - **Fallback Views**: Classic implementations for older iOS versions
  - **Progressive Enhancement**: Basic functionality always available
  - **Feature Detection**: Runtime capability checking

@@ -28,6 +28,7 @@ struct NowPlayingView: View {
     @State private var showingQueue = false
     @State private var dominantColor: Color = .accentColor
     @State private var hasStartedPlayback = false
+    @State private var trackDetailItem: TrackDetailItem?
     
     // UI Preferences (now using @AppStorage for persistence)
     @AppStorage("volume") private var volumeStorage: Double = 1.0
@@ -65,6 +66,11 @@ struct NowPlayingView: View {
         }
         .onAppear {
             isPlayingParticles = audioService?.isPlaying ?? false
+        }
+        .sheet(item: $trackDetailItem) { item in
+            NavigationStack {
+                TrackDetailView(track: item.track)
+            }
         }
     }
     
@@ -236,8 +242,9 @@ struct NowPlayingView: View {
             )
         )
         .onTapGesture {
-            // Tap on artwork could show additional options or do nothing
-            // For now, we'll leave it as a placeholder for future functionality
+            guard let track = audioService?.currentTrack else { return }
+            // Present detailed metadata sheet for the active track
+            trackDetailItem = TrackDetailItem(track: track)
         }
     }
     
@@ -593,6 +600,16 @@ struct NowPlayingView: View {
             audioService.setRepeatMode(newMode)
             repeatModeRawValue = newMode.rawValue
         }
+    }
+}
+
+private struct TrackDetailItem: Identifiable {
+    let id: UUID
+    let track: Track
+    
+    init(track: Track) {
+        self.id = track.id
+        self.track = track
     }
 }
 

@@ -12,18 +12,16 @@ A sophisticated iOS audiophile music player built with Swift 6, SwiftUI, and Aud
 ### 🎧 Audio Excellence
 - **Bit-Perfect Playback**: True lossless audio reproduction
 - **Multi-Engine Architecture**: Automatic engine selection based on format
-  - AVAudioEngine for standard formats (MP3, AAC, ALAC)
-  - AudioKit for DSP-heavy processing and equalizer
-  - SFBAudioEngine for high-res formats (FLAC, DSD, MQA)
-  - FFmpeg for exotic formats (OGG, OPUS, APE)
+  - AVAudioEngine for standard formats (MP3, AAC, ALAC, WAV, AIFF)
+  - AudioKit for FLAC playback and advanced DSP processing
+  - Extensible adapter layer for future engines
 - **Gapless Playback**: Seamless track transitions
 - **High-Resolution Support**: Up to 32-bit/384kHz
 
 ### 📚 Format Support
-- **Lossless**: FLAC, ALAC, WAV, AIFF
-- **Compressed**: MP3, AAC, OGG Vorbis, Opus
-- **High-Res**: DSD (.dsf, .dff), MQA
-- **Exotic**: APE, WavPack, TTA
+- **Lossless**: ALAC, FLAC, WAV, AIFF
+- **Compressed**: MP3, AAC
+- **Extensible**: Architecture-ready for additional formats via adapters
 
 ### 🎨 Modern SwiftUI Interface
 - Native iOS 18 design language
@@ -54,10 +52,8 @@ Intelligent engine selection based on audio format:
 
 ```
 AudioEngineFacade (Main coordinator)
-├── AVAudioEngineAdapter (MP3, AAC, ALAC)
-├── AudioKitEngineAdapter (DSP, EQ)
-├── SFBAudioEngineAdapter (FLAC, DSD, MQA)
-└── FFmpegEngineAdapter (OGG, OPUS, APE)
+├── AVAudioEngineAdapter (MP3, AAC, ALAC, WAV, AIFF)
+└── AudioKitEngineAdapter (FLAC playback, advanced DSP)
 ```
 
 ### SwiftUI-Native State Management
@@ -196,8 +192,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - [AudioKit](https://audiokit.io/) for DSP capabilities
-- [SFBAudioEngine](https://github.com/sbooth/SFBAudioEngine) for high-res format support
-- [FFmpeg](https://ffmpeg.org/) for exotic format decoding
 - SwiftUI community for architecture insights
 
 ---

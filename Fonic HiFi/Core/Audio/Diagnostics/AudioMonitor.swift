@@ -10,6 +10,9 @@ import Combine
 import AVFoundation
 import OSLog
 import os
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Comprehensive audio monitoring implementation with periodic polling and real-time metrics
 @MainActor
@@ -24,6 +27,7 @@ public final class AudioMonitor: ObservableObject, AudioMonitoringService {
     public var metricsPublisher: AnyPublisher<AudioMetrics, Never> {
         _metricsSubject.eraseToAnyPublisher()
     }
+
     
     public var healthStatusPublisher: AnyPublisher<PlaybackHealthStatus, Never> {
         _healthStatusSubject.eraseToAnyPublisher()
@@ -59,6 +63,12 @@ public final class AudioMonitor: ObservableObject, AudioMonitoringService {
     private let systemMetricsCollector: SystemMetricsCollector
     private let thermalStateMonitor: ThermalStateMonitor
     private let interruptionStatsTracker: InterruptionStatsTracker
+    
+    private func recentMetrics(window: Int = 120) -> [AudioMetrics] {
+        guard !metricsHistory.isEmpty else { return [] }
+        let count = min(window, metricsHistory.count)
+        return Array(metricsHistory.suffix(count))
+    }
     
     // MARK: - Profiling Data
     
@@ -1009,6 +1019,9 @@ private class ProfilingData {
     var memorySamples: [Int64] = []
     var latencySamples: [TimeInterval] = []
     var bufferFillSamples: [Float] = []
+    var sampleTimestamps: [Date] = []
+    var underrunCount: Int = 0
+    var lastKnownBufferUnderrunTotal: Int?
     
     var cpuProfile: CPUProfile {
         let avg = cpuSamples.isEmpty ? 0 : cpuSamples.reduce(0, +) / Float(cpuSamples.count)
@@ -1036,13 +1049,38 @@ private class ProfilingData {
     
     var latencyProfile: LatencyProfile {
         let avg = latencySamples.isEmpty ? 0 : latencySamples.reduce(0, +) / Double(latencySamples.count)
-        let max = latencySamples.max() ?? 0
+        let maxLatency = latencySamples.max() ?? 0
+        let threshold = max(avg * 1.5, avg + 0.01)
+        
+        var spikes: [LatencySpike] = []
+        for index in latencySamples.indices where latencySamples[index] > threshold {
+            let timestamp = sampleTimestamps.indices.contains(index) ? sampleTimestamps[index] : Date()
+            let previousTimestamp = index > 0 && sampleTimestamps.indices.contains(index - 1) ? sampleTimestamps[index - 1] : timestamp
+            let duration = max(timestamp.timeIntervalSince(previousTimestamp), 0.1)
+            let latency = latencySamples[index]
+            let possibleCause: String?
+            if latency > 0.08 {
+                possibleCause = "Decoder back-pressure"
+            } else if latency > 0.05 {
+                possibleCause = "Render scheduling delay"
+            } else {
+                possibleCause = nil
+            }
+            spikes.append(
+                LatencySpike(
+                    timestamp: timestamp,
+                    duration: duration,
+                    peakLatency: latency,
+                    possibleCause: possibleCause
+                )
+            )
+        }
         
         return LatencyProfile(
             averageLatency: avg,
-            maxLatency: max,
+            maxLatency: maxLatency,
             latencyDistribution: latencySamples,
-            spikes: []
+            spikes: spikes
         )
     }
     
@@ -1053,7 +1091,7 @@ private class ProfilingData {
         return BufferProfile(
             averageBufferFill: avg,
             minBufferFill: min,
-            underrunCount: 0,
+            underrunCount: underrunCount,
             fillDistribution: bufferFillSamples
         )
     }
@@ -1178,28 +1216,44 @@ private extension AudioMonitor {
     }
     
     func collectSessionInfo() async -> AudioSessionInfo {
-        // Implementation would collect session information
+        let session = AVAudioSession.sharedInstance()
+        let category = session.category.rawValue
+        let mode = session.mode.rawValue
+        let options = session.categoryOptions.optionNames
+        let sampleRate = session.sampleRate
+        let bufferDuration = session.ioBufferDuration
+        let isOtherAudioPlaying = session.isOtherAudioPlaying
+        let isActive = !session.secondaryAudioShouldBeSilencedHint || _isMonitoring
+        
         return AudioSessionInfo(
-            category: "playback",
-            mode: "default",
-            options: [],
-            sampleRate: 44100,
-            ioBufferDuration: 0.023,
-            isActive: true,
-            isOtherAudioPlaying: false
+            category: category,
+            mode: mode,
+            options: options,
+            sampleRate: sampleRate,
+            ioBufferDuration: bufferDuration,
+            isActive: isActive,
+            isOtherAudioPlaying: isOtherAudioPlaying
         )
     }
     
     func collectDeviceInfo() async -> AudioDeviceInfo {
-        // Implementation would collect device information
+        let session = AVAudioSession.sharedInstance()
+        let route = session.currentRoute
+        let output = route.outputs.first
+        let sampleRate = session.sampleRate
+        let channels = Int(session.outputNumberOfChannels)
+        let bufferFrames = Int(session.ioBufferDuration * sampleRate)
+        let latency = session.outputLatency + session.ioBufferDuration
+        let bitDepth = Int(metricsHistory.last?.bitDepth ?? 24)
+        
         return AudioDeviceInfo(
-            deviceID: "built-in",
-            name: "iPhone Speaker",
-            sampleRate: 44100,
-            bitDepth: 16,
-            channels: 2,
-            bufferSize: 512,
-            latency: 0.023
+            deviceID: output?.uid ?? "unknown",
+            name: output?.portName ?? "Unknown Output",
+            sampleRate: sampleRate,
+            bitDepth: max(bitDepth, 16),
+            channels: max(channels, 2),
+            bufferSize: max(bufferFrames, 256),
+            latency: latency
         )
     }
     
@@ -1207,24 +1261,184 @@ private extension AudioMonitor {
         guard let profilingData = profilingData else { return }
         
         let metrics = await collectCurrentMetrics()
+        let timestamp = Date()
         profilingData.cpuSamples.append(metrics.cpuUsage)
         profilingData.memorySamples.append(metrics.memoryUsage)
         profilingData.latencySamples.append(metrics.renderLatency)
         profilingData.bufferFillSamples.append(metrics.bufferFillLevel)
+        profilingData.sampleTimestamps.append(timestamp)
+        
+        if let previousUnderruns = profilingData.lastKnownBufferUnderrunTotal {
+            let delta = max(0, metrics.bufferUnderruns - previousUnderruns)
+            profilingData.underrunCount += delta
+        }
+        profilingData.lastKnownBufferUnderrunTotal = metrics.bufferUnderruns
+        
+        // Keep profiling windows bounded to avoid unbounded growth (~1 minute of data at 10Hz)
+        let maxSamples = 600
+        if profilingData.cpuSamples.count > maxSamples {
+            profilingData.cpuSamples.removeFirst(profilingData.cpuSamples.count - maxSamples)
+            profilingData.memorySamples.removeFirst(profilingData.memorySamples.count - maxSamples)
+            profilingData.latencySamples.removeFirst(profilingData.latencySamples.count - maxSamples)
+            profilingData.bufferFillSamples.removeFirst(profilingData.bufferFillSamples.count - maxSamples)
+            profilingData.sampleTimestamps.removeFirst(profilingData.sampleTimestamps.count - maxSamples)
+        }
     }
     
     func finalizeProfilingData() async {
-        // Implementation would finalize profiling data
+        guard let profilingData = profilingData else { return }
+        
+        if let start = profilingStartTime {
+            profilingDuration = Date().timeIntervalSince(start)
+        }
+        
+        // Ensure sample arrays stay aligned
+        let alignedCount = min(
+            profilingData.sampleTimestamps.count,
+            profilingData.cpuSamples.count,
+            profilingData.memorySamples.count,
+            profilingData.latencySamples.count,
+            profilingData.bufferFillSamples.count
+        )
+        if alignedCount > 0 {
+            profilingData.sampleTimestamps = Array(profilingData.sampleTimestamps.suffix(alignedCount))
+            profilingData.cpuSamples = Array(profilingData.cpuSamples.suffix(alignedCount))
+            profilingData.memorySamples = Array(profilingData.memorySamples.suffix(alignedCount))
+            profilingData.latencySamples = Array(profilingData.latencySamples.suffix(alignedCount))
+            profilingData.bufferFillSamples = Array(profilingData.bufferFillSamples.suffix(alignedCount))
+        }
+        profilingData.lastKnownBufferUnderrunTotal = nil
+        
+        let durationSeconds = profilingDuration ?? 0
+        logger.info("Profiling finalized with \(alignedCount) samples over \(String(format: "%.2f", durationSeconds))s")
     }
     
     func identifyBottlenecks(from profilingData: ProfilingData) async -> [PerformanceBottleneck] {
-        // Implementation would analyze profiling data for bottlenecks
-        return []
+        var bottlenecks: [PerformanceBottleneck] = []
+        
+        let cpuAverage = profilingData.cpuProfile.averageUsage
+        if cpuAverage > 65 {
+            let severity: BottleneckSeverity
+            switch cpuAverage {
+            case 0..<75: severity = .moderate
+            case 75..<85: severity = .major
+            default: severity = .critical
+            }
+            bottlenecks.append(
+                PerformanceBottleneck(
+                    type: .cpu,
+                    description: "Audio threads are consuming \(Int(cpuAverage))% CPU on average",
+                    severity: severity,
+                    impactPercentage: min(cpuAverage, 100)
+                )
+            )
+        }
+        
+        let memoryPeakMB = Double(profilingData.memoryProfile.peakUsage) / 1_048_576
+        if memoryPeakMB > 350 {
+            let severity: BottleneckSeverity = memoryPeakMB > 600 ? .major : .moderate
+            bottlenecks.append(
+                PerformanceBottleneck(
+                    type: .memory,
+                    description: "Peak audio memory usage reached \(Int(memoryPeakMB)) MB",
+                    severity: severity,
+                    impactPercentage: Float(min(memoryPeakMB / 8.0 * 100.0, 100.0))
+                )
+            )
+        }
+        
+        let maxLatency = profilingData.latencyProfile.maxLatency
+        if maxLatency > 0.04 {
+            let severity: BottleneckSeverity = maxLatency > 0.08 ? .critical : .major
+            bottlenecks.append(
+                PerformanceBottleneck(
+                    type: .io,
+                    description: "Render latency spiked to \(String(format: "%.0f", maxLatency * 1000)) ms",
+                    severity: severity,
+                    impactPercentage: Float(min(maxLatency * 2000, 100))
+                )
+            )
+        }
+        
+        let minBufferFill = profilingData.bufferProfile.minBufferFill
+        if minBufferFill < 0.35 {
+            let severity: BottleneckSeverity = minBufferFill < 0.2 ? .critical : .major
+            bottlenecks.append(
+                PerformanceBottleneck(
+                    type: .buffer,
+                    description: "Buffer fill dipped to \(Int(minBufferFill * 100))%",
+                    severity: severity,
+                    impactPercentage: Float((1 - minBufferFill) * 100)
+                )
+            )
+        }
+        
+        let thermalState = await thermalStateMonitor.getCurrentState()
+        if thermalState.thermalState.isElevated {
+            bottlenecks.append(
+                PerformanceBottleneck(
+                    type: .thermal,
+                    description: "Device reported \(thermalState.thermalState.displayName) thermal conditions",
+                    severity: .moderate,
+                    impactPercentage: 45
+                )
+            )
+        }
+        
+        return bottlenecks
+            .sorted { severityRank($0.severity) > severityRank($1.severity) }
     }
     
     func identifyOptimizationsFromProfiling(_ profilingData: ProfilingData) async -> [OptimizationOpportunity] {
-        // Implementation would identify optimization opportunities
-        return []
+        var opportunities: [OptimizationOpportunity] = []
+        
+        if profilingData.cpuProfile.averageUsage > 65 {
+            opportunities.append(
+                OptimizationOpportunity(
+                    type: .resourceManagement,
+                    description: "Lower decoder quality or offload visualizations to reduce CPU load",
+                    expectedGain: 15,
+                    complexity: .medium
+                )
+            )
+        }
+        
+        let minBufferFill = profilingData.bufferProfile.minBufferFill
+        if minBufferFill < 0.4 {
+            opportunities.append(
+                OptimizationOpportunity(
+                    type: .bufferSizing,
+                    description: "Increase output buffer size to protect against underruns",
+                    expectedGain: Float((0.5 - minBufferFill) * 100).clamped(to: 5.0...30.0),
+                    complexity: .low
+                )
+            )
+        }
+        
+        let maxLatency = profilingData.latencyProfile.maxLatency
+        if maxLatency > 0.05 {
+            opportunities.append(
+                OptimizationOpportunity(
+                    type: .formatOptimization,
+                    description: "Pre-decode high complexity formats or enable hardware decoding",
+                    expectedGain: Float(min(maxLatency * 1200, 30)),
+                    complexity: .medium
+                )
+            )
+        }
+        
+        if profilingData.memoryProfile.peakUsage > 400 * 1_048_576 {
+            opportunities.append(
+                OptimizationOpportunity(
+                    type: .resourceManagement,
+                    description: "Release cached waveform data and purge inactive buffers",
+                    expectedGain: 10,
+                    complexity: .low
+                )
+            )
+        }
+        
+        return opportunities
     }
     
     func mapHealthStatus(_ status: PlaybackHealthStatus) -> DiagnosticHealthStatus {
@@ -1237,89 +1451,587 @@ private extension AudioMonitor {
         }
     }
     
-    // Placeholder implementations for all the analysis methods
+    // MARK: - Analysis
     func analyzePerformanceTrends() async -> PerformanceTrendSummary {
+        let window = recentMetrics(window: 120)
+        guard !window.isEmpty else {
+            return PerformanceTrendSummary(
+                cpuTrend: TrendIndicator(currentValue: 0, changePercent: 0, direction: .stable, stability: .stable),
+                memoryTrend: TrendIndicator(currentValue: 0, changePercent: 0, direction: .stable, stability: .stable),
+                latencyTrend: TrendIndicator(currentValue: 0, changePercent: 0, direction: .stable, stability: .stable),
+                qualityTrend: TrendIndicator(currentValue: 0, changePercent: 0, direction: .stable, stability: .stable),
+                bufferTrend: TrendIndicator(currentValue: 0, changePercent: 0, direction: .stable, stability: .stable),
+                overallTrend: .stable
+            )
+        }
+        
+        let cpuTrend = buildTrend(from: window.map { Double($0.cpuUsage) }, higherIsBetter: false)
+        let memoryTrend = buildTrend(from: window.map { Double($0.memoryUsage) / 1_048_576 }, higherIsBetter: false)
+        let latencyTrend = buildTrend(from: window.map { Double($0.renderLatency * 1000) }, higherIsBetter: false)
+        let qualityTrend = buildTrend(from: window.map { Double($0.qualityScore * 100) }, higherIsBetter: true)
+        let bufferTrend = buildTrend(from: window.map { Double($0.bufferFillLevel * 100) }, higherIsBetter: true)
+        
+        let overallTrend = deriveOverallTrend([cpuTrend, memoryTrend, latencyTrend, qualityTrend, bufferTrend])
+        
         return PerformanceTrendSummary(
-            cpuTrend: TrendIndicator(currentValue: 25, changePercent: 0, direction: .stable, stability: .stable),
-            memoryTrend: TrendIndicator(currentValue: 50, changePercent: 0, direction: .stable, stability: .stable),
-            latencyTrend: TrendIndicator(currentValue: 23, changePercent: 0, direction: .stable, stability: .stable),
-            qualityTrend: TrendIndicator(currentValue: 95, changePercent: 0, direction: .stable, stability: .stable),
-            bufferTrend: TrendIndicator(currentValue: 85, changePercent: 0, direction: .stable, stability: .stable),
-            overallTrend: .stable
+            cpuTrend: cpuTrend,
+            memoryTrend: memoryTrend,
+            latencyTrend: latencyTrend,
+            qualityTrend: qualityTrend,
+            bufferTrend: bufferTrend,
+            overallTrend: overallTrend
         )
     }
     
     func analyzeResourceUtilization() async -> ResourceUtilizationSummary {
+        let window = recentMetrics(window: 180)
+        guard let latest = window.last else {
+            return ResourceUtilizationSummary(
+                cpuUtilization: ResourceUsageAnalysis(currentUsage: 0, averageUsage: 0, peakUsage: 0, efficiencyScore: 1.0, classification: .minimal),
+                memoryUtilization: ResourceUsageAnalysis(currentUsage: 0, averageUsage: 0, peakUsage: 0, efficiencyScore: 1.0, classification: .minimal),
+                batteryUtilization: ResourceUsageAnalysis(currentUsage: 0, averageUsage: 0, peakUsage: 0, efficiencyScore: 1.0, classification: .minimal),
+                networkUtilization: ResourceUsageAnalysis(currentUsage: 0, averageUsage: 0, peakUsage: 0, efficiencyScore: 1.0, classification: .minimal),
+                overallEfficiency: .excellent
+            )
+        }
+        
+        let cpuValues = window.map { Double($0.cpuUsage) }
+        let memoryValues = window.map { Double($0.memoryUsage) / 1_048_576 }
+        let networkValues = window.map { Double($0.networkBandwidth) / 1_000_000 }
+        let batteryValues = window.compactMap { $0.batteryUsageRate.map(Double.init) }
+        
+        let cpuAnalysis = ResourceUsageAnalysis(
+            currentUsage: Double(latest.cpuUsage),
+            averageUsage: average(of: cpuValues),
+            peakUsage: cpuValues.max() ?? Double(latest.cpuUsage),
+            efficiencyScore: (1.0 - average(of: cpuValues) / 100).clamped(to: 0...1),
+            classification: classifyCPUUsage(Double(latest.cpuUsage))
+        )
+        
+        let memoryAnalysis = ResourceUsageAnalysis(
+            currentUsage: Double(latest.memoryUsage) / 1_048_576,
+            averageUsage: average(of: memoryValues),
+            peakUsage: memoryValues.max() ?? Double(latest.memoryUsage) / 1_048_576,
+            efficiencyScore: (1.0 - average(of: memoryValues) / 512).clamped(to: 0...1),
+            classification: classifyMemoryUsage(Double(latest.memoryUsage) / 1_048_576)
+        )
+        
+        let batteryCurrent = batteryValues.last ?? Double(latest.batteryUsageRate ?? 0)
+        let batteryAverage = batteryValues.isEmpty ? batteryCurrent : average(of: batteryValues)
+        let batteryPeak = batteryValues.max() ?? batteryCurrent
+        let batteryAnalysis = ResourceUsageAnalysis(
+            currentUsage: batteryCurrent,
+            averageUsage: batteryAverage,
+            peakUsage: batteryPeak,
+            efficiencyScore: (1.0 - batteryAverage / 350).clamped(to: 0...1),
+            classification: classifyBatteryUsage(batteryCurrent)
+        )
+        
+        let networkAnalysis = ResourceUsageAnalysis(
+            currentUsage: networkValues.last ?? Double(latest.networkBandwidth) / 1_000_000,
+            averageUsage: average(of: networkValues),
+            peakUsage: networkValues.max() ?? Double(latest.networkBandwidth) / 1_000_000,
+            efficiencyScore: (1.0 - average(of: networkValues) / 15).clamped(to: 0...1),
+            classification: classifyNetworkUsage(networkValues.last ?? Double(latest.networkBandwidth) / 1_000_000)
+        )
+        
+        let efficiencySamples = window.map { Double($0.efficiencyScore) }
+        let overallScore = efficiencySamples.isEmpty ? (cpuAnalysis.efficiencyScore + batteryAnalysis.efficiencyScore) / 2 : average(of: efficiencySamples)
+        let overallRating: EfficiencyRating
+        switch overallScore {
+        case 0.85...: overallRating = .excellent
+        case 0.7..<0.85: overallRating = .good
+        case 0.5..<0.7: overallRating = .fair
+        default: overallRating = .poor
+        }
+        
         return ResourceUtilizationSummary(
-            cpuUtilization: ResourceUsageAnalysis(currentUsage: 25, averageUsage: 23, peakUsage: 30, efficiencyScore: 0.8, classification: .low),
-            memoryUtilization: ResourceUsageAnalysis(currentUsage: 50, averageUsage: 48, peakUsage: 60, efficiencyScore: 0.7, classification: .moderate),
-            batteryUtilization: ResourceUsageAnalysis(currentUsage: 150, averageUsage: 140, peakUsage: 200, efficiencyScore: 0.75, classification: .moderate),
-            networkUtilization: ResourceUsageAnalysis(currentUsage: 0, averageUsage: 0, peakUsage: 0, efficiencyScore: 1.0, classification: .minimal),
-            overallEfficiency: .good
+            cpuUtilization: cpuAnalysis,
+            memoryUtilization: memoryAnalysis,
+            batteryUtilization: batteryAnalysis,
+            networkUtilization: networkAnalysis,
+            overallEfficiency: overallRating
         )
     }
     
     func assessAudioQuality() async -> QualityAssessmentSummary {
+        let window = recentMetrics(window: 120)
+        guard let latest = window.last else {
+            return QualityAssessmentSummary(
+                qualityScore: 0,
+                bitPerfectStatus: .unavailable,
+                signalIntegrity: SignalIntegrityAssessment(
+                    integrityScore: 0,
+                    issues: [],
+                    pathAnalysis: "No playback metrics available",
+                    jitterLevel: .minimal
+                ),
+                qualityIssues: [],
+                improvements: []
+            )
+        }
+        
+        let qualityScores = window.map { Double($0.qualityScore) }
+        let qualityScore = Int((average(of: qualityScores) * 100).clamped(to: 0...100))
+        
+        let bitPerfectStatus: BitPerfectStatus
+        if latest.isBitPerfect {
+            bitPerfectStatus = .active
+        } else if window.contains(where: { $0.isBitPerfect }) {
+            bitPerfectStatus = .available
+        } else if latest.audioFormat.lowercased().contains("lossless") {
+            bitPerfectStatus = .limited
+        } else {
+            bitPerfectStatus = .unavailable
+        }
+        
+        let snrValues = window.compactMap { $0.estimatedSNR.map(Double.init) }
+        let dynamicRangeValues = window.compactMap { $0.dynamicRange.map(Double.init) }
+        let jitterValues = window.map { Double($0.jitter) }
+        let glitchTotal = window.reduce(0) { $0 + $1.glitchCount }
+        
+        let averageSNR = average(of: snrValues)
+        let averageDynamicRange = average(of: dynamicRangeValues)
+        let averageJitter = average(of: jitterValues)
+        
+        var signalIssues: Set<SignalIssue> = []
+        if averageSNR > 0 && averageSNR < 80 { signalIssues.insert(.noise) }
+        if averageDynamicRange > 0 && averageDynamicRange < 65 { signalIssues.insert(.distortion) }
+        if averageJitter > 0.004 { signalIssues.insert(.jitter) }
+        if glitchTotal > 0 { signalIssues.insert(.dropout) }
+        
+        let integrityScore = computeIntegrityScore(snr: averageSNR, dynamicRange: averageDynamicRange, jitter: averageJitter, glitches: glitchTotal)
+        let jitterLevel = jitterLevel(for: averageJitter)
+        let pathAnalysis = buildPathAnalysis(signalIssues: Array(signalIssues), bitPerfectActive: latest.isBitPerfect)
+        
+        var qualityIssues: [QualityIssue] = []
+        if !signalIssues.isEmpty {
+            if signalIssues.contains(.noise), averageSNR > 0 {
+                qualityIssues.append(
+                    QualityIssue(
+                        type: .device,
+                        description: "Average SNR measured \(Int(averageSNR)) dB, introducing audible noise floor.",
+                        impact: .significant,
+                        resolution: "Use an external DAC or reduce analog volume to improve signal-to-noise ratio."
+                    )
+                )
+            }
+            if signalIssues.contains(.distortion), averageDynamicRange > 0 {
+                qualityIssues.append(
+                    QualityIssue(
+                        type: .processing,
+                        description: "Dynamic range collapsed to \(Int(averageDynamicRange)) dB during playback.",
+                        impact: .significant,
+                        resolution: "Disable loudness normalization or replay gain during high fidelity sessions."
+                    )
+                )
+            }
+            if signalIssues.contains(.jitter) {
+                qualityIssues.append(
+                    QualityIssue(
+                        type: .device,
+                        description: "Digital jitter averaged \(String(format: "%.3f", averageJitter * 1_000)) ms across the session.",
+                        impact: .moderate,
+                        resolution: "Use wired output or a reclocking DAC to minimize transport jitter."
+                    )
+                )
+            }
+            if signalIssues.contains(.dropout) {
+                qualityIssues.append(
+                    QualityIssue(
+                        type: .processing,
+                        description: "Detected \(glitchTotal) glitch events while rendering audio.",
+                        impact: .moderate,
+                        resolution: "Increase buffer size or reduce background decoding load to eliminate dropouts."
+                    )
+                )
+            }
+        }
+        
+        if bitPerfectStatus != .active {
+            qualityIssues.append(
+                QualityIssue(
+                    type: .format,
+                    description: "Bit-perfect playback is not active; output is routed through the system mixer.",
+                    impact: .moderate,
+                    resolution: "Enable Bit-Perfect playback in Settings to bypass CoreAudio resampling."
+                )
+            )
+        }
+        
+        var improvements: [QualityImprovement] = []
+        if bitPerfectStatus != .active {
+            improvements.append(
+                QualityImprovement(
+                    title: "Enable Bit-Perfect Output",
+                    description: "Activating bit-perfect mode avoids CoreAudio resampling for lossless formats.",
+                    expectedGain: 8,
+                    difficulty: .easy
+                )
+            )
+        }
+        if signalIssues.contains(.jitter) {
+            improvements.append(
+                QualityImprovement(
+                    title: "Stabilize Digital Clock",
+                    description: "Use a wired USB DAC or reduce wireless interference to minimize transport jitter.",
+                    expectedGain: 6,
+                    difficulty: .moderate
+                )
+            )
+        }
+        if signalIssues.contains(.noise) {
+            improvements.append(
+                QualityImprovement(
+                    title: "Improve Signal-to-Noise",
+                    description: "Lower analog gain and avoid stacked pre-amps to reduce the noise floor.",
+                    expectedGain: 5,
+                    difficulty: .easy
+                )
+            )
+        }
+        
         return QualityAssessmentSummary(
-            qualityScore: 85,
-            bitPerfectStatus: .available,
+            qualityScore: qualityScore,
+            bitPerfectStatus: bitPerfectStatus,
             signalIntegrity: SignalIntegrityAssessment(
-                integrityScore: 90,
-                issues: [],
-                pathAnalysis: "Clean signal path",
-                jitterLevel: .low
+                integrityScore: Int(integrityScore.clamped(to: 0...100)),
+                issues: Array(signalIssues),
+                pathAnalysis: pathAnalysis,
+                jitterLevel: jitterLevel
             ),
-            qualityIssues: [],
-            improvements: []
+            qualityIssues: qualityIssues,
+            improvements: improvements
         )
     }
     
     func analyzeEfficiency() async -> EfficiencyAnalysisSummary {
+        let window = recentMetrics(window: 180)
+        guard !window.isEmpty else {
+            return EfficiencyAnalysisSummary(
+                efficiencyScore: 100,
+                powerEfficiency: .excellent,
+                performanceEfficiency: .excellent,
+                optimizationOpportunities: []
+            )
+        }
+        
+        let efficiencyValues = window.map { Double($0.efficiencyScore) }
+        let efficiencyScore = Int((average(of: efficiencyValues) * 100).clamped(to: 0...100))
+        
+        let cpuAverage = average(of: window.map { Double($0.cpuUsage) })
+        let batteryAverage = average(of: window.compactMap { $0.batteryUsageRate.map(Double.init) })
+        
+        let performanceRating = efficiencyRating(forCPU: cpuAverage)
+        let powerRating = efficiencyRating(forBattery: batteryAverage)
+        
+        var optimizations: [EfficiencyOptimization] = []
+        if cpuAverage > 65 {
+            optimizations.append(
+                EfficiencyOptimization(
+                    title: "Reduce Decoder Load",
+                    expectedGain: 12,
+                    resourceImpact: "CPU usage -12%",
+                    steps: [
+                        "Disable real-time waveform visualizations",
+                        "Prefer hardware-accelerated decoders for ALAC/FLAC"
+                    ]
+                )
+            )
+        }
+        if batteryAverage > 200 {
+            optimizations.append(
+                EfficiencyOptimization(
+                    title: "Enable Low Power Audio Mode",
+                    expectedGain: 10,
+                    resourceImpact: "Battery drain -10%",
+                    steps: [
+                        "Reduce background refresh interval to 30s",
+                        "Lower particle effects intensity in Now Playing"
+                    ]
+                )
+            )
+        }
+        let networkAverage = average(of: window.map { Double($0.networkBandwidth) / 1_000_000 })
+        if networkAverage > 5 {
+            optimizations.append(
+                EfficiencyOptimization(
+                    title: "Prefetch Lossless Tracks",
+                    expectedGain: 7,
+                    resourceImpact: "Network spikes -40%",
+                    steps: [
+                        "Cache playlists before playback for offline sessions",
+                        "Disable Hi-Res streaming on cellular"
+                    ]
+                )
+            )
+        }
+        
         return EfficiencyAnalysisSummary(
-            efficiencyScore: 80,
-            powerEfficiency: .good,
-            performanceEfficiency: .good,
-            optimizationOpportunities: []
+            efficiencyScore: efficiencyScore,
+            powerEfficiency: powerRating,
+            performanceEfficiency: performanceRating,
+            optimizationOpportunities: optimizations
         )
     }
     
     func identifyActiveIssues() async -> [DiagnosticIssue] {
-        return []
+        var issues: [DiagnosticIssue] = []
+        let recentAlerts = alertHistory.suffix(10)
+        var seenKeys = Set<String>()
+        
+        for alert in recentAlerts {
+            let severity = issueSeverity(for: alert.severity)
+            let type = diagnosticIssueType(for: alert.type)
+            let key = "\(alert.type.rawValue)_\(severity.rawValue)"
+            if seenKeys.contains(key) { continue }
+            seenKeys.insert(key)
+            let resolution = alert.suggestedActions.first ?? defaultResolution(for: alert.type)
+            issues.append(
+                DiagnosticIssue(
+                    type: type,
+                    severity: severity,
+                    title: alert.type.displayName,
+                    description: alert.message,
+                    technicalDetails: alert.technicalDetails,
+                    resolution: resolution,
+                    canAutoResolve: alert.type == .lowBufferFill || alert.type == .bufferUnderrun,
+                    firstDetected: alert.timestamp
+                )
+            )
+        }
+        
+        if let latest = metricsHistory.last {
+            if latest.cpuUsage > 85 && !seenKeys.contains("cpu_usage_major") {
+                issues.append(
+                    DiagnosticIssue(
+                        type: .performance,
+                        severity: .major,
+                        title: "Sustained high CPU",
+                        description: "Audio pipeline is consuming \(Int(latest.cpuUsage))% CPU",
+                        technicalDetails: "Thread utilization: audio=\(String(format: "%.1f", latest.threadUtilization.audioThreadCPU))%",
+                        resolution: "Disable visual effects or lower upsampling quality to reduce decoder load.",
+                        canAutoResolve: false,
+                        firstDetected: Date()
+                    )
+                )
+            }
+            if latest.bufferFillLevel < 0.3 && !seenKeys.contains("low_buffer_fill_minor") {
+                issues.append(
+                    DiagnosticIssue(
+                        type: .performance,
+                        severity: .moderate,
+                        title: "Buffer at risk",
+                        description: "Output buffer fell to \(Int(latest.bufferFillLevel * 100))%",
+                        technicalDetails: "Underrun rate: \(String(format: "%.2f", latest.underrunRate)) events/min",
+                        resolution: "Increase output buffer duration in Settings > Audio > Advanced.",
+                        canAutoResolve: true,
+                        firstDetected: Date()
+                    )
+                )
+            }
+        }
+        
+        return issues
     }
     
     func generateRecommendations() async -> [PerformanceRecommendation] {
-        return []
+        var recommendations: [PerformanceRecommendation] = []
+        if let latest = metricsHistory.last {
+            if latest.cpuUsage > 75 {
+                recommendations.append(
+                    PerformanceRecommendation(
+                        type: .performanceModeAdjustment,
+                        priority: .high,
+                        title: "Enable Performance Mode",
+                        description: "CPU usage averaged \(Int(latest.cpuUsage))%. Enable performance mode to prioritize audio threads.",
+                        expectedImprovement: "CPU spikes reduced by ~15%",
+                        technicalDetails: "Activates AVAudioSessionModeVideoRecording and raises audio thread QoS.",
+                        canAutoApply: false
+                    )
+                )
+            }
+            if latest.bufferFillLevel < 0.35 {
+                recommendations.append(
+                    PerformanceRecommendation(
+                        type: .audioSessionConfiguration,
+                        priority: .medium,
+                        title: "Increase IO Buffer Duration",
+                        description: "Buffer fill dropped to \(Int(latest.bufferFillLevel * 100))%. Increasing IO buffer provides more headroom.",
+                        expectedImprovement: "Underruns reduced by up to 60%",
+                        technicalDetails: "Set AVAudioSession.ioBufferDuration to 0.012s when using high resolution content.",
+                        canAutoApply: true
+                    )
+                )
+            }
+            if latest.jitter > 0.004 {
+                recommendations.append(
+                    PerformanceRecommendation(
+                        type: .hardware,
+                        priority: .medium,
+                        title: "Use Wired Output",
+                        description: "Detected jitter of \(String(format: "%.3f", latest.jitter * 1_000)) ms. Wired output stabilizes the master clock.",
+                        expectedImprovement: "Jitter floor reduced by ~40%",
+                        technicalDetails: "Switch to USB or Lightning DAC for critical listening sessions.",
+                        canAutoApply: false
+                    )
+                )
+            }
+            if !latest.isBitPerfect {
+                recommendations.append(
+                    PerformanceRecommendation(
+                        type: .formatOptimization,
+                        priority: .medium,
+                        title: "Review Output Format",
+                        description: "Bit-perfect playback is disabled. Matching output sample rate avoids SRC artifacts.",
+                        expectedImprovement: "Quality score +5",
+                        technicalDetails: "Align AVAudioSession sample rate with source (\(Int(latest.sampleRate)) Hz).",
+                        canAutoApply: false
+                    )
+                )
+            }
+        }
+        
+        if recommendations.isEmpty {
+            recommendations.append(
+                PerformanceRecommendation(
+                    type: .backgroundAppManagement,
+                    priority: .low,
+                    title: "Maintain Current Configuration",
+                    description: "No critical issues detected during the monitoring window.",
+                    expectedImprovement: "N/A",
+                    technicalDetails: "Continue monitoring if workload changes.",
+                    canAutoApply: false
+                )
+            )
+        }
+        
+        return recommendations
     }
     
     func identifyOptimizations() async -> [OptimizationOpportunity] {
-        return []
+        var opportunities: [OptimizationOpportunity] = []
+        if let profilingData = profilingData {
+            opportunities.append(contentsOf: await identifyOptimizationsFromProfiling(profilingData))
+        }
+        if let latest = metricsHistory.last {
+            if Double(latest.memoryUsage) / 1_048_576 > 450 {
+                opportunities.append(
+                    OptimizationOpportunity(
+                        type: .resourceManagement,
+                        description: "Unload inactive visualizers to reclaim \(Int(Double(latest.memoryUsage) / 1_048_576 - 450)) MB",
+                        expectedGain: 12,
+                        complexity: .medium
+                    )
+                )
+            }
+            if Double(latest.networkBandwidth) / 1_000_000 > 8 {
+                opportunities.append(
+                    OptimizationOpportunity(
+                        type: .formatOptimization,
+                        description: "Transcode cached radio streams to AAC 256 for lower bandwidth during roaming",
+                        expectedGain: 9,
+                        complexity: .medium
+                    )
+                )
+            }
+        }
+        return opportunities
     }
     
     func createSessionStatistics() async -> SessionStatisticsSummary {
         let summary = await getSessionSummary()
+        let durationHours = max(summary.duration / 3600, 0.1)
+        let errorRate = Double(summary.totalAlerts) / durationHours
+        let bufferUnderruns = alertHistory.filter { $0.type == .bufferUnderrun || $0.type == .lowBufferFill }.count
+        let qualityDrops = metricsHistory.filter { $0.qualityScore < 0.85 }.count
+        let recoverySuccess = metricsHistory.isEmpty ? 1.0 : Double(metricsHistory.last?.recoverySuccessRate ?? 1.0)
+        
         return SessionStatisticsSummary(
             totalUptime: summary.duration,
             averagePerformanceScore: summary.performanceScore,
             totalAlerts: summary.totalAlerts,
-            errorRate: 0,
-            bufferUnderrunIncidents: 0,
-            qualityDropCount: 0,
-            recoverySuccessRate: 1.0
+            errorRate: errorRate,
+            bufferUnderrunIncidents: bufferUnderruns,
+            qualityDropCount: qualityDrops,
+            recoverySuccessRate: recoverySuccess
         )
     }
     
     func createErrorHistory() async -> ErrorHistorySummary {
+        let alerts = alertHistory
+        let totalErrors = alerts.count
+        let errorsByCategory = Dictionary(grouping: alerts) { errorCategory(for: $0.type) }
+            .mapValues { $0.count }
+        let mostRecentError = alerts.last.map { alert -> DiagnosticError in
+            DiagnosticError(
+                code: alert.type.rawValue.uppercased(),
+                category: errorCategory(for: alert.type),
+                description: alert.message,
+                timestamp: alert.timestamp,
+                recoveryAttempted: alert.suggestedActions.contains { $0.lowercased().contains("retry") },
+                recoverySuccessful: (metricsHistory.last?.recoverySuccessRate ?? 1) > 0.9
+            )
+        }
+        let mostCommonCategory = errorsByCategory.max(by: { $0.value < $1.value })?.key
+        let trend = errorTrend(for: alerts)
+        
         return ErrorHistorySummary(
-            totalErrors: 0,
-            errorsByCategory: [:],
-            mostRecentError: nil,
-            mostCommonErrorType: nil,
-            errorFrequencyTrend: .stable
+            totalErrors: totalErrors,
+            errorsByCategory: errorsByCategory,
+            mostRecentError: mostRecentError,
+            mostCommonErrorType: mostCommonCategory,
+            errorFrequencyTrend: trend
         )
     }
     
     func identifyMilestones() async -> [PerformanceMilestone] {
-        return []
+        var milestones: [PerformanceMilestone] = []
+        let now = Date()
+        if let start = sessionStartTime {
+            let uptime = now.timeIntervalSince(start)
+            milestones.append(
+                PerformanceMilestone(
+                    type: .uptime,
+                    achievedAt: now,
+                    description: "Monitoring active for \(String(format: "%.1f", uptime / 3600)) hours",
+                    value: uptime
+                )
+            )
+        }
+        if let peakQuality = metricsHistory.map({ Double($0.qualityScore) }).max(), peakQuality > 0.95 {
+            milestones.append(
+                PerformanceMilestone(
+                    type: .quality,
+                    achievedAt: now,
+                    description: "Peak quality score \(Int(peakQuality * 100))",
+                    value: peakQuality
+                )
+            )
+        }
+        let efficiencyValues = metricsHistory.map { Double($0.efficiencyScore) }
+        let efficiencyAverage = average(of: efficiencyValues)
+        if efficiencyAverage > 0.9 {
+            milestones.append(
+                PerformanceMilestone(
+                    type: .efficiency,
+                    achievedAt: now,
+                    description: "Efficiency sustained above 90%",
+                    value: efficiencyAverage
+                )
+            )
+        }
+        if alertHistory.isEmpty || alertHistory.filter({ now.timeIntervalSince($0.timestamp) < 1800 }).isEmpty {
+            milestones.append(
+                PerformanceMilestone(
+                    type: .stability,
+                    achievedAt: now,
+                    description: "No alerts recorded in the last 30 minutes",
+                    value: 1800
+                )
+            )
+        }
+        return milestones
     }
     
     func assessOSCompatibility() async -> OSCompatibilityInfo {
@@ -1364,63 +2076,192 @@ private extension AudioMonitor {
     }
     
     func collectDebugInfo() async -> DebugInformation {
+        let sessionInfo = await collectSessionInfo()
+        let deviceInfo = await collectDeviceInfo()
+        let thermalInfo = await thermalStateMonitor.getCurrentState()
+        let systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
+        let deviceIdentifier = currentDeviceIdentifier()
+        let architecture = currentArchitecture()
+        let availableMemory = Int64(ProcessInfo.processInfo.physicalMemory)
+        
+        let bufferAverage = metricsHistory.isEmpty ? 1.0 : Double(metricsHistory.map { $0.bufferFillLevel }.reduce(0, +)) / Double(metricsHistory.count)
+        let bufferMinimum = metricsHistory.map { Double($0.bufferFillLevel) }.min() ?? 1.0
+        
+        let audioStackInfo = AudioStackDebugInfo(
+            activeAudioUnits: _currentEngine.map { [String(describing: type(of: $0))] } ?? [],
+            sessionDetails: [
+                "category": sessionInfo.category,
+                "mode": sessionInfo.mode,
+                "options": sessionInfo.options.joined(separator: ",")
+            ],
+            engineConfiguration: [
+                "updateInterval": updateInterval,
+                "profiling": _isProfiling,
+                "metricsSamples": metricsHistory.count
+            ].mapValues { String(describing: $0) },
+            bufferInfo: BufferDebugInfo(
+                bufferSizes: [
+                    "ioBufferFrames": Int(sessionInfo.ioBufferDuration * sessionInfo.sampleRate),
+                    "deviceFrames": deviceInfo.bufferSize
+                ],
+                bufferUtilization: [
+                    "average": Float(bufferAverage),
+                    "minimum": Float(bufferMinimum)
+                ],
+                allocationHistory: []
+            )
+        )
+        
+        let debugFlags: [String: String] = [
+            "monitoring": String(_isMonitoring),
+            "profiling": String(_isProfiling),
+            "alerts": String(alertHistory.count)
+        ]
+        
         return DebugInformation(
             sessionID: UUID().uuidString,
             systemInfo: SystemDebugInfo(
-                deviceIdentifier: "iPhone",
-                systemVersion: "17.0",
-                availableMemory: 1_000_000_000,
-                cpuArchitecture: "arm64",
-                thermalState: "nominal"
+                deviceIdentifier: deviceIdentifier,
+                systemVersion: systemVersion,
+                availableMemory: availableMemory,
+                cpuArchitecture: architecture,
+                thermalState: thermalInfo.thermalState.rawValue
             ),
-            audioStackInfo: AudioStackDebugInfo(
-                activeAudioUnits: [],
-                sessionDetails: [:],
-                engineConfiguration: [:],
-                bufferInfo: BufferDebugInfo(
-                    bufferSizes: [:],
-                    bufferUtilization: [:],
-                    allocationHistory: []
-                )
-            ),
+            audioStackInfo: audioStackInfo,
             performanceCounters: performanceCounters,
-            debugFlags: [:]
+            debugFlags: debugFlags
         )
     }
     
     func collectRecentLogEntries() async -> [DiagnosticLogEntry] {
-        return []
+        var entries: [DiagnosticLogEntry] = []
+        for alert in alertHistory.suffix(10) {
+            let level: LogLevel
+            switch alert.severity {
+            case .low: level = .warning
+            case .medium: level = .warning
+            case .high: level = .error
+            case .critical: level = .critical
+            }
+            let context = alert.triggerValues.mapValues { String(format: "%.2f", $0) }
+            entries.append(
+                DiagnosticLogEntry(
+                    timestamp: alert.timestamp,
+                    level: level,
+                    category: alert.type.rawValue,
+                    message: alert.message,
+                    context: context
+                )
+            )
+        }
+        for metric in metricsHistory.suffix(5) {
+            let context: [String: String] = [
+                "cpu": String(format: "%.1f", metric.cpuUsage),
+                "memoryMB": String(format: "%.0f", Double(metric.memoryUsage) / 1_048_576),
+                "latencyMs": String(format: "%.2f", metric.renderLatency * 1000),
+                "buffer": String(format: "%.1f", metric.bufferFillLevel * 100)
+            ]
+            entries.append(
+                DiagnosticLogEntry(
+                    timestamp: metric.timestamp,
+                    level: .info,
+                    category: "metrics",
+                    message: "Metrics snapshot",
+                    context: context
+                )
+            )
+        }
+        return entries.sorted { $0.timestamp < $1.timestamp }
     }
     
     func createConfigurationDump() async -> ConfigurationDump {
+        let sessionInfo = await collectSessionInfo()
+        let deviceInfo = await collectDeviceInfo()
+        let systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
+        let deviceIdentifier = currentDeviceIdentifier()
+        
+        let engineConfig = [
+            "updateInterval": String(format: "%.2f", updateInterval),
+            "profiling": String(_isProfiling),
+            "metricsSamples": String(metricsHistory.count)
+        ]
+        let sessionConfig = [
+            "category": sessionInfo.category,
+            "mode": sessionInfo.mode,
+            "options": sessionInfo.options.joined(separator: ","),
+            "sampleRate": String(format: "%.0f", sessionInfo.sampleRate),
+            "ioBufferDuration": String(format: "%.4f", sessionInfo.ioBufferDuration)
+        ]
+        let deviceConfig = [
+            "name": deviceInfo.name,
+            "sampleRate": String(format: "%.0f", deviceInfo.sampleRate),
+            "bitDepth": String(deviceInfo.bitDepth),
+            "channels": String(deviceInfo.channels),
+            "bufferSize": String(deviceInfo.bufferSize)
+        ]
+        let defaults = UserDefaults.standard
+        let userPreferences = [
+            "volume": String(format: "%.2f", defaults.double(forKey: "volume")),
+            "isShuffleEnabled": String(defaults.bool(forKey: "isShuffleEnabled")),
+            "repeatMode": defaults.string(forKey: "repeatMode") ?? "none"
+        ]
+        let systemSettings = [
+            "osVersion": systemVersion,
+            "device": deviceIdentifier
+        ]
+        
         return ConfigurationDump(
-            engineConfig: [:],
-            sessionConfig: [:],
-            deviceConfig: [:],
-            userPreferences: [:],
-            systemSettings: [:]
+            engineConfig: engineConfig,
+            sessionConfig: sessionConfig,
+            deviceConfig: deviceConfig,
+            userPreferences: userPreferences,
+            systemSettings: systemSettings
         )
     }
     
     // Export methods
     func exportAsJSON(_ metrics: [AudioMetrics]) async -> Data {
-        // Implementation would export as JSON
-        return Data()
+        let payload = metrics.map(EncodedMetric.init)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted]
+        encoder.dateEncodingStrategy = .iso8601
+        return (try? encoder.encode(payload)) ?? Data()
     }
     
     func exportAsCSV(_ metrics: [AudioMetrics]) async -> Data {
-        // Implementation would export as CSV
-        return Data()
+        var rows = ["timestamp,cpuUsage,memoryUsageMB,bufferFill,renderLatencyMs,performanceScore,qualityScore,isBitPerfect"]
+        let formatter = ISO8601DateFormatter()
+        for metric in metrics {
+            let memoryMB = Double(metric.memoryUsage) / 1_048_576
+            let row = "\(formatter.string(from: metric.timestamp)),\(String(format: \"%.1f\", metric.cpuUsage)),\(String(format: \"%.0f\", memoryMB)),\(String(format: \"%.2f\", metric.bufferFillLevel)),\(String(format: \"%.3f\", metric.renderLatency * 1000)),\(String(format: \"%.2f\", metric.performanceScore)),\(String(format: \"%.2f\", metric.qualityScore)),\(metric.isBitPerfect)"
+            rows.append(row)
+        }
+        return rows.joined(separator: "\n").data(using: .utf8) ?? Data()
     }
     
     func exportAsXML(_ metrics: [AudioMetrics]) async -> Data {
-        // Implementation would export as XML
-        return Data()
+        let formatter = ISO8601DateFormatter()
+        var xml = "<metrics>\n"
+        for metric in metrics {
+            xml += "  <metric timestamp=\"\(formatter.string(from: metric.timestamp))\">\n"
+            xml += "    <cpuUsage>\(String(format: \"%.1f\", metric.cpuUsage))</cpuUsage>\n"
+            xml += "    <memoryUsageMB>\(String(format: \"%.0f\", Double(metric.memoryUsage) / 1_048_576))</memoryUsageMB>\n"
+            xml += "    <bufferFill>\(String(format: \"%.2f\", metric.bufferFillLevel))</bufferFill>\n"
+            xml += "    <renderLatencyMs>\(String(format: \"%.3f\", metric.renderLatency * 1000))</renderLatencyMs>\n"
+            xml += "    <performanceScore>\(String(format: \"%.2f\", metric.performanceScore))</performanceScore>\n"
+            xml += "    <qualityScore>\(String(format: \"%.2f\", metric.qualityScore))</qualityScore>\n"
+            xml += "    <bitPerfect>\(metric.isBitPerfect)</bitPerfect>\n"
+            xml += "  </metric>\n"
+        }
+        xml += "</metrics>"
+        return xml.data(using: .utf8) ?? Data()
     }
     
     func exportAsBinary(_ metrics: [AudioMetrics]) async -> Data {
-        // Implementation would export as binary format
-        return Data()
+        let payload = metrics.map(EncodedMetric.init)
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        return (try? encoder.encode(payload)) ?? Data()
     }
     
     // Report generation methods
@@ -1444,7 +2285,350 @@ private extension AudioMonitor {
     }
     
     func analyzePerformanceTrends(for metrics: [AudioMetrics]) async -> [PerformanceTrend] {
-        // Implementation would analyze trends in the metrics
-        return []
+        guard metrics.count >= 2 else { return [] }
+        let cpuIndicator = buildTrend(from: metrics.map { Double($0.cpuUsage) }, higherIsBetter: false)
+        let memoryIndicator = buildTrend(from: metrics.map { Double($0.memoryUsage) / 1_048_576 }, higherIsBetter: false)
+        let latencyIndicator = buildTrend(from: metrics.map { Double($0.renderLatency * 1000) }, higherIsBetter: false)
+        let qualityIndicator = buildTrend(from: metrics.map { Double($0.qualityScore * 100) }, higherIsBetter: true)
+        let bufferIndicator = buildTrend(from: metrics.map { Double($0.bufferFillLevel * 100) }, higherIsBetter: true)
+        
+        let trends = [
+            makePerformanceTrend(label: "CPU Usage", indicator: cpuIndicator, higherIsBetter: false),
+            makePerformanceTrend(label: "Memory Usage", indicator: memoryIndicator, higherIsBetter: false),
+            makePerformanceTrend(label: "Render Latency", indicator: latencyIndicator, higherIsBetter: false),
+            makePerformanceTrend(label: "Quality Score", indicator: qualityIndicator, higherIsBetter: true),
+            makePerformanceTrend(label: "Buffer Fill", indicator: bufferIndicator, higherIsBetter: true)
+        ]
+        
+        return trends.filter { abs($0.magnitude) >= 1 || $0.direction != .stable }
     }
-} 
+    
+    private func average(of values: [Double]) -> Double {
+        guard !values.isEmpty else { return 0 }
+        return values.reduce(0, +) / Double(values.count)
+    }
+    
+    private func standardDeviation(of values: [Double]) -> Double {
+        guard values.count > 1 else { return 0 }
+        let mean = average(of: values)
+        let variance = values.reduce(0) { $0 + pow($1 - mean, 2) } / Double(values.count)
+        return sqrt(variance)
+    }
+    
+    private func buildTrend(from values: [Double], higherIsBetter: Bool) -> TrendIndicator {
+        guard !values.isEmpty else {
+            return TrendIndicator(currentValue: 0, changePercent: 0, direction: .stable, stability: .stable)
+        }
+        let current = values.last ?? 0
+        let historical = Array(values.dropLast())
+        let baseline = historical.isEmpty ? current : average(of: historical)
+        let delta = current - baseline
+        let changePercent = baseline == 0 ? 0 : (delta / abs(baseline)) * 100
+        let stability = trendStability(for: values)
+        let direction: TrendDirection
+        if stability == .volatile {
+            direction = .volatile
+        } else {
+            let threshold = higherIsBetter ? 1.5 : 1.5
+            if higherIsBetter {
+                if changePercent > threshold { direction = .improving }
+                else if changePercent < -threshold { direction = .degrading }
+                else { direction = .stable }
+            } else {
+                if changePercent < -threshold { direction = .improving }
+                else if changePercent > threshold { direction = .degrading }
+                else { direction = .stable }
+            }
+        }
+        return TrendIndicator(currentValue: current, changePercent: changePercent, direction: direction, stability: stability)
+    }
+    
+    private func makePerformanceTrend(label: String, indicator: TrendIndicator, higherIsBetter: Bool) -> PerformanceTrend {
+        let magnitude = abs(indicator.changePercent)
+        let significance: TrendSignificance
+        switch magnitude {
+        case 0..<2: significance = .low
+        case 2..<5: significance = .medium
+        case 5..<10: significance = .high
+        default: significance = .veryHigh
+        }
+        let description = "\(label): \(String(format: "%.1f", indicator.currentValue)) (\(String(format: "%.1f", indicator.changePercent))%)"
+        return PerformanceTrend(metric: label, direction: indicator.direction, magnitude: magnitude, significance: significance, description: description)
+    }
+    
+    private func trendStability(for values: [Double]) -> TrendStability {
+        guard !values.isEmpty else { return .stable }
+        let mean = average(of: values.map { abs($0) })
+        let deviation = standardDeviation(of: values)
+        let ratio = mean == 0 ? deviation : deviation / (mean + 1)
+        switch ratio {
+        case ..<0.05: return .stable
+        case ..<0.15: return .fluctuating
+        default: return .volatile
+        }
+    }
+    
+    private func deriveOverallTrend(_ indicators: [TrendIndicator]) -> TrendDirection {
+        if indicators.contains(where: { $0.direction == .volatile }) {
+            return .volatile
+        }
+        let score = indicators.reduce(0.0) { partial, indicator -> Double in
+            switch indicator.direction {
+            case .improving: return partial + 1
+            case .degrading: return partial - 1
+            case .volatile: return partial
+            case .stable: return partial
+            }
+        } / Double(max(indicators.count, 1))
+        if score > 0.3 { return .improving }
+        if score < -0.3 { return .degrading }
+        return .stable
+    }
+    
+    private func classifyCPUUsage(_ value: Double) -> UsageClassification {
+        switch value {
+        case ..<5: return .minimal
+        case ..<25: return .low
+        case ..<50: return .moderate
+        case ..<75: return .high
+        default: return .excessive
+        }
+    }
+    
+    private func classifyMemoryUsage(_ value: Double) -> UsageClassification {
+        switch value {
+        case ..<128: return .minimal
+        case ..<256: return .low
+        case ..<512: return .moderate
+        case ..<768: return .high
+        default: return .excessive
+        }
+    }
+    
+    private func classifyBatteryUsage(_ value: Double) -> UsageClassification {
+        switch value {
+        case ..<40: return .minimal
+        case ..<120: return .low
+        case ..<200: return .moderate
+        case ..<320: return .high
+        default: return .excessive
+        }
+    }
+    
+    private func classifyNetworkUsage(_ value: Double) -> UsageClassification {
+        switch value {
+        case ..<0.5: return .minimal
+        case ..<2: return .low
+        case ..<5: return .moderate
+        case ..<10: return .high
+        default: return .excessive
+        }
+    }
+    
+    private func efficiencyRating(forCPU value: Double) -> EfficiencyRating {
+        switch value {
+        case ..<35: return .excellent
+        case ..<55: return .good
+        case ..<75: return .fair
+        default: return .poor
+        }
+    }
+    
+    private func efficiencyRating(forBattery value: Double) -> EfficiencyRating {
+        switch value {
+        case ..<50: return .excellent
+        case ..<140: return .good
+        case ..<220: return .fair
+        default: return .poor
+        }
+    }
+    
+    private func issueSeverity(for severity: AlertSeverity) -> IssueSeverity {
+        switch severity {
+        case .low: return .minor
+        case .medium: return .moderate
+        case .high: return .major
+        case .critical: return .critical
+        }
+    }
+    
+    private func diagnosticIssueType(for type: AlertType) -> DiagnosticIssueType {
+        switch type {
+        case .bufferUnderrun, .lowBufferFill, .highCPUUsage, .highMemoryUsage, .latencySpike:
+            return .performance
+        case .thermalThrottling:
+            return .hardware
+        case .audioInterruption:
+            return .configuration
+        case .formatMismatch:
+            return .compatibility
+        case .engineError:
+            return .software
+        case .audioDropout:
+            return .performance
+        }
+    }
+    
+    private func defaultResolution(for type: AlertType) -> String {
+        switch type {
+        case .bufferUnderrun, .lowBufferFill:
+            return "Increase IO buffer duration or reduce decoder complexity."
+        case .highCPUUsage:
+            return "Lower visualization intensity or disable background decoding."
+        case .highMemoryUsage:
+            return "Purge waveform caches and reload library assets on demand."
+        case .latencySpike:
+            return "Preload tracks and keep device thermals in nominal range."
+        case .thermalThrottling:
+            return "Pause playback briefly and move device to a cooler environment."
+        case .audioInterruption:
+            return "Resume playback after interruption ended and re-activate session."
+        case .formatMismatch:
+            return "Convert the track to a supported output format before playback."
+        case .engineError:
+            return "Reset the audio engine and reload the active track."
+        case .audioDropout:
+            return "Increase buffering or switch to offline playback."
+        }
+    }
+    
+    private func errorCategory(for type: AlertType) -> ErrorCategory {
+        switch type {
+        case .bufferUnderrun, .lowBufferFill:
+            return .buffer
+        case .highCPUUsage, .highMemoryUsage, .engineError:
+            return .decoding
+        case .latencySpike, .audioDropout:
+            return .network
+        case .thermalThrottling:
+            return .device
+        case .audioInterruption:
+            return .session
+        case .formatMismatch:
+            return .device
+        }
+    }
+    
+    private func errorTrend(for alerts: [PlaybackAlert]) -> TrendDirection {
+        guard alerts.count >= 4 else { return alerts.isEmpty ? .stable : .stable }
+        let midpoint = alerts.count / 2
+        let firstHalf = alerts.prefix(midpoint).count
+        let secondHalf = alerts.suffix(alerts.count - midpoint).count
+        if secondHalf > firstHalf { return .degrading }
+        if secondHalf < firstHalf { return .improving }
+        return .stable
+    }
+    
+    private func computeIntegrityScore(snr: Double, dynamicRange: Double, jitter: Double, glitches: Int) -> Double {
+        var score = 100.0
+        if snr > 0 { score -= max(0, 90 - snr) * 0.4 }
+        if dynamicRange > 0 { score -= max(0, 70 - dynamicRange) * 0.6 }
+        score -= min(15, jitter * 2000)
+        score -= Double(min(glitches * 3, 15))
+        return max(0, score)
+    }
+    
+    private func jitterLevel(for jitter: Double) -> JitterLevel {
+        switch jitter {
+        case ..<0.002: return .minimal
+        case ..<0.004: return .low
+        case ..<0.006: return .moderate
+        case ..<0.01: return .high
+        default: return .excessive
+        }
+    }
+    
+    private func buildPathAnalysis(signalIssues: [SignalIssue], bitPerfectActive: Bool) -> String {
+        if signalIssues.isEmpty {
+            return bitPerfectActive ? "Signal chain is bit-perfect with nominal jitter." : "Signal chain stable; playback routed through system mixer."
+        }
+        let issueDescriptions = signalIssues.map { $0.rawValue }.joined(separator: ", ")
+        return "Detected integrity issues: \(issueDescriptions). Review output chain for optimizations."
+    }
+    
+    private func currentDeviceIdentifier() -> String {
+        #if canImport(UIKit)
+        return UIDevice.current.name
+        #else
+        return Host.current().localizedName ?? "Unknown"
+        #endif
+    }
+    
+    private func currentArchitecture() -> String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let machineMirror = Mirror(reflecting: systemInfo.machine)
+        let identifier = machineMirror.children.reduce(into: "") { identifier, element in
+            guard let value = element.value as? Int8, value != 0 else { return }
+            identifier.append(Character(UnicodeScalar(UInt8(value))))
+        }
+        return identifier.isEmpty ? "arm64" : identifier
+    }
+}
+
+private extension ThermalState {
+    var isElevated: Bool {
+        switch self {
+        case .nominal:
+            return false
+        case .fair, .serious, .critical:
+            return true
+        }
+    }
+    
+    var displayName: String {
+        rawValue.capitalized
+    }
+}
+
+private extension Float {
+    func clamped(to range: ClosedRange<Float>) -> Float {
+        min(max(self, range.lowerBound), range.upperBound)
+    }
+}
+
+private extension Double {
+    func clamped(to range: ClosedRange<Double>) -> Double {
+        min(max(self, range.lowerBound), range.upperBound)
+    }
+}
+
+private extension AVAudioSession.CategoryOptions {
+    var optionNames: [String] {
+        var names: [String] = []
+        if contains(.mixWithOthers) { names.append("mixWithOthers") }
+        if contains(.duckOthers) { names.append("duckOthers") }
+        if contains(.allowBluetooth) { names.append("allowBluetooth") }
+        if contains(.defaultToSpeaker) { names.append("defaultToSpeaker") }
+        if contains(.allowBluetoothA2DP) { names.append("allowBluetoothA2DP") }
+        if contains(.allowAirPlay) { names.append("allowAirPlay") }
+        if contains(.interruptSpokenAudioAndMixWithOthers) { names.append("interruptSpokenAudio") }
+        if names.isEmpty { names.append("none") }
+        return names
+    }
+}
+
+private struct EncodedMetric: Codable {
+    let timestamp: Date
+    let cpuUsage: Float
+    let memoryUsage: Int64
+    let bufferFillLevel: Float
+    let renderLatency: Double
+    let performanceScore: Float
+    let qualityScore: Float
+    let isBitPerfect: Bool
+    let bufferUnderruns: Int
+    
+    init(_ metric: AudioMetrics) {
+        self.timestamp = metric.timestamp
+        self.cpuUsage = metric.cpuUsage
+        self.memoryUsage = metric.memoryUsage
+        self.bufferFillLevel = metric.bufferFillLevel
+        self.renderLatency = metric.renderLatency
+        self.performanceScore = metric.performanceScore
+        self.qualityScore = metric.qualityScore
+        self.isBitPerfect = metric.isBitPerfect
+        self.bufferUnderruns = metric.bufferUnderruns
+    }
+}
+

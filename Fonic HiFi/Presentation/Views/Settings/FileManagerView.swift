@@ -292,13 +292,55 @@ struct FileManagerView: View {
     
     private func copyFilesToDocuments(_ urls: [URL]) async {
         for url in urls {
-            do {
-                let destinationURL = currentDirectory.appendingPathComponent(url.lastPathComponent)
-                try FileManager.default.copyItem(at: url, to: destinationURL)
-            } catch {
-                print("Error copying file: \(error)")
-            }
+            await copyItemToCurrentDirectory(url)
         }
+    }
+    
+    private func copyItemToCurrentDirectory(_ url: URL) async {
+        let targetDirectory = currentDirectory
+        await Task.detached(priority: .utility) {
+            let fileManager = FileManager.default
+            let destinationURL = uniqueDestinationURL(for: url, in: targetDirectory, fileManager: fileManager)
+            guard url.standardizedFileURL != destinationURL.standardizedFileURL else {
+                return
+            }
+            let didAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            do {
+                if fileManager.fileExists(atPath: destinationURL.path) {
+                    print("Destination already exists at \(destinationURL.lastPathComponent), skipping copy")
+                    return
+                }
+                try fileManager.copyItem(at: url, to: destinationURL)
+            } catch {
+                print("Error copying file \(url.lastPathComponent): \(error)")
+            }
+        }.value
+    }
+    
+    private func uniqueDestinationURL(for sourceURL: URL, in directory: URL, fileManager: FileManager) -> URL {
+        var destination = directory.appendingPathComponent(sourceURL.lastPathComponent)
+        guard fileManager.fileExists(atPath: destination.path) else {
+            return destination
+        }
+        let baseName = destination.deletingPathExtension().lastPathComponent
+        let fileExtension = destination.pathExtension
+        var attempt = 1
+        repeat {
+            let suffix = " copy \(attempt)"
+            let newName = baseName + suffix
+            if fileExtension.isEmpty {
+                destination = directory.appendingPathComponent(newName)
+            } else {
+                destination = directory.appendingPathComponent(newName).appendingPathExtension(fileExtension)
+            }
+            attempt += 1
+        } while fileManager.fileExists(atPath: destination.path)
+        return destination
     }
     
     private func createNewFolder() {

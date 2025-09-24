@@ -4,7 +4,7 @@
 1. Create Xcode project: iOS 18+, Swift 6, SwiftUI lifecycle
 2. Configure build settings: strict concurrency, recommended warnings
 3. Set up directory structure as per architecture
-4. Add package dependencies: SFBAudioEngine, FFmpegKit, TagLib
+4. Add package dependencies: AudioKit (required), TagLib (optional future metadata tooling)
 5. Initialize SwiftLint for code consistency
 6. Create .gitignore for Swift/iOS
 

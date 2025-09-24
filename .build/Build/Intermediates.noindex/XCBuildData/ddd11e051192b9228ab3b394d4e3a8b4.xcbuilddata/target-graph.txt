@@ -1,6 +1,0 @@
-Target dependency graph (3 targets)
-Target 'Fonic HiFiUITests' in project 'Fonic HiFi'
-➜ Explicit dependency on target 'Fonic HiFi' in project 'Fonic HiFi'
-Target 'Fonic HiFiTests' in project 'Fonic HiFi'
-➜ Explicit dependency on target 'Fonic HiFi' in project 'Fonic HiFi'
-Target 'Fonic HiFi' in project 'Fonic HiFi' (no dependencies)

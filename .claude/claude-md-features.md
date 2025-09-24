@@ -29,19 +29,16 @@
 ### Audio Engine Hierarchy
 ```
 AVAudioEngine (primary)
-├── Standard formats (MP3, AAC, ALAC)
+├── Standard formats (MP3, AAC, ALAC, WAV, AIFF)
 ├── iOS audio session integration
 └── Hardware acceleration
 
-SFBAudioEngine (specialized)
-├── High-res formats (FLAC, APE)
-├── DSD support
-└── Bit-perfect output
+AudioKitEngine (secondary)
+├── FLAC playback and waveform analysis
+├── Advanced DSP pipeline
+└── Seamless hand-off from facade
 
-FFmpegKit (fallback)
-├── Unsupported formats
-├── Convert to PCM
-└── Pass to AVAudioEngine
+Legacy stub adapters (SFBAudioEngine, FFmpegKit) were removed from the production target.
 ```
 
 ### Bit-Perfect Validation

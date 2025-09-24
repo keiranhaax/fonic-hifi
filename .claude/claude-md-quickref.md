@@ -65,11 +65,11 @@ Muted: #666666
 ## 🎵 Supported Formats
 | Format | Decoder | Bit-Perfect | Priority |
 |--------|---------|-------------|----------|
-| FLAC   | SFBAudioEngine | ✅ | High |
+| FLAC   | AudioKitEngine | ✅ | High |
 | ALAC   | AVAudioEngine | ✅ | High |
 | WAV    | AVAudioEngine | ✅ | Medium |
 | AIFF   | AVAudioEngine | ✅ | Medium |
-| DSD    | SFBAudioEngine | ✅ | Low |
+| AAC    | AVAudioEngine | ❌ | Low |
 | MP3    | AVAudioEngine | ❌ | Low |
 
 ## 🔧 Performance Targets

@@ -8,7 +8,7 @@
 import Foundation
 
 /// Core protocol defining the interface for all audio playback engines.
-/// Implementations may use AVAudioEngine, SFBAudioEngine, or other engines
+/// Implementations may use AVAudioEngine, AudioKit, or other vetted engines
 /// based on format requirements and performance characteristics.
 @MainActor
 public protocol AudioEngineService: Sendable {

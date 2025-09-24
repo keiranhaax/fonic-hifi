@@ -42,9 +42,9 @@
 ### Audio Engine Selection
 ```
 1. Analyze format → 2. Select engine → 3. Configure output
-- Standard formats (MP3, AAC, ALAC): AVAudioEngine
-- High-res/specialized (FLAC, DSD): SFBAudioEngine
-- Unsupported: FFmpegKit → PCM → AVAudioEngine
+- Standard formats (MP3, AAC, ALAC, WAV, AIFF): AVAudioEngine
+- FLAC or DSP-heavy workloads: AudioKit
+- Future specialized formats: Extend via new adapters when requirements emerge
 ```
 
 ### Database Schema Strategy

@@ -36,8 +36,7 @@ mcp__sosumi__fetchAppleDocumentation("/path") → Confirm
 **Audio Engines:**
 - ✅ AVAudioEngineAdapter - COMPLETE (`Core/Audio/Engines/AVAudioEngineAdapter.swift`)
 - ✅ AudioKitEngineAdapter - COMPLETE (`Core/Audio/Engines/AudioKitEngineAdapter.swift`)
-- 🚧 SFBAudioEngineAdapter - STUB ONLY (method exists, not implemented)
-- 🚧 FFmpegEngineAdapter - STUB ONLY (method exists, not implemented)
+- 🗑️ Legacy SFBAudioEngineAdapter/FFmpegEngineAdapter stubs removed from the codebase
 
 **Liquid Glass UI:**
 - ⚠️ Native `.glassEffect()` - iOS 26 API documented but NOT USED IN CODE
@@ -311,9 +310,7 @@ The audio system uses a sophisticated facade pattern with automatic engine selec
 ```
 AudioEngineFacade (Main coordinator) - AudioEngineFacade.swift:20
 ├── AVAudioEngineAdapter - IMPLEMENTED (AVAudioEngineAdapter.swift)
-├── AudioKitEngineAdapter - IMPLEMENTED (AudioKitEngineAdapter.swift)
-├── SFBAudioEngineAdapter - STUB ONLY
-└── FFmpegEngineAdapter - STUB ONLY
+└── AudioKitEngineAdapter - IMPLEMENTED (AudioKitEngineAdapter.swift)
 ```
 
 **ACTUAL CODE** (`AudioEngineFacade.swift:20`):
@@ -524,7 +521,7 @@ make memory-leaks
 func testEngineSwitch() async {
     let facade = AudioEngineFacade(...)
     try await facade.load(flacFile)
-    XCTAssertTrue(facade.currentEngine is SFBAudioEngineAdapter)
+    XCTAssertTrue(facade.currentEngine is AudioKitEngineAdapter)
 }
 ```
 
@@ -777,8 +774,8 @@ make view FILE=Core/Audio/AudioEngineFacade.swift
 
 **Why Multiple Audio Engines?**
 - AVAudioEngine: Best iOS integration, limited format support
-- AudioKit: Superior DSP, higher CPU usage
-- SFBAudioEngine: True bit-perfect, complex setup
+- AudioKit: Superior DSP and FLAC playback, slightly higher CPU usage
+- Extensible adapter layer: Leaves room for future specialized engines if requirements emerge
 - Trade-off: Complexity for flexibility
 
 **Why Actor-Based Concurrency?**

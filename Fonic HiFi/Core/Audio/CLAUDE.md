@@ -41,9 +41,7 @@ Task { @MainActor in
 ```
 AudioEngineFacade.swift:20 (Main Coordinator)
 ├── AVAudioEngineAdapter.swift (MP3, AAC, ALAC) - COMPLETE
-├── AudioKitEngineAdapter.swift (Enhanced DSP) - COMPLETE
-├── SFBAudioEngineAdapter - STUB ONLY (not implemented)
-└── FFmpegEngineAdapter - STUB ONLY (not implemented)
+└── AudioKitEngineAdapter.swift (Enhanced DSP) - COMPLETE
 ```
 
 **ACTUAL CODE** (`AudioEngineFacade.swift:20`):
