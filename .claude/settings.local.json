@@ -36,7 +36,17 @@
       "Bash(tee:*)",
       "Read(//private/tmp/**)",
       "Bash(swift:*)",
-      "mcp__filesystem__directory_tree"
+      "mcp__filesystem__directory_tree",
+      "Bash(git rm:*)",
+      "Bash(tree:*)",
+      "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
+      "mcp__time__current_time",
+      "mcp__exa__web_search_exa",
+      "mcp__brave-search__brave_web_search",
+      "mcp__tavily__tavily_search",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "Bash(.specify/scripts/bash/update-agent-context.sh:*)"
     ],
     "deny": [],
     "ask": []
@@ -69,5 +79,6 @@
         ]
       }
     ]
-  }
+  },
+  "outputStyle": "swift-native"
 }

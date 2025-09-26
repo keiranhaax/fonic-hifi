@@ -1,11 +1,11 @@
 # Fonic HiFi 🎵
 
-A sophisticated iOS audiophile music player built with Swift 6, SwiftUI, and AudioKit, focusing on bit-perfect playback and format versatility.
-
-![iOS 18+](https://img.shields.io/badge/iOS-18%2B-blue)
-![Swift 6](https://img.shields.io/badge/Swift-6.0-orange)
-![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-green)
+![iOS 26+](https://img.shields.io/badge/iOS-26%2B-blue)
+![Swift 6.2](https://img.shields.io/badge/Swift-6.2-orange)
+![SwiftUI iOS 26](https://img.shields.io/badge/SwiftUI-iOS%2026-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
+
+A sophisticated iOS 26 audiophile music player built with Swift 6.2, SwiftUI, and AudioKit, focusing on bit-perfect playback and format versatility.
 
 ## Features
 
@@ -24,11 +24,11 @@ A sophisticated iOS audiophile music player built with Swift 6, SwiftUI, and Aud
 - **Extensible**: Architecture-ready for additional formats via adapters
 
 ### 🎨 Modern SwiftUI Interface
-- Native iOS 18 design language
-- Adaptive layouts for all device sizes
-- Smooth animations with matched geometry effects
-- Dark mode support
-- Accessibility features
+- Native iOS 26 Liquid Glass design using `.glassEffect()` surfaces
+- Adaptive layouts tuned for iPhone 16 Pro and larger displays
+- Smooth animations with matched geometry effects and timeline scrubbing
+- Dark mode-first visuals for OLED panels
+- Full VoiceOver, Dynamic Type, and reduced motion accommodations
 
 ### 🔒 Privacy-First
 - No cloud services or analytics
@@ -38,13 +38,14 @@ A sophisticated iOS audiophile music player built with Swift 6, SwiftUI, and Aud
 
 ## Architecture
 
-### Swift 6 Concurrency
-The app leverages Swift 6's strict concurrency model with clear actor isolation boundaries:
+### Swift 6.2 Concurrency
+The app opts into Swift 6.2's main-actor-by-default tooling while isolating persistence and playback work behind actors:
 
 ```swift
-@MainActor: UI components, ViewModels, AudioEngineFacade
+@MainActor: UI components, view models, AudioEngineFacade
 TrackDataActor: SwiftData operations, file I/O
-AudioSessionActor: Audio session configuration
+AudioSessionManager: AVAudioSession configuration
+LibraryImportService: Managed imports and background file I/O
 ```
 
 ### Audio Engine Facade Pattern
@@ -64,10 +65,10 @@ AudioEngineFacade (Main coordinator)
 
 ## Requirements
 
-- iOS 18.0+
-- iPhone 12 or newer (recommended)
-- Xcode 16.0+
-- Swift 6.0+
+- iOS 26.0+ deployment target (iPhone 16 Pro simulator default)
+- iPhone 16 Pro or newer hardware for on-device validation
+- Xcode 16.4+ with the Swift 6.2 toolchain
+- Homebrew toolchain via `make install-deps` (SwiftLint, SwiftFormat, xcbeautify)
 
 ## Installation
 
@@ -79,48 +80,49 @@ cd fonic-hifi
 
 ### Open in Xcode
 ```bash
-open "Fonic HiFi.xcodeproj"
+make open
 ```
 
 ### Build and Run
-1. Select your target device or simulator
-2. Press `Cmd+R` to build and run
-3. Grant file access permissions when prompted
+1. Run `make run` to build and launch on the iPhone 16 Pro (iOS 26) simulator.
+2. Grant file access permissions when prompted.
+3. Connect an external DAC before launch if you want to validate bit-perfect playback.
 
 ## Development
 
-### Build Commands
+### Build & Test Commands
 
 ```bash
-# Debug build
-xcodebuild -scheme "Fonic HiFi" -sdk iphonesimulator -configuration Debug build
-
-# Release build
-xcodebuild -scheme "Fonic HiFi" -sdk iphonesimulator -configuration Release build
-
-# Run tests
-xcodebuild test -scheme "Fonic HiFi" -sdk iphonesimulator
-
-# Clean build
-xcodebuild clean -scheme "Fonic HiFi"
+make build        # Debug build for iPhone 16 Pro (iOS 26)
+make test-unit    # Unit + integration test suites
+make test-ui      # End-to-end UI flows
+make lint         # SwiftLint quality checks
+make format       # SwiftFormat auto-formatting
+make clean        # Reset derived data and build artifacts
 ```
 
 ### Project Structure
 
 ```
 Fonic HiFi/
+├── Assets.xcassets/              # Design assets
 ├── Core/
-│   ├── Audio/           # Audio engine and playback logic
-│   ├── Models/          # Data models
-│   └── Services/        # Business logic
+│   └── Audio/                    # Engine facade, adapters, diagnostics
 ├── Data/
-│   ├── Models/          # SwiftData models
-│   └── Actors/          # Concurrency actors
+│   ├── Actors/                   # SwiftData model actors
+│   ├── Extensions/               # SwiftData helpers (pagination, batching)
+│   ├── Migration/                # Schema migration plans
+│   ├── Models/                   # SwiftData model definitions
+│   └── Services/                 # Library import + metadata services
 ├── Presentation/
-│   ├── Views/           # SwiftUI views
-│   ├── Components/      # Reusable UI components
-│   └── Environment/     # Custom environment values
-└── Resources/           # Assets and configurations
+│   ├── Environment/              # SwiftUI environment values
+│   ├── Models/                   # Presentation models and fixtures
+│   ├── ViewModels/               # Screen-level controllers
+│   └── Views/                    # SwiftUI screens and components
+├── Utils/                        # Shared helpers and diagnostics utilities
+├── ContentView.swift             # Primary SwiftUI entry point
+├── FonicHiFiApp.swift            # App lifecycle entry point
+└── Fonic_HiFi.entitlements       # Capability configuration
 ```
 
 ### Contributing
@@ -134,7 +136,7 @@ Contributions are welcome! Please follow these guidelines:
 5. Open a Pull Request
 
 ### Code Style
-- Swift 6 strict concurrency compliance
+- Swift 6.2 approachable concurrency with main-actor-by-default mode
 - SwiftUI best practices
 - Comprehensive documentation for public APIs
 - Unit tests for business logic
