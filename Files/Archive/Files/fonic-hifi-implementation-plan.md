@@ -1,6 +1,7 @@
 # Fonic HiFi Implementation Plan
 
 > **Archived (2025-09):** Historic plan that referenced SFBAudioEngine/FFmpeg stubs; retained for context only.
+> **Status Update (2025-09-26)**: [Unverified] Legacy steps reference pre-iOS 26 toolchains, fictional module paths (e.g., `/FonicHiFi/App`), and automated test scaffolding that do not exist in the current repository. Treat coverage metrics and testing tasks as future-state work until new specs land.
 
 This implementation plan provides a detailed, step-by-step guide for developing the Fonic HiFi iOS application. Each step is designed to build incrementally on the previous one while maintaining a functioning state throughout development.
 
@@ -10,13 +11,13 @@ This implementation plan provides a detailed, step-by-step guide for developing 
 
 **Detailed technical explanation**
 
-We'll create the Xcode project with the proper configuration for iOS 18+, Swift 6, and SwiftUI 5. We'll establish the foundational architecture following MVVM pattern with feature-based modules and set up the core folder structure that will house all components.
+We'll create the Xcode project with the proper configuration for iOS 26 (simulator target), Swift 6.2, and the current SwiftUI toolset. We'll establish the foundational architecture following MVVM pattern with feature-based modules and set up the core folder structure that will house all components. [Unverified] Folder names shown below predate the current `Fonic HiFi/` layout and should be mapped manually when applying this plan.
 
 **Task Breakdown**
 
 • Create Xcode Project
   - Create new iOS app using SwiftUI lifecycle
-  - Target iOS 18+, Swift 6, SwiftUI 5
+  - Target iOS 26 simulator, Swift 6.2, SwiftUI (current toolchain) [Unverified]
   - Configure app name, bundle identifier, and team
   - `/FonicHiFi.xcodeproj` - Create
 
@@ -45,7 +46,7 @@ We'll create the Xcode project with the proper configuration for iOS 18+, Swift 
   - `/FonicHiFi/App/AppConfiguration.swift` - Create
 
 **Other Notes**
-- Ensure Xcode 16+ is installed
+- Ensure Xcode 26.x (with the iOS 26 SDK) is installed
 - Create a .gitignore file appropriate for Swift/iOS projects
 - Consider setting up SwiftLint for code style enforcement
 

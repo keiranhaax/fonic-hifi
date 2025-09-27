@@ -26,7 +26,7 @@ mcp__sosumi__fetchAppleDocumentation("/path") → Confirm
 - **Search**: `make search PATTERN='text'` > Task tool > multiple Grep/Glob calls
 - **Files**: Read before Edit, MultiEdit > single Edit
 - **Git**: `make pr-create`, `make issues` > gh CLI directly
-- **Tests**: `make test-unit` > manual xcodebuild commands
+- **Tests**: No test targets configured (debug views available in app)
 - **Lint**: `make lint` after every code change
 - **Format**: `make format` before commits
 - **Context**: /clear between unrelated tasks
@@ -108,7 +108,7 @@ make check-deps
 - `make build-check` - Quick build check (exit code only)
 - `make error-report` - Generate detailed error report
 - `make run` - Build and run in simulator
-- `make test` - Run all tests
+- `make test` - Shows message about no tests configured
 - `make lint` - Check code quality
 - `make format` - Auto-format code
 - `make clean` - Clean build artifacts
@@ -174,17 +174,11 @@ make open
 
 ### Testing Commands
 ```bash
-# Run all tests (unit + UI)
-make test
-
-# Run unit tests only (faster)
-make test-unit
-
-# Run UI tests only
-make test-ui
-
-# Generate test coverage report
-make coverage
+# Test commands (no tests configured)
+make test         # Shows no tests message
+make test-unit    # Shows no unit tests message
+make test-ui      # Shows no UI tests message
+make coverage     # Shows no coverage message
 ```
 
 ### Code Quality Commands
@@ -564,14 +558,12 @@ class MockAudioEngine: AudioEngineProtocol {
 }
 ```
 
-**UI Testing for Audio Playback:**
+**Testing Status:**
 ```bash
-# Run all UI tests
-make test-ui
-
-# For specific test targeting, use xcodebuild directly:
-xcodebuild test -scheme "Fonic HiFi" -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.0' \
-    -only-testing:"Fonic HiFiUITests/AudioControlsUITests/testPlayPauseButton"
+# No test targets currently configured
+# Debug views available in app for testing scenarios:
+# - MinimalCrashTest.swift - Debug crash scenarios
+# - DebugContentView.swift - Debug UI interactions
 ```
 
 ## Makefile Automation Features
@@ -590,14 +582,11 @@ make watch-test
 
 ### Advanced Workflows
 ```bash
-# Full build and test cycle
-make all  # Runs: clean → lint → build → test
+# Full build cycle (without tests)
+make all  # Runs: clean → lint → build
 
 # Parse last build for errors
 make parse-errors
-
-# Extract test results as JSON
-make test-json
 ```
 
 ### Project Navigation Tips
@@ -641,7 +630,7 @@ make test-json
 5. Run `make lint` to check code quality
 6. Run `make format` to ensure consistent style
 7. Add unit tests for business logic
-8. Run `make test-unit` for fast test validation
+8. Debug views available in app for testing scenarios
 9. Run `make build` to verify compilation
 10. Run `make run` to test in iPhone 16 Pro simulator (iOS 26.0)
 11. Run `make coverage` if code coverage needed

@@ -25,7 +25,10 @@ struct FonicHiFiApp: App {
     init() {
         // Disable SwiftUI's async rendering if it's causing issues
         UserDefaults.standard.set(false, forKey: "SwiftUI.Animation.AsyncRendering")
-        
+
+        // Create logger early for error reporting
+        let initLogger = Logger(subsystem: "com.fonichifi.app", category: "FonicHiFiApp.init")
+
         do {
             let dataManager = try DataManager()
             let playbackStateManager = PlaybackStateManager()  // Shared instance
@@ -34,13 +37,36 @@ struct FonicHiFiApp: App {
                 trackDataActor: dataManager.trackDataActor,
                 metadataExtractor: dataManager.metadataExtractor
             )
-            
+
             self._dataManager = StateObject(wrappedValue: dataManager)
             self._audioService = StateObject(wrappedValue: audioService)
             self._importService = StateObject(wrappedValue: importService)
-            
+
         } catch {
-            fatalError("Failed to initialize app: \(error.localizedDescription)")
+            initLogger.critical("Failed to initialize app: \(error.localizedDescription)")
+
+            // Create minimal fallback instances to allow app to launch
+            // with reduced functionality rather than crashing
+            let playbackStateManager = PlaybackStateManager()
+            let audioService = AudioEngineFacade(stateManager: playbackStateManager)
+
+            // Try to create a minimal DataManager if possible
+            if let fallbackDataManager = try? DataManager() {
+                let importService = LibraryImportService(
+                    trackDataActor: fallbackDataManager.trackDataActor,
+                    metadataExtractor: fallbackDataManager.metadataExtractor
+                )
+                self._dataManager = StateObject(wrappedValue: fallbackDataManager)
+                self._importService = StateObject(wrappedValue: importService)
+            } else {
+                // Create dummy services that won't work but allow UI to load
+                let dummyDataManager = DataManager.makePreviewDataManager()
+                let dummyImportService = DataManager.makePreviewImportService()
+                self._dataManager = StateObject(wrappedValue: dummyDataManager)
+                self._importService = StateObject(wrappedValue: dummyImportService)
+            }
+
+            self._audioService = StateObject(wrappedValue: audioService)
         }
     }
     

@@ -9,6 +9,8 @@ import Foundation
 import Observation
 import Combine
 import AVFoundation
+import MediaPlayer
+import UIKit
 
 /// High-level facade that coordinates all audio infrastructure components
 /// Provides a unified interface for audio playback, state management, queue operations, 
@@ -174,7 +176,11 @@ public final class AudioEngineFacade: ObservableObject {
             // 3. Initialize monitoring
             await monitor.startMonitoring(updateInterval: 1.0)
             logger.debug("Audio monitoring started")
-            
+
+            // 4. Enable remote commands for Control Center
+            await sessionManager.enableRemoteCommands()
+            logger.debug("Remote commands enabled")
+
             isInitialized = true
             isReady = true
             
@@ -270,7 +276,10 @@ public final class AudioEngineFacade: ObservableObject {
             stateManager.updateState(.playing(currentTime: 0, duration: formatInfo.duration))
             
             try await engine.play()
-            
+
+            // Update Now Playing info for Control Center
+            await updateNowPlayingInfo(track: track, duration: formatInfo.duration)
+
             // Start progress timer for continuous updates
             progressTimer.start(pollInterval: 0.1) { [weak self] in
                 guard let self = self else { return }
@@ -386,6 +395,13 @@ public final class AudioEngineFacade: ObservableObject {
         
         await engine.stop()
         stateManager.updateState(.stopped)
+
+        // Clear Now Playing info
+        await clearNowPlayingInfo()
+
+        // Clear the current track
+        currentTrack = nil
+        showMiniPlayer = false
     }
     
     /// Seek to a specific time position
@@ -570,7 +586,30 @@ public final class AudioEngineFacade: ObservableObject {
     }
     
     // MARK: - Private Implementation
-    
+
+    /// Update Now Playing info for Control Center and Lock Screen
+    private func updateNowPlayingInfo(track: Track, duration: TimeInterval) async {
+        var nowPlayingInfo: [String: Any] = [
+            MPMediaItemPropertyTitle: track.title,
+            MPMediaItemPropertyAlbumTitle: track.album,
+            MPMediaItemPropertyArtist: track.artist,
+            MPMediaItemPropertyPlaybackDuration: duration,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: 0,
+            MPNowPlayingInfoPropertyPlaybackRate: 1.0
+        ]
+
+        // Add artwork if available - Note: Track model doesn't have artwork yet
+        // This would need to be added to the Track model or loaded separately
+        // For now, we'll skip artwork
+
+        await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
+    }
+
+    /// Clear Now Playing info when playback stops
+    private func clearNowPlayingInfo() async {
+        await sessionManager.clearNowPlayingInfo()
+    }
+
     private func setupServiceIntegrations() async {
         logger.debug("Setting up service integrations...")
 

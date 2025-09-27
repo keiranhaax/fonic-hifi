@@ -1,0 +1,93 @@
+Checking dependencies...
+
+Critical (Required):
+  [OK] xcodebuild
+
+Build & Formatting:
+  [OK] xcbeautify
+  [OK] swiftlint
+  [OK] swiftformat
+
+Search & Navigation (Optional):
+  [OK] ripgrep (rg)
+  [OK] fd
+  [OK] fzf
+  [OK] bat
+  [OK] eza
+
+Analysis & Monitoring (Optional):
+  [OK] tokei
+  [OK] watchman
+  [OK] hyperfine
+  [OK] jq
+
+Git & AI Tools (Optional):
+  [OK] gh
+  [OK] mods
+  [OK] llm
+
+Dependency check complete
+Building Fonic HiFi (Debug)...
+
+----- xcbeautify -----
+Version: 2.30.1
+----------------------
+
+[36;1mResolving Package Graph[0m
+[32;1mResolved source packages[0m
+[36;1mAudioKit[0m - [1mhttps://github.com/AudioKit/AudioKit.git[0m @ [32m5.6.5[0m
+[36;1mnote: [0mUsing codesigning identity override: 
+[36;1mnote: [0mBuilding targets in dependency order
+[36;1mnote: [0mTarget dependency graph (4 targets)
+[[36mAudioKit_AudioKit[0m] [1mProcessing[0m empty-AudioKit_AudioKit.plist
+[[36mFonic HiFi[0m] [1mCompiling[0m FileManagerView.swift
+❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Views/Settings/FileManagerView.swift:308:15: [31mgeneric parameter 'T' could not be inferred[0m
+        await withCheckedContinuation { continuation in
+[36m              ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackStateManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineFacade.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:210:16: [33mvalue 'engine' was defined but never used; consider replacing with boolean test[0m
+        if let engine = currentEngine {
+[32m           ~~~~^~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:592:13: [33mvariable 'nowPlayingInfo' was never mutated; consider changing to 'let' constant[0m
+        var nowPlayingInfo: [String: Any] = [
+[32m        ~~~ ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:678:28: [33mno 'async' operations occur within 'await' expression[0m
+        let currentState = await stateManager.currentState
+[32m                           ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:686:16: [33mvalue 'engine' was defined but never used; consider replacing with boolean test[0m
+        if let engine = currentEngine {
+[32m           ~~~~^~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:706:19: [33mvalue 'engine' was defined but never used; consider replacing with boolean test[0m
+        guard let engine = currentEngine else { return }
+[32m              ~~~~^~~~~~~~~[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m StateCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackStateStore.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PerformanceOptimizedContainer.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugContentView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugNowPlayingView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BottomSearchBar.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassRail.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassTabBar.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AppSettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileDetailsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugTrackRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MinimalCrashTest.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileImportView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LibraryView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaylistListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ContentView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ContentView_Safe.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp_Debug.swift
+❌ Build failed with exit code 65
+First 5 errors:
+/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Views/Settings/FileManagerView.swift:308:15: error: generic parameter 'T' could not be inferred
+make[1]: *** [build] Error 65

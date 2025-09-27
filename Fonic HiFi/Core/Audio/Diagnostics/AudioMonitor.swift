@@ -1385,6 +1385,15 @@ private extension AudioMonitor {
             )
         }
         
+        func severityRank(_ severity: BottleneckSeverity) -> Int {
+            switch severity {
+            case .critical: return 4
+            case .major: return 3
+            case .moderate: return 2
+            case .minor: return 1
+            }
+        }
+
         return bottlenecks
             .sorted { severityRank($0.severity) > severityRank($1.severity) }
     }
@@ -1867,7 +1876,7 @@ private extension AudioMonitor {
             if latest.jitter > 0.004 {
                 recommendations.append(
                     PerformanceRecommendation(
-                        type: .hardware,
+                        type: .engineSelection,
                         priority: .medium,
                         title: "Use Wired Output",
                         description: "Detected jitter of \(String(format: "%.3f", latest.jitter * 1_000)) ms. Wired output stabilizes the master clock.",
@@ -2129,7 +2138,7 @@ private extension AudioMonitor {
             ),
             audioStackInfo: audioStackInfo,
             performanceCounters: performanceCounters,
-            debugFlags: debugFlags
+            debugFlags: debugFlags.reduce(into: [:]) { $0[$1.key] = $1.value == "true" }
         )
     }
     
@@ -2233,7 +2242,7 @@ private extension AudioMonitor {
         let formatter = ISO8601DateFormatter()
         for metric in metrics {
             let memoryMB = Double(metric.memoryUsage) / 1_048_576
-            let row = "\(formatter.string(from: metric.timestamp)),\(String(format: \"%.1f\", metric.cpuUsage)),\(String(format: \"%.0f\", memoryMB)),\(String(format: \"%.2f\", metric.bufferFillLevel)),\(String(format: \"%.3f\", metric.renderLatency * 1000)),\(String(format: \"%.2f\", metric.performanceScore)),\(String(format: \"%.2f\", metric.qualityScore)),\(metric.isBitPerfect)"
+            let row = "\(formatter.string(from: metric.timestamp)),\(String(format: "%.1f", metric.cpuUsage)),\(String(format: "%.0f", memoryMB)),\(String(format: "%.2f", metric.bufferFillLevel)),\(String(format: "%.3f", metric.renderLatency * 1000)),\(String(format: "%.2f", metric.performanceScore)),\(String(format: "%.2f", metric.qualityScore)),\(metric.isBitPerfect)"
             rows.append(row)
         }
         return rows.joined(separator: "\n").data(using: .utf8) ?? Data()
@@ -2244,12 +2253,12 @@ private extension AudioMonitor {
         var xml = "<metrics>\n"
         for metric in metrics {
             xml += "  <metric timestamp=\"\(formatter.string(from: metric.timestamp))\">\n"
-            xml += "    <cpuUsage>\(String(format: \"%.1f\", metric.cpuUsage))</cpuUsage>\n"
-            xml += "    <memoryUsageMB>\(String(format: \"%.0f\", Double(metric.memoryUsage) / 1_048_576))</memoryUsageMB>\n"
-            xml += "    <bufferFill>\(String(format: \"%.2f\", metric.bufferFillLevel))</bufferFill>\n"
-            xml += "    <renderLatencyMs>\(String(format: \"%.3f\", metric.renderLatency * 1000))</renderLatencyMs>\n"
-            xml += "    <performanceScore>\(String(format: \"%.2f\", metric.performanceScore))</performanceScore>\n"
-            xml += "    <qualityScore>\(String(format: \"%.2f\", metric.qualityScore))</qualityScore>\n"
+            xml += "    <cpuUsage>\(String(format: "%.1f", metric.cpuUsage))</cpuUsage>\n"
+            xml += "    <memoryUsageMB>\(String(format: "%.0f", Double(metric.memoryUsage) / 1_048_576))</memoryUsageMB>\n"
+            xml += "    <bufferFill>\(String(format: "%.2f", metric.bufferFillLevel))</bufferFill>\n"
+            xml += "    <renderLatencyMs>\(String(format: "%.3f", metric.renderLatency * 1000))</renderLatencyMs>\n"
+            xml += "    <performanceScore>\(String(format: "%.2f", metric.performanceScore))</performanceScore>\n"
+            xml += "    <qualityScore>\(String(format: "%.2f", metric.qualityScore))</qualityScore>\n"
             xml += "    <bitPerfect>\(metric.isBitPerfect)</bitPerfect>\n"
             xml += "  </metric>\n"
         }
