@@ -40,53 +40,24 @@ Version: 2.30.1
 [36;1mnote: [0mBuilding targets in dependency order
 [36;1mnote: [0mTarget dependency graph (4 targets)
 [[36mAudioKit_AudioKit[0m] [1mProcessing[0m empty-AudioKit_AudioKit.plist
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackCache.swift
+❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:17:13: [31mstored property 'track' of 'Sendable'-conforming struct 'CacheEntry' has non-Sendable type 'Track'[0m
+        let track: Track
+[36m            ^[0m
+❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:96:67: [31mreference to property 'cache' in closure requires explicit use of 'self' to make capture semantics explicit[0m
+        logger.debug("Cached track: \(track.title) (cache size: \(cache.count))")
+[36m                                                                  ^[0m
+❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:121:76: [31mreference to property 'cache' in closure requires explicit use of 'self' to make capture semantics explicit[0m
+        logger.info("Evicted \(evictedCount) items from cache (new size: \(cache.count))")
+[36m                                                                           ^[0m
 [[36mFonic HiFi[0m] [1mCompiling[0m TrackDataActor.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchCache.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DataManager.swift
 [[36mFonic HiFi[0m] [1mCompiling[0m ImportSession.swift
 [[36mFonic HiFi[0m] [1mCompiling[0m LibraryImportService.swift
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:151:13: [31mmain actor-isolated property 'importErrors' can not be mutated from a nonisolated context[0m
-            importErrors.append(ImportError(
-[36m            ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:429:9: [31mmain actor-isolated property 'statusMessage' can not be mutated from a nonisolated context[0m
-        statusMessage = "Processing \(url.lastPathComponent)..."
-[36m        ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:460:9: [31mmain actor-isolated property 'filesProcessed' can not be mutated from a nonisolated context[0m
-        filesProcessed += 1
-[36m        ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:461:9: [31mmain actor-isolated property 'importProgress' can not be mutated from a nonisolated context[0m
-        importProgress = totalFiles > 0 ? Double(filesProcessed) / Double(totalFiles) : 0.0
-[36m        ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:461:26: [31mnon-Sendable type 'LibraryImportService' cannot be sent into main actor-isolated context in call to property 'totalFiles'[0m
-        importProgress = totalFiles > 0 ? Double(filesProcessed) / Double(totalFiles) : 0.0
-[36m                         ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:461:50: [31mnon-Sendable type 'LibraryImportService' cannot be sent into main actor-isolated context in call to property 'filesProcessed'[0m
-        importProgress = totalFiles > 0 ? Double(filesProcessed) / Double(totalFiles) : 0.0
-[36m                                                 ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:461:75: [31mnon-Sendable type 'LibraryImportService' cannot be sent into main actor-isolated context in call to property 'totalFiles'[0m
-        importProgress = totalFiles > 0 ? Double(filesProcessed) / Double(totalFiles) : 0.0
-[36m                                                                          ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:462:9: [31mmain actor-isolated property 'statusMessage' can not be mutated from a nonisolated context[0m
-        statusMessage = "Processed \(filesProcessed) of \(totalFiles) files"
-[36m        ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:462:38: [31mnon-Sendable type 'LibraryImportService' cannot be sent into main actor-isolated context in call to property 'filesProcessed'[0m
-        statusMessage = "Processed \(filesProcessed) of \(totalFiles) files"
-[36m                                     ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:462:59: [31mnon-Sendable type 'LibraryImportService' cannot be sent into main actor-isolated context in call to property 'totalFiles'[0m
-        statusMessage = "Processed \(filesProcessed) of \(totalFiles) files"
-[36m                                                          ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:461:26: [31mexpression is 'async' but is not marked with 'await'[0m
-        importProgress = totalFiles > 0 ? Double(filesProcessed) / Double(totalFiles) : 0.0
-[36m                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:462:38: [31mmain actor-isolated property 'filesProcessed' cannot be accessed from outside of the actor[0m
-        statusMessage = "Processed \(filesProcessed) of \(totalFiles) files"
-[36m                                     ^~~~~~~~~~~~~~[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:462:59: [31mmain actor-isolated property 'totalFiles' cannot be accessed from outside of the actor[0m
-        statusMessage = "Processed \(filesProcessed) of \(totalFiles) files"
-[36m                                                          ^~~~~~~~~~[0m
 ❌ Build failed with exit code 65
 First 5 errors:
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:151:13: error: main actor-isolated property 'importErrors' can not be mutated from a nonisolated context
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:429:9: error: main actor-isolated property 'statusMessage' can not be mutated from a nonisolated context
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:460:9: error: main actor-isolated property 'filesProcessed' can not be mutated from a nonisolated context
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:461:9: error: main actor-isolated property 'importProgress' can not be mutated from a nonisolated context
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/LibraryImportService.swift:461:26: error: non-Sendable type 'LibraryImportService' cannot be sent into main actor-isolated context in call to property 'totalFiles'
+/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:17:13: error: stored property 'track' of 'Sendable'-conforming struct 'CacheEntry' has non-Sendable type 'Track'
+/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:96:67: error: reference to property 'cache' in closure requires explicit use of 'self' to make capture semantics explicit
+/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:121:76: error: reference to property 'cache' in closure requires explicit use of 'self' to make capture semantics explicit
 make[1]: *** [build] Error 65

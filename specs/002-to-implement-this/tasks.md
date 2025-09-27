@@ -62,9 +62,9 @@
 - [X] T023 [P] Create ImportSession actor in `Fonic HiFi/Data/Services/ImportSession.swift` per data-model.md specification
 
 ### Performance Optimizations (FR-009, FR-010, FR-011, FR-013, FR-014)
-- [ ] T024 Implement pagination (100 items per page) in `Fonic HiFi/Data/Services/DataManager.swift` for large queries
-- [ ] T025 [P] Create TrackCache actor in `Fonic HiFi/Core/Audio/Cache/TrackCache.swift` with LRU eviction
-- [ ] T026 [P] Create SearchCache actor in `Fonic HiFi/Data/Services/SearchCache.swift` with TTL expiration
+- [X] T024 Implement pagination (100 items per page) in `Fonic HiFi/Data/Services/DataManager.swift` for large queries
+- [X] T025 [P] Create TrackCache actor in `Fonic HiFi/Core/Audio/Cache/TrackCache.swift` with LRU eviction
+- [X] T026 [P] Create SearchCache actor in `Fonic HiFi/Data/Services/SearchCache.swift` with TTL expiration
 - [ ] T027 Batch progress timer updates to 0.2s intervals in `Fonic HiFi/Core/Audio/Engine/ProgressTimerManager.swift`
 - [ ] T028 Optimize queue state transitions in `Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift` with cached shuffle sequences
 - [ ] T029 [P] Implement AudioMetrics struct in `Fonic HiFi/Core/Audio/Diagnostics/AudioMetrics.swift` per data-model.md
