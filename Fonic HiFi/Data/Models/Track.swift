@@ -150,7 +150,21 @@ public final class Track: TrackProtocol {
     
     /// Musical key
     public var musicalKey: String?
-    
+
+    // MARK: - Relationships
+
+    /// Relationship to the album this track belongs to
+    @Relationship(deleteRule: .nullify)
+    public var albumRelation: Album?
+
+    /// Relationship to the artist of this track
+    @Relationship(deleteRule: .nullify)
+    public var artistRelation: Artist?
+
+    /// Playlists containing this track
+    @Relationship(deleteRule: .nullify, inverse: \Playlist.tracks)
+    public var playlists: [Playlist] = []
+
     // MARK: - Computed Properties
     
     /// Full file path as string

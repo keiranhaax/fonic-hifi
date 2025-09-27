@@ -50,11 +50,11 @@
 ## Phase 3.3: Week 2-3 - Performance Optimizations (FR-007 to FR-014) (16 tasks)
 
 ### Data Model Updates (FR-008)
-- [ ] T016 [P] Add @Relationship macros to `Fonic HiFi/Data/Models/Album.swift`
-- [ ] T017 [P] Add @Relationship macros to `Fonic HiFi/Data/Models/Artist.swift`
-- [ ] T018 [P] Add @Relationship macros to `Fonic HiFi/Data/Models/Track.swift`
-- [ ] T019 [P] Implement computed properties (trackCount, totalDuration) in `Fonic HiFi/Data/Models/Album.swift`
-- [ ] T020 [P] Implement computed properties (trackCount, albumCount) in `Fonic HiFi/Data/Models/Artist.swift`
+- [X] T016 [P] Add @Relationship macros to `Fonic HiFi/Data/Models/Album.swift`
+- [X] T017 [P] Add @Relationship macros to `Fonic HiFi/Data/Models/Artist.swift`
+- [X] T018 [P] Add @Relationship macros to `Fonic HiFi/Data/Models/Track.swift`
+- [X] T019 [P] Implement computed properties (trackCount, totalDuration) in `Fonic HiFi/Data/Models/Album.swift`
+- [X] T020 [P] Implement computed properties (trackCount, albumCount) in `Fonic HiFi/Data/Models/Artist.swift`
 
 ### Async I/O Operations (FR-007, FR-012)
 - [ ] T021 Move file I/O operations off @MainActor in `Fonic HiFi/Data/Services/LibraryImportService.swift`

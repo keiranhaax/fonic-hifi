@@ -47,32 +47,38 @@ public final class Artist {
     public var externalUrls: [String: String]
     
     // MARK: - Artwork
-    
+
     /// Artist photo or logo
     public var artwork: Data?
-    
+
     /// URL to artist artwork (if stored externally)
     public var artworkUrl: URL?
-    
+
+    // MARK: - Relationships
+
+    /// Albums by this artist
+    @Relationship(deleteRule: .nullify)
+    public var albums: [Album] = []
+
+    /// Tracks by this artist
+    @Relationship(deleteRule: .nullify, inverse: \Track.artistRelation)
+    public var tracks: [Track] = []
+
     // MARK: - Computed Properties
     
     /// Number of tracks by this artist (calculated from relationships)
     public var trackCount: Int {
-        // This would be calculated based on Track relationships
-        // For now, return 0 as this will be populated by the database layer
-        return 0
+        tracks.count
     }
-    
+
     /// Number of albums by this artist
     public var albumCount: Int {
-        // This would be calculated based on Album relationships
-        return 0
+        albums.count
     }
-    
+
     /// Total duration of all tracks by this artist
     public var totalDuration: TimeInterval {
-        // This would be calculated based on Track relationships
-        return 0
+        tracks.reduce(0) { $0 + $1.duration }
     }
     
     /// First letter for section indexing
