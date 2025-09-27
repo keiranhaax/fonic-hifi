@@ -71,10 +71,18 @@ struct FonicHiFiApp: App {
                 self._importService = StateObject(wrappedValue: importService)
             } else {
                 // Create dummy services that won't work but allow UI to load
-                let dummyDataManager = DataManager.makePreviewDataManager()
-                let dummyImportService = DataManager.makePreviewImportService()
-                self._dataManager = StateObject(wrappedValue: dummyDataManager)
-                self._importService = StateObject(wrappedValue: dummyImportService)
+                if let dummyDataManager = DataManager.makePreviewDataManager() {
+                    let dummyImportService = DataManager.makePreviewImportService()
+                    self._dataManager = StateObject(wrappedValue: dummyDataManager)
+                    self._importService = StateObject(wrappedValue: dummyImportService)
+                } else {
+                    // If even preview creation fails, try with a basic DataManager
+                    // This is a last resort - accepting potential crash
+                    let fallbackDataManager = try! DataManager()
+                    let dummyImportService = DataManager.makePreviewImportService()
+                    self._dataManager = StateObject(wrappedValue: fallbackDataManager)
+                    self._importService = StateObject(wrappedValue: dummyImportService)
+                }
             }
 
             self._audioService = StateObject(wrappedValue: audioService)

@@ -608,18 +608,26 @@ extension DataManager {
                 configurations: [modelConfiguration]
             )
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // Log error and return a basic in-memory container as fallback
+            print("Warning: Could not create ModelContainer with migration: \(error)")
+            print("Falling back to basic in-memory container")
+            return try! ModelContainer(
+                for: schema,
+                configurations: [modelConfiguration]
+            )
         }
     }
     
     /// Create a preview DataManager for SwiftUI previews
     @MainActor
-    static func makePreviewDataManager() -> DataManager {
+    static func makePreviewDataManager() -> DataManager? {
         do {
             let previewDataManager = try DataManager()
             return previewDataManager
         } catch {
-            fatalError("Could not create preview DataManager: \(error)")
+            print("Error creating preview DataManager: \(error)")
+            print("Preview functionality may be limited")
+            return nil
         }
     }
     

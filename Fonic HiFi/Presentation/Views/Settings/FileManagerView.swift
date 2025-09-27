@@ -449,7 +449,11 @@ enum SortOption: CaseIterable {
 }
 
 #Preview {
-    FileManagerView()
-        .dataManager(DataManager.makePreviewDataManager())
-        .importService(DataManager.makePreviewImportService())
+    if let previewDataManager = DataManager.makePreviewDataManager() {
+        FileManagerView()
+            .dataManager(previewDataManager)
+            .importService(DataManager.makePreviewImportService())
+    } else {
+        Text("Preview unavailable")
+    }
 }
