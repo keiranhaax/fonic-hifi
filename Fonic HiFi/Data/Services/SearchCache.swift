@@ -13,20 +13,52 @@ public actor SearchCache {
 
     // MARK: - Types
 
+    /// Simplified track data for cache storage
+    public struct CachedTrack: Sendable {
+        public let id: UUID
+        public let title: String
+        public let artist: String
+        public let album: String
+        public let duration: TimeInterval
+    }
+
+    /// Simplified album data for cache storage
+    public struct CachedAlbum: Sendable {
+        public let id: UUID
+        public let title: String
+        public let artistName: String
+        public let trackCount: Int
+    }
+
+    /// Simplified artist data for cache storage
+    public struct CachedArtist: Sendable {
+        public let id: UUID
+        public let name: String
+        public let albumCount: Int
+        public let trackCount: Int
+    }
+
+    /// Simplified playlist data for cache storage
+    public struct CachedPlaylist: Sendable {
+        public let id: UUID
+        public let name: String
+        public let trackCount: Int
+    }
+
     public struct SearchResult: Sendable {
         public let query: String
-        public let tracks: [Track]
-        public let albums: [Album]
-        public let artists: [Artist]
-        public let playlists: [Playlist]
+        public let tracks: [CachedTrack]
+        public let albums: [CachedAlbum]
+        public let artists: [CachedArtist]
+        public let playlists: [CachedPlaylist]
         public let timestamp: Date
 
         public init(
             query: String,
-            tracks: [Track] = [],
-            albums: [Album] = [],
-            artists: [Artist] = [],
-            playlists: [Playlist] = [],
+            tracks: [CachedTrack] = [],
+            albums: [CachedAlbum] = [],
+            artists: [CachedArtist] = [],
+            playlists: [CachedPlaylist] = [],
             timestamp: Date = Date()
         ) {
             self.query = query
@@ -74,7 +106,9 @@ public actor SearchCache {
         logger.info("SearchCache initialized with TTL: \(ttl)s, max size: \(maxCacheSize)")
 
         // Start periodic cleanup task
-        startCleanupTask()
+        Task {
+            await startCleanupTask()
+        }
     }
 
     deinit {
@@ -124,11 +158,22 @@ public actor SearchCache {
     public func updateTracks(_ query: String, tracks: [Track]) async {
         let normalizedQuery = normalizeQuery(query)
 
+        // Convert Track objects to CachedTrack
+        let cachedTracks = tracks.map { track in
+            CachedTrack(
+                id: track.id,
+                title: track.title,
+                artist: track.artist,
+                album: track.album,
+                duration: track.duration
+            )
+        }
+
         if var existing = cache[normalizedQuery], !existing.isExpired(ttl: ttl) {
             // Update with new tracks while preserving other results
             cache[normalizedQuery] = SearchResult(
                 query: existing.query,
-                tracks: tracks,
+                tracks: cachedTracks,
                 albums: existing.albums,
                 artists: existing.artists,
                 playlists: existing.playlists,
@@ -138,7 +183,7 @@ public actor SearchCache {
             // Create new result with just tracks
             cache[normalizedQuery] = SearchResult(
                 query: query,
-                tracks: tracks,
+                tracks: cachedTracks,
                 timestamp: Date()
             )
         }
@@ -235,10 +280,10 @@ public actor SearchCache {
 
         // Sort by timestamp and keep most recent
         let sortedEntries = cache.sorted { $0.value.timestamp > $1.value.timestamp }
-        let entriesToKeep = sortedEntries.prefix(Int(Double(maxCacheSize) * 0.75))
+        let entriesToKeep = Array(sortedEntries.prefix(Int(Double(maxCacheSize) * 0.75)))
 
-        cache = Dictionary(uniqueKeysWithValues: entriesToKeep)
-        logger.info("Trimmed cache to \(cache.count) entries")
+        self.cache = Dictionary(uniqueKeysWithValues: entriesToKeep)
+        logger.info("Trimmed cache to \(self.cache.count) entries")
     }
 
     // MARK: - Cache Statistics

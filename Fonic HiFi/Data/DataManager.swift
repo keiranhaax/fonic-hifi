@@ -188,20 +188,20 @@ public final class DataManager: ObservableObject {
 
     /// Fetch all tracks in batches (for large operations like export)
     public func fetchAllTracksInBatches(
-        batchSize: Int = defaultPageSize,
-        process: ([Track]) async throws -> Void
-    ) async throws {
+        batchSize: Int = defaultPageSize
+    ) async throws -> [Track] {
+        var allTracks: [Track] = []
         var page = 0
         var hasMore = true
 
         while hasMore {
             let result = try await fetchTracks(page: page, pageSize: batchSize)
-            if !result.tracks.isEmpty {
-                try await process(result.tracks)
-            }
+            allTracks.append(contentsOf: result.tracks)
             hasMore = result.hasMore
             page += 1
         }
+
+        return allTracks
     }
 
     // MARK: - Search Operations
@@ -474,14 +474,10 @@ public final class DataManager: ObservableObject {
     
     /// Export library data to JSON for backup with pagination
     public func exportLibraryData() async throws -> Data {
-        var allTracks: [Track] = []
-
         // Fetch all tracks in batches to avoid memory issues
-        try await fetchAllTracksInBatches(batchSize: 100) { tracks in
-            allTracks.append(contentsOf: tracks)
-        }
+        let allTracks = try await fetchAllTracksInBatches(batchSize: 100)
         let exportData = LibraryExportData(
-            tracks: tracks.map { track in
+            tracks: allTracks.map { track in
                 TrackExportData(
                     id: track.id,
                     title: track.title,

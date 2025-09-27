@@ -205,12 +205,9 @@ public final class AudioEngineFacade: ObservableObject {
         
         // Stop playback
         await stop()
-        
-        // Cleanup engine
-        if let engine = currentEngine {
-            await monitor.detachFromEngine()
-            currentEngine = nil
-        }
+
+        // Cleanup engine properly
+        await cleanupCurrentEngine()
         
         // Cancel subscriptions
         cancellables.removeAll()
@@ -280,20 +277,21 @@ public final class AudioEngineFacade: ObservableObject {
             // Update Now Playing info for Control Center
             await updateNowPlayingInfo(track: track, duration: formatInfo.duration)
 
-            // Start progress timer for continuous updates
-            progressTimer.start(pollInterval: 0.1) { [weak self] in
+            // Start progress timer for continuous updates (batched at 0.2s intervals)
+            progressTimer.start(pollInterval: 0.2) { [weak self] in
                 guard let self = self else { return }
                 guard let engine = self.currentEngine,
                       self.currentState.isPlaying else {
                     return
                 }
-                
-                Task {
-                    let currentTime = await engine.currentTime
-                    let duration = await engine.duration
-                    await MainActor.run {
-                        self.stateManager.updateTime(currentTime, duration: duration)
-                    }
+
+                Task { @MainActor in
+                    // Batch time update with duration in single async call
+                    async let currentTime = engine.currentTime
+                    async let duration = engine.duration
+
+                    let (time, dur) = await (currentTime, duration)
+                    self.stateManager.updateTime(time, duration: dur)
                 }
             }
             
@@ -333,20 +331,21 @@ public final class AudioEngineFacade: ObservableObject {
             let duration = await engine.duration
             stateManager.updateState(.playing(currentTime: currentTime, duration: duration))
             
-            // Restart progress timer
-            progressTimer.start(pollInterval: 0.1) { [weak self] in
+            // Restart progress timer (batched at 0.2s intervals)
+            progressTimer.start(pollInterval: 0.2) { [weak self] in
                 guard let self = self else { return }
                 guard let engine = self.currentEngine,
                       self.currentState.isPlaying else {
                     return
                 }
-                
-                Task {
-                    let currentTime = await engine.currentTime
-                    let duration = await engine.duration
-                    await MainActor.run {
-                        self.stateManager.updateTime(currentTime, duration: duration)
-                    }
+
+                Task { @MainActor in
+                    // Batch time update with duration in single async call
+                    async let currentTime = engine.currentTime
+                    async let duration = engine.duration
+
+                    let (time, dur) = await (currentTime, duration)
+                    self.stateManager.updateTime(time, duration: dur)
                 }
             }
             
@@ -681,23 +680,54 @@ public final class AudioEngineFacade: ObservableObject {
         }
     }
     
-    private func ensureEngineForFormat(_ formatInfo: AudioFileInfo) async throws {
-        // Check if current engine can handle this format
-        if let engine = currentEngine {
-            // For now, assume AVAudioEngine can handle all our supported formats
-            // In the future, we might need format-specific engines
-            return
+    /// Cleanup current engine properly to avoid memory leaks
+    private func cleanupCurrentEngine() async {
+        guard let engine = currentEngine else { return }
+
+        // Stop playback if needed
+        if await engine.isPlaying {
+            await engine.stop()
         }
-        
+
+        // Detach from monitoring
+        await monitor.detachFromEngine()
+
+        // Clear reference to allow deallocation
+        currentEngine = nil
+
+        logger.debug("Cleaned up previous audio engine")
+    }
+
+    private func ensureEngineForFormat(_ formatInfo: AudioFileInfo) async throws {
+        // Check if we need a different engine type for this format
+        let requiredEngineType = engineFactory.selectEngineType(
+            for: formatInfo.format,
+            configuration: engineConfiguration
+        )
+
+        // Check if current engine is the right type
+        if let engine = currentEngine {
+            let currentEngineType: AudioEngineType = engine is AudioKitEngineAdapter ? .audioKitEngine : .avAudioEngine
+
+            if currentEngineType == requiredEngineType {
+                // Current engine can handle this format
+                return
+            }
+
+            // Need to switch engines - cleanup current one first
+            logger.debug("Switching from \(currentEngineType) to \(requiredEngineType)")
+            await cleanupCurrentEngine()
+        }
+
         // Create new engine
         let engine = try await engineFactory.makeEngine(
             for: formatInfo.format,
             configuration: engineConfiguration
         )
-        
+
         // Attach to monitoring
         await monitor.attachToEngine(engine)
-        
+
         currentEngine = engine
         logger.debug("Created new audio engine for format: \(formatInfo.format.displayName)")
     }

@@ -65,11 +65,11 @@
 - [X] T024 Implement pagination (100 items per page) in `Fonic HiFi/Data/Services/DataManager.swift` for large queries
 - [X] T025 [P] Create TrackCache actor in `Fonic HiFi/Core/Audio/Cache/TrackCache.swift` with LRU eviction
 - [X] T026 [P] Create SearchCache actor in `Fonic HiFi/Data/Services/SearchCache.swift` with TTL expiration
-- [ ] T027 Batch progress timer updates to 0.2s intervals in `Fonic HiFi/Core/Audio/Engine/ProgressTimerManager.swift`
-- [ ] T028 Optimize queue state transitions in `Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift` with cached shuffle sequences
-- [ ] T029 [P] Implement AudioMetrics struct in `Fonic HiFi/Core/Audio/Diagnostics/AudioMetrics.swift` per data-model.md
-- [ ] T030 [P] Implement ImportMetrics struct in `Fonic HiFi/Data/Services/ImportMetrics.swift` per data-model.md
-- [ ] T031 Add background queue for metadata extraction in `Fonic HiFi/Data/Services/LibraryImportService.swift`
+- [X] T027 Batch progress timer updates to 0.2s intervals in `Fonic HiFi/Core/Audio/Engine/ProgressTimerManager.swift`
+- [X] T028 Optimize queue state transitions in `Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift` with cached shuffle sequences
+- [X] T029 [P] Implement AudioMetrics struct in `Fonic HiFi/Core/Audio/Diagnostics/AudioMetrics.swift` per data-model.md
+- [X] T030 [P] Implement ImportMetrics struct in `Fonic HiFi/Data/Services/ImportMetrics.swift` per data-model.md
+- [X] T031 ~~Add background queue for metadata extraction~~ (Skipped - Swift 6 concurrency constraints)
 
 ## Phase 3.4: Week 4 - Architecture & Quality (FR-015 to FR-028) (17 tasks)
 

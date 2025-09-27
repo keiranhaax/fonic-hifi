@@ -2,19 +2,48 @@
 //  TrackCache.swift
 //  Fonic HiFi
 //
-//  Created by Claude on 5/28/25.
+//  Created by Claude on 9/26/25.
 //
 
 import Foundation
-import OSLog
+import os.log
 
-/// LRU cache for frequently accessed tracks
+/// LRU cache for track data with actor isolation
 public actor TrackCache {
 
     // MARK: - Types
 
+    /// Simplified track data for cache storage
+    public struct TrackCacheData: Sendable {
+        public let id: UUID
+        public let title: String
+        public let artist: String
+        public let album: String
+        public let duration: TimeInterval
+        public let url: URL
+        public let fileSize: Int64
+
+        public init(
+            id: UUID,
+            title: String,
+            artist: String,
+            album: String,
+            duration: TimeInterval,
+            url: URL,
+            fileSize: Int64
+        ) {
+            self.id = id
+            self.title = title
+            self.artist = artist
+            self.album = album
+            self.duration = duration
+            self.url = url
+            self.fileSize = fileSize
+        }
+    }
+
     struct CacheEntry: Sendable {
-        let track: Track
+        let trackData: TrackCacheData
         var lastAccessed: Date
         var accessCount: Int
     }
@@ -39,159 +68,150 @@ public actor TrackCache {
 
     // MARK: - Public Methods
 
-    /// Get a track from cache
-    public func get(_ id: UUID) async -> Track? {
+    /// Add or update a track in the cache
+    public func addTrack(_ trackData: TrackCacheData) async {
+        let id = trackData.id
+
+        // Update access order
+        accessOrder.removeAll { $0 == id }
+        accessOrder.append(id)
+
+        // Add or update entry
+        cache[id] = CacheEntry(
+            trackData: trackData,
+            lastAccessed: Date(),
+            accessCount: 1
+        )
+
+        // Evict if needed
+        await evictIfNeeded()
+
+        logger.debug("Added track to cache: \(trackData.title)")
+    }
+
+    /// Get a track from the cache
+    public func getTrack(_ id: UUID) async -> TrackCacheData? {
         guard var entry = cache[id] else {
-            logger.debug("Cache miss for track: \(id)")
+            logger.debug("Cache miss for track ID: \(id)")
             return nil
         }
 
-        // Update access information
+        // Update access info
         entry.lastAccessed = Date()
         entry.accessCount += 1
         cache[id] = entry
 
-        // Move to front of LRU list
-        if let index = accessOrder.firstIndex(of: id) {
-            accessOrder.remove(at: index)
-        }
-        accessOrder.insert(id, at: 0)
+        // Update access order for LRU
+        accessOrder.removeAll { $0 == id }
+        accessOrder.append(id)
 
-        logger.debug("Cache hit for track: \(id) (access count: \(entry.accessCount))")
-        return entry.track
+        logger.debug("Cache hit for track: \(entry.trackData.title)")
+        return entry.trackData
     }
 
-    /// Add or update a track in cache
-    public func set(_ track: Track) async {
-        let id = track.id
-
-        // Update existing entry or create new one
-        if var entry = cache[id] {
-            // Update existing entry
-            entry.lastAccessed = Date()
-            entry.accessCount += 1
-            cache[id] = entry
-
-            // Move to front of LRU list
-            if let index = accessOrder.firstIndex(of: id) {
-                accessOrder.remove(at: index)
-            }
-            accessOrder.insert(id, at: 0)
-        } else {
-            // Add new entry
-            let entry = CacheEntry(
-                track: track,
-                lastAccessed: Date(),
-                accessCount: 1
-            )
-            cache[id] = entry
-            accessOrder.insert(id, at: 0)
-
-            // Evict if needed
-            if cache.count > maxSize {
-                await evictLRU()
-            }
-        }
-
-        logger.debug("Cached track: \(trackData.title) (cache size: \(self.cache.count))")
+    /// Remove a track from the cache
+    public func removeTrack(_ id: UUID) async {
+        cache.removeValue(forKey: id)
+        accessOrder.removeAll { $0 == id }
+        logger.debug("Removed track from cache: \(id)")
     }
 
-    /// Evict least recently used items
-    public func evictLRU() async {
-        guard !accessOrder.isEmpty else { return }
-
-        // Keep high-frequency items even if they're old
-        let evictionCandidates = accessOrder.suffix(accessOrder.count / 3)
-        var evictedCount = 0
-        let targetSize = Int(Double(maxSize) * 0.75) // Reduce to 75% capacity
-
-        for id in evictionCandidates {
-            guard cache.count > targetSize else { break }
-
-            // Don't evict items with high access count (>10 accesses)
-            if let entry = cache[id], entry.accessCount <= 10 {
-                cache.removeValue(forKey: id)
-                if let index = accessOrder.firstIndex(of: id) {
-                    accessOrder.remove(at: index)
-                }
-                evictedCount += 1
-            }
-        }
-
-        logger.info("Evicted \(evictedCount) items from cache (new size: \(cache.count))")
-    }
-
-    /// Invalidate a specific track
-    public func invalidate(_ id: UUID) async {
-        if cache.removeValue(forKey: id) != nil {
-            if let index = accessOrder.firstIndex(of: id) {
-                accessOrder.remove(at: index)
-            }
-            logger.debug("Invalidated track: \(id)")
-        }
-    }
-
-    /// Clear entire cache
+    /// Clear all cached tracks
     public func clear() async {
-        let previousSize = cache.count
         cache.removeAll()
         accessOrder.removeAll()
-        logger.info("Cleared cache (removed \(previousSize) items)")
+        logger.info("Cleared all tracks from cache")
     }
 
-    /// Preload tracks into cache
-    public func preload(_ tracks: [Track]) async {
-        logger.info("Preloading \(tracks.count) tracks into cache")
-
-        for track in tracks.prefix(maxSize) {
-            let entry = CacheEntry(
-                track: track,
-                lastAccessed: Date(),
-                accessCount: 0
-            )
-            cache[track.id] = entry
-            accessOrder.append(track.id)
-        }
-
-        // Trim if needed
-        if cache.count > maxSize {
-            await evictLRU()
-        }
-    }
-
-    /// Get cache statistics
+    /// Get current cache statistics
     public func getStatistics() async -> CacheStatistics {
-        let totalAccesses = cache.values.reduce(0) { $0 + $1.accessCount }
-        let averageAccesses = cache.isEmpty ? 0 : totalAccesses / cache.count
-
-        let oldestAccess = cache.values
-            .map { $0.lastAccessed }
-            .min() ?? Date()
-
-        let newestAccess = cache.values
-            .map { $0.lastAccessed }
-            .max() ?? Date()
+        let totalSize = cache.values.reduce(0) { $0 + $1.trackData.fileSize }
+        let avgAccessCount = cache.values.isEmpty ? 0.0 :
+            Double(cache.values.reduce(0) { $0 + $1.accessCount }) / Double(cache.count)
 
         return CacheStatistics(
-            currentSize: cache.count,
-            maxSize: maxSize,
-            totalAccesses: totalAccesses,
-            averageAccessesPerTrack: averageAccesses,
-            oldestAccess: oldestAccess,
-            newestAccess: newestAccess,
-            fillPercentage: Double(cache.count) / Double(maxSize)
+            count: cache.count,
+            totalSizeBytes: totalSize,
+            averageAccessCount: avgAccessCount,
+            maxSize: maxSize
         )
+    }
+
+    // MARK: - Private Methods
+
+    /// Evict least recently used items if cache is full
+    private func evictIfNeeded() async {
+        guard cache.count > maxSize else { return }
+
+        let itemsToEvict = cache.count - maxSize
+        let idsToEvict = accessOrder.prefix(itemsToEvict)
+
+        for id in idsToEvict {
+            cache.removeValue(forKey: id)
+            logger.debug("Evicted track from cache: \(id)")
+        }
+
+        // Remove evicted IDs from access order
+        accessOrder.removeFirst(itemsToEvict)
+
+        logger.info("Evicted \(itemsToEvict) items from cache")
+    }
+
+    /// Prune cache based on age
+    public func pruneOldEntries(olderThan age: TimeInterval) async {
+        let cutoffDate = Date().addingTimeInterval(-age)
+        var idsToRemove: [UUID] = []
+
+        for (id, entry) in cache {
+            if entry.lastAccessed < cutoffDate {
+                idsToRemove.append(id)
+            }
+        }
+
+        for id in idsToRemove {
+            cache.removeValue(forKey: id)
+            accessOrder.removeAll { $0 == id }
+        }
+
+        if !idsToRemove.isEmpty {
+            logger.info("Pruned \(idsToRemove.count) old entries from cache")
+        }
+    }
+
+    // MARK: - Batch Operations
+
+    /// Add multiple tracks at once
+    public func addTracks(_ tracks: [TrackCacheData]) async {
+        for trackData in tracks {
+            await addTrack(trackData)
+        }
+    }
+
+    /// Get multiple tracks at once
+    public func getTracks(_ ids: [UUID]) async -> [UUID: TrackCacheData] {
+        var results: [UUID: TrackCacheData] = [:]
+        for id in ids {
+            if let trackData = await getTrack(id) {
+                results[id] = trackData
+            }
+        }
+        return results
     }
 
     // MARK: - Cache Statistics
 
     public struct CacheStatistics: Sendable {
-        public let currentSize: Int
+        public let count: Int
+        public let totalSizeBytes: Int64
+        public let averageAccessCount: Double
         public let maxSize: Int
-        public let totalAccesses: Int
-        public let averageAccessesPerTrack: Int
-        public let oldestAccess: Date
-        public let newestAccess: Date
-        public let fillPercentage: Double
+
+        public var fillPercentage: Double {
+            Double(count) / Double(maxSize) * 100
+        }
+
+        public var formattedTotalSize: String {
+            ByteCountFormatter.string(fromByteCount: totalSizeBytes, countStyle: .file)
+        }
     }
 }

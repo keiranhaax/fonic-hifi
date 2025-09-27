@@ -248,6 +248,10 @@ public enum ProcessingType: String, Sendable {
     case dynamicsProcessing = "dynamics_processing"
     case spatialAudio = "spatial_audio"
     case systemMixer = "system_mixer"
+    case movieMode = "movie_mode"
+    case voiceProcessing = "voice_processing"
+    case spokenAudioMode = "spoken_audio_mode"
+    case bluetoothCodec = "bluetooth_codec"
 }
 
 /// Limitations detected in the audio path

@@ -51,7 +51,10 @@ public final class AudioQueueManager: AudioQueue, Sendable {
     
     /// Current shuffle sequence
     private var shuffleSequence: [Int] = []
-    
+
+    /// Cached shuffle sequences for performance
+    private var shuffleSequenceCache: [String: [Int]] = [:]
+
     /// Whether navigation state is dirty and needs recalculation
     private var navigationStateDirty = true
     
@@ -218,8 +221,9 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         tracks.removeAll()
         originalOrder.removeAll()
         shuffleSequence.removeAll()
+        shuffleSequenceCache.removeAll() // Clear cache when clearing queue
         currentIndex = nil
-        
+
         markNavigationStateDirty()
         notifyTracksChanged()
         notifyCurrentTrackChanged()
@@ -368,12 +372,30 @@ public final class AudioQueueManager: AudioQueue, Sendable {
             shuffleSequence.removeAll()
             return
         }
-        
-        shuffleSequence = shuffleMode.generateShuffleSequence(
-            trackCount: tracks.count,
-            currentIndex: currentIndex,
-            tracks: tracks
-        )
+
+        // Generate cache key based on tracks and mode
+        let cacheKey = "\(shuffleMode.rawValue)_\(tracks.count)_\(currentIndex?.description ?? "nil")"
+
+        // Check if we have a cached sequence
+        if let cached = shuffleSequenceCache[cacheKey] {
+            shuffleSequence = cached
+        } else {
+            // Generate new sequence and cache it
+            shuffleSequence = shuffleMode.generateShuffleSequence(
+                trackCount: tracks.count,
+                currentIndex: currentIndex,
+                tracks: tracks
+            )
+
+            // Limit cache size to prevent memory growth
+            if shuffleSequenceCache.count > 10 {
+                // Remove oldest entries (simple FIFO)
+                let keysToRemove = Array(shuffleSequenceCache.keys.prefix(5))
+                keysToRemove.forEach { shuffleSequenceCache.removeValue(forKey: $0) }
+            }
+
+            shuffleSequenceCache[cacheKey] = shuffleSequence
+        }
         
         // Reorder tracks according to shuffle sequence
         if !shuffleSequence.isEmpty {
@@ -393,7 +415,8 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         let currentTrack = self.currentTrack
         tracks = originalOrder
         shuffleSequence.removeAll()
-        
+        shuffleSequenceCache.removeAll() // Clear cache when restoring order
+
         // Find current track in original order
         if let track = currentTrack {
             currentIndex = tracks.firstIndex { $0.id == track.id }

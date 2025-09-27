@@ -40,24 +40,191 @@ Version: 2.30.1
 [36;1mnote: [0mBuilding targets in dependency order
 [36;1mnote: [0mTarget dependency graph (4 targets)
 [[36mAudioKit_AudioKit[0m] [1mProcessing[0m empty-AudioKit_AudioKit.plist
-[[36mFonic HiFi[0m] [1mCompiling[0m TrackCache.swift
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:17:13: [31mstored property 'track' of 'Sendable'-conforming struct 'CacheEntry' has non-Sendable type 'Track'[0m
-        let track: Track
-[36m            ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:96:67: [31mreference to property 'cache' in closure requires explicit use of 'self' to make capture semantics explicit[0m
-        logger.debug("Cached track: \(track.title) (cache size: \(cache.count))")
-[36m                                                                  ^[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:121:76: [31mreference to property 'cache' in closure requires explicit use of 'self' to make capture semantics explicit[0m
-        logger.info("Evicted \(evictedCount) items from cache (new size: \(cache.count))")
-[36m                                                                           ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineFactory.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioMetrics.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioQueueManager.swift
 [[36mFonic HiFi[0m] [1mCompiling[0m TrackDataActor.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m SearchCache.swift
 [[36mFonic HiFi[0m] [1mCompiling[0m DataManager.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m ImportSession.swift
+❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/DataManager.swift:480:59: [31mextra trailing closure passed in call[0m
+        try await fetchAllTracksInBatches(batchSize: 100) { tracks in
+[36m                                                          ^~~~~~~~~~~[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackCache.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackCoordinator.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Coordinators/PlaybackCoordinator.swift:316:10: [33mno 'async' operations occur within 'await' expression[0m
+      if await stateManager.currentState.isPlaying {
+[32m         ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidator.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:57:13: [33mvariable 'warnings' was never mutated; consider changing to 'let' constant[0m
+        var warnings: [ValidationWarning] = []
+[32m        ~~~ ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:721:89: [33mleft side of nil coalescing operator '??' has non-optional type 'Bool', so the right side is never used[0m
+        if audioSession.currentRoute.outputs.contains(where: { $0.isSpatialAudioEnabled ?? false }) {
+[32m                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1035:13: [33minitialization of immutable value 'memoryImpact' was never used; consider replacing with assignment to '_' or removing it[0m
+        let memoryImpact = min(1.0, formatImpact * 2.0)
+[32m        ~~~~^~~~~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1036:13: [33minitialization of immutable value 'batteryImpact' was never used; consider replacing with assignment to '_' or removing it[0m
+        let batteryImpact = min(1.0, cpuImpact * 0.8)
+[32m        ~~~~^~~~~~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1038:13: [33minitialization of immutable value 'latency' was never used; consider replacing with assignment to '_' or removing it[0m
+        let latency = Double(processingStages.count) * 2.0 + 3.0 // Base 3ms + 2ms per stage
+[32m        ~~~~^~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1040:13: [33mimmutable value 'rating' was never used; consider removing it[0m
+        let rating: PerformanceRating
+[32m            ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidatorService.swift
 [[36mFonic HiFi[0m] [1mCompiling[0m LibraryImportService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineFacade.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:591:13: [33mvariable 'nowPlayingInfo' was never mutated; consider changing to 'let' constant[0m
+        var nowPlayingInfo: [String: Any] = [
+[32m        ~~~ ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:677:28: [33mno 'async' operations occur within 'await' expression[0m
+        let currentState = await stateManager.currentState
+[32m                           ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:736:19: [33mvalue 'engine' was defined but never used; consider replacing with boolean test[0m
+        guard let engine = currentEngine else { return }
+[32m              ~~~~^~~~~~~~~[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m AVAudioEngineAdapter.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:174:20: [33mconsider using asynchronous alternative function[0m
+        playerNode.scheduleFile(file, at: nil) {
+[32m                   ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:247:20: [33mconsider using asynchronous alternative function[0m
+        playerNode.scheduleSegment(
+[32m                   ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:274:13: [33minitialization of immutable value 'format' was never used; consider replacing with assignment to '_' or removing it[0m
+        let format = engine.outputNode.outputFormat(forBus: 0)
+[32m        ~~~~^~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:281:20: [33mvalue 'preferredSampleRate' was defined but never used; consider replacing with boolean test[0m
+            if let preferredSampleRate = configuration.sampleRate {
+[32m               ~~~~^~~~~~~~~~~~~~~~~~~~~~[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m ImportSession.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ImportMetrics.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchCache.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/SearchCache.swift:172:16: [33mvariable 'existing' was never mutated; consider changing to 'let' constant[0m
+        if var existing = cache[normalizedQuery], !existing.isExpired(ttl: ttl) {
+[32m           ~~~ ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/SearchCache.swift:194:13: [33minitialization of immutable value 'now' was never used; consider replacing with assignment to '_' or removing it[0m
+        let now = Date()
+[32m        ~~~~^~~[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectFailureReason.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackProtocol.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackState.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackStateManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackStateStore.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioQueue.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueRepeatMode.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueShuffleMode.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PerformanceOptimizedContainer.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugContentView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugNowPlayingView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugTrackRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MinimalCrashTest.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileImportView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ImportProgressView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AlbumGridView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearchMigrationPlan.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Album.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Artist.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormatType.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Playlist.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearch.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Track.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MetadataExtractionService.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:49:21: [33m'init(url:)' was deprecated in iOS 18.0: Use AVURLAsset(url:) instead[0m
+        let asset = AVAsset(url: url)
+[32m                    ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:44:13: [33minitialization of immutable value 'fileSize' was never used; consider replacing with assignment to '_' or removing it[0m
+        let fileSize = fileAttributes[.size] as? Int64 ?? 0
+[32m        ~~~~^~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:45:13: [33minitialization of immutable value 'dateAdded' was never used; consider replacing with assignment to '_' or removing it[0m
+        let dateAdded = fileAttributes[.creationDate] as? Date ?? Date()
+[32m        ~~~~^~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:46:13: [33minitialization of immutable value 'dateModified' was never used; consider replacing with assignment to '_' or removing it[0m
+        let dateModified = fileAttributes[.modificationDate] as? Date ?? Date()
+[32m        ~~~~^~~~~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:56:13: [33minitialization of immutable value 'metadata' was never used; consider replacing with assignment to '_' or removing it[0m
+        let metadata = try await asset.load(.metadata)
+[32m        ~~~~^~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:176:36: [33m'value' was deprecated in iOS 16.0: Use load(.value) instead[0m
+                  let value = item.value else { continue }
+[32m                                   ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:218:40: [33m'dataValue' was deprecated in iOS 16.0: Use load(.dataValue) instead[0m
+                    if let data = item.dataValue {
+[32m                                       ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:223:40: [33m'dataValue' was deprecated in iOS 16.0: Use load(.dataValue) instead[0m
+                    if let data = item.dataValue {
+[32m                                       ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:242:32: [33m'dataValue' was deprecated in iOS 16.0: Use load(.dataValue) instead[0m
+               let data = item.dataValue {
+[32m                               ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchPlaylistResultsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchResults.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AppSettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileDetailsView.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Views/Settings/FileDetailsView.swift:161:25: [33m'init(url:)' was deprecated in iOS 18.0: Use AVURLAsset(url:) instead[0m
+            let asset = AVAsset(url: file.url)
+[32m                        ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m FileManagerView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m StateCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioMonitor.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:2610:22: [33m'allowBluetooth' was deprecated in iOS 8.0: renamed to 'AVAudioSession.CategoryOptions.allowBluetoothHFP'[0m
+        if contains(.allowBluetooth) { names.append("allowBluetooth") }
+[32m                     ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioMonitoringService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidationResult.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DACCompatibilityInfo.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackDiagnostics.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioKitEngineAdapter.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEnvironment.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AccessibilityEnhancements.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BottomSearchBar.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m iOS26_Features_Documentation.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassDesignSystem.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassExamples.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassRail.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassTabBar.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ArtistListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LibraryView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaylistListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassMiniPlayer.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MiniPlayerView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AVAudioEngineConfig.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineType.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioDevice.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineConfiguration.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioError.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFileInfo.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormat.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionInterruption.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MainActorHelpers.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ContentView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ContentView_Safe.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp_Debug.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m GeneratedAssetSymbols.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueState.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormatDetectionManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FormatDetectionService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingInfo+Extensions.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearchesActor.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Actors/RecentSearchesActor.swift:24:13: [33mvariable 'descriptor' was never mutated; consider changing to 'let' constant[0m
+        var descriptor = FetchDescriptor<RecentSearch>(
+[32m        ~~~ ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Actors/RecentSearchesActor.swift:48:13: [33mvariable 'descriptor' was never mutated; consider changing to 'let' constant[0m
+        var descriptor = FetchDescriptor<RecentSearch>()
+[32m        ~~~ ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m SwiftDataPagination.swift
 ❌ Build failed with exit code 65
 First 5 errors:
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:17:13: error: stored property 'track' of 'Sendable'-conforming struct 'CacheEntry' has non-Sendable type 'Track'
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:96:67: error: reference to property 'cache' in closure requires explicit use of 'self' to make capture semantics explicit
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Cache/TrackCache.swift:121:76: error: reference to property 'cache' in closure requires explicit use of 'self' to make capture semantics explicit
+/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/DataManager.swift:480:59: error: extra trailing closure passed in call
 make[1]: *** [build] Error 65

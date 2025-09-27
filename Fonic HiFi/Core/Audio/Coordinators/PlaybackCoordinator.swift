@@ -260,7 +260,7 @@ public final class PlaybackCoordinator {
   
   /// Start progress tracking timer
   private func startProgressTracking() {
-    progressTimer.start(pollInterval: 0.25) { [weak self] in
+    progressTimer.start(pollInterval: 0.2) { [weak self] in
       guard let self = self else { return }
       guard let engine = self.currentEngine,
             self.stateManager.currentState.isPlaying else {

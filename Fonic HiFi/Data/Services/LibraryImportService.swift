@@ -11,6 +11,7 @@ import Combine
 import OSLog
 
 /// Service responsible for importing audio files into the library
+@MainActor
 public final class LibraryImportService: ObservableObject {
     
     // MARK: - Published Properties
@@ -71,7 +72,6 @@ public final class LibraryImportService: ObservableObject {
     // MARK: - Public Methods
     
     /// Import files from selected URLs (handles security-scoped resources)
-    @MainActor
     public func importFiles(from urls: [URL]) async {
         guard !isImporting else {
             logger.warning("Import already in progress")
@@ -122,10 +122,10 @@ public final class LibraryImportService: ObservableObject {
     }
     
     /// Cancel the current import operation
-    @MainActor
     public func cancelImport() {
         importTask?.cancel()
         importTask = nil
+
         isImporting = false
         statusMessage = "Import cancelled"
         logger.info("Import operation cancelled")
@@ -383,12 +383,9 @@ public final class LibraryImportService: ObservableObject {
     
     /// Process a batch of audio files
     private func processBatch(_ urls: [URL]) async {
-        await withTaskGroup(of: Void.self) { group in
-            for url in urls {
-                group.addTask { [weak self] in
-                    await self?.processSingleFile(url)
-                }
-            }
+        // Process files sequentially to avoid concurrency issues with @MainActor properties
+        for url in urls {
+            await processSingleFile(url)
         }
     }
     
@@ -404,21 +401,17 @@ public final class LibraryImportService: ObservableObject {
             
             // Import the file
             if let trackId = try await processAudioFile(url) {
-                await Task { @MainActor in
-                    self.recentlyImported.append(trackId)
-                }.value
+                recentlyImported.append(trackId)
                 logger.debug("Successfully imported track with ID: \(String(describing: trackId))")
             }
             
         } catch {
             logger.error("Error processing file \(url.lastPathComponent): \(error.localizedDescription)")
-            await Task { @MainActor in
-                self.importErrors.append(ImportError(
-                    url: url,
-                    error: error,
-                    message: "Failed to process audio file"
-                ))
-            }.value
+            importErrors.append(ImportError(
+                url: url,
+                error: error,
+                message: "Failed to process audio file"
+            ))
         }
         
         await updateProgress()
@@ -494,4 +487,8 @@ private extension Array {
             Array(self[$0..<Swift.min($0 + size, count)])
         }
     }
+}
+
+enum ImportServiceError: Error {
+    case serviceUnavailable
 }
