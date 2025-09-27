@@ -303,6 +303,91 @@ extension QueueState: Codable {
     }
 }
 
+// MARK: - Persistence
+
+extension QueueState {
+
+    /// UserDefaults key for storing queue state
+    private static let persistenceKey = "com.fonichifi.queue.state"
+
+    /// Save queue state to UserDefaults
+    public func save() throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(self)
+        UserDefaults.standard.set(data, forKey: Self.persistenceKey)
+    }
+
+    /// Load queue state from UserDefaults
+    /// - Returns: Saved queue state, or nil if not found or invalid
+    public static func load() -> QueueState? {
+        guard let data = UserDefaults.standard.data(forKey: persistenceKey) else {
+            return nil
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        do {
+            let state = try decoder.decode(QueueState.self, from: data)
+            // Validate that the state is still recent (within 24 hours)
+            if abs(state.timestamp.timeIntervalSinceNow) < 86400 {
+                return state
+            }
+        } catch {
+            print("Failed to decode queue state: \(error)")
+        }
+
+        return nil
+    }
+
+    /// Clear saved queue state
+    public static func clear() {
+        UserDefaults.standard.removeObject(forKey: persistenceKey)
+    }
+
+    /// Create a persistence-safe version of the queue state
+    /// This excludes tracks that may no longer be available
+    public func validateForPersistence() -> QueueState {
+        // Filter out tracks that no longer exist on disk
+        let validTracks = tracks.filter { track in
+            FileManager.default.fileExists(atPath: track.url.path)
+        }
+
+        // Adjust current index if needed
+        let validCurrentIndex: Int?
+        if let currentIndex = currentIndex,
+           let currentTrack = currentTrack,
+           let newIndex = validTracks.firstIndex(where: { $0.id == currentTrack.id }) {
+            validCurrentIndex = newIndex
+        } else {
+            validCurrentIndex = nil
+        }
+
+        // Adjust shuffle sequence if needed
+        let validShuffleSequence: [Int]?
+        if let shuffleSequence = shuffleSequence {
+            validShuffleSequence = shuffleSequence.filter { $0 < validTracks.count }
+        } else {
+            validShuffleSequence = nil
+        }
+
+        return QueueState(
+            tracks: validTracks,
+            currentIndex: validCurrentIndex,
+            shuffleMode: shuffleMode,
+            repeatMode: repeatMode,
+            hasNext: validCurrentIndex != nil && validCurrentIndex! < validTracks.count - 1,
+            hasPrevious: validCurrentIndex != nil && validCurrentIndex! > 0,
+            history: history.filter { track in
+                FileManager.default.fileExists(atPath: track.url.path)
+            },
+            shuffleSequence: validShuffleSequence,
+            timestamp: Date()
+        )
+    }
+}
+
 // MARK: - Debug Description
 
 extension QueueState: CustomDebugStringConvertible {

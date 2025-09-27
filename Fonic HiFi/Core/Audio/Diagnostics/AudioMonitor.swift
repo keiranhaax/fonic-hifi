@@ -38,17 +38,20 @@ public final class AudioMonitor: ObservableObject, AudioMonitoringService {
     }
     
     // MARK: - Private Properties
-    
+
     private var monitoringTimer: Timer?
     private var profilingTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
-    
+
     private var _isMonitoring = false
     private var _isProfiling = false
     private var _currentEngine: AudioEngineService?
-    
+
     private var updateInterval: TimeInterval = 1.0
     private var alertConfiguration = AlertConfiguration.default
+
+    // Performance monitor integration
+    private var performanceMonitor: PerformanceMonitor?
     
     // MARK: - Data Storage
     
@@ -81,12 +84,13 @@ public final class AudioMonitor: ObservableObject, AudioMonitoringService {
     private let logger = Logger(subsystem: "com.fonic.hifi", category: "AudioMonitor")
     
     // MARK: - Initialization
-    
-    public init() {
+
+    public init(performanceMonitor: PerformanceMonitor? = nil) {
         self.systemMetricsCollector = SystemMetricsCollector()
         self.thermalStateMonitor = ThermalStateMonitor()
         self.interruptionStatsTracker = InterruptionStatsTracker()
-        
+        self.performanceMonitor = performanceMonitor ?? PerformanceMonitor()
+
         setupMonitoring()
         setupInterruptionHandling()
     }
@@ -438,22 +442,46 @@ private extension AudioMonitor {
     
     func performPeriodicMonitoring() async {
         let metrics = await collectCurrentMetrics()
-        
+
         // Store metrics in history
         metricsHistory.append(metrics)
-        
+
         // Limit history size (keep last 1000 entries)
         if metricsHistory.count > 1000 {
             metricsHistory.removeFirst(metricsHistory.count - 1000)
         }
-        
+
+        // Track audio latency in PerformanceMonitor
+        if let performanceMonitor = performanceMonitor {
+            // Calculate total audio latency (render + output)
+            let outputLatency = await getAudioOutputLatency()
+            let totalLatency = metrics.renderLatency + outputLatency
+            await performanceMonitor.recordAudioLatency(totalLatency)
+
+            // Track buffer underruns
+            if metrics.bufferUnderruns > 0 {
+                for _ in 0..<metrics.bufferUnderruns {
+                    await performanceMonitor.recordBufferUnderrun()
+                }
+            }
+
+            // Track memory usage
+            await performanceMonitor.recordMemoryUsage(metrics.memoryUsage)
+
+            // Check for memory warnings
+            let memoryPressure = await performanceMonitor.checkMemoryPressure()
+            if memoryPressure == .warning || memoryPressure == .urgent || memoryPressure == .critical {
+                await performanceMonitor.recordMemoryWarning()
+            }
+        }
+
         // Emit metrics
         _metricsSubject.send(metrics)
         _healthStatusSubject.send(metrics.healthStatus)
-        
+
         // Check for alerts
         await checkForAlerts(metrics: metrics)
-        
+
         // Update performance counters
         updatePerformanceCounters(metrics: metrics)
     }
@@ -823,6 +851,12 @@ private extension AudioMonitor {
     
     func calculatePeakLatency() -> TimeInterval {
         return metricsHistory.map { $0.renderLatency }.max() ?? 0
+    }
+
+    /// Get the current audio output latency from AVAudioSession
+    func getAudioOutputLatency() async -> TimeInterval {
+        let session = AVAudioSession.sharedInstance()
+        return session.outputLatency + session.ioBufferDuration
     }
     
     func calculateAverageBufferFill() -> Float {

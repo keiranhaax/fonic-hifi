@@ -74,31 +74,31 @@
 ## Phase 3.4: Week 4 - Architecture & Quality (FR-015 to FR-028) (17 tasks)
 
 ### Architecture Improvements (FR-015, FR-016, FR-017)
-- [ ] T032 Consolidate audio session management - remove duplicate session handling from engine adapters
-- [ ] T033 Fix memory leaks in engine switching - add cleanup in `Fonic HiFi/Core/Audio/Factory/AudioEngineFactory.swift`
-- [ ] T034 Implement real bit-perfect validation logic in `Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift`
+- [X] T032 Consolidate audio session management - remove duplicate session handling from engine adapters
+- [X] T033 Fix memory leaks in engine switching - add cleanup in `Fonic HiFi/Core/Audio/Factory/AudioEngineFactory.swift`
+- [X] T034 Implement real bit-perfect validation logic in `Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift`
 
 ### Contract Implementations
-- [ ] T035 Implement AudioSessionManaging protocol from contracts in `Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift`
-- [ ] T036 Implement ImportSessionProtocol from contracts in `Fonic HiFi/Data/Services/ImportSession.swift`
-- [ ] T037 Implement PlaybackCoordinating protocol from contracts in `Fonic HiFi/Core/Audio/Coordinators/PlaybackCoordinator.swift`
-- [ ] T038 Implement PerformanceMonitoring protocol from contracts in `Fonic HiFi/Core/Audio/Diagnostics/PerformanceMonitor.swift`
+- [X] T035 Implement AudioSessionManaging protocol from contracts in `Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift`
+- [X] T036 Implement ImportSessionProtocol from contracts in `Fonic HiFi/Data/Services/ImportSession.swift`
+- [X] T037 Implement PlaybackCoordinating protocol from contracts in `Fonic HiFi/Core/Audio/Coordinators/PlaybackCoordinator.swift`
+- [X] T038 Implement PerformanceMonitoring protocol from contracts in `Fonic HiFi/Core/Audio/Diagnostics/PerformanceMonitor.swift`
 
 ### Queue Persistence (FR-020, FR-021)
-- [ ] T039 [P] Implement queue persistence in `Fonic HiFi/Core/Audio/Queue/QueueState.swift`
-- [ ] T040 Add shuffle sequence preservation in `Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift`
-- [ ] T041 Implement queue restoration on app launch in `Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift`
+- [X] T039 [P] Implement queue persistence in `Fonic HiFi/Core/Audio/Queue/QueueState.swift`
+- [X] T040 Add shuffle sequence preservation in `Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift`
+- [X] T041 Implement queue restoration on app launch in `Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift`
 
 ### Monitoring (FR-022, FR-023, FR-024)
-- [ ] T042 [P] Implement audio latency tracking in `Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift`
-- [ ] T043 [P] Add memory usage tracking in `Fonic HiFi/Core/Audio/Diagnostics/PerformanceMonitor.swift`
-- [ ] T044 Add app launch time tracking in `Fonic HiFi/FonicHiFiApp.swift`
+- [X] T042 [P] Implement audio latency tracking in `Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift`
+- [X] T043 [P] Add memory usage tracking in `Fonic HiFi/Core/Audio/Diagnostics/PerformanceMonitor.swift`
+- [X] T044 Add app launch time tracking in `Fonic HiFi/FonicHiFiApp.swift`
 
 ### User Experience (FR-025, FR-026, FR-027, FR-028)
-- [ ] T045 [P] Add progress indicators for long operations in `Fonic HiFi/Presentation/Views/LibraryView.swift`
-- [ ] T046 [P] Implement user-friendly error messages in `Fonic HiFi/Presentation/Views/Components/ErrorView.swift`
-- [ ] T047 Ensure 60fps UI performance with frame rate monitoring
-- [ ] T048 Verify background audio and Now Playing info updates work correctly
+- [X] T045 [P] Add progress indicators for long operations in `Fonic HiFi/Presentation/Views/LibraryView.swift`
+- [X] T046 [P] Implement user-friendly error messages in `Fonic HiFi/Presentation/Views/Components/ErrorView.swift`
+- [X] T047 Ensure 60fps UI performance with frame rate monitoring
+- [X] T048 Verify background audio and Now Playing info updates work correctly
 
 ---
 

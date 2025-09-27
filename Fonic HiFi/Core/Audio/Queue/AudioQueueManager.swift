@@ -503,14 +503,97 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         delegate?.audioQueue(self, didAddToHistory: track)
     }
     
+    // MARK: - Persistence
+
+    /// Save current queue state to persistence
+    public func saveState() {
+        let state = QueueState(
+            tracks: tracks,
+            currentIndex: currentIndex,
+            shuffleMode: shuffleMode,
+            repeatMode: repeatMode,
+            hasNext: hasNext,
+            hasPrevious: hasPrevious,
+            history: history,
+            shuffleSequence: shuffleMode.isActive ? shuffleSequence : nil,
+            timestamp: Date()
+        )
+
+        do {
+            // Validate and save state
+            let validatedState = state.validateForPersistence()
+            try validatedState.save()
+        } catch {
+            print("Failed to save queue state: \(error)")
+        }
+    }
+
+    /// Restore queue state from persistence
+    /// - Returns: true if state was restored, false otherwise
+    @discardableResult
+    public func restoreState() -> Bool {
+        guard let state = QueueState.load() else {
+            return false
+        }
+
+        // Validate loaded state
+        let validatedState = state.validateForPersistence()
+
+        // Restore tracks
+        tracks = validatedState.tracks
+        originalOrder = validatedState.tracks // Store original order
+        currentIndex = validatedState.currentIndex
+
+        // Restore shuffle mode and sequence
+        shuffleMode = validatedState.shuffleMode
+        repeatMode = validatedState.repeatMode
+
+        // Restore shuffle sequence if present
+        if let savedShuffleSequence = validatedState.shuffleSequence,
+           shuffleMode.isActive {
+            shuffleSequence = savedShuffleSequence
+
+            // Apply shuffle sequence to tracks
+            if !shuffleSequence.isEmpty {
+                let shuffledTracks = shuffleSequence.compactMap { index in
+                    tracks.indices.contains(index) ? tracks[index] : nil
+                }
+                if !shuffledTracks.isEmpty {
+                    tracks = shuffledTracks
+                }
+            }
+        }
+
+        // Restore history
+        history = validatedState.history
+
+        // Update navigation state
+        markNavigationStateDirty()
+
+        // Notify delegates
+        notifyTracksChanged()
+        notifyCurrentTrackChanged()
+
+        return true
+    }
+
+    /// Clear persisted queue state
+    public func clearSavedState() {
+        QueueState.clear()
+    }
+
     // MARK: - Notifications
-    
+
     private func notifyTracksChanged() {
         delegate?.audioQueue(self, didUpdateTracks: tracks)
+        // Auto-save when tracks change
+        saveState()
     }
-    
+
     private func notifyCurrentTrackChanged() {
         delegate?.audioQueue(self, didChangeCurrentTrack: currentTrack, at: currentIndex)
+        // Auto-save when current track changes
+        saveState()
     }
 }
 

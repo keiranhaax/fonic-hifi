@@ -9,9 +9,30 @@ import Foundation
 import AVFoundation
 import MediaPlayer
 
+/// Protocol for audio session management with proper actor isolation
+@MainActor
+public protocol AudioSessionManaging: Sendable {
+    // Configuration
+    func configureSession() async throws
+    func activateSession(_ active: Bool) async throws
+
+    // Remote Commands
+    func enableRemoteCommands() async
+    func disableRemoteCommands() async
+
+    // Interruption Handling
+    func handleInterruption(_ notification: Notification) async
+    func handleRouteChange(_ notification: Notification) async
+
+    // State Query
+    var currentRouteDescription: AVAudioSessionRouteDescription { get async }
+    var isSessionActive: Bool { get async }
+    var supportsBitPerfect: Bool { get async }
+}
+
 /// Concrete implementation of AudioSessionService using AVAudioSession
 @MainActor
-public final class AudioSessionManager: NSObject, AudioSessionService {
+public final class AudioSessionManager: NSObject, AudioSessionService, AudioSessionManaging {
     
     // MARK: - Properties
     
@@ -355,6 +376,64 @@ public final class AudioSessionManager: NSObject, AudioSessionService {
         }
     }
     
+    // MARK: - AudioSessionManaging Protocol Methods
+
+    /// Alias for configureAudioSession to match protocol
+    public func configureSession() async throws {
+        try await configureAudioSession()
+    }
+
+    /// Activate or deactivate the audio session
+    public func activateSession(_ active: Bool) async throws {
+        if active {
+            try await activateAudioSession()
+        } else {
+            try await deactivateAudioSession()
+        }
+    }
+
+    /// Handle interruption notifications
+    public func handleInterruption(_ notification: Notification) async {
+        handleInterruptionNotification(notification)
+    }
+
+    /// Handle route change notifications
+    public func handleRouteChange(_ notification: Notification) async {
+        handleRouteChangeNotification(notification)
+    }
+
+    // currentRoute already defined above at line 96 for AudioSessionService compatibility
+
+    /// Get full current audio route for AudioSessionManaging
+    public var currentRouteDescription: AVAudioSessionRouteDescription {
+        get async {
+            session.currentRoute
+        }
+    }
+
+    // isSessionActive already defined above at line 92
+
+    /// Check if the current route supports bit-perfect playback
+    public var supportsBitPerfect: Bool {
+        get async {
+            // Check if we have a USB or Thunderbolt DAC connected
+            let outputs = session.currentRoute.outputs
+            for output in outputs {
+                switch output.portType {
+                case .usbAudio, .thunderbolt:
+                    // External DACs typically support bit-perfect
+                    return true
+                case .headphones:
+                    // Lightning/USB-C headphones might support it
+                    return output.portName.contains("USB") || output.portName.contains("Lightning")
+                default:
+                    continue
+                }
+            }
+            return false
+        }
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }

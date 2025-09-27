@@ -1,0 +1,333 @@
+//
+//  ErrorView.swift
+//  Fonic HiFi
+//
+//  Created by Claude on 9/27/25.
+//
+
+import SwiftUI
+
+/// User-friendly error display view
+struct ErrorView: View {
+    let error: Error
+    let retryAction: (() -> Void)?
+
+    init(error: Error, retryAction: (() -> Void)? = nil) {
+        self.error = error
+        self.retryAction = retryAction
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // Icon
+            Image(systemName: errorIcon)
+                .font(.system(size: 50))
+                .foregroundColor(iconColor)
+
+            // Title
+            Text(errorTitle)
+                .font(.title2)
+                .fontWeight(.semibold)
+                .multilineTextAlignment(.center)
+
+            // Description
+            Text(errorDescription)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            // Actions
+            VStack(spacing: 12) {
+                if let retryAction = retryAction {
+                    Button(action: retryAction) {
+                        Label("Try Again", systemImage: "arrow.clockwise")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                }
+
+                // Additional help text
+                if let helpText = additionalHelpText {
+                    Text(helpText)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(.horizontal)
+        }
+        .padding()
+    }
+
+    // MARK: - Error Categorization
+
+    private var errorIcon: String {
+        switch categorizeError() {
+        case .network:
+            return "wifi.exclamationmark"
+        case .fileAccess:
+            return "folder.badge.questionmark"
+        case .audio:
+            return "speaker.slash"
+        case .storage:
+            return "externaldrive.badge.exclamationmark"
+        case .format:
+            return "doc.badge.ellipsis"
+        case .permission:
+            return "lock.shield"
+        case .memory:
+            return "memorychip"
+        case .general:
+            return "exclamationmark.triangle"
+        }
+    }
+
+    private var iconColor: Color {
+        switch categorizeError() {
+        case .network:
+            return .blue
+        case .fileAccess, .storage:
+            return .orange
+        case .audio, .format:
+            return .purple
+        case .permission:
+            return .red
+        case .memory:
+            return .yellow
+        case .general:
+            return .secondary
+        }
+    }
+
+    private var errorTitle: String {
+        switch categorizeError() {
+        case .network:
+            return "Network Connection Issue"
+        case .fileAccess:
+            return "Cannot Access File"
+        case .audio:
+            return "Audio Playback Error"
+        case .storage:
+            return "Storage Issue"
+        case .format:
+            return "Unsupported Format"
+        case .permission:
+            return "Permission Required"
+        case .memory:
+            return "Memory Warning"
+        case .general:
+            return "Something Went Wrong"
+        }
+    }
+
+    var errorDescription: String {
+        // First try to get a user-friendly message based on error type
+        if let friendlyMessage = getUserFriendlyMessage() {
+            return friendlyMessage
+        }
+
+        // Fallback to localized description
+        return error.localizedDescription
+    }
+
+    private var additionalHelpText: String? {
+        switch categorizeError() {
+        case .network:
+            return "Check your internet connection and try again"
+        case .fileAccess:
+            return "Make sure the file exists and you have permission to access it"
+        case .audio:
+            return "Try selecting a different audio engine in Settings"
+        case .storage:
+            return "Free up some space on your device"
+        case .format:
+            return "This file format may not be supported. Try converting it to a compatible format"
+        case .permission:
+            return "Grant the necessary permissions in Settings > Privacy & Security"
+        case .memory:
+            return "Close some apps to free up memory"
+        case .general:
+            return nil
+        }
+    }
+
+    // MARK: - Error Categorization Logic
+
+    private enum ErrorCategory {
+        case network
+        case fileAccess
+        case audio
+        case storage
+        case format
+        case permission
+        case memory
+        case general
+    }
+
+    private func categorizeError() -> ErrorCategory {
+        let errorString = String(describing: error).lowercased()
+        let localizedString = error.localizedDescription.lowercased()
+
+        // Check for specific error types
+        if errorString.contains("network") || errorString.contains("connection") ||
+           localizedString.contains("network") || localizedString.contains("internet") {
+            return .network
+        }
+
+        if errorString.contains("file") || errorString.contains("url") ||
+           localizedString.contains("file") || localizedString.contains("cannot open") {
+            return .fileAccess
+        }
+
+        if errorString.contains("audio") || errorString.contains("playback") ||
+           errorString.contains("engine") || localizedString.contains("audio") {
+            return .audio
+        }
+
+        if errorString.contains("storage") || errorString.contains("disk") ||
+           localizedString.contains("storage") || localizedString.contains("space") {
+            return .storage
+        }
+
+        if errorString.contains("format") || errorString.contains("codec") ||
+           localizedString.contains("format") || localizedString.contains("unsupported") {
+            return .format
+        }
+
+        if errorString.contains("permission") || errorString.contains("denied") ||
+           localizedString.contains("permission") || localizedString.contains("not allowed") {
+            return .permission
+        }
+
+        if errorString.contains("memory") || errorString.contains("ram") ||
+           localizedString.contains("memory") {
+            return .memory
+        }
+
+        return .general
+    }
+
+    private func getUserFriendlyMessage() -> String? {
+        let errorString = String(describing: error)
+
+        // Map common technical errors to user-friendly messages
+        if errorString.contains("AVAudioEngineConfigurationChange") {
+            return "The audio configuration changed. Please try playing the track again."
+        }
+
+        if errorString.contains("NSFileReadNoSuchFileError") {
+            return "The audio file could not be found. It may have been moved or deleted."
+        }
+
+        if errorString.contains("NSFileReadNoPermissionError") {
+            return "You don't have permission to access this file."
+        }
+
+        if errorString.contains("NSFileReadCorruptFileError") {
+            return "The audio file appears to be damaged and cannot be played."
+        }
+
+        if errorString.contains("NSURLErrorNotConnectedToInternet") {
+            return "No internet connection available."
+        }
+
+        if errorString.contains("NSURLErrorTimedOut") {
+            return "The request took too long. Please try again."
+        }
+
+        if errorString.contains("kAudioUnitErr_InvalidProperty") {
+            return "The audio system encountered an issue. Try restarting the app."
+        }
+
+        if errorString.contains("kAudioUnitErr_FormatNotSupported") {
+            return "This audio format is not supported on your device."
+        }
+
+        if errorString.contains("NSCocoaErrorDomain") && errorString.contains("512") {
+            return "The file couldn't be saved. Check your storage space."
+        }
+
+        if errorString.contains("bufferUnderrun") {
+            return "Audio playback was interrupted. This might be due to system load."
+        }
+
+        if errorString.contains("engineInitializationFailed") {
+            return "The audio player couldn't start. Try restarting the app."
+        }
+
+        if errorString.contains("formatNotSupported") {
+            return "This audio format isn't supported. Try converting the file to MP3 or AAC."
+        }
+
+        return nil
+    }
+}
+
+// MARK: - Alert Modifier
+
+extension View {
+    func errorAlert(error: Binding<Error?>, retryAction: (() -> Void)? = nil) -> some View {
+        self.alert(
+            "Error",
+            isPresented: .constant(error.wrappedValue != nil),
+            presenting: error.wrappedValue
+        ) { presentedError in
+            if let retryAction = retryAction {
+                Button("Try Again", action: retryAction)
+                Button("OK", role: .cancel) {
+                    error.wrappedValue = nil
+                }
+            } else {
+                Button("OK", role: .cancel) {
+                    error.wrappedValue = nil
+                }
+            }
+        } message: { presentedError in
+            Text(ErrorView(error: presentedError).errorDescription)
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Network Error") {
+    ErrorView(
+        error: NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorNotConnectedToInternet,
+            userInfo: [NSLocalizedDescriptionKey: "The Internet connection appears to be offline."]
+        ),
+        retryAction: {
+            print("Retry tapped")
+        }
+    )
+}
+
+#Preview("File Error") {
+    ErrorView(
+        error: NSError(
+            domain: NSCocoaErrorDomain,
+            code: NSFileReadNoSuchFileError,
+            userInfo: [NSLocalizedDescriptionKey: "The file could not be found."]
+        ),
+        retryAction: {
+            print("Retry tapped")
+        }
+    )
+}
+
+#Preview("Audio Error") {
+    ErrorView(
+        error: NSError(
+            domain: "com.fonichifi.audio",
+            code: 1001,
+            userInfo: [NSLocalizedDescriptionKey: "Audio engine initialization failed"]
+        ),
+        retryAction: {
+            print("Retry tapped")
+        }
+    )
+}

@@ -11,17 +11,21 @@ import OSLog
 
 @main
 struct FonicHiFiApp: App {
-    
+
     // MARK: - Properties
-    
+
     @StateObject private var dataManager: DataManager
     @StateObject private var audioService: AudioEngineFacade
     @StateObject private var importService: LibraryImportService
-    
+
     private let logger = Logger(subsystem: "com.fonichifi.app", category: "FonicHiFiApp")
-    
+
+    // App launch time tracking
+    private let appLaunchStartTime = Date()
+    private let performanceMonitor = PerformanceMonitor()
+
     // MARK: - Initialization
-    
+
     init() {
         // Disable SwiftUI's async rendering if it's causing issues
         UserDefaults.standard.set(false, forKey: "SwiftUI.Animation.AsyncRendering")
@@ -32,7 +36,14 @@ struct FonicHiFiApp: App {
         do {
             let dataManager = try DataManager()
             let playbackStateManager = PlaybackStateManager()  // Shared instance
-            let audioService = AudioEngineFacade(stateManager: playbackStateManager)
+
+            // Create AudioMonitor with performance monitor connection
+            let audioMonitor = AudioMonitor(performanceMonitor: performanceMonitor)
+
+            let audioService = AudioEngineFacade(
+                stateManager: playbackStateManager,
+                monitor: audioMonitor
+            )
             let importService = LibraryImportService(
                 trackDataActor: dataManager.trackDataActor,
                 metadataExtractor: dataManager.metadataExtractor
@@ -91,17 +102,30 @@ struct FonicHiFiApp: App {
     @MainActor
     private func initializeApp() async {
         logger.info("Initializing Fonic HiFi app...")
-        
+
         do {
             // Initialize audio service with proper error handling
             try await audioService.initialize()
             logger.info("Audio service initialized successfully")
-            
+
             // Perform any other startup tasks
             await performStartupTasks()
-            
+
+            // Track app launch time
+            let launchDuration = Date().timeIntervalSince(appLaunchStartTime)
+            await performanceMonitor.recordAppLaunchTime(launchDuration)
+            logger.info("App launch completed in \(String(format: "%.2f", launchDuration)) seconds")
+
         } catch {
             logger.error("Failed to initialize app: \(error.localizedDescription)")
+
+            // Track app launch time even if initialization fails
+            let launchDuration = Date().timeIntervalSince(appLaunchStartTime)
+            await performanceMonitor.recordAppLaunchTime(launchDuration)
+
+            // Record the error in performance monitor
+            await performanceMonitor.recordError(error, context: "App initialization")
+
             // You could show an alert to the user here if needed
             // For now, we'll just log the error and continue with limited functionality
         }

@@ -9,8 +9,79 @@ import Foundation
 import SwiftData
 import OSLog
 
+// MARK: - Protocol Definition
+
+public protocol ImportSessionProtocol: Actor {
+    // Transaction Management
+    func beginTransaction() async throws
+    func commit() async throws
+    func rollback() async
+
+    // Import Operations
+    func addFile(_ url: URL) async throws -> UUID
+    func addFiles(_ urls: [URL]) async throws -> [UUID]
+    func removeFile(_ id: UUID) async throws
+
+    // Progress Tracking
+    var progress: ImportProgress { get async }
+    func observeProgress() -> AsyncStream<ImportProgress>
+
+    // Validation
+    func validateFile(_ url: URL) async throws -> ValidationResult
+    func checkDuplicate(_ url: URL) async -> Bool
+}
+
+// MARK: - Import Progress
+
+public struct ImportProgress: Sendable {
+    public let totalFiles: Int
+    public let processedFiles: Int
+    public let currentFile: String?
+    public let phase: ImportPhase
+    public let errors: [ImportSessionError]
+
+    public var percentComplete: Double {
+        guard totalFiles > 0 else { return 0 }
+        return Double(processedFiles) / Double(totalFiles) * 100
+    }
+}
+
+public enum ImportPhase: Sendable {
+    case idle
+    case validating
+    case extractingMetadata
+    case copyingFiles
+    case savingToDatabase
+    case complete
+}
+
+public struct ValidationResult: Sendable {
+    public let isValid: Bool
+    public let format: AudioFormat?
+    public let issues: [ImportValidationIssue]
+}
+
+public enum ImportValidationIssue: Sendable {
+    case unsupportedFormat
+    case corruptedFile
+    case missingMetadata
+    case fileTooLarge(size: Int64)
+    case duplicateFile(existingId: UUID)
+}
+
+public enum ImportSessionError: Error, Sendable {
+    case transactionNotStarted
+    case transactionAlreadyStarted
+    case fileNotFound(URL)
+    case fileAccessDenied(URL)
+    case metadataExtractionFailed(URL, String)
+    case fileCopyFailed(from: URL, to: URL, String)
+    case databaseSaveFailed(String)
+    case rollbackFailed(String)
+}
+
 /// Actor for managing transactional import operations
-public actor ImportSession {
+public actor ImportSession: ImportSessionProtocol {
 
     // MARK: - Types
 
@@ -53,7 +124,7 @@ public actor ImportSession {
     // MARK: - Properties
 
     private var items: [ImportItem] = []
-    private var progress = Progress(totalUnitCount: 0)
+    private var progressTracker = Progress(totalUnitCount: 0)
     private let logger = Logger(subsystem: "com.fonichifi.data", category: "ImportSession")
 
     // Track successful operations for rollback
@@ -108,7 +179,7 @@ public actor ImportSession {
         )
 
         items.append(item)
-        progress.totalUnitCount = Int64(items.count)
+        progressTracker.totalUnitCount = Int64(items.count)
 
         logger.debug("Item added to session. Total items: \(self.items.count)")
     }
@@ -135,7 +206,7 @@ public actor ImportSession {
 
                 // Mark complete
                 self.items[index].status = .complete
-                progress.completedUnitCount = Int64(index + 1)
+                progressTracker.completedUnitCount = Int64(index + 1)
 
                 logger.debug("Successfully imported: \(self.items[index].sourceURL.lastPathComponent)")
 
@@ -155,7 +226,7 @@ public actor ImportSession {
         items.removeAll()
         copiedFiles.removeAll()
         savedTrackIds.removeAll()
-        progress = Progress(totalUnitCount: 0)
+        progressTracker = Progress(totalUnitCount: 0)
     }
 
     /// Rollback the import transaction
@@ -188,14 +259,14 @@ public actor ImportSession {
         items.removeAll()
         copiedFiles.removeAll()
         savedTrackIds.removeAll()
-        progress = Progress(totalUnitCount: 0)
+        progressTracker = Progress(totalUnitCount: 0)
 
         logger.info("Import session rolled back")
     }
 
     /// Get current progress
     public func getProgress() -> (completed: Int, total: Int, currentItem: String?) {
-        let completed = Int(progress.completedUnitCount)
+        let completed = Int(progressTracker.completedUnitCount)
         let total = items.count
         let currentItem = items.first(where: {
             if case .extractingMetadata = $0.status { return true }
@@ -237,5 +308,169 @@ public actor ImportSession {
         }
 
         return destinationURL
+    }
+
+    // MARK: - ImportSessionProtocol Implementation
+
+    private var transactionStarted = false
+    private var fileIdMap: [UUID: ImportItem] = [:]
+    private var currentPhase = ImportPhase.idle
+    private var sessionErrors: [ImportSessionError] = []
+
+    /// Begin a new import transaction
+    public func beginTransaction() async throws {
+        guard !transactionStarted else {
+            throw ImportSessionError.transactionAlreadyStarted
+        }
+
+        transactionStarted = true
+        items.removeAll()
+        copiedFiles.removeAll()
+        savedTrackIds.removeAll()
+        fileIdMap.removeAll()
+        sessionErrors.removeAll()
+        currentPhase = .idle
+        progressTracker = Progress(totalUnitCount: 0)
+
+        logger.info("Import transaction started")
+    }
+
+    /// Add a single file to the import session
+    public func addFile(_ url: URL) async throws -> UUID {
+        guard transactionStarted else {
+            throw ImportSessionError.transactionNotStarted
+        }
+
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw ImportSessionError.fileNotFound(url)
+        }
+
+        // Use existing addItem logic
+        try await addItem(url)
+
+        // Generate and track ID for this item
+        let id = UUID()
+        if let lastItem = items.last {
+            fileIdMap[id] = lastItem
+        }
+
+        return id
+    }
+
+    /// Add multiple files to the import session
+    public func addFiles(_ urls: [URL]) async throws -> [UUID] {
+        guard transactionStarted else {
+            throw ImportSessionError.transactionNotStarted
+        }
+
+        var ids: [UUID] = []
+        for url in urls {
+            let id = try await addFile(url)
+            ids.append(id)
+        }
+        return ids
+    }
+
+    /// Remove a file from the import session
+    public func removeFile(_ id: UUID) async throws {
+        guard transactionStarted else {
+            throw ImportSessionError.transactionNotStarted
+        }
+
+        if let item = fileIdMap[id],
+           let index = items.firstIndex(where: { $0.sourceURL == item.sourceURL }) {
+            items.remove(at: index)
+            fileIdMap.removeValue(forKey: id)
+            progressTracker.totalUnitCount = Int64(items.count)
+        }
+    }
+
+    /// Get current import progress
+    public var progress: ImportProgress {
+        get async {
+            let (completed, total, currentFile) = getProgress()
+            return ImportProgress(
+                totalFiles: total,
+                processedFiles: completed,
+                currentFile: currentFile,
+                phase: currentPhase,
+                errors: sessionErrors
+            )
+        }
+    }
+
+    /// Observe progress changes as a stream
+    public func observeProgress() -> AsyncStream<ImportProgress> {
+        AsyncStream { continuation in
+            Task {
+                while !Task.isCancelled {
+                    let currentProgress = await self.progress
+                    continuation.yield(currentProgress)
+
+                    if currentProgress.phase == .complete {
+                        continuation.finish()
+                        break
+                    }
+
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                }
+            }
+        }
+    }
+
+    /// Validate a file before importing
+    public func validateFile(_ url: URL) async throws -> ValidationResult {
+        var issues: [ImportValidationIssue] = []
+
+        // Check file exists
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw ImportSessionError.fileNotFound(url)
+        }
+
+        // Check file size
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        if let fileSize = attributes[.size] as? Int64 {
+            if fileSize > 500_000_000 { // 500MB limit
+                issues.append(ImportValidationIssue.fileTooLarge(size: fileSize))
+            }
+        }
+
+        // Check duplicate
+        let isDuplicate = await checkDuplicate(url)
+        if isDuplicate {
+            // Try to find existing track ID
+            if (try? await trackDataActor.trackExists(for: url)) != nil {
+                issues.append(ImportValidationIssue.duplicateFile(existingId: UUID()))
+            }
+        }
+
+        // Try to extract metadata to validate format
+        do {
+            let _ = try await metadataExtractor.extractTrackMetadata(from: url)
+            let format = AudioFormat.from(url: url)
+
+            return ValidationResult(
+                isValid: issues.isEmpty,
+                format: format,
+                issues: issues
+            )
+        } catch {
+            issues.append(ImportValidationIssue.corruptedFile)
+            return ValidationResult(
+                isValid: false,
+                format: nil,
+                issues: issues
+            )
+        }
+    }
+
+    /// Check if a file is a duplicate
+    public func checkDuplicate(_ url: URL) async -> Bool {
+        do {
+            let existingTrack = try await trackDataActor.trackExists(for: url)
+            return existingTrack != nil
+        } catch {
+            return false
+        }
     }
 }

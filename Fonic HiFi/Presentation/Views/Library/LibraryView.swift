@@ -16,13 +16,18 @@ struct LibraryView: View {
     @Query private var albums: [Album]
     @Query private var artists: [Artist]
     @Query private var playlists: [Playlist]
-    
+
     @State private var selectedTab = LibraryTab.tracks
     @State private var searchText = ""
     @State private var showingImportView = false
     @State private var showingImportProgress = false
     @State private var showingCreatePlaylist = false
-    
+
+    // Progress tracking states
+    @State private var isLoading = false
+    @State private var isFiltering = false
+    @State private var loadingMessage = ""
+
     @Environment(\.importService) private var importService
     
     enum LibraryTab: String, CaseIterable {
@@ -69,6 +74,14 @@ struct LibraryView: View {
                     }
                 }
                 .searchable(text: $searchText, prompt: "Search \(selectedTab.rawValue)")
+                .overlay {
+                    if isLoading || isFiltering {
+                        LoadingOverlay(
+                            message: loadingMessage.isEmpty ? "Loading..." : loadingMessage,
+                            isShowing: isLoading || isFiltering
+                        )
+                    }
+                }
             }
             .navigationTitle("Library")
             .toolbar {
@@ -111,33 +124,81 @@ struct LibraryView: View {
     }
 
     // MARK: - Filtered Data
-    
+
     private var filteredTracks: [Track] {
         if searchText.isEmpty {
             return tracks
         } else {
-            return tracks.filter { $0.matches(searchQuery: searchText) }
+            // Show progress for large track lists
+            if tracks.count > 1000 {
+                DispatchQueue.main.async {
+                    self.isFiltering = true
+                    self.loadingMessage = "Filtering \(tracks.count) tracks..."
+                }
+            }
+
+            let filtered = tracks.filter { $0.matches(searchQuery: searchText) }
+
+            if tracks.count > 1000 {
+                DispatchQueue.main.async {
+                    self.isFiltering = false
+                }
+            }
+
+            return filtered
         }
     }
-    
+
     private var filteredAlbums: [Album] {
         if searchText.isEmpty {
             return albums
         } else {
-            return albums.filter {
+            // Show progress for large album lists
+            if albums.count > 100 {
+                DispatchQueue.main.async {
+                    self.isFiltering = true
+                    self.loadingMessage = "Filtering \(albums.count) albums..."
+                }
+            }
+
+            let filtered = albums.filter {
                 $0.title.localizedCaseInsensitiveContains(searchText) ||
                 $0.albumArtist.localizedCaseInsensitiveContains(searchText)
             }
+
+            if albums.count > 100 {
+                DispatchQueue.main.async {
+                    self.isFiltering = false
+                }
+            }
+
+            return filtered
         }
     }
-    
+
     private var filteredArtists: [Artist] {
         if searchText.isEmpty {
             return artists
         } else {
-            return artists.filter {
+            // Show progress for large artist lists
+            if artists.count > 100 {
+                DispatchQueue.main.async {
+                    self.isFiltering = true
+                    self.loadingMessage = "Filtering \(artists.count) artists..."
+                }
+            }
+
+            let filtered = artists.filter {
                 $0.name.localizedCaseInsensitiveContains(searchText)
             }
+
+            if artists.count > 100 {
+                DispatchQueue.main.async {
+                    self.isFiltering = false
+                }
+            }
+
+            return filtered
         }
     }
 }
@@ -159,6 +220,37 @@ struct EmptyLibraryView: View {
             Text("Import music to get started")
                 .font(.body)
                 .foregroundColor(.secondary)
+        }
+    }
+}
+
+/// Loading overlay for long operations
+struct LoadingOverlay: View {
+    let message: String
+    let isShowing: Bool
+
+    var body: some View {
+        if isShowing {
+            ZStack {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .scaleEffect(1.5)
+
+                    Text(message)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
+                .padding(24)
+                .background(Color(UIColor.systemBackground))
+                .cornerRadius(12)
+                .shadow(radius: 10)
+            }
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.3), value: isShowing)
         }
     }
 }

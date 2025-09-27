@@ -181,9 +181,29 @@ public final class AudioEngineFacade: ObservableObject {
             await sessionManager.enableRemoteCommands()
             logger.debug("Remote commands enabled")
 
+            // 5. Restore queue state from previous session
+            if queueManager.restoreState() {
+                logger.info("Queue state restored from previous session")
+
+                // If we have a current track, update UI state
+                if let currentTrack = queueManager.currentTrack {
+                    self.currentTrack = Track(
+                        url: currentTrack.url,
+                        title: currentTrack.title,
+                        artist: currentTrack.artist,
+                        album: currentTrack.album,
+                        audioFormat: currentTrack.audioFormat
+                    )
+                    showMiniPlayer = true
+                    logger.info("Restored current track: \(currentTrack.title)")
+                }
+            } else {
+                logger.debug("No saved queue state to restore")
+            }
+
             isInitialized = true
             isReady = true
-            
+
             logger.info("AudioEngineFacade initialization complete")
             
         } catch {
