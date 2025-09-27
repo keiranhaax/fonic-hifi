@@ -57,9 +57,9 @@
 - [X] T020 [P] Implement computed properties (trackCount, albumCount) in `Fonic HiFi/Data/Models/Artist.swift`
 
 ### Async I/O Operations (FR-007, FR-012)
-- [ ] T021 Move file I/O operations off @MainActor in `Fonic HiFi/Data/Services/LibraryImportService.swift`
-- [ ] T022 Implement transactional import with rollback in `Fonic HiFi/Data/Services/LibraryImportService.swift`
-- [ ] T023 [P] Create ImportSession actor in `Fonic HiFi/Data/Services/ImportSession.swift` per data-model.md specification
+- [X] T021 Move file I/O operations off @MainActor in `Fonic HiFi/Data/Services/LibraryImportService.swift`
+- [X] T022 Implement transactional import with rollback in `Fonic HiFi/Data/Services/LibraryImportService.swift`
+- [X] T023 [P] Create ImportSession actor in `Fonic HiFi/Data/Services/ImportSession.swift` per data-model.md specification
 
 ### Performance Optimizations (FR-009, FR-010, FR-011, FR-013, FR-014)
 - [ ] T024 Implement pagination (100 items per page) in `Fonic HiFi/Data/Services/DataManager.swift` for large queries

@@ -11,31 +11,30 @@ import Combine
 import OSLog
 
 /// Service responsible for importing audio files into the library
-@MainActor
 public final class LibraryImportService: ObservableObject {
     
     // MARK: - Published Properties
-    
+
     /// Current import progress (0.0 to 1.0)
-    @Published public private(set) var importProgress: Double = 0.0
-    
+    @MainActor @Published public private(set) var importProgress: Double = 0.0
+
     /// Whether an import is currently in progress
-    @Published public private(set) var isImporting: Bool = false
-    
+    @MainActor @Published public private(set) var isImporting: Bool = false
+
     /// Current status message
-    @Published public private(set) var statusMessage: String = ""
-    
+    @MainActor @Published public private(set) var statusMessage: String = ""
+
     /// Number of files processed
-    @Published public private(set) var filesProcessed: Int = 0
-    
+    @MainActor @Published public private(set) var filesProcessed: Int = 0
+
     /// Total number of files to process
-    @Published public private(set) var totalFiles: Int = 0
-    
+    @MainActor @Published public private(set) var totalFiles: Int = 0
+
     /// Import errors encountered
-    @Published public private(set) var importErrors: [ImportError] = []
-    
+    @MainActor @Published public private(set) var importErrors: [ImportError] = []
+
     /// Recently imported track identifiers
-    @Published public private(set) var recentlyImported: [PersistentIdentifier] = []
+    @MainActor @Published public private(set) var recentlyImported: [PersistentIdentifier] = []
     
     // MARK: - Dependencies
     
@@ -44,11 +43,14 @@ public final class LibraryImportService: ObservableObject {
     private let logger = Logger(subsystem: "com.fonichifi.library", category: "LibraryImportService")
     
     // MARK: - Private Properties
-    
+
     private var importTask: Task<Void, Never>?
     private let supportedExtensions: Set<String> = [
         "mp3", "m4a", "aac", "flac", "alac", "wav", "aiff", "aif", "ape", "wv", "ogg", "opus"
     ]
+
+    // Transaction tracking
+    private var currentTransaction: ImportTransaction?
     
     /// App container directory for storing copied music files
     private lazy var musicContainerURL: URL = {
@@ -69,14 +71,15 @@ public final class LibraryImportService: ObservableObject {
     // MARK: - Public Methods
     
     /// Import files from selected URLs (handles security-scoped resources)
+    @MainActor
     public func importFiles(from urls: [URL]) async {
         guard !isImporting else {
             logger.warning("Import already in progress")
             return
         }
-        
+
         logger.info("Starting import of \(urls.count) URLs")
-        
+
         // Reset state
         importProgress = 0.0
         filesProcessed = 0
@@ -119,6 +122,7 @@ public final class LibraryImportService: ObservableObject {
     }
     
     /// Cancel the current import operation
+    @MainActor
     public func cancelImport() {
         importTask?.cancel()
         importTask = nil
@@ -400,17 +404,21 @@ public final class LibraryImportService: ObservableObject {
             
             // Import the file
             if let trackId = try await processAudioFile(url) {
-                self.recentlyImported.append(trackId)
+                await Task { @MainActor in
+                    self.recentlyImported.append(trackId)
+                }.value
                 logger.debug("Successfully imported track with ID: \(String(describing: trackId))")
             }
             
         } catch {
             logger.error("Error processing file \(url.lastPathComponent): \(error.localizedDescription)")
-            importErrors.append(ImportError(
-                url: url,
-                error: error,
-                message: "Failed to process audio file"
-            ))
+            await Task { @MainActor in
+                self.importErrors.append(ImportError(
+                    url: url,
+                    error: error,
+                    message: "Failed to process audio file"
+                ))
+            }.value
         }
         
         await updateProgress()
@@ -457,6 +465,13 @@ public final class LibraryImportService: ObservableObject {
 
 // MARK: - Supporting Types
 
+/// Track import transaction for rollback support
+private final class ImportTransaction {
+    var importedFiles: [URL] = []
+    var copiedFiles: [URL] = []
+    var importedTracks: [PersistentIdentifier] = []
+}
+
 /// Error information for import failures
 public struct ImportError: Identifiable, Equatable {
     public let id = UUID()
@@ -464,11 +479,11 @@ public struct ImportError: Identifiable, Equatable {
     public let error: Error
     public let message: String
     public let timestamp: Date = Date()
-    
+
     public static func == (lhs: ImportError, rhs: ImportError) -> Bool {
         lhs.id == rhs.id
     }
-    
+
 }
 
 // MARK: - Extensions
