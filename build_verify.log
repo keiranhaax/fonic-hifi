@@ -1,0 +1,429 @@
+Checking dependencies...
+
+Critical (Required):
+  [OK] xcodebuild
+
+Build & Formatting:
+  [OK] xcbeautify
+  [OK] swiftlint
+  [OK] swiftformat
+
+Search & Navigation (Optional):
+  [OK] ripgrep (rg)
+  [OK] fd
+  [OK] fzf
+  [OK] bat
+  [OK] eza
+
+Analysis & Monitoring (Optional):
+  [OK] tokei
+  [OK] watchman
+  [OK] hyperfine
+  [OK] jq
+
+Git & AI Tools (Optional):
+  [OK] gh
+  [OK] mods
+  [OK] llm
+
+Dependency check complete
+Building Fonic HiFi (Debug)...
+
+----- xcbeautify -----
+Version: 2.30.1
+----------------------
+
+[36;1mResolving Package Graph[0m
+Fetching https://github.com/AudioKit/AudioKit.git (cached)
+Checking out [1m‘AudioKit’[0m @ [32m5.6.5[0m
+[32;1mResolved source packages[0m
+[36;1mAudioKit[0m - [1mhttps://github.com/AudioKit/AudioKit.git[0m @ [32m5.6.5[0m
+[36;1mnote: [0mUsing codesigning identity override: 
+[36;1mnote: [0mBuilding targets in dependency order
+[36;1mnote: [0mTarget dependency graph (4 targets)
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi.DependencyStaticMetadataFileList
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi.hmap
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi-project-headers.hmap
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi.DependencyMetadataFileList
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi.SwiftFileList
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi.LinkFileList
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi-OutputFileMap.json
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi_const_extract_protocols.json
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi.SwiftConstValuesFileList
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi-own-target-headers.hmap
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi-generated-files.hmap
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi-all-target-headers.hmap
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi-all-non-framework-target-headers.hmap
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi-DebugDylibPath-normal-arm64.txt
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Fonic\ HiFi-DebugDylibInstallName-normal-arm64.txt
+[[36mFonic HiFi[0m] [1mWrite Auxiliary File[0m Entitlements-Simulated.plist
+[[36mAudioKit_AudioKit[0m] [1mWrite Auxiliary File[0m AudioKit_AudioKit.DependencyStaticMetadataFileList
+[[36mAudioKit_AudioKit[0m] [1mWrite Auxiliary File[0m empty-AudioKit_AudioKit.plist
+[[36mAudioKit_AudioKit[0m] [1mWrite Auxiliary File[0m AudioKit_AudioKit.DependencyMetadataFileList
+[[36mAudioKit[0m] [1mWrite Auxiliary File[0m AudioKit.LinkFileList
+[[36mAudioKit[0m] [1mWrite Auxiliary File[0m AudioKit.SwiftConstValuesFileList
+[[36mAudioKit[0m] [1mWrite Auxiliary File[0m AudioKit_const_extract_protocols.json
+[[36mAudioKit[0m] [1mWrite Auxiliary File[0m AudioKit.SwiftFileList
+[[36mAudioKit[0m] [1mWrite Auxiliary File[0m AudioKit-OutputFileMap.json
+[[36mAudioKit[0m] [1mWrite Auxiliary File[0m resource_bundle_accessor.swift
+[[36mAudioKit[0m] [1mWrite Auxiliary File[0m AudioKit.modulemap
+[[36mAudioKit[0m] [1mWrite Auxiliary File[0m AudioKit.DependencyStaticMetadataFileList
+[[36mAudioKit[0m] [1mWrite Auxiliary File[0m AudioKit.DependencyMetadataFileList
+[[36mAudioKit[0m] [1mCopy[0m AudioKit.modulemap -> AudioKit.modulemap
+[[36mAudioKit_AudioKit[0m] [1mProcessing[0m empty-AudioKit_AudioKit.plist
+[[36mAudioKit_AudioKit[0m] [1mCopying[0m PrivacyInfo.xcprivacy
+[1mSigning[0m AudioKit_AudioKit.bundle (in target 'AudioKit_AudioKit' from project 'AudioKit')
+[[36mAudioKit_AudioKit[0m] [1mRegisterExecutionPolicyException[0m AudioKit_AudioKit.bundle
+[[36mAudioKit_AudioKit[0m] [1mTouching[0m AudioKit_AudioKit.bundle
+[[36mAudioKit[0m] [1mCompiling[0m MatrixMixer.swift
+[[36mAudioKit[0m] [1mCompiling[0m Mixer.swift
+[[36mAudioKit[0m] [1mCompiling[0m Mixer3D.swift
+[[36mAudioKit[0m] [1mCompiling[0m NamedNode.swift
+[[36mAudioKit[0m] [1mCompiling[0m Node+ConnectStrategy.swift
+[[36mAudioKit[0m] [1mCompiling[0m Node+Graphviz.swift
+[[36mAudioKit[0m] [1mCompiling[0m Node+connectionTreeDescription.swift
+[[36mAudioKit[0m] [1mCompiling[0m Node+disconnectStrategy.swift
+[[36mAudioKit[0m] [1mCompiling[0m Node.swift
+[[36mAudioKit[0m] [1mCompiling[0m NodeParameter.swift
+[[36mAudioKit[0m] [1mCompiling[0m NodeStatus.swift
+[[36mAudioKit[0m] [1mCompiling[0m AppleSampler+SoundFonts.swift
+[[36mAudioKit[0m] [1mCompiling[0m AppleSampler+getAUPresetXML.swift
+[[36mAudioKit[0m] [1mCompiling[0m AppleSampler.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioEngine.swift
+[[36mAudioKit[0m] [1mCompiling[0m CheckError.swift
+[[36mAudioKit[0m] [1mCompiling[0m CommonError.swift
+[[36mAudioKit[0m] [1mCompiling[0m AVAudioEngine+Devices.swift
+[[36mAudioKit[0m] [1mCompiling[0m Device.swift
+[[36mAudioKit[0m] [1mCompiling[0m DeviceUtils.swift
+[[36mAudioKit[0m] [1mCompiling[0m Settings+iOSVariants.swift
+[[36mAudioKit[0m] [1mCompiling[0m Settings+macOS.swift
+[[36mAudioKit[0m] [1mCompiling[0m Settings.swift
+[[36mAudioKit[0m] [1mCompiling[0m Table+AdditiveSynthesis.swift
+[[36mAudioKit[0m] [1mCompiling[0m Table.swift
+[[36mAudioKit[0m] [1mCompiling[0m AVAudioPCMBuffer+audition.swift
+[[36mAudioKit[0m] [1mCompiling[0m AVAudioTimeShim.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioKitHelpers.swift
+[[36mAudioKit[0m] [1mCompiling[0m resource_bundle_accessor.swift
+[[36mAudioKit[0m] [1mCompiling[0m AVAudioFile+Utilities.swift
+[[36mAudioKit[0m] [1mCompiling[0m AVAudioPCMBuffer+Processing.swift
+[[36mAudioKit[0m] [1mCompiling[0m AVAudioPCMBuffer+Utilities.swift
+[[36mAudioKit[0m] [1mCompiling[0m FormatConverter+Compressed.swift
+[[36mAudioKit[0m] [1mCompiling[0m FormatConverter+PCM.swift
+[[36mAudioKit[0m] [1mCompiling[0m FormatConverter+Utilities.swift
+[[36mAudioKit[0m] [1mCompiling[0m FormatConverter.swift
+[[36mAudioKit[0m] [1mCompiling[0m WaveformDataRequest.swift
+[[36mAudioKit[0m] [1mCompiling[0m AVAudioUnit+Helpers.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioComponentDescription+Helpers.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioUnit+Helpers.swift
+[[36mAudioKit[0m] [1mCompiling[0m AVAudioEngine+Extensions.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioEngine+connectionTreeDescription.swift
+[[36mAudioKit[0m] [1mCompiling[0m MusicTrack.swift
+[[36mAudioKit[0m] [1mCompiling[0m TimeSignature.swift
+[[36mAudioKit[0m] [1mCompiling[0m UnsafeMIDIMetaEventPointer.swift
+[[36mAudioKit[0m] [1mCompiling[0m Duration.swift
+[[36mAudioKit[0m] [1mCompiling[0m AmplitudeTap.swift
+[[36mAudioKit[0m] [1mCompiling[0m BaseTap.swift
+[[36mAudioKit[0m] [1mCompiling[0m FFTTap.swift
+[[36mAudioKit[0m] [1mCompiling[0m MultiChannelInputNodeTap+WriteableFile.swift
+[[36mAudioKit[0m] [1mCompiling[0m MultiChannelInputNodeTap.swift
+[[36mAudioKit[0m] [1mCompiling[0m NodeRecorder.swift
+[[36mAudioKit[0m] [1mCompiling[0m RawBufferTap.swift
+[[36mAudioKit[0m] [1mCompiling[0m RawDataTap.swift
+[[36mAudioKit[0m] [1mCompiling[0m Tap.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIOmniListener.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDISystemRealTimeListener.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDISystemRealTimeObserver.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDITempoListener.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDITempoObserver.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDI+Extensions.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDI+Receiving.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDI+Sending.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDI+VirtualPorts.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDI.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDICallbackInstrument.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIEndpointInfo.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIEvent.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIFile.swift
+[[36mAudioKit[0m] [1mCompiling[0m PresetBuilder.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioPlayer+Buffering.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioPlayer+Legacy.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioPlayer+Playback.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioPlayer+Scheduling.swift
+[[36mAudioKit[0m] [1mCompiling[0m AudioPlayer.swift
+[[36mAudioKit[0m] [1mCompiling[0m MultiSegmentAudioPlayer.swift
+[[36mAudioKit[0m] [1mCompiling[0m TimePitch.swift
+[[36mAudioKit[0m] [1mCompiling[0m VariSpeed.swift
+[[36mAudioKit[0m] [1mCompiling[0m AppleSequencer.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIMetaEvent+allocate.swift
+[[36mAudioKit[0m] [1mCompiling[0m MusicTrack+Events.swift
+[[36mAudioKit[0m] [1mCompiling[0m MusicTrack+Load.swift
+[[36mAudioKit[0m] [1mCompiling[0m DynamicsProcessor.swift
+[[36mAudioKit[0m] [1mCompiling[0m Expander.swift
+[[36mAudioKit[0m] [1mCompiling[0m PeakLimiter.swift
+[[36mAudioKit[0m] [1mCompiling[0m BandPassFilter.swift
+[[36mAudioKit[0m] [1mCompiling[0m HighPassFilter.swift
+[[36mAudioKit[0m] [1mCompiling[0m HighShelfFilter.swift
+[[36mAudioKit[0m] [1mCompiling[0m LowPassFilter.swift
+[[36mAudioKit[0m] [1mCompiling[0m LowShelfFilter.swift
+[[36mAudioKit[0m] [1mCompiling[0m ParametricEQ.swift
+[[36mAudioKit[0m] [1mCompiling[0m NewPitch.swift
+[[36mAudioKit[0m] [1mCompiling[0m Reverb.swift
+[[36mAudioKit[0m] [1mCompiling[0m PlaygroundNoiseGenerator.swift
+[[36mAudioKit[0m] [1mCompiling[0m PlaygroundOscillator.swift
+[[36mAudioKit[0m] [1mCompiling[0m EnvironmentalNode.swift
+[[36mAudioKit[0m] [1mCompiling[0m Log.swift
+[[36mAudioKit[0m] [1mCompiling[0m MemoryAddress.swift
+[[36mAudioKit[0m] [1mCompiling[0m MusicalDuration.swift
+[[36mAudioKit[0m] [1mCompiling[0m ThreadLockedAccessor.swift
+[[36mAudioKit[0m] [1mCompiling[0m BluetoothMIDIButton.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIControl.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDICustomMetaEvent.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIMessage.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIStatus.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDISystemCommand.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIBeatObserver.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIClockListener.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIMonoPolyListener.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIObserverMaster.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIFileChunk.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIFileChunkEvent.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIFileHeaderChunk.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIFileTempoTrack.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIFileTrack.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIFileTrackChunk.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIFileTrackMap.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIInstrument.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIListener.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDINoteData.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIPlayer.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDISampler.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDITransformer.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIPacket+Extensions.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIPacket+SequenceType.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIPacketList+SequenceType.swift
+[[36mAudioKit[0m] [1mCompiling[0m BPM+StatisticalTools.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIHelper.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDISysexMessage.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDITimeout.swift
+[[36mAudioKit[0m] [1mCompiling[0m MIDIVariableLengthQuantity.swift
+[[36mAudioKit[0m] [1mCompiling[0m AVAudioUnitEffect+Apple.swift
+[[36mAudioKit[0m] [1mCompiling[0m Delay.swift
+[[36mAudioKit[0m] [1mCompiling[0m AppleDistortion.swift
+[[36mAudioKit[0m] [1mCompiling[0m Decimator.swift
+[[36mAudioKit[0m] [1mCompiling[0m Distortion.swift
+[[36mAudioKit[0m] [1mCompiling[0m RingModulator.swift
+[[36mAudioKit[0m] [1mCompiling[0m Compressor.swift
+[[36mAudioKit[0m] [1mCopy[0m arm64-apple-ios-simulator.swiftmodule -> AudioKit.swiftmodule
+[[36mAudioKit[0m] [1mCopy[0m arm64-apple-ios-simulator.swiftdoc -> AudioKit.swiftdoc
+[[36mAudioKit[0m] [1mCopy[0m arm64-apple-ios-simulator.abi.json -> AudioKit.abi.json
+[[36mAudioKit[0m] [1mCopy[0m arm64-apple-ios-simulator.swiftsourceinfo -> AudioKit.swiftsourceinfo
+[[36mFonic HiFi[0m] [1mGenerate Asset Symbols[0m Assets.xcassets
+[[36mAudioKit[0m] [1mLinking[0m AudioKit.o
+[[36mAudioKit[0m] [1mExtract App Intents Metadata[0m
+[[36mAudioKit[0m] [1mRegisterExecutionPolicyException[0m AudioKit.o
+[[36mFonic HiFi[0m] [1mCopy[0m AudioKit_AudioKit.bundle -> AudioKit_AudioKit.bundle
+[[36mFonic HiFi[0m] [1mLinking[0m __preview.dylib
+[[36mFonic HiFi[0m] [1mProcessing[0m Info.plist
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugNowPlayingView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugTrackRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MinimalCrashTest.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileImportView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ImportProgressView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AlbumGridView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ArtistListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LibraryView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaylistListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassMiniPlayer.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MiniPlayerView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PreviewData.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchPlaylistResultsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchResults.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AppSettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PerformanceMonitor.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackDiagnostics.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineFacade.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:611:13: [33mvariable 'nowPlayingInfo' was never mutated; consider changing to 'let' constant[0m
+        var nowPlayingInfo: [String: Any] = [
+[32m        ~~~ ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:697:28: [33mno 'async' operations occur within 'await' expression[0m
+        let currentState = await stateManager.currentState
+[32m                           ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:756:19: [33mvalue 'engine' was defined but never used; consider replacing with boolean test[0m
+        guard let engine = currentEngine else { return }
+[32m              ~~~~^~~~~~~~~[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m ProgressTimerManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioKitEngineAdapter.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AVAudioEngineAdapter.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:174:20: [33mconsider using asynchronous alternative function[0m
+        playerNode.scheduleFile(file, at: nil) {
+[32m                   ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:247:20: [33mconsider using asynchronous alternative function[0m
+        playerNode.scheduleSegment(
+[32m                   ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:274:13: [33minitialization of immutable value 'format' was never used; consider replacing with assignment to '_' or removing it[0m
+        let format = engine.outputNode.outputFormat(forBus: 0)
+[32m        ~~~~^~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:281:20: [33mvalue 'preferredSampleRate' was defined but never used; consider replacing with boolean test[0m
+            if let preferredSampleRate = configuration.sampleRate {
+[32m               ~~~~^~~~~~~~~~~~~~~~~~~~~~[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m AVAudioEngineConfig.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineFactory.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineType.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioDevice.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackCache.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m StateCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioMonitor.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift:2644:22: [33m'allowBluetooth' was deprecated in iOS 8.0: renamed to 'AVAudioSession.CategoryOptions.allowBluetoothHFP'[0m
+        if contains(.allowBluetooth) { names.append("allowBluetooth") }
+[32m                     ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioMonitoringService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidationResult.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidator.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:57:13: [33mvariable 'warnings' was never mutated; consider changing to 'let' constant[0m
+        var warnings: [ValidationWarning] = []
+[32m        ~~~ ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:721:89: [33mleft side of nil coalescing operator '??' has non-optional type 'Bool', so the right side is never used[0m
+        if audioSession.currentRoute.outputs.contains(where: { $0.isSpatialAudioEnabled ?? false }) {
+[32m                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1035:13: [33minitialization of immutable value 'memoryImpact' was never used; consider replacing with assignment to '_' or removing it[0m
+        let memoryImpact = min(1.0, formatImpact * 2.0)
+[32m        ~~~~^~~~~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1036:13: [33minitialization of immutable value 'batteryImpact' was never used; consider replacing with assignment to '_' or removing it[0m
+        let batteryImpact = min(1.0, cpuImpact * 0.8)
+[32m        ~~~~^~~~~~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1038:13: [33minitialization of immutable value 'latency' was never used; consider replacing with assignment to '_' or removing it[0m
+        let latency = Double(processingStages.count) * 2.0 + 3.0 // Base 3ms + 2ms per stage
+[32m        ~~~~^~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift:1040:13: [33mimmutable value 'rating' was never used; consider removing it[0m
+        let rating: PerformanceRating
+[32m            ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidatorService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DACCompatibilityInfo.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineConfiguration.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioError.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFileInfo.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormat.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioMetrics.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionInterruption.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectFailureReason.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackProtocol.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackState.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FormatDetectionService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingInfo+Extensions.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearchesActor.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Actors/RecentSearchesActor.swift:24:13: [33mvariable 'descriptor' was never mutated; consider changing to 'let' constant[0m
+        var descriptor = FetchDescriptor<RecentSearch>(
+[32m        ~~~ ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Actors/RecentSearchesActor.swift:48:13: [33mvariable 'descriptor' was never mutated; consider changing to 'let' constant[0m
+        var descriptor = FetchDescriptor<RecentSearch>()
+[32m        ~~~ ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackDataActor.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SwiftDataPagination.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearchMigrationPlan.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Album.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Artist.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormatType.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Playlist.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearch.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Track.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ImportMetrics.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ImportSession.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LibraryImportService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MetadataExtractionService.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:49:21: [33m'init(url:)' was deprecated in iOS 18.0: Use AVURLAsset(url:) instead[0m
+        let asset = AVAsset(url: url)
+[32m                    ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:44:13: [33minitialization of immutable value 'fileSize' was never used; consider replacing with assignment to '_' or removing it[0m
+        let fileSize = fileAttributes[.size] as? Int64 ?? 0
+[32m        ~~~~^~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:45:13: [33minitialization of immutable value 'dateAdded' was never used; consider replacing with assignment to '_' or removing it[0m
+        let dateAdded = fileAttributes[.creationDate] as? Date ?? Date()
+[32m        ~~~~^~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:46:13: [33minitialization of immutable value 'dateModified' was never used; consider replacing with assignment to '_' or removing it[0m
+        let dateModified = fileAttributes[.modificationDate] as? Date ?? Date()
+[32m        ~~~~^~~~~~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:56:13: [33minitialization of immutable value 'metadata' was never used; consider replacing with assignment to '_' or removing it[0m
+        let metadata = try await asset.load(.metadata)
+[32m        ~~~~^~~~~~~~[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:176:36: [33m'value' was deprecated in iOS 16.0: Use load(.value) instead[0m
+                  let value = item.value else { continue }
+[32m                                   ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:218:40: [33m'dataValue' was deprecated in iOS 16.0: Use load(.dataValue) instead[0m
+                    if let data = item.dataValue {
+[32m                                       ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:223:40: [33m'dataValue' was deprecated in iOS 16.0: Use load(.dataValue) instead[0m
+                    if let data = item.dataValue {
+[32m                                       ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/MetadataExtractionService.swift:242:32: [33m'dataValue' was deprecated in iOS 16.0: Use load(.dataValue) instead[0m
+               let data = item.dataValue {
+[32m                               ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchCache.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/SearchCache.swift:172:16: [33mvariable 'existing' was never mutated; consider changing to 'let' constant[0m
+        if var existing = cache[normalizedQuery], !existing.isExpired(ttl: ttl) {
+[32m           ~~~ ^[0m
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Data/Services/SearchCache.swift:194:13: [33minitialization of immutable value 'now' was never used; consider replacing with assignment to '_' or removing it[0m
+        let now = Date()
+[32m        ~~~~^~~[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m DataManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEnvironment.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingEnvironment.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackStateManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackStateStore.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioQueue.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioQueueManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueRepeatMode.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueShuffleMode.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueState.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Core/Audio/Queue/QueueState.swift:359:16: [33mimmutable value 'currentIndex' was never used; consider replacing with '_' or removing it[0m
+        if let currentIndex = currentIndex,
+[32m           ~~~~^~~~~~~~~~~~[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormatDetectionManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AccessibilityEnhancements.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BottomSearchBar.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ErrorView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m iOS26_Features_Documentation.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassDesignSystem.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassExamples.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassRail.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassTabBar.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PerformanceOptimizedContainer.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugContentView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileDetailsView.swift
+⚠️  /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Views/Settings/FileDetailsView.swift:161:25: [33m'init(url:)' was deprecated in iOS 18.0: Use AVURLAsset(url:) instead[0m
+            let asset = AVAsset(url: file.url)
+[32m                        ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m FileManagerView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MainActorHelpers.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ContentView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ContentView_Safe.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp_Debug.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m GeneratedAssetSymbols.swift
+[[36mFonic HiFi[0m] [1mCopy[0m arm64-apple-ios-simulator.swiftmodule -> Fonic_HiFi.swiftmodule
+[[36mFonic HiFi[0m] [1mCopy[0m arm64-apple-ios-simulator.swiftdoc -> Fonic_HiFi.swiftdoc
+[[36mFonic HiFi[0m] [1mCopy[0m arm64-apple-ios-simulator.abi.json -> Fonic_HiFi.abi.json
+[[36mFonic HiFi[0m] [1mCopy[0m arm64-apple-ios-simulator.swiftsourceinfo -> Fonic_HiFi.swiftsourceinfo
+[[36mFonic HiFi[0m] [1mLinking[0m Fonic\ HiFi.debug.dylib
+[36;1mnote: [0mUsing stub executor library with Swift entry point. (in target 'Fonic HiFi' from project 'Fonic HiFi')
+[[36mFonic HiFi[0m] [1mLinking[0m Fonic\ HiFi
+[[36mFonic HiFi[0m] [1mExtract App Intents Metadata[0m
+[1mSigning[0m Fonic\ HiFi.debug.dylib (in target 'Fonic HiFi' from project 'Fonic HiFi')
+[1mSigning[0m __preview.dylib (in target 'Fonic HiFi' from project 'Fonic HiFi')
+[1mSigning[0m Fonic\ HiFi.app (in target 'Fonic HiFi' from project 'Fonic HiFi')
+[[36mFonic HiFi[0m] [1mRegisterExecutionPolicyException[0m Fonic\ HiFi.app
+[[36mFonic HiFi[0m] [1mValidate[0m Fonic\ HiFi.app
+[[36mFonic HiFi[0m] [1mTouching[0m Fonic\ HiFi.app
+[32;1mBuild Succeeded[0m
+Build complete

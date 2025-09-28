@@ -50,7 +50,10 @@
       "Bash(chmod:*)",
       "Bash(specs/001-read-and-analyze/scripts/count-public-apis.sh)",
       "Bash(specs/001-read-and-analyze/scripts/count-documented-apis.sh)",
-      "Bash(specs/001-read-and-analyze/scripts/check-doc-coverage.sh)"
+      "Bash(specs/001-read-and-analyze/scripts/check-doc-coverage.sh)",
+      "Bash(git checkout:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
