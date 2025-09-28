@@ -1,7 +1,18 @@
 # Fonic HiFi Implementation Plan
 
+> ## ⚠️ SUPERSEDED - DO NOT USE
+> **This plan has been SUPERSEDED by `/specs/002-to-implement-this/` (Completed 2025-09-28)**
+>
 > **Archived (2025-09):** Historic plan that referenced SFBAudioEngine/FFmpeg stubs; retained for context only.
 > **Status Update (2025-09-26)**: [Unverified] Legacy steps reference pre-iOS 26 toolchains, fictional module paths (e.g., `/FonicHiFi/App`), and automated test scaffolding that do not exist in the current repository. Treat coverage metrics and testing tasks as future-state work until new specs land.
+>
+> **Supersession Details (2025-09-28):**
+> - All critical stability fixes completed via specs/002-to-implement-this (48 tasks)
+> - Swift 6 concurrency compliance achieved
+> - Remote commands and monitoring systems implemented
+> - Performance optimizations and caching layers added
+> - Architecture improvements and UX enhancements completed
+> - For current implementation status, see `/specs/002-to-implement-this/COMPLETED.md`
 
 This implementation plan provides a detailed, step-by-step guide for developing the Fonic HiFi iOS application. Each step is designed to build incrementally on the previous one while maintaining a functioning state throughout development.
 
