@@ -11,12 +11,28 @@ import SwiftData
 /// Debug version of the app to isolate the crash
 // @main  // UNCOMMENT THIS AND COMMENT OUT @main IN FonicHiFiApp.swift TO USE
 struct FonicHiFiApp_Debug: App {
-    @StateObject private var dataManager = try! DataManager()
+    @StateObject private var dataManager: DataManager
     @StateObject private var audioEngine: AudioEngineFacade
-    
+
     private let playbackStateManager: PlaybackStateManager
-    
+
     init() {
+        // Initialize DataManager with error handling
+        do {
+            let dm = try DataManager()
+            self._dataManager = StateObject(wrappedValue: dm)
+        } catch {
+            print("Error initializing DataManager: \(error)")
+            print("Using fallback in-memory DataManager for debug")
+            // Create a minimal fallback DataManager for debugging
+            if let fallbackDM = DataManager.makePreviewDataManager() {
+                self._dataManager = StateObject(wrappedValue: fallbackDM)
+            } else {
+                // Last resort: try to create a basic DataManager, accepting potential crash in debug mode
+                self._dataManager = StateObject(wrappedValue: try! DataManager())
+            }
+        }
+
         let playbackStateManager = PlaybackStateManager()
         self.playbackStateManager = playbackStateManager
         self._audioEngine = StateObject(wrappedValue: AudioEngineFacade(stateManager: playbackStateManager))

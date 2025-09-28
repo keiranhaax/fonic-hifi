@@ -9,10 +9,82 @@
 import Foundation
 import AVFoundation
 import os.log
+import SwiftData
+
+// MARK: - Protocol Definition
+
+@MainActor
+public protocol PlaybackCoordinating: Sendable {
+    // Playback Control
+    func play() async throws
+    func pause() async
+    func stop() async
+    func seek(to time: TimeInterval) async throws
+    func setRate(_ rate: Float) async throws
+
+    // Track Management
+    func load(_ track: Track) async throws
+    func preloadNext(_ track: Track) async
+    func clearPreload() async
+
+    // Queue Operations
+    func playNext() async throws
+    func playPrevious() async throws
+    func skipTo(index: Int) async throws
+
+    // State Observation
+    var currentState: PlaybackState { get async }
+    var statePublisher: AsyncStream<PlaybackState> { get }
+
+    // Progress Updates
+    func startProgressTimer() async
+    func stopProgressTimer() async
+    var progressPublisher: AsyncStream<PlaybackProgress> { get }
+}
+
+// MARK: - Data Types
+
+public struct PlaybackProgress: Sendable {
+    public let currentTime: TimeInterval
+    public let duration: TimeInterval
+    public let bufferedTime: TimeInterval
+    public let isLive: Bool
+
+    public var percentComplete: Double {
+        guard duration > 0 else { return 0 }
+        return currentTime / duration * 100
+    }
+
+    public var remainingTime: TimeInterval {
+        max(0, duration - currentTime)
+    }
+}
+
+public struct PlaybackCapabilities: Sendable {
+    public let canPlay: Bool
+    public let canPause: Bool
+    public let canSeek: Bool
+    public let canSkipForward: Bool
+    public let canSkipBackward: Bool
+    public let supportsVariableRate: Bool
+    public let minRate: Float
+    public let maxRate: Float
+}
+
+public enum PlaybackError: Error, Sendable {
+    case trackNotFound
+    case engineNotInitialized
+    case loadFailed(String)
+    case seekFailed(String)
+    case unsupportedFormat(AudioFormat)
+    case noAudioRoute
+    case queueEmpty
+    case invalidQueueIndex(Int)
+}
 
 /// Handles all playback-related operations and progress management
 @MainActor
-public final class PlaybackCoordinator {
+public final class PlaybackCoordinator: PlaybackCoordinating {
   
   // MARK: - Dependencies
   
@@ -260,7 +332,7 @@ public final class PlaybackCoordinator {
   
   /// Start progress tracking timer
   private func startProgressTracking() {
-    progressTimer.start(pollInterval: 0.25) { [weak self] in
+    progressTimer.start(pollInterval: 0.2) { [weak self] in
       guard let self = self else { return }
       guard let engine = self.currentEngine,
             self.stateManager.currentState.isPlaying else {
@@ -313,7 +385,7 @@ public final class PlaybackCoordinator {
       logger.info("Engine preference changed from \(currentEngineType) to \(preferredEngine), recreating engine")
 
       // Stop current playback if playing
-      if await stateManager.currentState.isPlaying {
+      if stateManager.currentState.isPlaying {
         await currentEngine.stop()
       }
 
@@ -335,6 +407,187 @@ public final class PlaybackCoordinator {
     logger.debug("Created new audio engine: \(preferredEngine) for format: \(formatInfo.format.displayName)")
   }
   
+  // MARK: - PlaybackCoordinating Protocol Implementation
+
+  /// Protocol: Play current track or resume playback
+  public func play() async throws {
+    if let currentTrack = queueManager.currentTrack {
+      // Use simple Track initializer for AudioTrack conversion
+      let track = Track(
+        url: currentTrack.url,
+        title: currentTrack.title,
+        artist: currentTrack.artist,
+        album: currentTrack.album,
+        audioFormat: currentTrack.audioFormat
+      )
+      try await play(track: track)
+    } else {
+      try await resume()
+    }
+  }
+
+  /// Protocol: Load a track
+  public func load(_ track: Track) async throws {
+    assertMainThread()
+
+    guard facade?.isReady == true else {
+      throw PlaybackError.engineNotInitialized
+    }
+
+    logger.info("Loading track: \(track.title)")
+
+    // Update queue manager
+    queueManager.setCurrentTrack(track.toAudioTrack())
+
+    // Detect format
+    let formatInfo = try await formatDetectionManager.detectFormat(at: track.url)
+
+    // Ensure proper engine
+    try await ensureEngineForFormat(formatInfo)
+
+    // Load into engine
+    guard let engine = currentEngine else {
+      throw PlaybackError.engineNotInitialized
+    }
+
+    try await engine.load(url: track.url)
+    stateManager.updateState(.paused(currentTime: 0, duration: formatInfo.duration))
+  }
+
+  /// Protocol: Preload next track
+  public func preloadNext(_ track: Track) async {
+    // TODO: Implement preloading logic
+    logger.info("Preloading next track: \(track.title)")
+  }
+
+  /// Protocol: Clear preloaded content
+  public func clearPreload() async {
+    // TODO: Implement preload clearing
+    logger.info("Clearing preloaded content")
+  }
+
+  /// Protocol: Play next track in queue
+  public func playNext() async throws {
+    guard let nextTrack = queueManager.next() else {
+      throw PlaybackError.queueEmpty
+    }
+
+    let track = Track(
+      url: nextTrack.url,
+      title: nextTrack.title,
+      artist: nextTrack.artist,
+      album: nextTrack.album,
+      audioFormat: nextTrack.audioFormat
+    )
+    try await play(track: track)
+  }
+
+  /// Protocol: Play previous track in queue
+  public func playPrevious() async throws {
+    guard let previousTrack = queueManager.previous() else {
+      throw PlaybackError.queueEmpty
+    }
+
+    let track = Track(
+      url: previousTrack.url,
+      title: previousTrack.title,
+      artist: previousTrack.artist,
+      album: previousTrack.album,
+      audioFormat: previousTrack.audioFormat
+    )
+    try await play(track: track)
+  }
+
+  /// Protocol: Skip to specific index in queue
+  public func skipTo(index: Int) async throws {
+    // Get track at index directly
+    guard index >= 0 && index < queueManager.tracks.count else {
+      throw PlaybackError.invalidQueueIndex(index)
+    }
+
+    let selectedTrack = queueManager.tracks[index]
+
+    // Set as current track
+    queueManager.setCurrentTrack(selectedTrack)
+
+    let trackModel = Track(
+      url: selectedTrack.url,
+      title: selectedTrack.title,
+      artist: selectedTrack.artist,
+      album: selectedTrack.album,
+      audioFormat: selectedTrack.audioFormat
+    )
+    try await play(track: trackModel)
+  }
+
+  /// Protocol: Set playback rate
+  public func setRate(_ rate: Float) async throws {
+    guard currentEngine != nil else {
+      throw PlaybackError.engineNotInitialized
+    }
+
+    // AudioEngineService doesn't have setRate method, would need to extend it
+    logger.warning("setRate not implemented in AudioEngineService")
+  }
+
+  /// Protocol: Get current playback state
+  public var currentState: PlaybackState {
+    get async {
+      stateManager.currentState
+    }
+  }
+
+  /// Protocol: Get state updates as async stream
+  public var statePublisher: AsyncStream<PlaybackState> {
+    AsyncStream { continuation in
+      // PlaybackStateManager doesn't expose stateSubject
+      // We'd need to modify it or use a different approach
+      // For now, return current state once
+      Task { @MainActor in
+        let state = self.stateManager.currentState
+        continuation.yield(state)
+        continuation.finish()
+      }
+    }
+  }
+
+  /// Protocol: Start progress timer
+  public func startProgressTimer() async {
+    startProgressTracking()
+  }
+
+  /// Protocol: Stop progress timer
+  public func stopProgressTimer() async {
+    stopProgressTracking()
+  }
+
+  /// Protocol: Get progress updates as async stream
+  public var progressPublisher: AsyncStream<PlaybackProgress> {
+    AsyncStream { continuation in
+      Task { @MainActor in
+        // Use a simple polling approach to avoid Timer capture issues
+        while !Task.isCancelled {
+          if let engine = self.currentEngine,
+             self.stateManager.currentState.isPlaying {
+            let currentTime = await engine.currentTime
+            let duration = await engine.duration
+            let progress = PlaybackProgress(
+              currentTime: currentTime,
+              duration: duration,
+              bufferedTime: currentTime, // TODO: Get actual buffered time
+              isLive: false
+            )
+            continuation.yield(progress)
+          }
+
+          // Sleep for 200ms
+          try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+        continuation.finish()
+      }
+    }
+  }
+
   // MARK: - Thread Safety
   
   private func assertMainThread(

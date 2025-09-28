@@ -114,8 +114,18 @@ public final class Album {
     /// Whether the album supports gapless playback
     public var supportsGapless: Bool
     
+    // MARK: - Relationships
+
+    /// Tracks belonging to this album
+    @Relationship(deleteRule: .nullify, inverse: \Track.albumRelation)
+    public var tracks: [Track] = []
+
+    /// Primary artist relationship
+    @Relationship(deleteRule: .nullify, inverse: \Artist.albums)
+    public var artistRelation: Artist?
+
     // MARK: - User Data
-    
+
     /// User rating (1-5 stars)
     public var rating: Int?
     
@@ -135,23 +145,20 @@ public final class Album {
     public var dateAdded: Date
     
     // MARK: - Computed Properties
-    
+
     /// Total duration of all tracks on the album
     public var totalDuration: TimeInterval {
-        // This would be calculated from related tracks
-        return 0
+        tracks.reduce(0) { $0 + $1.duration }
     }
-    
+
     /// Total file size of the album
     public var totalFileSize: Int64 {
-        // This would be calculated from related tracks
-        return 0
+        tracks.reduce(0) { $0 + $1.fileSize }
     }
-    
+
     /// Number of tracks currently in the library for this album
     public var trackCount: Int {
-        // This would be calculated from Track relationships
-        return 0
+        tracks.count
     }
     
     /// Whether the album is complete (all tracks present)

@@ -44,29 +44,36 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         sourceFormat: AudioFileInfo,
         outputDevice: AudioDevice?
     ) async -> BitPerfectValidationResult {
-        
+
         logger.info("Starting bit-perfect validation for \(sourceFormat.format.displayName) at \(sourceFormat.sampleRate)Hz/\(sourceFormat.bitDepth)-bit")
-        
+
         // Check cache first
         if let cachedResult = getCachedValidationResult() {
             logger.debug("Returning cached validation result")
             return cachedResult
         }
-        
+
         var validationIssues: [ValidationIssue] = []
         var warnings: [ValidationWarning] = []
         var processingStages: [AudioProcessingStage] = []
-        
+
         // Get current device capabilities
         let deviceCapabilities = await getCurrentDeviceCapabilities()
         let deviceInfo = await getCurrentDeviceInfo()
-        
+
         // Analyze audio session settings
         let sessionAnalysis = await analyzeAudioSession()
-        
+
         // Check sample rate compatibility
+        // Note: iOS often reports nearest supported rate, not exact match
         let actualSampleRate = Int(audioSession.sampleRate)
-        let sampleRateMatches = Int(sourceFormat.sampleRate) == actualSampleRate
+        let targetSampleRate = Int(sourceFormat.sampleRate)
+
+        // iOS typically supports 44100 and 48000 natively
+        // Check if we're using a standard rate that iOS can handle directly
+        let isStandardRate = [44100, 48000].contains(targetSampleRate)
+        let sampleRateMatches = actualSampleRate == targetSampleRate ||
+                               (isStandardRate && abs(actualSampleRate - targetSampleRate) < 100)
         
         if !sampleRateMatches {
             validationIssues.append(ValidationIssue(
@@ -618,39 +625,57 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
     }
     
     private func estimateOutputBitDepth(deviceCapabilities: DeviceCapabilities) -> Int {
-        // iOS typically uses 16-bit for built-in audio, 24-bit for external DACs
+        // iOS audio engine capabilities based on output device
         let currentRoute = audioSession.currentRoute
         guard let output = currentRoute.outputs.first else {
             return 16
         }
-        
+
+        // Log device information for debugging
+        logger.debug("Detecting bit depth for device: \(output.portName) (type: \(output.portType.rawValue))")
+
         switch output.portType {
         case .builtInSpeaker, .builtInReceiver:
+            // iOS internal audio is 16-bit integer
             return 16
         case .headphones:
-            return 16
+            // Lightning/USB-C headphones can support 24-bit
+            // Standard 3.5mm jack is 16-bit
+            return output.portName.contains("USB") || output.portName.contains("Lightning") ? 24 : 16
         case .bluetoothA2DP, .bluetoothHFP, .bluetoothLE:
+            // Bluetooth audio is limited to 16-bit due to compression
             return 16
+        case .usbAudio:
+            // USB DACs typically support 24-bit or 32-bit
+            return min(deviceCapabilities.maxBitDepth, 24)
         case .thunderbolt:
+            // Thunderbolt interfaces can support up to 32-bit
             return deviceCapabilities.maxBitDepth
+        case .carAudio:
+            // CarPlay typically uses 16-bit
+            return 16
+        case .HDMI:
+            // HDMI can support 24-bit
+            return 24
         default:
+            // Conservative default
             return 16
         }
     }
     
     private func detectAudioProcessing() async -> (hasProcessing: Bool, stages: [AudioProcessingStage]) {
         var stages: [AudioProcessingStage] = []
-        
+
         // Check for system mixer activity
         if audioSession.isOtherAudioPlaying {
             stages.append(AudioProcessingStage(
                 type: .systemMixer,
-                description: "System audio mixer is active",
+                description: "System audio mixer is active - other apps are playing audio",
                 affectsBitPerfect: true,
                 performanceImpact: 0.2
             ))
         }
-        
+
         // Check for volume scaling
         if audioSession.outputVolume < 1.0 {
             stages.append(AudioProcessingStage(
@@ -660,10 +685,61 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
                 performanceImpact: 0.1
             ))
         }
-        
-        // Note: iOS doesn't provide direct access to DSP/EQ settings
-        // These would need to be detected through other means or user reporting
-        
+
+        // Check audio session mode for processing hints
+        switch audioSession.mode {
+        case .moviePlayback:
+            stages.append(AudioProcessingStage(
+                type: .movieMode,
+                description: "Movie playback mode - may apply dynamic range processing",
+                affectsBitPerfect: false,
+                performanceImpact: 0.05
+            ))
+        case .voiceChat, .videoChat:
+            stages.append(AudioProcessingStage(
+                type: .voiceProcessing,
+                description: "Voice/Video chat mode - echo cancellation and noise reduction active",
+                affectsBitPerfect: true,
+                performanceImpact: 0.3
+            ))
+        case .measurement:
+            // Measurement mode is actually good for bit-perfect
+            break
+        case .spokenAudio:
+            stages.append(AudioProcessingStage(
+                type: .spokenAudioMode,
+                description: "Spoken audio mode - may apply speech enhancement",
+                affectsBitPerfect: false,
+                performanceImpact: 0.1
+            ))
+        default:
+            // Default mode is fine
+            break
+        }
+
+        // Check if Spatial Audio is enabled (iOS 15+)
+        if audioSession.currentRoute.outputs.contains(where: { $0.isSpatialAudioEnabled ?? false }) {
+            stages.append(AudioProcessingStage(
+                type: .spatialAudio,
+                description: "Spatial Audio processing is enabled",
+                affectsBitPerfect: true,
+                performanceImpact: 0.4
+            ))
+        }
+
+        // Check for Bluetooth codec limitations
+        let bluetoothOutput = audioSession.currentRoute.outputs.first { output in
+            [AVAudioSession.Port.bluetoothA2DP, .bluetoothHFP, .bluetoothLE].contains(output.portType)
+        }
+        if bluetoothOutput != nil {
+            stages.append(AudioProcessingStage(
+                type: .bluetoothCodec,
+                description: "Bluetooth audio codec compression (AAC/SBC)",
+                affectsBitPerfect: true,
+                performanceImpact: 0.2
+            ))
+        }
+
         return (hasProcessing: !stages.isEmpty, stages: stages)
     }
     

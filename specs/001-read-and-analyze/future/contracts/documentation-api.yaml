@@ -1,0 +1,395 @@
+openapi: 3.0.0
+info:
+  title: Codebase Documentation API
+  version: 1.0.0
+  description: API for accessing and managing Fonic HiFi codebase documentation
+
+paths:
+  /documentation/sections:
+    get:
+      summary: Get all documentation sections
+      operationId: getDocumentationSections
+      parameters:
+        - name: includeSubsections
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of documentation sections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sections:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DocumentationSection'
+                  coverage:
+                    $ref: '#/components/schemas/CoverageMetrics'
+
+  /documentation/sections/{sectionId}:
+    get:
+      summary: Get specific documentation section
+      operationId: getDocumentationSection
+      parameters:
+        - name: sectionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Documentation section details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentationSection'
+        '404':
+          description: Section not found
+
+  /documentation/components:
+    get:
+      summary: Get documented components
+      operationId: getComponents
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ComponentType'
+        - name: publicOnly
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: verificationStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/VerificationType'
+      responses:
+        '200':
+          description: List of components
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Component'
+
+  /documentation/components/{componentId}:
+    get:
+      summary: Get specific component documentation
+      operationId: getComponent
+      parameters:
+        - name: componentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Component documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+        '404':
+          description: Component not found
+
+  /documentation/conflicts:
+    get:
+      summary: Get all documented conflicts
+      operationId: getConflicts
+      parameters:
+        - name: resolved
+          in: query
+          schema:
+            type: boolean
+        - name: sectionId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of conflicts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConflictRecord'
+
+  /documentation/search:
+    get:
+      summary: Search documentation
+      operationId: searchDocumentation
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [all, components, sections, examples]
+            default: all
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        item:
+                          type: object
+                        relevance:
+                          type: number
+                  totalCount:
+                    type: integer
+                  searchTime:
+                    type: number
+
+  /documentation/verify:
+    post:
+      summary: Verify a technical claim
+      operationId: verifyTechnicalClaim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - claim
+                - verificationType
+              properties:
+                claim:
+                  type: string
+                verificationType:
+                  $ref: '#/components/schemas/VerificationType'
+                source:
+                  type: string
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationTag'
+        '400':
+          description: Invalid verification request
+
+  /documentation/coverage:
+    get:
+      summary: Get documentation coverage metrics
+      operationId: getCoverageMetrics
+      responses:
+        '200':
+          description: Coverage metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoverageMetrics'
+
+components:
+  schemas:
+    DocumentationSection:
+      type: object
+      required:
+        - id
+        - title
+        - path
+        - order
+        - lastUpdated
+        - completeness
+        - verificationStatus
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        path:
+          type: string
+        order:
+          type: integer
+        lastUpdated:
+          type: string
+          format: date-time
+        completeness:
+          type: number
+          minimum: 0
+          maximum: 1
+        verificationStatus:
+          $ref: '#/components/schemas/VerificationLevel'
+        subsections:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentationSection'
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/Component'
+
+    Component:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - filePath
+        - isPublicAPI
+        - documentation
+        - verificationTag
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/ComponentType'
+        filePath:
+          type: string
+        lineNumber:
+          type: integer
+          nullable: true
+        isPublicAPI:
+          type: boolean
+        documentation:
+          type: string
+        verificationTag:
+          $ref: '#/components/schemas/VerificationTag'
+
+    VerificationTag:
+      type: object
+      required:
+        - type
+        - timestamp
+      properties:
+        type:
+          $ref: '#/components/schemas/VerificationType'
+        timestamp:
+          type: string
+          format: date-time
+        source:
+          type: string
+          nullable: true
+        verifiedBy:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+
+    ConflictRecord:
+      type: object
+      required:
+        - id
+        - topic
+        - options
+      properties:
+        id:
+          type: string
+        topic:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConflictOption'
+          minItems: 2
+        resolution:
+          $ref: '#/components/schemas/ConflictOption'
+          nullable: true
+        verificationTag:
+          $ref: '#/components/schemas/VerificationTag'
+          nullable: true
+
+    ConflictOption:
+      type: object
+      required:
+        - source
+        - recommendation
+        - pros
+        - cons
+        - codeAligned
+      properties:
+        source:
+          type: string
+        recommendation:
+          type: string
+        pros:
+          type: array
+          items:
+            type: string
+        cons:
+          type: array
+          items:
+            type: string
+        codeAligned:
+          type: boolean
+
+    CoverageMetrics:
+      type: object
+      required:
+        - totalPublicAPIs
+        - documentedAPIs
+        - verifiedAPIs
+        - coveragePercentage
+        - verificationPercentage
+        - isComplete
+      properties:
+        totalPublicAPIs:
+          type: integer
+        documentedAPIs:
+          type: integer
+        verifiedAPIs:
+          type: integer
+        coveragePercentage:
+          type: number
+          minimum: 0
+          maximum: 1
+        verificationPercentage:
+          type: number
+          minimum: 0
+          maximum: 1
+        isComplete:
+          type: boolean
+
+    ComponentType:
+      type: string
+      enum:
+        - class
+        - struct
+        - protocol
+        - enum
+        - module
+        - function
+        - property
+
+    VerificationType:
+      type: string
+      enum:
+        - VerifiedCode
+        - VerifiedApple
+        - Unverified
+
+    VerificationLevel:
+      type: string
+      enum:
+        - fullyVerified
+        - mostlyVerified
+        - partiallyVerified
+        - minimallyVerified
+        - unverified

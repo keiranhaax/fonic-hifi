@@ -181,6 +181,25 @@ public actor TrackDataActor {
         }
     }
     
+    /// Delete a specific track by identifier
+    /// - Parameter id: PersistentIdentifier of the track to delete
+    /// - Throws: TrackDataError if deletion fails
+    public func deleteTrack(_ id: PersistentIdentifier) throws {
+        guard let track: Track = modelContext.registeredModel(for: id) else {
+            throw TrackDataError.trackNotFound(id)
+        }
+
+        modelContext.delete(track)
+
+        do {
+            try modelContext.save()
+            logger.info("Successfully deleted track: \(track.id)")
+        } catch {
+            logger.error("Failed to delete track: \(error.localizedDescription)")
+            throw TrackDataError.deleteFailed(error)
+        }
+    }
+
     /// Remove tracks that have missing files
     /// - Returns: Number of tracks removed
     public func cleanupMissingFiles() throws -> Int {
@@ -339,6 +358,7 @@ public enum TrackDataError: Error, LocalizedError {
     case fetchFailed(Error)
     case updateFailed(Error)
     case cleanupFailed(Error)
+    case deleteFailed(Error)
     
     public var errorDescription: String? {
         switch self {
@@ -354,6 +374,8 @@ public enum TrackDataError: Error, LocalizedError {
             return "Failed to update track: \(error.localizedDescription)"
         case .cleanupFailed(let error):
             return "Failed to cleanup tracks: \(error.localizedDescription)"
+        case .deleteFailed(let error):
+            return "Failed to delete track: \(error.localizedDescription)"
         }
     }
 }

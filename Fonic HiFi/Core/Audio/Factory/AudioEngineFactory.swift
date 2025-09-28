@@ -77,7 +77,7 @@ public final class AudioEngineFactory {
     
     // MARK: - Engine Selection Logic
     
-    private func selectEngineType(
+    public func selectEngineType(
         for format: AudioFormat,
         configuration: AudioEngineConfiguration
     ) -> AudioEngineType {

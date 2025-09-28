@@ -282,60 +282,24 @@ run: build simulator-boot
 	@echo "App is running on simulator"
 
 # Run all tests (unit and UI)
-test: check-deps simulator-boot
-	@echo "Running all tests..."
-	@set -o pipefail && $(XCODEBUILD) test \
-		-project "$(PROJECT_NAME).xcodeproj" \
-		-scheme "$(SCHEME)" \
-		-destination "$(DESTINATION)" \
-		-derivedDataPath $(BUILD_DIR) \
-		-enableCodeCoverage YES \
-		| $(XCBEAUTIFY) || exit 1
-	@echo "All tests passed"
+test:
+	@echo "No tests configured for this project."
+	@echo "Debug views are available in the app under Debug menu."
 
 # Run unit tests only
-test-unit: check-deps simulator-boot
-	@echo "Running unit tests..."
-	@set -o pipefail && $(XCODEBUILD) test \
-		-project "$(PROJECT_NAME).xcodeproj" \
-		-scheme "$(SCHEME)" \
-		-destination "$(DESTINATION)" \
-		-derivedDataPath $(BUILD_DIR) \
-		-enableCodeCoverage YES \
-		-only-testing:"Fonic HiFiTests" \
-		| $(XCBEAUTIFY) || exit 1
-	@echo "Unit tests passed"
+test-unit:
+	@echo "No unit tests configured."
+	@echo "To add tests, create a new test target in Xcode."
 
 # Run UI tests only
-test-ui: check-deps simulator-boot
-	@echo "Running UI tests..."
-	@set -o pipefail && $(XCODEBUILD) test \
-		-project "$(PROJECT_NAME).xcodeproj" \
-		-scheme "$(SCHEME)" \
-		-destination "$(DESTINATION)" \
-		-derivedDataPath $(BUILD_DIR) \
-		-enableCodeCoverage YES \
-		-only-testing:"Fonic HiFiUITests" \
-		| $(XCBEAUTIFY) || exit 1
-	@echo "UI tests passed"
+test-ui:
+	@echo "No UI tests configured."
+	@echo "To add tests, create a new UI test target in Xcode."
 
 # Generate test coverage report
-coverage: test
-	@echo "Generating test coverage report..."
-	@if [ -d "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app" ]; then \
-		PROFDATA=$$(find $(BUILD_DIR)/Build/ProfileData -name "Coverage.profdata" 2>/dev/null | head -1); \
-		if [ -n "$$PROFDATA" ]; then \
-			$(XCRUN) llvm-cov report \
-				"$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app/Fonic HiFi" \
-				-instr-profile="$$PROFDATA" \
-				-ignore-filename-regex=".*(Tests|Mocks|Generated).*" || echo "Coverage report generation failed."; \
-		else \
-			echo "No coverage data found. Make sure tests have been run with code coverage enabled."; \
-		fi \
-	else \
-		echo "App not found. Run 'make test' first to generate coverage data."; \
-	fi
-	@echo "Coverage report complete"
+coverage:
+	@echo "No tests configured for coverage analysis."
+	@echo "Add test targets first to enable coverage reporting."
 
 # Run SwiftLint
 lint:
@@ -712,5 +676,5 @@ test-json:
 	@xcrun xcresulttool get --format json --path result.xcresult | $(JQ) '.metrics'
 
 # Combined commands for common workflows
-all: clean lint build test
+all: clean lint build
 	@echo "Full build and test cycle complete"

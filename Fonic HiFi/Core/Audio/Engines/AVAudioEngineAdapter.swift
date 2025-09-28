@@ -156,15 +156,9 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         
         print("=== AVAUDIOENGINE PLAY DEBUG ===")
         print("1. Engine running before start: \(engine.isRunning)")
-        
-        do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            print("Failed to configure audio session: \(error)")
-            throw AudioError.sessionConfigurationFailed(reason: error.localizedDescription)
-        }
-        
+
+        // Audio session is managed by AudioSessionManager, not here
+
         // Start playback
         if !engine.isRunning {
             try startEngine()

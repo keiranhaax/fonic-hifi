@@ -15,27 +15,27 @@ import OSLog
 public final class LibraryImportService: ObservableObject {
     
     // MARK: - Published Properties
-    
+
     /// Current import progress (0.0 to 1.0)
-    @Published public private(set) var importProgress: Double = 0.0
-    
+    @MainActor @Published public private(set) var importProgress: Double = 0.0
+
     /// Whether an import is currently in progress
-    @Published public private(set) var isImporting: Bool = false
-    
+    @MainActor @Published public private(set) var isImporting: Bool = false
+
     /// Current status message
-    @Published public private(set) var statusMessage: String = ""
-    
+    @MainActor @Published public private(set) var statusMessage: String = ""
+
     /// Number of files processed
-    @Published public private(set) var filesProcessed: Int = 0
-    
+    @MainActor @Published public private(set) var filesProcessed: Int = 0
+
     /// Total number of files to process
-    @Published public private(set) var totalFiles: Int = 0
-    
+    @MainActor @Published public private(set) var totalFiles: Int = 0
+
     /// Import errors encountered
-    @Published public private(set) var importErrors: [ImportError] = []
-    
+    @MainActor @Published public private(set) var importErrors: [ImportError] = []
+
     /// Recently imported track identifiers
-    @Published public private(set) var recentlyImported: [PersistentIdentifier] = []
+    @MainActor @Published public private(set) var recentlyImported: [PersistentIdentifier] = []
     
     // MARK: - Dependencies
     
@@ -44,11 +44,14 @@ public final class LibraryImportService: ObservableObject {
     private let logger = Logger(subsystem: "com.fonichifi.library", category: "LibraryImportService")
     
     // MARK: - Private Properties
-    
+
     private var importTask: Task<Void, Never>?
     private let supportedExtensions: Set<String> = [
         "mp3", "m4a", "aac", "flac", "alac", "wav", "aiff", "aif", "ape", "wv", "ogg", "opus"
     ]
+
+    // Transaction tracking
+    private var currentTransaction: ImportTransaction?
     
     /// App container directory for storing copied music files
     private lazy var musicContainerURL: URL = {
@@ -74,9 +77,9 @@ public final class LibraryImportService: ObservableObject {
             logger.warning("Import already in progress")
             return
         }
-        
+
         logger.info("Starting import of \(urls.count) URLs")
-        
+
         // Reset state
         importProgress = 0.0
         filesProcessed = 0
@@ -122,6 +125,7 @@ public final class LibraryImportService: ObservableObject {
     public func cancelImport() {
         importTask?.cancel()
         importTask = nil
+
         isImporting = false
         statusMessage = "Import cancelled"
         logger.info("Import operation cancelled")
@@ -379,12 +383,9 @@ public final class LibraryImportService: ObservableObject {
     
     /// Process a batch of audio files
     private func processBatch(_ urls: [URL]) async {
-        await withTaskGroup(of: Void.self) { group in
-            for url in urls {
-                group.addTask { [weak self] in
-                    await self?.processSingleFile(url)
-                }
-            }
+        // Process files sequentially to avoid concurrency issues with @MainActor properties
+        for url in urls {
+            await processSingleFile(url)
         }
     }
     
@@ -400,7 +401,7 @@ public final class LibraryImportService: ObservableObject {
             
             // Import the file
             if let trackId = try await processAudioFile(url) {
-                self.recentlyImported.append(trackId)
+                recentlyImported.append(trackId)
                 logger.debug("Successfully imported track with ID: \(String(describing: trackId))")
             }
             
@@ -457,6 +458,13 @@ public final class LibraryImportService: ObservableObject {
 
 // MARK: - Supporting Types
 
+/// Track import transaction for rollback support
+private final class ImportTransaction {
+    var importedFiles: [URL] = []
+    var copiedFiles: [URL] = []
+    var importedTracks: [PersistentIdentifier] = []
+}
+
 /// Error information for import failures
 public struct ImportError: Identifiable, Equatable {
     public let id = UUID()
@@ -464,11 +472,11 @@ public struct ImportError: Identifiable, Equatable {
     public let error: Error
     public let message: String
     public let timestamp: Date = Date()
-    
+
     public static func == (lhs: ImportError, rhs: ImportError) -> Bool {
         lhs.id == rhs.id
     }
-    
+
 }
 
 // MARK: - Extensions
@@ -479,4 +487,8 @@ private extension Array {
             Array(self[$0..<Swift.min($0 + size, count)])
         }
     }
+}
+
+enum ImportServiceError: Error {
+    case serviceUnavailable
 }

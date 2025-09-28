@@ -29,12 +29,22 @@ public final class PlaybackStateManager {
     public var loggingEnabled: Bool = false
     
     // MARK: - Publishers
-    
-    /// Publisher for state changes
-    public let statePublisher = PassthroughSubject<PlaybackStateChange, Never>()
-    
-    /// Publisher for state transition events
-    public let transitionPublisher = PassthroughSubject<PlaybackStateTransition, Never>()
+
+    /// Private publisher for state changes
+    private let _statePublisher = PassthroughSubject<PlaybackStateChange, Never>()
+
+    /// Private publisher for state transition events
+    private let _transitionPublisher = PassthroughSubject<PlaybackStateTransition, Never>()
+
+    /// Public read-only publisher for state changes (main thread guaranteed)
+    public var statePublisher: AnyPublisher<PlaybackStateChange, Never> {
+        _statePublisher.receive(on: RunLoop.main).eraseToAnyPublisher()
+    }
+
+    /// Public read-only publisher for state transition events (main thread guaranteed)
+    public var transitionPublisher: AnyPublisher<PlaybackStateTransition, Never> {
+        _transitionPublisher.receive(on: RunLoop.main).eraseToAnyPublisher()
+    }
     
     // MARK: - Private Properties
     
@@ -100,8 +110,8 @@ public final class PlaybackStateManager {
         )
         
         // Emit notifications
-        statePublisher.send(change)
-        transitionPublisher.send(transition)
+        _statePublisher.send(change)
+        _transitionPublisher.send(transition)
         
         if loggingEnabled {
             print("PlaybackStateManager: \(oldState) -> \(newState)")

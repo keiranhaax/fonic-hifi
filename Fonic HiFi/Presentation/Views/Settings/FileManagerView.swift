@@ -298,28 +298,38 @@ struct FileManagerView: View {
     
     private func copyItemToCurrentDirectory(_ url: URL) async {
         let targetDirectory = currentDirectory
-        await Task.detached(priority: .utility) {
-            let fileManager = FileManager.default
-            let destinationURL = uniqueDestinationURL(for: url, in: targetDirectory, fileManager: fileManager)
-            guard url.standardizedFileURL != destinationURL.standardizedFileURL else {
-                return
-            }
-            let didAccess = url.startAccessingSecurityScopedResource()
-            defer {
-                if didAccess {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-            do {
-                if fileManager.fileExists(atPath: destinationURL.path) {
-                    print("Destination already exists at \(destinationURL.lastPathComponent), skipping copy")
+        let fileManager = FileManager.default
+        let destinationURL = uniqueDestinationURL(for: url, in: targetDirectory, fileManager: fileManager)
+
+        // Copy values to avoid capturing MainActor context
+        let sourceURL = url
+        let targetURL = destinationURL
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            Task.detached(priority: .utility) {
+                defer { continuation.resume() }
+
+                guard sourceURL.standardizedFileURL != targetURL.standardizedFileURL else {
                     return
                 }
-                try fileManager.copyItem(at: url, to: destinationURL)
-            } catch {
-                print("Error copying file \(url.lastPathComponent): \(error)")
+                let didAccess = sourceURL.startAccessingSecurityScopedResource()
+                defer {
+                    if didAccess {
+                        sourceURL.stopAccessingSecurityScopedResource()
+                    }
+                }
+                do {
+                    let fm = FileManager.default
+                    if fm.fileExists(atPath: targetURL.path) {
+                        print("Destination already exists at \(targetURL.lastPathComponent), skipping copy")
+                        return
+                    }
+                    try fm.copyItem(at: sourceURL, to: targetURL)
+                } catch {
+                    print("Error copying file \(sourceURL.lastPathComponent): \(error)")
+                }
             }
-        }.value
+        }
     }
     
     private func uniqueDestinationURL(for sourceURL: URL, in directory: URL, fileManager: FileManager) -> URL {
@@ -439,7 +449,11 @@ enum SortOption: CaseIterable {
 }
 
 #Preview {
-    FileManagerView()
-        .dataManager(DataManager.makePreviewDataManager())
-        .importService(DataManager.makePreviewImportService())
+    if let previewDataManager = DataManager.makePreviewDataManager() {
+        FileManagerView()
+            .dataManager(previewDataManager)
+            .importService(DataManager.makePreviewImportService())
+    } else {
+        Text("Preview unavailable")
+    }
 }

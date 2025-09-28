@@ -37,7 +37,24 @@
       "Read(//private/tmp/**)",
       "Bash(swift:*)",
       "mcp__filesystem__directory_tree",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git rm:*)",
+      "Bash(tree:*)",
+      "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
+      "mcp__time__current_time",
+      "mcp__exa__web_search_exa",
+      "mcp__brave-search__brave_web_search",
+      "mcp__tavily__tavily_search",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "Bash(.specify/scripts/bash/update-agent-context.sh:*)",
+      "Bash(chmod:*)",
+      "Bash(specs/001-read-and-analyze/scripts/count-public-apis.sh)",
+      "Bash(specs/001-read-and-analyze/scripts/count-documented-apis.sh)",
+      "Bash(specs/001-read-and-analyze/scripts/check-doc-coverage.sh)",
+      "Bash(git checkout:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
@@ -70,5 +87,6 @@
         ]
       }
     ]
-  }
+  },
+  "outputStyle": "swift-native"
 }

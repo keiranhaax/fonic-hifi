@@ -9,6 +9,8 @@ import Foundation
 import Observation
 import Combine
 import AVFoundation
+import MediaPlayer
+import UIKit
 
 /// High-level facade that coordinates all audio infrastructure components
 /// Provides a unified interface for audio playback, state management, queue operations, 
@@ -174,10 +176,34 @@ public final class AudioEngineFacade: ObservableObject {
             // 3. Initialize monitoring
             await monitor.startMonitoring(updateInterval: 1.0)
             logger.debug("Audio monitoring started")
-            
+
+            // 4. Enable remote commands for Control Center
+            await sessionManager.enableRemoteCommands()
+            logger.debug("Remote commands enabled")
+
+            // 5. Restore queue state from previous session
+            if queueManager.restoreState() {
+                logger.info("Queue state restored from previous session")
+
+                // If we have a current track, update UI state
+                if let currentTrack = queueManager.currentTrack {
+                    self.currentTrack = Track(
+                        url: currentTrack.url,
+                        title: currentTrack.title,
+                        artist: currentTrack.artist,
+                        album: currentTrack.album,
+                        audioFormat: currentTrack.audioFormat
+                    )
+                    showMiniPlayer = true
+                    logger.info("Restored current track: \(currentTrack.title)")
+                }
+            } else {
+                logger.debug("No saved queue state to restore")
+            }
+
             isInitialized = true
             isReady = true
-            
+
             logger.info("AudioEngineFacade initialization complete")
             
         } catch {
@@ -199,12 +225,9 @@ public final class AudioEngineFacade: ObservableObject {
         
         // Stop playback
         await stop()
-        
-        // Cleanup engine
-        if let engine = currentEngine {
-            await monitor.detachFromEngine()
-            currentEngine = nil
-        }
+
+        // Cleanup engine properly
+        await cleanupCurrentEngine()
         
         // Cancel subscriptions
         cancellables.removeAll()
@@ -270,21 +293,25 @@ public final class AudioEngineFacade: ObservableObject {
             stateManager.updateState(.playing(currentTime: 0, duration: formatInfo.duration))
             
             try await engine.play()
-            
-            // Start progress timer for continuous updates
-            progressTimer.start(pollInterval: 0.1) { [weak self] in
+
+            // Update Now Playing info for Control Center
+            await updateNowPlayingInfo(track: track, duration: formatInfo.duration)
+
+            // Start progress timer for continuous updates (batched at 0.2s intervals)
+            progressTimer.start(pollInterval: 0.2) { [weak self] in
                 guard let self = self else { return }
                 guard let engine = self.currentEngine,
                       self.currentState.isPlaying else {
                     return
                 }
-                
-                Task {
-                    let currentTime = await engine.currentTime
-                    let duration = await engine.duration
-                    await MainActor.run {
-                        self.stateManager.updateTime(currentTime, duration: duration)
-                    }
+
+                Task { @MainActor in
+                    // Batch time update with duration in single async call
+                    async let currentTime = engine.currentTime
+                    async let duration = engine.duration
+
+                    let (time, dur) = await (currentTime, duration)
+                    self.stateManager.updateTime(time, duration: dur)
                 }
             }
             
@@ -324,20 +351,21 @@ public final class AudioEngineFacade: ObservableObject {
             let duration = await engine.duration
             stateManager.updateState(.playing(currentTime: currentTime, duration: duration))
             
-            // Restart progress timer
-            progressTimer.start(pollInterval: 0.1) { [weak self] in
+            // Restart progress timer (batched at 0.2s intervals)
+            progressTimer.start(pollInterval: 0.2) { [weak self] in
                 guard let self = self else { return }
                 guard let engine = self.currentEngine,
                       self.currentState.isPlaying else {
                     return
                 }
-                
-                Task {
-                    let currentTime = await engine.currentTime
-                    let duration = await engine.duration
-                    await MainActor.run {
-                        self.stateManager.updateTime(currentTime, duration: duration)
-                    }
+
+                Task { @MainActor in
+                    // Batch time update with duration in single async call
+                    async let currentTime = engine.currentTime
+                    async let duration = engine.duration
+
+                    let (time, dur) = await (currentTime, duration)
+                    self.stateManager.updateTime(time, duration: dur)
                 }
             }
             
@@ -386,6 +414,13 @@ public final class AudioEngineFacade: ObservableObject {
         
         await engine.stop()
         stateManager.updateState(.stopped)
+
+        // Clear Now Playing info
+        await clearNowPlayingInfo()
+
+        // Clear the current track
+        currentTrack = nil
+        showMiniPlayer = false
     }
     
     /// Seek to a specific time position
@@ -570,7 +605,30 @@ public final class AudioEngineFacade: ObservableObject {
     }
     
     // MARK: - Private Implementation
-    
+
+    /// Update Now Playing info for Control Center and Lock Screen
+    private func updateNowPlayingInfo(track: Track, duration: TimeInterval) async {
+        var nowPlayingInfo: [String: Any] = [
+            MPMediaItemPropertyTitle: track.title,
+            MPMediaItemPropertyAlbumTitle: track.album,
+            MPMediaItemPropertyArtist: track.artist,
+            MPMediaItemPropertyPlaybackDuration: duration,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: 0,
+            MPNowPlayingInfoPropertyPlaybackRate: 1.0
+        ]
+
+        // Add artwork if available - Note: Track model doesn't have artwork yet
+        // This would need to be added to the Track model or loaded separately
+        // For now, we'll skip artwork
+
+        await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
+    }
+
+    /// Clear Now Playing info when playback stops
+    private func clearNowPlayingInfo() async {
+        await sessionManager.clearNowPlayingInfo()
+    }
+
     private func setupServiceIntegrations() async {
         logger.debug("Setting up service integrations...")
 
@@ -642,23 +700,54 @@ public final class AudioEngineFacade: ObservableObject {
         }
     }
     
-    private func ensureEngineForFormat(_ formatInfo: AudioFileInfo) async throws {
-        // Check if current engine can handle this format
-        if let engine = currentEngine {
-            // For now, assume AVAudioEngine can handle all our supported formats
-            // In the future, we might need format-specific engines
-            return
+    /// Cleanup current engine properly to avoid memory leaks
+    private func cleanupCurrentEngine() async {
+        guard let engine = currentEngine else { return }
+
+        // Stop playback if needed
+        if await engine.isPlaying {
+            await engine.stop()
         }
-        
+
+        // Detach from monitoring
+        await monitor.detachFromEngine()
+
+        // Clear reference to allow deallocation
+        currentEngine = nil
+
+        logger.debug("Cleaned up previous audio engine")
+    }
+
+    private func ensureEngineForFormat(_ formatInfo: AudioFileInfo) async throws {
+        // Check if we need a different engine type for this format
+        let requiredEngineType = engineFactory.selectEngineType(
+            for: formatInfo.format,
+            configuration: engineConfiguration
+        )
+
+        // Check if current engine is the right type
+        if let engine = currentEngine {
+            let currentEngineType: AudioEngineType = engine is AudioKitEngineAdapter ? .audioKitEngine : .avAudioEngine
+
+            if currentEngineType == requiredEngineType {
+                // Current engine can handle this format
+                return
+            }
+
+            // Need to switch engines - cleanup current one first
+            logger.debug("Switching from \(currentEngineType) to \(requiredEngineType)")
+            await cleanupCurrentEngine()
+        }
+
         // Create new engine
         let engine = try await engineFactory.makeEngine(
             for: formatInfo.format,
             configuration: engineConfiguration
         )
-        
+
         // Attach to monitoring
         await monitor.attachToEngine(engine)
-        
+
         currentEngine = engine
         logger.debug("Created new audio engine for format: \(formatInfo.format.displayName)")
     }

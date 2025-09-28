@@ -73,23 +73,28 @@ public final class Playlist {
     
     /// User-defined tags
     public var userTags: [String]
-    
+
+    // MARK: - Relationships
+
+    /// Tracks in this playlist
+    @Relationship(deleteRule: .nullify)
+    public var tracks: [Track] = []
+
     // MARK: - Computed Properties
     
     /// Number of tracks in the playlist
     public var trackCount: Int {
-        return trackIds.count
+        return tracks.count
     }
-    
+
     /// Whether the playlist is empty
     public var isEmpty: Bool {
-        return trackIds.isEmpty
+        return tracks.isEmpty
     }
-    
+
     /// Total duration of all tracks (would be calculated from actual tracks)
     public var totalDuration: TimeInterval {
-        // This would be calculated by fetching tracks and summing durations
-        return 0
+        tracks.reduce(0) { $0 + $1.duration }
     }
     
     /// Formatted duration string

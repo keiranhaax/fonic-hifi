@@ -386,10 +386,6 @@ struct PlaylistDetailView: View {
         evaluateNumeric(Optional(actual), rule: rule)
     }
     
-    private func evaluateNumeric(_ actual: TimeInterval, rule: SmartPlaylistRule) -> Bool {
-        evaluateNumeric(Optional(actual), rule: rule)
-    }
-    
     private func evaluateNumeric(_ actual: Double?, rule: SmartPlaylistRule) -> Bool {
         guard let comparison = Double(rule.value) else { return false }
         guard let actual = actual else {
