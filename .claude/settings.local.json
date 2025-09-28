@@ -36,7 +36,8 @@
       "Bash(tee:*)",
       "Read(//private/tmp/**)",
       "Bash(swift:*)",
-      "mcp__filesystem__directory_tree"
+      "mcp__filesystem__directory_tree",
+      "Bash(git merge:*)"
     ],
     "deny": [],
     "ask": []
