@@ -11,57 +11,57 @@ import Foundation
 public enum AudioEngineType: String, CaseIterable, Sendable {
     /// Apple's native AVAudioEngine (default)
     case avAudioEngine = "AVAudioEngine"
-    
+
     /// AudioKit-based engine for enhanced audio features and better scheduling
     case audioKitEngine = "AudioKitEngine"
-    
+
     /// Display name for UI and logging
     public var displayName: String {
         switch self {
         case .avAudioEngine:
-            return "Native Audio Engine"
+            "Native Audio Engine"
         case .audioKitEngine:
-            return "AudioKit Engine"
+            "AudioKit Engine"
         }
     }
-    
+
     /// Description of engine capabilities
     public var description: String {
         switch self {
         case .avAudioEngine:
-            return "Hardware-accelerated playback for standard formats"
+            "Hardware-accelerated playback for standard formats"
         case .audioKitEngine:
-            return "Enhanced audio engine with native scheduling and Combine integration"
+            "Enhanced audio engine with native scheduling and Combine integration"
         }
     }
-    
+
     /// Formats this engine excels at
     public var preferredFormats: [AudioFormat] {
         switch self {
         case .avAudioEngine:
-            return [.mp3, .aac, .alac, .wav, .aiff]
+            [.mp3, .aac, .alac, .wav, .aiff]
         case .audioKitEngine:
-            return [.mp3, .aac, .alac, .wav, .aiff, .flac] // AudioKit handles most standard formats well
+            [.mp3, .aac, .alac, .wav, .aiff, .flac] // AudioKit handles most standard formats well
         }
     }
-    
+
     /// Check if engine can handle a specific format
     public func canHandle(_ format: AudioFormat) -> Bool {
         switch self {
         case .avAudioEngine:
-            return AVAudioEngineConfig.isFormatNativelySupported(format)
+            AVAudioEngineConfig.isFormatNativelySupported(format)
         case .audioKitEngine:
-            return [.mp3, .aac, .alac, .wav, .aiff, .flac].contains(format)
+            [.mp3, .aac, .alac, .wav, .aiff, .flac].contains(format)
         }
     }
-    
+
     /// Performance characteristics
     public var performanceImpact: PerformanceImpact {
         switch self {
         case .avAudioEngine:
-            return .low
+            .low
         case .audioKitEngine:
-            return .low // AudioKit is optimized and runs on audio thread
+            .low // AudioKit is optimized and runs on audio thread
         }
     }
 }
@@ -71,28 +71,28 @@ public enum PerformanceImpact: String, Sendable {
     case low = "Low"
     case medium = "Medium"
     case high = "High"
-    
+
     /// CPU usage expectation
     public var cpuUsageRange: ClosedRange<Float> {
         switch self {
         case .low:
-            return 1...5
+            1 ... 5
         case .medium:
-            return 5...15
+            5 ... 15
         case .high:
-            return 15...30
+            15 ... 30
         }
     }
-    
+
     /// Battery impact description
     public var batteryImpactDescription: String {
         switch self {
         case .low:
-            return "Minimal battery impact"
+            "Minimal battery impact"
         case .medium:
-            return "Moderate battery usage"
+            "Moderate battery usage"
         case .high:
-            return "Higher battery consumption"
+            "Higher battery consumption"
         }
     }
 }

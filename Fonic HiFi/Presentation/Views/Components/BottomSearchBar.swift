@@ -16,15 +16,15 @@ struct BottomSearchBar: View {
     @FocusState private var isFocused: Bool
     @State private var isInteracting = false
     @State private var glassIntensity: Double = 0.3
-    
+
     // Animation state
     @State private var searchIconRotation: Double = 0
     @State private var searchFieldScale: CGFloat = 1.0
-    
+
     var body: some View {
         enhancedSearchBar
     }
-    
+
     // MARK: - Enhanced Search Bar
 
     private var enhancedSearchBar: some View {
@@ -39,7 +39,7 @@ struct BottomSearchBar: View {
                         .rotationEffect(.degrees(searchIconRotation))
                         .scaleEffect(isInteracting ? 1.1 : 1.0)
                         .animation(.liquidBouncy, value: isInteracting)
-                    
+
                     // Search text field
                     TextField("Search Tracks", text: $searchText)
                         .textFieldStyle(.plain)
@@ -51,7 +51,7 @@ struct BottomSearchBar: View {
                         .onSubmit {
                             performSearch()
                         }
-                    
+
                     // Clear button when text exists
                     if !searchText.isEmpty {
                         Button(action: clearSearch) {
@@ -80,37 +80,36 @@ struct BottomSearchBar: View {
             animateSearchIcon()
         }
     }
-    
+
     // MARK: - Classic Search Bar (iOS 25 and below)
-    
-    
+
     // MARK: - Actions
-    
+
     private func performSearch() {
         // Haptic feedback
         let impactGenerator = UIImpactFeedbackGenerator(style: .light)
         impactGenerator.impactOccurred()
-        
+
         // Dismiss keyboard
         isFocused = false
-        
+
         // Animation feedback
         withAnimation(.liquidBouncy) {
             searchIconRotation += 360
         }
     }
-    
+
     private func clearSearch() {
         // Haptic feedback
         let impactGenerator = UIImpactFeedbackGenerator(style: .light)
         impactGenerator.impactOccurred(intensity: 0.7)
-        
+
         // Clear and animation
         withAnimation(.liquidSmooth) {
             searchText = ""
             searchFieldScale = 0.95
         }
-        
+
         // Reset scale
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             withAnimation(.liquidSmooth) {
@@ -118,30 +117,28 @@ struct BottomSearchBar: View {
             }
         }
     }
-    
-    
+
     private func handleFocusChange(_ focused: Bool) {
         isInteracting = focused
-        
+
         // Enhanced haptic feedback
         if focused {
             let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
             impactGenerator.impactOccurred(intensity: 0.8)
         }
-        
+
         // Animate glass intensity
         withAnimation(.liquidMorph) {
             glassIntensity = focused ? 0.5 : 0.3
         }
     }
-    
-    
+
     private func animateSearchIcon() {
         // Subtle rotation on text change
         withAnimation(.liquidSmooth) {
             searchIconRotation += 15
         }
-        
+
         // Reset rotation
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             withAnimation(.liquidSmooth) {
@@ -158,9 +155,9 @@ struct BottomSearchBar: View {
 struct BottomSearchContainer<Content: View>: View {
     @Binding var searchText: String
     let content: () -> Content
-    
+
     @State private var keyboardHeight: CGFloat = 0
-    
+
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .bottom) {
@@ -168,7 +165,7 @@ struct BottomSearchContainer<Content: View>: View {
                 content()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.bottom, searchBarHeight + geometry.safeAreaInsets.bottom)
-                
+
                 // Floating search bar
                 BottomSearchBar(searchText: $searchText)
                     .offset(y: -keyboardHeight)
@@ -185,7 +182,7 @@ struct BottomSearchContainer<Content: View>: View {
             keyboardHeight = 0
         }
     }
-    
+
     private var searchBarHeight: CGFloat {
         60 // Height of search bar including padding
     }
@@ -193,10 +190,10 @@ struct BottomSearchContainer<Content: View>: View {
 
 #Preview {
     @Previewable @State var searchText = ""
-    
+
     return ZStack {
         Color.black.ignoresSafeArea()
-        
+
         VStack {
             Spacer()
             BottomSearchBar(searchText: $searchText)

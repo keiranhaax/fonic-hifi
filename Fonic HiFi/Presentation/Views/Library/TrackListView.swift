@@ -5,18 +5,18 @@
 //  Created by Claude on 5/28/25.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 /// List view for tracks
 @MainActor
 struct TrackListView: View {
     let tracks: [Track]
     @Binding var searchText: String
-    
+
     @State private var sortOrder = TrackSortOrder.title
     @State private var selectedTrack: Track?
-    
+
     enum TrackSortOrder: String, CaseIterable {
         case title = "Title"
         case artist = "Artist"
@@ -24,24 +24,24 @@ struct TrackListView: View {
         case dateAdded = "Date Added"
         case duration = "Duration"
     }
-    
+
     var sortedTracks: [Track] {
         tracks.sorted { track1, track2 in
             switch sortOrder {
             case .title:
-                return track1.title < track2.title
+                track1.title < track2.title
             case .artist:
-                return track1.artist < track2.artist
+                track1.artist < track2.artist
             case .album:
-                return track1.album < track2.album
+                track1.album < track2.album
             case .dateAdded:
-                return track1.dateAdded > track2.dateAdded
+                track1.dateAdded > track2.dateAdded
             case .duration:
-                return track1.duration < track2.duration
+                track1.duration < track2.duration
             }
         }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Sort options
@@ -49,7 +49,7 @@ struct TrackListView: View {
                 Text("Sort by:")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 Picker("Sort", selection: $sortOrder) {
                     ForEach(TrackSortOrder.allCases, id: \.self) { order in
                         Text(order.rawValue).tag(order)
@@ -57,16 +57,16 @@ struct TrackListView: View {
                 }
                 .pickerStyle(.menu)
                 .font(.caption)
-                
+
                 Spacer()
-                
+
                 Text("\(tracks.count) tracks")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
-            
+
             List(sortedTracks) { track in
                 TrackRowView(track: track)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -82,12 +82,11 @@ struct TrackListView: View {
     }
 }
 
-
 /// Track detail view
 struct TrackDetailView: View {
     let track: Track
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -99,10 +98,10 @@ struct TrackDetailView: View {
                         .overlay(
                             Image(systemName: "music.note")
                                 .font(.system(size: 60))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.secondary),
                         )
                         .padding(.horizontal, 40)
-                    
+
                     // Basic info
                     VStack(alignment: .leading, spacing: 12) {
                         DetailRow(label: "Title", value: track.title)
@@ -116,15 +115,15 @@ struct TrackDetailView: View {
                         }
                     }
                     .padding(.horizontal)
-                    
+
                     Divider()
-                    
+
                     // Technical info
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Technical Details")
                             .font(.headline)
                             .padding(.horizontal)
-                        
+
                         DetailRow(label: "Format", value: track.audioFormat)
                         DetailRow(label: "Duration", value: track.formattedDuration)
                         DetailRow(label: "Sample Rate", value: "\(Int(track.sampleRate)) Hz")
@@ -156,14 +155,14 @@ struct TrackDetailView: View {
 struct DetailRow: View {
     let label: String
     let value: String
-    
+
     var body: some View {
         HStack {
             Text(label)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .frame(width: 100, alignment: .leading)
-            
+
             Text(value)
                 .font(.subheadline)
                 .lineLimit(2)

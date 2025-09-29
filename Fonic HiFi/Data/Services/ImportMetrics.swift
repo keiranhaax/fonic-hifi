@@ -22,7 +22,7 @@ public struct ImportMetrics: Sendable {
         failedImports: Int = 0,
         duplicatesSkipped: Int = 0,
         averageFileProcessingTime: TimeInterval = 0,
-        totalImportTime: TimeInterval = 0
+        totalImportTime: TimeInterval = 0,
     ) {
         self.totalFiles = totalFiles
         self.successfulImports = successfulImports

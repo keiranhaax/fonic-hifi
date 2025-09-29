@@ -5,44 +5,43 @@
 //  Created by Claude on 5/28/25.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 /// Grid view for albums
 struct AlbumGridView: View {
     let albums: [Album]
     @Binding var searchText: String
-    
+
     @State private var sortOrder = AlbumSortOrder.title
     @State private var selectedAlbum: Album?
-    
+
     enum AlbumSortOrder: String, CaseIterable {
         case title = "Title"
         case artist = "Artist"
         case year = "Year"
         case dateAdded = "Date Added"
-        
     }
-    
+
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16)
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16),
     ]
-    
+
     var sortedAlbums: [Album] {
         albums.sorted { album1, album2 in
             switch sortOrder {
             case .title:
-                return album1.title < album2.title
+                album1.title < album2.title
             case .artist:
-                return album1.albumArtist < album2.albumArtist
+                album1.albumArtist < album2.albumArtist
             case .year:
-                return (album1.year ?? 0) > (album2.year ?? 0)
+                (album1.year ?? 0) > (album2.year ?? 0)
             case .dateAdded:
-                return album1.dateAdded > album2.dateAdded
+                album1.dateAdded > album2.dateAdded
             }
         }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Sort options
@@ -50,7 +49,7 @@ struct AlbumGridView: View {
                 Text("Sort by:")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 Picker("Sort", selection: $sortOrder) {
                     ForEach(AlbumSortOrder.allCases, id: \.self) { order in
                         Text(order.rawValue).tag(order)
@@ -58,16 +57,16 @@ struct AlbumGridView: View {
                 }
                 .pickerStyle(.menu)
                 .font(.caption)
-                
+
                 Spacer()
-                
+
                 Text("\(albums.count) albums")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
-            
+
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(sortedAlbums) { album in
@@ -89,7 +88,7 @@ struct AlbumGridView: View {
 /// Individual album grid item
 struct AlbumGridItem: View {
     let album: Album
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Artwork
@@ -99,10 +98,10 @@ struct AlbumGridItem: View {
                 .overlay(
                     Image(systemName: "square.stack")
                         .font(.system(size: 40))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.secondary),
                 )
                 .shadow(radius: 4)
-            
+
             // Album info
             VStack(alignment: .leading, spacing: 2) {
                 Text(album.title)
@@ -110,12 +109,12 @@ struct AlbumGridItem: View {
                     .fontWeight(.medium)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                
+
                 Text(album.albumArtist)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
-                
+
                 if let year = album.year {
                     Text(String(year))
                         .font(.caption2)
@@ -132,17 +131,17 @@ struct AlbumDetailView: View {
     let album: Album
     @Environment(\.dismiss) private var dismiss
     @Query private var tracks: [Track]
-    
+
     var albumTracks: [Track] {
         tracks.filter { $0.album == album.title && $0.albumArtist == album.albumArtist }
-            .sorted { 
+            .sorted {
                 if let disc1 = $0.discNumber, let disc2 = $1.discNumber, disc1 != disc2 {
                     return disc1 < disc2
                 }
                 return ($0.trackNumber ?? 0) < ($1.trackNumber ?? 0)
             }
     }
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -156,26 +155,26 @@ struct AlbumDetailView: View {
                             .overlay(
                                 Image(systemName: "square.stack")
                                     .font(.system(size: 40))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.secondary),
                             )
-                        
+
                         // Album info
                         VStack(alignment: .leading, spacing: 8) {
                             Text(album.title)
                                 .font(.title3)
                                 .fontWeight(.semibold)
                                 .lineLimit(2)
-                            
+
                             Text(album.albumArtist)
                                 .font(.body)
                                 .foregroundColor(.secondary)
-                            
+
                             if let year = album.year {
                                 Text(String(year))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
-                            
+
                             HStack(spacing: 4) {
                                 Text("\(albumTracks.count) tracks")
                                 Text("•")
@@ -184,11 +183,11 @@ struct AlbumDetailView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                         }
-                        
+
                         Spacer()
                     }
                     .padding(.horizontal)
-                    
+
                     // Track list
                     if !albumTracks.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
@@ -196,12 +195,12 @@ struct AlbumDetailView: View {
                                 .font(.headline)
                                 .padding(.horizontal)
                                 .padding(.bottom, 8)
-                            
+
                             ForEach(albumTracks) { track in
                                 AlbumTrackRow(track: track)
                                     .padding(.horizontal)
                                     .padding(.vertical, 8)
-                                
+
                                 if track != albumTracks.last {
                                     Divider()
                                         .padding(.leading, 40)
@@ -209,13 +208,13 @@ struct AlbumDetailView: View {
                             }
                         }
                     }
-                    
+
                     // Album details
                     if album.primaryGenre != nil || album.label != nil {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Album Details")
                                 .font(.headline)
-                            
+
                             if let genre = album.primaryGenre {
                                 DetailRow(label: "Genre", value: genre)
                             }
@@ -239,12 +238,12 @@ struct AlbumDetailView: View {
             }
         }
     }
-    
+
     private var formattedDuration: String {
         let totalSeconds = albumTracks.reduce(0) { $0 + $1.duration }
         let hours = Int(totalSeconds) / 3600
         let minutes = (Int(totalSeconds) % 3600) / 60
-        
+
         if hours > 0 {
             return "\(hours)h \(minutes)m"
         } else {
@@ -256,7 +255,7 @@ struct AlbumDetailView: View {
 /// Track row for album view
 struct AlbumTrackRow: View {
     let track: Track
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Track number
@@ -266,22 +265,22 @@ struct AlbumTrackRow: View {
                     .foregroundColor(.secondary)
                     .frame(width: 20)
             }
-            
+
             // Track info
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.title)
                     .font(.body)
                     .lineLimit(1)
-                
-                if track.artist != track.albumArtist && track.albumArtist != nil {
+
+                if track.artist != track.albumArtist, track.albumArtist != nil {
                     Text(track.artist)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             // Duration
             Text(track.formattedDuration)
                 .font(.caption)

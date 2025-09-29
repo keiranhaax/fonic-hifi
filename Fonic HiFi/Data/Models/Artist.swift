@@ -11,41 +11,40 @@ import SwiftData
 /// Artist model representing a musical artist or band
 @Model
 public final class Artist {
-    
     // MARK: - Identity
-    
+
     /// Unique identifier for the artist
     public var id: UUID
-    
+
     /// Artist name
     public var name: String
-    
+
     /// Sort name (for alphabetical ordering)
     public var sortName: String
-    
+
     // MARK: - Metadata
-    
+
     /// Artist biography or description
     public var biography: String?
-    
+
     /// Primary genre associated with the artist
     public var primaryGenre: String?
-    
+
     /// All genres associated with this artist
     public var genres: [String]
-    
+
     /// Country of origin
     public var country: String?
-    
+
     /// Formation year (for bands) or birth year (for solo artists)
     public var formationYear: Int?
-    
+
     /// Whether the artist is currently active
     public var isActive: Bool
-    
+
     /// External URLs (website, social media, etc.)
     public var externalUrls: [String: String]
-    
+
     // MARK: - Artwork
 
     /// Artist photo or logo
@@ -65,7 +64,7 @@ public final class Artist {
     public var tracks: [Track] = []
 
     // MARK: - Computed Properties
-    
+
     /// Number of tracks by this artist (calculated from relationships)
     public var trackCount: Int {
         tracks.count
@@ -80,31 +79,31 @@ public final class Artist {
     public var totalDuration: TimeInterval {
         tracks.reduce(0) { $0 + $1.duration }
     }
-    
+
     /// First letter for section indexing
     public var firstLetter: String {
         let effectiveName = sortName.isEmpty ? name : sortName
         return String(effectiveName.prefix(1).uppercased())
     }
-    
+
     // MARK: - Initialization
-    
+
     public init(
         name: String,
         sortName: String? = nil,
         primaryGenre: String? = nil,
         country: String? = nil,
-        formationYear: Int? = nil
+        formationYear: Int? = nil,
     ) {
-        self.id = UUID()
+        id = UUID()
         self.name = name
         self.sortName = sortName ?? name
         self.primaryGenre = primaryGenre
         self.country = country
         self.formationYear = formationYear
-        self.isActive = true
-        self.genres = []
-        self.externalUrls = [:]
+        isActive = true
+        genres = []
+        externalUrls = [:]
     }
 }
 
@@ -114,7 +113,7 @@ extension Artist: Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     public static func == (lhs: Artist, rhs: Artist) -> Bool {
         lhs.id == rhs.id
     }
@@ -122,25 +121,24 @@ extension Artist: Hashable {
 
 // MARK: - Search and Filtering
 
-extension Artist {
-    
+public extension Artist {
     /// Check if artist matches search query
-    public func matches(searchQuery: String) -> Bool {
+    func matches(searchQuery: String) -> Bool {
         let query = searchQuery.lowercased()
         return name.lowercased().contains(query) ||
-               sortName.lowercased().contains(query) ||
-               genres.contains { $0.lowercased().contains(query) } ||
-               (country?.lowercased().contains(query) ?? false)
+            sortName.lowercased().contains(query) ||
+            genres.contains { $0.lowercased().contains(query) } ||
+            (country?.lowercased().contains(query) ?? false)
     }
-    
+
     /// Check if artist matches specific filter criteria
-    public func matches(filter: ArtistFilter) -> Bool {
+    func matches(filter: ArtistFilter) -> Bool {
         switch filter {
-        case .genre(let genreName):
+        case let .genre(genreName):
             return genres.contains { $0.lowercased() == genreName.lowercased() }
-        case .country(let countryName):
+        case let .country(countryName):
             return country?.lowercased() == countryName.lowercased()
-        case .decade(let decade):
+        case let .decade(decade):
             guard let year = formationYear else { return false }
             return year >= decade && year < decade + 10
         case .active:
@@ -164,7 +162,6 @@ public enum ArtistFilter {
 // MARK: - Artist Statistics
 
 public extension Artist {
-    
     /// Statistics about the artist's music in the library
     struct Statistics {
         public let trackCount: Int
@@ -176,18 +173,18 @@ public extension Artist {
         public let yearRange: ClosedRange<Int>?
         public let audioFormats: Set<String>
         public let qualityDistribution: [String: Int] // e.g., ["Lossless": 50, "Hi-Res": 30]
-        
+
         public var formattedTotalDuration: String {
             let hours = Int(totalDuration) / 3600
             let minutes = (Int(totalDuration) % 3600) / 60
-            
+
             if hours > 0 {
                 return String(format: "%dh %dm", hours, minutes)
             } else {
                 return String(format: "%dm", minutes)
             }
         }
-        
+
         public var formattedTotalFileSize: String {
             let formatter = ByteCountFormatter()
             formatter.allowedUnits = [.useMB, .useGB]

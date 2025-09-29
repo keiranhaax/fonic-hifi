@@ -10,6 +10,7 @@ import Combine
 import Foundation
 import MediaPlayer
 import Observation
+import OSLog
 import UIKit
 
 /// High-level facade that coordinates all audio infrastructure components
@@ -183,7 +184,7 @@ public final class AudioEngineFacade: ObservableObject {
         queueManager: AudioQueueManager? = nil,
         validator: BitPerfectValidator? = nil,
         monitor: AudioMonitor? = nil,
-        playbackSettingsStore: AudioPlaybackSettingsStore? = nil
+        playbackSettingsStore: AudioPlaybackSettingsStore? = nil,
     ) {
         engineConfiguration = configuration
 
@@ -242,7 +243,7 @@ public final class AudioEngineFacade: ObservableObject {
                         title: currentTrack.title,
                         artist: currentTrack.artist,
                         album: currentTrack.album,
-                        audioFormat: currentTrack.audioFormat
+                        audioFormat: currentTrack.audioFormat,
                     )
                     showMiniPlayer = true
                     logger.info("Restored current track: \(currentTrack.title)")
@@ -317,7 +318,7 @@ public final class AudioEngineFacade: ObservableObject {
             if engineConfiguration.performanceMode == .quality {
                 let validationResult = await validator.validateBitPerfectPlayback(
                     sourceFormat: formatInfo,
-                    outputDevice: nil
+                    outputDevice: nil,
                 )
 
                 if !validationResult.isValid {
@@ -528,7 +529,7 @@ public final class AudioEngineFacade: ObservableObject {
                 to: nextTrack.url,
                 duration: crossfadeDuration,
                 playbackRate: playbackRate,
-                gainDB: gain
+                gainDB: gain,
             )
 
             stateManager.updateState(.playing(currentTime: 0, duration: nextTrack.duration))
@@ -566,7 +567,7 @@ public final class AudioEngineFacade: ObservableObject {
                 to: previousTrack.url,
                 duration: crossfadeDuration,
                 playbackRate: playbackRate,
-                gainDB: gain
+                gainDB: gain,
             )
 
             stateManager.updateState(.playing(currentTime: 0, duration: previousTrack.duration))
@@ -622,7 +623,7 @@ public final class AudioEngineFacade: ObservableObject {
             let formatInfo = try await formatDetectionManager.detectFormat(at: currentTrack.url)
             return await validator.validateBitPerfectPlayback(
                 sourceFormat: formatInfo,
-                outputDevice: nil
+                outputDevice: nil,
             )
         } catch {
             logger.error("Validation failed: \(error.localizedDescription)")
@@ -643,15 +644,14 @@ public final class AudioEngineFacade: ObservableObject {
     /// Refresh diagnostics for the provided track, optionally reusing detected format info
     public func refreshDiagnostics(for track: Track, formatInfo: AudioFileInfo? = nil) async {
         do {
-            let info: AudioFileInfo
-            if let provided = formatInfo {
-                info = provided
+            let info: AudioFileInfo = if let provided = formatInfo {
+                provided
             } else {
-                info = try await formatDetectionManager.detectFormat(at: track.url)
+                try await formatDetectionManager.detectFormat(at: track.url)
             }
             let validation = await validator.validateBitPerfectPlayback(
                 sourceFormat: info,
-                outputDevice: nil
+                outputDevice: nil,
             )
 
             let devices = await validator.getAvailableDevicesWithCapabilities()
@@ -668,7 +668,7 @@ public final class AudioEngineFacade: ObservableObject {
                 device: defaultDevice?.device,
                 dacInfo: dacInfo,
                 metrics: metrics,
-                updatedAt: Date()
+                updatedAt: Date(),
             )
         } catch {
             let metrics = await monitor.getCurrentMetrics()
@@ -678,7 +678,7 @@ public final class AudioEngineFacade: ObservableObject {
                 device: nil,
                 dacInfo: nil,
                 metrics: metrics,
-                updatedAt: Date()
+                updatedAt: Date(),
             )
             logger.warning("Diagnostics refresh failed: \(error.localizedDescription)")
         }
@@ -742,7 +742,7 @@ public final class AudioEngineFacade: ObservableObject {
             MPMediaItemPropertyArtist: track.artist,
             MPMediaItemPropertyPlaybackDuration: duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: 0,
-            MPNowPlayingInfoPropertyPlaybackRate: playbackRate
+            MPNowPlayingInfoPropertyPlaybackRate: playbackRate,
         ]
 
         await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
@@ -846,7 +846,7 @@ public final class AudioEngineFacade: ObservableObject {
         // Check if we need a different engine type for this format
         let requiredEngineType = engineFactory.selectEngineType(
             for: formatInfo.format,
-            configuration: engineConfiguration
+            configuration: engineConfiguration,
         )
 
         // Check if current engine is the right type
@@ -866,7 +866,7 @@ public final class AudioEngineFacade: ObservableObject {
         // Create new engine
         let engine = try await engineFactory.makeEngine(
             for: formatInfo.format,
-            configuration: engineConfiguration
+            configuration: engineConfiguration,
         )
 
         // Attach to monitoring
@@ -935,13 +935,11 @@ public final class AudioEngineFacade: ObservableObject {
                 return
             }
 
-            Task { @MainActor in
-                async let currentTime = engine.currentTime
-                async let duration = engine.duration
+            async let currentTime = engine.currentTime
+            async let duration = engine.duration
 
-                let (time, dur) = await (currentTime, duration)
-                self.stateManager.updateTime(time, duration: dur)
-            }
+            let (time, dur) = await (currentTime, duration)
+            stateManager.updateTime(time, duration: dur)
         }
     }
 
@@ -951,7 +949,7 @@ public final class AudioEngineFacade: ObservableObject {
             title: track.title,
             artist: track.artist,
             album: track.album,
-            format: track.audioFormat
+            format: track.audioFormat,
         )
     }
 
@@ -964,7 +962,7 @@ public final class AudioEngineFacade: ObservableObject {
             artist: audioTrack.artist,
             album: audioTrack.album,
             audioFormat: audioTrack.audioFormat,
-            duration: audioTrack.duration
+            duration: audioTrack.duration,
         )
         track.replayGainTrack = audioTrack.replayGainTrack
         track.replayGainAlbum = audioTrack.replayGainAlbum
@@ -1027,41 +1025,13 @@ extension AudioEngineFacade {
     private func assertMainThread(
         file: StaticString = #file,
         line: UInt = #line,
-        function: StaticString = #function
+        function: StaticString = #function,
     ) {
         #if DEBUG
             assert(
                 Thread.isMainThread,
-                "\(function) must be called on the main thread. Called from \(file):\(line)"
+                "\(function) must be called on the main thread. Called from \(file):\(line)",
             )
         #endif
     }
-}
-
-extension Logger {
-    init(subsystem _: String, category _: String) {
-        // For now, use a simple logger
-        // In production, this would be properly configured
-        self.init()
-    }
-
-    func info(_ message: String) {
-        print("[INFO] [\(Date())] \(message)")
-    }
-
-    func debug(_ message: String) {
-        print("[DEBUG] [\(Date())] \(message)")
-    }
-
-    func warning(_ message: String) {
-        print("[WARNING] [\(Date())] \(message)")
-    }
-
-    func error(_ message: String) {
-        print("[ERROR] [\(Date())] \(message)")
-    }
-}
-
-private struct Logger {
-    init() {}
 }

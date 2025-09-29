@@ -5,106 +5,105 @@
 //  Created by Claude on 5/27/2025.
 //
 
-import Foundation
 import AVFoundation
+import Foundation
 
 /// Represents an audio input or output device with its capabilities
 @frozen
 public struct AudioDevice: Sendable, Equatable, Hashable, Codable, Identifiable {
-    
     // MARK: - Core Properties
-    
+
     /// Unique device identifier
     public let id: String
-    
+
     /// Human-readable device name
     public let name: String
-    
+
     /// Device type classification
     public let type: AudioDeviceType
-    
+
     /// Whether this is an output device (true) or input device (false)
     public let isOutput: Bool
-    
+
     /// Whether the device is currently available and connected
     public let isAvailable: Bool
-    
+
     /// Device connection type
     public let connectionType: AudioConnectionType
-    
+
     // MARK: - Audio Capabilities
-    
+
     /// Supported sample rates in Hz
     public let supportedSampleRates: [Double]
-    
+
     /// Supported bit depths
     public let supportedBitDepths: [UInt16]
-    
+
     /// Maximum number of channels supported
     public let maxChannels: UInt8
-    
+
     /// Whether the device supports bit-perfect playback
     public let supportsBitPerfect: Bool
-    
+
     /// Minimum buffer size in frames
     public let minBufferSize: UInt32
-    
+
     /// Maximum buffer size in frames
     public let maxBufferSize: UInt32
-    
+
     /// Preferred buffer size in frames
     public let preferredBufferSize: UInt32
-    
+
     // MARK: - Device Information
-    
+
     /// Device manufacturer name
     public let manufacturer: String?
-    
+
     /// Device model identifier
     public let model: String?
-    
+
     /// Device transport type (USB, Bluetooth, etc.)
     public let transport: String?
-    
+
     /// Hardware latency in seconds
     public let hardwareLatency: TimeInterval
-    
+
     /// Whether the device is the system default
     public let isDefault: Bool
-    
+
     /// Device quality rating
     public let qualityRating: DeviceQuality
-    
+
     // MARK: - Computed Properties
-    
+
     /// Best supported sample rate for high-quality playback
     public var bestSampleRate: Double {
         supportedSampleRates.max() ?? 44100
     }
-    
+
     /// Best supported bit depth
     public var bestBitDepth: UInt16 {
         supportedBitDepths.max() ?? 16
     }
-    
+
     /// Whether this device supports high-resolution audio
     public var supportsHighResolution: Bool {
         bestSampleRate > 48000 || bestBitDepth > 16
     }
-    
+
     /// Whether this device is suitable for audiophile use
     public var isAudiophileGrade: Bool {
-        supportsBitPerfect && 
-        supportsHighResolution && 
-        qualityRating.rawValue >= DeviceQuality.good.rawValue
+        supportsBitPerfect &&
+            supportsHighResolution &&
+            qualityRating.rawValue >= DeviceQuality.good.rawValue
     }
-    
+
     /// Device capability summary string
     public var capabilityString: String {
         let maxRate = bestSampleRate >= 1000 ? "\(Int(bestSampleRate / 1000))kHz" : "\(Int(bestSampleRate))Hz"
         return "\(maxRate)/\(bestBitDepth)-bit"
     }
-    
+
     /// Short display name (truncated if too long)
     public var displayName: String {
         if name.count > 25 {
@@ -112,9 +111,9 @@ public struct AudioDevice: Sendable, Equatable, Hashable, Codable, Identifiable 
         }
         return name
     }
-    
+
     // MARK: - Initialization
-    
+
     public init(
         id: String,
         name: String,
@@ -134,7 +133,7 @@ public struct AudioDevice: Sendable, Equatable, Hashable, Codable, Identifiable 
         transport: String? = nil,
         hardwareLatency: TimeInterval = 0.001,
         isDefault: Bool = false,
-        qualityRating: DeviceQuality = .standard
+        qualityRating: DeviceQuality = .standard,
     ) {
         self.id = id
         self.name = name
@@ -156,12 +155,12 @@ public struct AudioDevice: Sendable, Equatable, Hashable, Codable, Identifiable 
         self.isDefault = isDefault
         self.qualityRating = qualityRating
     }
-    
+
     // MARK: - Factory Methods
-    
+
     /// Create a device representing built-in speakers
     public static func builtInSpeaker() -> AudioDevice {
-        return AudioDevice(
+        AudioDevice(
             id: "built-in-speaker",
             name: "Built-in Speaker",
             type: .builtIn,
@@ -172,13 +171,13 @@ public struct AudioDevice: Sendable, Equatable, Hashable, Codable, Identifiable 
             maxChannels: 2,
             supportsBitPerfect: false,
             isDefault: true,
-            qualityRating: .basic
+            qualityRating: .basic,
         )
     }
-    
+
     /// Create a device representing built-in microphone
     public static func builtInMicrophone() -> AudioDevice {
-        return AudioDevice(
+        AudioDevice(
             id: "built-in-microphone",
             name: "Built-in Microphone",
             type: .builtIn,
@@ -189,13 +188,13 @@ public struct AudioDevice: Sendable, Equatable, Hashable, Codable, Identifiable 
             maxChannels: 1,
             supportsBitPerfect: false,
             isDefault: true,
-            qualityRating: .basic
+            qualityRating: .basic,
         )
     }
-    
+
     /// Create a device representing wired headphones
     public static func wiredHeadphones() -> AudioDevice {
-        return AudioDevice(
+        AudioDevice(
             id: "wired-headphones",
             name: "Wired Headphones",
             type: .headphones,
@@ -205,13 +204,13 @@ public struct AudioDevice: Sendable, Equatable, Hashable, Codable, Identifiable 
             supportedBitDepths: [16],
             maxChannels: 2,
             supportsBitPerfect: true,
-            qualityRating: .standard
+            qualityRating: .standard,
         )
     }
-    
+
     /// Create a generic Bluetooth audio device
     public static func bluetoothAudio(name: String) -> AudioDevice {
-        return AudioDevice(
+        AudioDevice(
             id: "bluetooth-\(name.lowercased().replacingOccurrences(of: " ", with: "-"))",
             name: name,
             type: .bluetooth,
@@ -221,47 +220,47 @@ public struct AudioDevice: Sendable, Equatable, Hashable, Codable, Identifiable 
             supportedBitDepths: [16],
             maxChannels: 2,
             supportsBitPerfect: false,
-            qualityRating: .standard
+            qualityRating: .standard,
         )
     }
-    
+
     /// Create a high-end USB DAC device
     public static func usbDAC(name: String, manufacturer: String? = nil) -> AudioDevice {
-        return AudioDevice(
+        AudioDevice(
             id: "usb-dac-\(name.lowercased().replacingOccurrences(of: " ", with: "-"))",
             name: name,
             type: .usbDAC,
             isOutput: true,
             connectionType: .usb,
-            supportedSampleRates: [44100, 48000, 88200, 96000, 176400, 192000],
+            supportedSampleRates: [44100, 48000, 88200, 96000, 176_400, 192_000],
             supportedBitDepths: [16, 24, 32],
             maxChannels: 2,
             supportsBitPerfect: true,
             manufacturer: manufacturer,
             hardwareLatency: 0.0005,
-            qualityRating: .excellent
+            qualityRating: .excellent,
         )
     }
-    
+
     // MARK: - Capability Checking
-    
+
     /// Check if the device supports a specific sample rate
     public func supports(sampleRate: Double) -> Bool {
         supportedSampleRates.contains(sampleRate)
     }
-    
+
     /// Check if the device supports a specific bit depth
     public func supports(bitDepth: UInt16) -> Bool {
         supportedBitDepths.contains(bitDepth)
     }
-    
+
     /// Check if the device can handle a specific audio format
     public func supports(format: AudioFileInfo) -> Bool {
-        return supports(sampleRate: format.sampleRate) &&
-               supports(bitDepth: format.bitDepth) &&
-               format.channels <= maxChannels
+        supports(sampleRate: format.sampleRate) &&
+            supports(bitDepth: format.bitDepth) &&
+            format.channels <= maxChannels
     }
-    
+
     /// Get the optimal buffer size for the given sample rate
     public func optimalBufferSize(for sampleRate: Double) -> UInt32 {
         // Prefer lower latency for higher sample rates
@@ -287,27 +286,27 @@ public enum AudioDeviceType: String, Sendable, CaseIterable, Codable {
     case thunderbolt = "Thunderbolt"
     case hdmi = "HDMI"
     case unknown = "Unknown"
-    
+
     public var description: String {
-        return rawValue
+        rawValue
     }
-    
+
     /// Display name for UI
     public var displayName: String {
-        return rawValue
+        rawValue
     }
-    
+
     /// Whether this device type typically supports high-quality audio
     public var supportsHighQuality: Bool {
         switch self {
         case .usbDAC, .usb, .thunderbolt, .hdmi:
-            return true
+            true
         case .headphones, .speakers:
-            return true
+            true
         case .builtIn, .builtin, .bluetooth, .airPlay, .airplay:
-            return false
+            false
         case .unknown:
-            return false
+            false
         }
     }
 }
@@ -322,24 +321,24 @@ public enum AudioConnectionType: String, Sendable, CaseIterable, Codable {
     case thunderbolt = "Thunderbolt"
     case lightning = "Lightning"
     case unknown = "Unknown"
-    
+
     public var description: String {
-        return rawValue
+        rawValue
     }
-    
+
     /// Typical latency characteristics for this connection type
     public var typicalLatency: TimeInterval {
         switch self {
         case .builtin, .headphoneJack:
-            return 0.001
+            0.001
         case .usb, .thunderbolt, .lightning:
-            return 0.0005
+            0.0005
         case .bluetooth:
-            return 0.040
+            0.040
         case .airPlay:
-            return 0.100
+            0.100
         case .unknown:
-            return 0.010
+            0.010
         }
     }
 }
@@ -351,47 +350,47 @@ public enum DeviceQuality: Int, Sendable, CaseIterable, Codable {
     case good = 3
     case excellent = 4
     case reference = 5
-    
+
     public var description: String {
         switch self {
         case .basic:
-            return "Basic"
+            "Basic"
         case .standard:
-            return "Standard"
+            "Standard"
         case .good:
-            return "Good"
+            "Good"
         case .excellent:
-            return "Excellent"
+            "Excellent"
         case .reference:
-            return "Reference"
+            "Reference"
         }
     }
-    
+
     public var emoji: String {
         switch self {
         case .basic:
-            return "🔉"
+            "🔉"
         case .standard:
-            return "🔊"
+            "🔊"
         case .good:
-            return "🎵"
+            "🎵"
         case .excellent:
-            return "🎼"
+            "🎼"
         case .reference:
-            return "🏆"
+            "🏆"
         }
     }
 }
 
 // MARK: - Extensions
 
-extension AudioDevice {
+public extension AudioDevice {
     /// Create a device from an AVAudioSessionPortDescription
-    public static func from(port: AVAudioSessionPortDescription) -> AudioDevice {
+    static func from(port: AVAudioSessionPortDescription) -> AudioDevice {
         let connectionType: AudioConnectionType
         let deviceType: AudioDeviceType
         let qualityRating: DeviceQuality
-        
+
         switch port.portType {
         case .builtInSpeaker:
             connectionType = .builtin
@@ -418,7 +417,7 @@ extension AudioDevice {
             deviceType = .unknown
             qualityRating = .standard
         }
-        
+
         return AudioDevice(
             id: port.uid,
             name: port.portName,
@@ -429,24 +428,24 @@ extension AudioDevice {
             supportedBitDepths: [16],
             maxChannels: UInt8(port.channels?.count ?? 2),
             supportsBitPerfect: connectionType == .usb || connectionType == .headphoneJack,
-            qualityRating: qualityRating
+            qualityRating: qualityRating,
         )
     }
-    
+
     /// Get a user-friendly description including capabilities
-    public var fullDescription: String {
+    var fullDescription: String {
         var components = [name]
-        
-        if let manufacturer = manufacturer {
+
+        if let manufacturer {
             components.append("by \(manufacturer)")
         }
-        
+
         components.append("(\(capabilityString))")
-        
+
         if supportsBitPerfect {
             components.append("Bit-Perfect")
         }
-        
+
         return components.joined(separator: " ")
     }
 }

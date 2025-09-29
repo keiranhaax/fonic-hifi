@@ -5,8 +5,8 @@
 //  Created by Claude on 5/28/25.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 /// Main library view with tabs for different browse modes
 @MainActor
@@ -29,23 +29,23 @@ struct LibraryView: View {
     @State private var loadingMessage = ""
 
     @Environment(\.importService) private var importService
-    
+
     enum LibraryTab: String, CaseIterable {
         case tracks = "Tracks"
         case albums = "Albums"
         case artists = "Artists"
         case playlists = "Playlists"
-        
+
         var icon: String {
             switch self {
-            case .tracks: return "music.note"
-            case .albums: return "square.stack"
-            case .artists: return "person.2"
-            case .playlists: return "music.note.list"
+            case .tracks: "music.note"
+            case .albums: "square.stack"
+            case .artists: "person.2"
+            case .playlists: "music.note.list"
             }
         }
     }
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -59,7 +59,7 @@ struct LibraryView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
-                
+
                 // Content
                 Group {
                     switch selectedTab {
@@ -78,7 +78,7 @@ struct LibraryView: View {
                     if isLoading || isFiltering {
                         LoadingOverlay(
                             message: loadingMessage.isEmpty ? "Loading..." : loadingMessage,
-                            isShowing: isLoading || isFiltering
+                            isShowing: isLoading || isFiltering,
                         )
                     }
                 }
@@ -116,7 +116,7 @@ struct LibraryView: View {
                 }
             }
             .overlay {
-                if tracks.isEmpty && albums.isEmpty && artists.isEmpty && selectedTab != .playlists {
+                if tracks.isEmpty, albums.isEmpty, artists.isEmpty, selectedTab != .playlists {
                     EmptyLibraryView(showingImportView: $showingImportView)
                 }
             }
@@ -132,8 +132,8 @@ struct LibraryView: View {
             // Show progress for large track lists
             if tracks.count > 1000 {
                 DispatchQueue.main.async {
-                    self.isFiltering = true
-                    self.loadingMessage = "Filtering \(tracks.count) tracks..."
+                    isFiltering = true
+                    loadingMessage = "Filtering \(tracks.count) tracks..."
                 }
             }
 
@@ -141,7 +141,7 @@ struct LibraryView: View {
 
             if tracks.count > 1000 {
                 DispatchQueue.main.async {
-                    self.isFiltering = false
+                    isFiltering = false
                 }
             }
 
@@ -156,19 +156,19 @@ struct LibraryView: View {
             // Show progress for large album lists
             if albums.count > 100 {
                 DispatchQueue.main.async {
-                    self.isFiltering = true
-                    self.loadingMessage = "Filtering \(albums.count) albums..."
+                    isFiltering = true
+                    loadingMessage = "Filtering \(albums.count) albums..."
                 }
             }
 
             let filtered = albums.filter {
                 $0.title.localizedCaseInsensitiveContains(searchText) ||
-                $0.albumArtist.localizedCaseInsensitiveContains(searchText)
+                    $0.albumArtist.localizedCaseInsensitiveContains(searchText)
             }
 
             if albums.count > 100 {
                 DispatchQueue.main.async {
-                    self.isFiltering = false
+                    isFiltering = false
                 }
             }
 
@@ -183,8 +183,8 @@ struct LibraryView: View {
             // Show progress for large artist lists
             if artists.count > 100 {
                 DispatchQueue.main.async {
-                    self.isFiltering = true
-                    self.loadingMessage = "Filtering \(artists.count) artists..."
+                    isFiltering = true
+                    loadingMessage = "Filtering \(artists.count) artists..."
                 }
             }
 
@@ -194,7 +194,7 @@ struct LibraryView: View {
 
             if artists.count > 100 {
                 DispatchQueue.main.async {
-                    self.isFiltering = false
+                    isFiltering = false
                 }
             }
 
@@ -206,17 +206,17 @@ struct LibraryView: View {
 /// Empty library state
 struct EmptyLibraryView: View {
     @Binding var showingImportView: Bool
-    
+
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "music.note")
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
-            
+
             Text("Your Library is Empty")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text("Import music to get started")
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -256,6 +256,10 @@ struct LoadingOverlay: View {
 }
 
 #Preview {
-    LibraryView()
-        .importService(DataManager.makePreviewImportService())
+    if let importService = DataManager.makePreviewImportService() {
+        LibraryView()
+            .importService(importService)
+    } else {
+        LibraryView()
+    }
 }

@@ -41,8 +41,8 @@ public struct RecentSearchData: Sendable {
     }
 
     public init(from model: RecentSearch) {
-        self.query = model.query
-        self.timestamp = model.timestamp
-        self.resultCount = model.resultCount
+        query = model.query
+        timestamp = model.timestamp
+        resultCount = model.resultCount
     }
 }

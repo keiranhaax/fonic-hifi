@@ -8,31 +8,29 @@
 import SwiftUI
 
 struct PanGesture: UIGestureRecognizerRepresentable {
-    var onChange: (Value) -> ()
-    var onEnd: (Value) -> ()
-    
-    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+    var onChange: (Value) -> Void
+    var onEnd: (Value) -> Void
+
+    func makeUIGestureRecognizer(context _: Context) -> UIPanGestureRecognizer {
         let gesture = UIPanGestureRecognizer()
         return gesture
     }
-    
-    func updateUIGestureRecognizer(_ recognizer: UIPanGestureRecognizer, context: Context) {
-        
-    }
-    
-    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
+
+    func updateUIGestureRecognizer(_: UIPanGestureRecognizer, context _: Context) {}
+
+    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context _: Context) {
         let state = recognizer.state
         let translation = recognizer.translation(in: recognizer.view).toSize()
         let velocity = recognizer.velocity(in: recognizer.view).toSize()
         let value = Value(translation: translation, velocity: velocity)
-        
+
         if state == .began || state == .changed {
             onChange(value)
         } else {
             onEnd(value)
         }
     }
-    
+
     struct Value {
         var translation: CGSize
         var velocity: CGSize
@@ -41,6 +39,6 @@ struct PanGesture: UIGestureRecognizerRepresentable {
 
 extension CGPoint {
     func toSize() -> CGSize {
-        return .init(width: x, height: y)
+        .init(width: x, height: y)
     }
 }

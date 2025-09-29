@@ -5,8 +5,8 @@
 //  Created by Claude on 5/28/25.
 //
 
-import SwiftData
 import Foundation
+import SwiftData
 
 /// Versioned schema that includes all models
 enum SchemaV1: VersionedSchema {
@@ -18,7 +18,7 @@ enum SchemaV1: VersionedSchema {
             Artist.self,
             Album.self,
             Playlist.self,
-            RecentSearch.self
+            RecentSearch.self,
         ]
     }
 }

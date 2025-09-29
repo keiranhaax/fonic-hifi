@@ -13,12 +13,12 @@ struct TrackRowView: View {
     let track: Track
     @Environment(\.audioEngine) private var audioService
     @Environment(\.showingNowPlaying) private var showingNowPlaying
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Track number or playing indicator
             ZStack {
-                if audioService?.currentTrack?.id == track.id && audioService?.isPlaying == true {
+                if audioService?.currentTrack?.id == track.id, audioService?.isPlaying == true {
                     Image(systemName: "speaker.wave.2.fill")
                         .font(.caption)
                         .foregroundColor(.accentColor)
@@ -29,21 +29,21 @@ struct TrackRowView: View {
                 }
             }
             .frame(width: 24)
-            
+
             // Track info
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.title)
                     .font(.body)
                     .lineLimit(1)
-                
+
                 Text(track.artist)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             // Duration
             Text(formatDuration(track.duration))
                 .font(.caption)
@@ -56,24 +56,24 @@ struct TrackRowView: View {
         }
         .opacity(audioService?.isReady == true ? 1.0 : 0.6) // Visual feedback for initialization state
     }
-    
+
     private func formatDuration(_ duration: TimeInterval) -> String {
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
-    
+
     @MainActor
     private func playTrack() {
-        guard let audioService = audioService else { return }
-        
+        guard let audioService else { return }
+
         print("=== TRACK ROW TAP - UI STATE ONLY ===")
         print("Track to play: \(track.title)")
-        
+
         // Only update UI state - let NowPlayingView handle audio playback
         audioService.setCurrentTrack(track)
         showingNowPlaying.wrappedValue = true
-        
+
         print("currentTrack set: \(audioService.currentTrack != nil)")
         print("showingNowPlaying: \(showingNowPlaying.wrappedValue)")
         print("UI state updated - Now Playing view will handle audio playback")
@@ -91,7 +91,7 @@ private func makePreviewTrack() -> Track {
         sampleRate: 48000,
         bitDepth: 24,
         channels: 2,
-        isLossless: false
+        isLossless: false,
     )
     track.trackNumber = 3
     return track

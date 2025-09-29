@@ -2,8 +2,8 @@
 // Version: 1.0
 // Purpose: Define interface for audio session management with proper actor isolation
 
-import Foundation
 import AVFoundation
+import Foundation
 
 // MARK: - Protocol Definition
 
@@ -66,7 +66,7 @@ final class AudioSessionContractTests {
     func testConfigureSession() async throws {
         let manager: AudioSessionManaging = AudioSessionManager() // Should fail: not implemented
         try await manager.configureSession()
-        assert(await manager.isSessionActive == true)
+        await assert(manager.isSessionActive == true)
     }
 
     @MainActor

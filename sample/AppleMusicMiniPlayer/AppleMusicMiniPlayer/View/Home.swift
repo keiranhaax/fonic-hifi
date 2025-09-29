@@ -14,7 +14,7 @@ struct Home: View {
     var body: some View {
         /// Dummy Tab View
         TabView {
-            Tab.init("Home", systemImage: "house") {
+            Tab("Home", systemImage: "house") {
                 NavigationStack {
                     Button("Hide Mini Player") {
                         withAnimation(.snappy) {
@@ -24,16 +24,16 @@ struct Home: View {
                     .navigationTitle("Home")
                 }
             }
-            
-            Tab.init("Search", systemImage: "magnifyingglass") {
+
+            Tab("Search", systemImage: "magnifyingglass") {
                 Text("Search")
             }
-            
-            Tab.init("Notifications", systemImage: "bell") {
+
+            Tab("Notifications", systemImage: "bell") {
                 Text("Notifications")
             }
-            
-            Tab.init("Settings", systemImage: "gearshape") {
+
+            Tab("Settings", systemImage: "gearshape") {
                 Text("Settings")
             }
         }

@@ -12,7 +12,7 @@ import SwiftUI
 struct DebugNowPlayingView: View {
     @EnvironmentObject private var audioService: AudioEngineFacade
     @State private var debugLog: [String] = []
-    
+
     var body: some View {
         VStack(spacing: 20) {
             Text("Debug Now Playing View")
@@ -23,24 +23,24 @@ struct DebugNowPlayingView: View {
                     dispatchPrecondition(condition: .onQueue(.main))
                     addLog("Dispatch queue: \(String(cString: __dispatch_queue_get_label(nil)))")
                 }
-            
+
             if let track = audioService.currentTrack {
                 Text("Playing: \(track.title)")
                 Text("by \(track.artist)")
             } else {
                 Text("No track selected")
             }
-            
+
             Button("Close") {
                 addLog("Close button tapped")
                 // audioService.hideNowPlaying() // Method removed - showingNowPlaying moved to local view state
             }
-            
+
             Divider()
-            
+
             Text("Debug Log:")
                 .font(.headline)
-            
+
             ScrollView {
                 VStack(alignment: .leading) {
                     ForEach(debugLog, id: \.self) { log in
@@ -57,7 +57,7 @@ struct DebugNowPlayingView: View {
             addLog("App became active")
         }
     }
-    
+
     private func addLog(_ message: String) {
         let timestamp = Date().timeIntervalSince1970
         let logEntry = "\(String(format: "%.3f", timestamp)): \(message)"

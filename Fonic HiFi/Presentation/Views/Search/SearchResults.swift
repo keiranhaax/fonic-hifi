@@ -19,7 +19,7 @@ struct SearchResults: Equatable {
         tracks: [Track] = [],
         albums: [Album] = [],
         artists: [Artist] = [],
-        playlists: [Playlist] = []
+        playlists: [Playlist] = [],
     ) {
         self.tracks = tracks
         self.albums = albums
@@ -30,9 +30,9 @@ struct SearchResults: Equatable {
     /// Whether all results are empty
     var isEmpty: Bool {
         tracks.isEmpty &&
-        albums.isEmpty &&
-        artists.isEmpty &&
-        playlists.isEmpty
+            albums.isEmpty &&
+            artists.isEmpty &&
+            playlists.isEmpty
     }
 
     /// Total number of results across all types

@@ -5,8 +5,8 @@
 //  Created by Claude on 5/28/25.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 /// Main search interface for Fonic HiFi
 @MainActor
@@ -22,7 +22,7 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if searchText.isEmpty && showingRecentSearches {
+                if searchText.isEmpty, showingRecentSearches {
                     // Show recent searches when search is empty
                     RecentSearchesView(
                         recentSearches: recentSearches,
@@ -34,9 +34,9 @@ struct SearchView: View {
                                 try? await dataManager?.clearRecentSearches()
                                 recentSearches = []
                             }
-                        }
+                        },
                     )
-                } else if searchResults.isEmpty && !searchText.isEmpty && !isSearching {
+                } else if searchResults.isEmpty, !searchText.isEmpty, !isSearching {
                     // Show no results message
                     NoResultsView(query: searchText)
                 } else if !searchResults.isEmpty {
@@ -56,7 +56,7 @@ struct SearchView: View {
         .searchable(
             text: $searchText,
             placement: .toolbar,
-            prompt: Text("Search your library")
+            prompt: Text("Search your library"),
         )
         .onChange(of: searchText) { _, newValue in
             // Cancel previous search task
@@ -110,7 +110,7 @@ struct SearchView: View {
                     try? await dataManager.addRecentSearch(query)
                     try? await dataManager.updateSearchResultCount(
                         query: query,
-                        count: results.totalCount
+                        count: results.totalCount,
                     )
                 }
             }
@@ -134,7 +134,7 @@ struct SearchView: View {
             tracks: tracks,
             albums: albums,
             artists: artists,
-            playlists: playlists
+            playlists: playlists,
         )
     }
 

@@ -12,13 +12,14 @@ import Foundation
 final class ProgressTimerManager {
     private var task: Task<Void, Never>?
 
-    func start(pollInterval: TimeInterval = 0.2, update: @escaping @MainActor () -> Void) {
+    func start(pollInterval: TimeInterval = 0.2, update: @escaping @MainActor () async -> Void) {
         task?.cancel()
-        task = Task { @MainActor in
+        task = Task { @MainActor [pollInterval] in
+            let interval = UInt64(pollInterval * 1_000_000_000)
+
             while !Task.isCancelled {
-                update()
-                // suspend on the MainActor for the interval
-                try? await Task.sleep(nanoseconds: UInt64(pollInterval * 1_000_000_000))
+                await update()
+                try? await Task.sleep(nanoseconds: interval)
             }
         }
     }

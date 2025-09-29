@@ -11,20 +11,20 @@ import SwiftUI
 @MainActor
 struct MinimalCrashTest: View {
     @StateObject private var testState = TestState()
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 40) {
                 Text("Minimal Crash Test")
                     .font(.title)
-                
+
                 // Test 1: Direct state change
                 Button("Test 1: Direct State Change") {
                     debugLogThreadContext("Button 1 tapped")
                     testState.showingOverlay = true
                 }
                 .buttonStyle(.borderedProminent)
-                
+
                 // Test 2: State change in Task
                 Button("Test 2: Task State Change") {
                     debugLogThreadContext("Button 2 tapped")
@@ -34,7 +34,7 @@ struct MinimalCrashTest: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                
+
                 // Test 3: State change with animation
                 Button("Test 3: Animated State Change") {
                     debugLogThreadContext("Button 3 tapped")
@@ -43,7 +43,7 @@ struct MinimalCrashTest: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                
+
                 // Test 4: State change after async operation
                 Button("Test 4: Async Then State Change") {
                     debugLogThreadContext("Button 4 tapped")
@@ -56,7 +56,7 @@ struct MinimalCrashTest: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                
+
                 Text("Overlay is: \(testState.showingOverlay ? "Showing" : "Hidden")")
                     .foregroundColor(.secondary)
             }
@@ -76,12 +76,12 @@ struct MinimalCrashTest: View {
 @MainActor
 final class TestState: ObservableObject {
     @Published var showingOverlay = false
-    
+
     func show() {
         MainActor.logContext(message: "Showing overlay")
         showingOverlay = true
     }
-    
+
     func hide() {
         MainActor.logContext(message: "Hiding overlay")
         showingOverlay = false
@@ -92,7 +92,7 @@ final class TestState: ObservableObject {
 @MainActor
 struct TestOverlayView: View {
     @ObservedObject var testState: TestState
-    
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.8)
@@ -101,12 +101,12 @@ struct TestOverlayView: View {
                     debugLogThreadContext("Background tapped")
                     testState.hide()
                 }
-            
+
             VStack(spacing: 20) {
                 Text("Test Overlay")
                     .font(.title)
                     .foregroundColor(.white)
-                
+
                 Button("Close") {
                     debugLogThreadContext("Close button tapped")
                     testState.hide()

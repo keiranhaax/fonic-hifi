@@ -11,7 +11,7 @@ struct FileRowView: View {
     let item: FileItem
     let onTap: () -> Void
     let onLongPress: () -> Void
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // File icon
@@ -19,41 +19,41 @@ struct FileRowView: View {
                 .font(.title2)
                 .foregroundColor(iconColor)
                 .frame(width: 24, height: 24)
-            
+
             // File info
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
                     .font(.headline)
                     .lineLimit(1)
-                
+
                 HStack {
                     if !item.isDirectory {
                         Text(item.formattedSize)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        
+
                         Text("•")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     Text(RelativeDateTimeFormatter().localizedString(for: item.dateModified, relativeTo: Date()))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Spacer()
                 }
             }
-            
+
             Spacer()
-            
+
             // Audio file indicator
             if item.isAudioFile {
                 HStack(spacing: 4) {
                     Image(systemName: "waveform")
                         .font(.caption)
                         .foregroundColor(.blue)
-                    
+
                     Text(item.fileExtension.uppercased())
                         .font(.caption2)
                         .fontWeight(.medium)
@@ -64,7 +64,7 @@ struct FileRowView: View {
                         .cornerRadius(4)
                 }
             }
-            
+
             // Directory indicator
             if item.isDirectory {
                 Image(systemName: "chevron.right")
@@ -81,14 +81,14 @@ struct FileRowView: View {
             onLongPress()
         }
     }
-    
+
     private var iconColor: Color {
         if item.isDirectory {
-            return .blue
+            .blue
         } else if item.isAudioFile {
-            return .green
+            .green
         } else {
-            return .gray
+            .gray
         }
     }
 }
@@ -102,12 +102,12 @@ struct FileRowView: View {
                 url: URL(fileURLWithPath: "/path/to/song.mp3"),
                 isDirectory: false,
                 size: 3_500_000,
-                dateModified: Date()
+                dateModified: Date(),
             ),
             onTap: {},
-            onLongPress: {}
+            onLongPress: {},
         )
-        
+
         FileRowView(
             item: FileItem(
                 id: "2",
@@ -115,10 +115,10 @@ struct FileRowView: View {
                 url: URL(fileURLWithPath: "/path/to/folder"),
                 isDirectory: true,
                 size: 0,
-                dateModified: Date()
+                dateModified: Date(),
             ),
             onTap: {},
-            onLongPress: {}
+            onLongPress: {},
         )
     }
 }

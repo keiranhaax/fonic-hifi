@@ -9,99 +9,98 @@ import Foundation
 
 /// Immutable snapshot of the audio queue state
 public struct QueueState: Sendable, Equatable {
-    
     // MARK: - Properties
-    
+
     /// All tracks in the queue
     public let tracks: [AudioTrack]
-    
+
     /// Current playing index
     public let currentIndex: Int?
-    
+
     /// Current track being played
     public let currentTrack: AudioTrack?
-    
+
     /// Shuffle mode setting
     public let shuffleMode: QueueShuffleMode
-    
+
     /// Repeat mode setting
     public let repeatMode: QueueRepeatMode
-    
+
     /// Whether there is a next track available
     public let hasNext: Bool
-    
+
     /// Whether there is a previous track available
     public let hasPrevious: Bool
-    
+
     /// Playback history
     public let history: [AudioTrack]
-    
+
     /// Current shuffle sequence (if shuffled)
     public let shuffleSequence: [Int]?
-    
+
     /// Timestamp when this state was created
     public let timestamp: Date
-    
+
     // MARK: - Computed Properties
-    
+
     /// Whether the queue is empty
     public var isEmpty: Bool {
-        return tracks.isEmpty
+        tracks.isEmpty
     }
-    
+
     /// Number of tracks in the queue
     public var count: Int {
-        return tracks.count
+        tracks.count
     }
-    
+
     /// Whether shuffle is currently active
     public var isShuffled: Bool {
-        return shuffleMode.isActive
+        shuffleMode.isActive
     }
-    
+
     /// Whether repeat is currently active
     public var isRepeating: Bool {
-        return repeatMode.isInfinite
+        repeatMode.isInfinite
     }
-    
+
     /// Remaining tracks in queue after current
     public var remainingTracks: [AudioTrack] {
-        guard let currentIndex = currentIndex else { return tracks }
+        guard let currentIndex else { return tracks }
         guard currentIndex < tracks.count - 1 else { return [] }
         return Array(tracks[(currentIndex + 1)...])
     }
-    
+
     /// Number of remaining tracks
     public var remainingCount: Int {
-        return remainingTracks.count
+        remainingTracks.count
     }
-    
+
     /// Total duration of all tracks in queue
     public var totalDuration: TimeInterval {
-        return tracks.reduce(0) { $0 + $1.duration }
+        tracks.reduce(0) { $0 + $1.duration }
     }
-    
+
     /// Duration of remaining tracks (including current if playing)
     public var remainingDuration: TimeInterval {
-        guard let currentIndex = currentIndex else { return totalDuration }
+        guard let currentIndex else { return totalDuration }
         let remaining = tracks[currentIndex...]
         return remaining.reduce(0) { $0 + $1.duration }
     }
-    
+
     /// Position in queue (1-based for display)
     public var position: Int? {
-        guard let currentIndex = currentIndex else { return nil }
+        guard let currentIndex else { return nil }
         return currentIndex + 1
     }
-    
+
     /// Progress through queue (0.0 to 1.0)
     public var progress: Double {
-        guard !tracks.isEmpty, let currentIndex = currentIndex else { return 0.0 }
+        guard !tracks.isEmpty, let currentIndex else { return 0.0 }
         return Double(currentIndex) / Double(tracks.count)
     }
-    
+
     // MARK: - Initialization
-    
+
     public init(
         tracks: [AudioTrack] = [],
         currentIndex: Int? = nil,
@@ -111,11 +110,11 @@ public struct QueueState: Sendable, Equatable {
         hasPrevious: Bool = false,
         history: [AudioTrack] = [],
         shuffleSequence: [Int]? = nil,
-        timestamp: Date = Date()
+        timestamp: Date = Date(),
     ) {
         self.tracks = tracks
         self.currentIndex = currentIndex
-        self.currentTrack = currentIndex.flatMap { index in
+        currentTrack = currentIndex.flatMap { index in
             index >= 0 && index < tracks.count ? tracks[index] : nil
         }
         self.shuffleMode = shuffleMode
@@ -126,80 +125,80 @@ public struct QueueState: Sendable, Equatable {
         self.shuffleSequence = shuffleSequence
         self.timestamp = timestamp
     }
-    
+
     // MARK: - Track Access
-    
+
     /// Get track at specific index safely
     /// - Parameter index: Index to retrieve
     /// - Returns: Track at index, nil if invalid
     public func track(at index: Int) -> AudioTrack? {
-        guard index >= 0 && index < tracks.count else { return nil }
+        guard index >= 0, index < tracks.count else { return nil }
         return tracks[index]
     }
-    
+
     /// Find index of specific track
     /// - Parameter track: Track to find
     /// - Returns: Index of track, nil if not found
     public func index(of track: AudioTrack) -> Int? {
-        return tracks.firstIndex { $0.id == track.id }
+        tracks.firstIndex { $0.id == track.id }
     }
-    
+
     /// Get tracks in shuffle order (if shuffled)
     public var shuffledTracks: [AudioTrack] {
-        guard let shuffleSequence = shuffleSequence else { return tracks }
+        guard let shuffleSequence else { return tracks }
         return shuffleSequence.compactMap { index in
             track(at: index)
         }
     }
-    
+
     /// Get the next track that would play
     public var nextTrack: AudioTrack? {
         guard hasNext else { return nil }
-        
-        if shuffleMode.isActive, let shuffleSequence = shuffleSequence {
+
+        if shuffleMode.isActive, let shuffleSequence {
             let nextIndex = shuffleMode.nextIndex(
                 currentIndex: currentIndex,
                 shuffleSequence: shuffleSequence,
-                repeatMode: repeatMode
+                repeatMode: repeatMode,
             )
             return nextIndex.flatMap { track(at: $0) }
         } else {
             let nextIndex = repeatMode.nextIndex(
                 from: currentIndex,
-                queueCount: tracks.count
+                queueCount: tracks.count,
             )
             return nextIndex.flatMap { track(at: $0) }
         }
     }
-    
+
     /// Get the previous track that would play
     public var previousTrack: AudioTrack? {
         guard hasPrevious else { return nil }
-        
-        if shuffleMode.isActive, let shuffleSequence = shuffleSequence {
+
+        if shuffleMode.isActive, let shuffleSequence {
             let prevIndex = shuffleMode.previousIndex(
                 currentIndex: currentIndex,
                 shuffleSequence: shuffleSequence,
-                repeatMode: repeatMode
+                repeatMode: repeatMode,
             )
             return prevIndex.flatMap { track(at: $0) }
         } else {
             let prevIndex = repeatMode.previousIndex(
                 from: currentIndex,
-                queueCount: tracks.count
+                queueCount: tracks.count,
             )
             return prevIndex.flatMap { track(at: $0) }
         }
     }
-    
+
     // MARK: - Queue Information
-    
+
     /// Get formatted string for queue position
     public var positionText: String {
-        guard let position = position else { return "-- of \(count)" }
+        guard let position else { return "-- of \(count)" }
         return "\(position) of \(count)"
     }
-    
+
     /// Get formatted string for remaining tracks
     public var remainingText: String {
         let remaining = remainingCount
@@ -211,49 +210,48 @@ public struct QueueState: Sendable, Equatable {
             return "\(remaining) tracks remaining"
         }
     }
-    
+
     /// Get formatted string for total duration
     public var durationText: String {
-        return formatDuration(totalDuration)
+        formatDuration(totalDuration)
     }
-    
+
     /// Get formatted string for remaining duration
     public var remainingDurationText: String {
-        return formatDuration(remainingDuration)
+        formatDuration(remainingDuration)
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func formatDuration(_ duration: TimeInterval) -> String {
         let hours = Int(duration) / 3600
         let minutes = Int(duration) % 3600 / 60
         let seconds = Int(duration) % 60
-        
+
         if hours > 0 {
             return String(format: "%d:%02d:%02d", hours, minutes, seconds)
         } else {
             return String(format: "%d:%02d", minutes, seconds)
         }
     }
-    
+
     // MARK: - Equatable
-    
+
     public static func == (lhs: QueueState, rhs: QueueState) -> Bool {
-        return lhs.tracks.map(\.id) == rhs.tracks.map(\.id) &&
-               lhs.currentIndex == rhs.currentIndex &&
-               lhs.shuffleMode == rhs.shuffleMode &&
-               lhs.repeatMode == rhs.repeatMode &&
-               lhs.hasNext == rhs.hasNext &&
-               lhs.hasPrevious == rhs.hasPrevious &&
-               lhs.history.map(\.id) == rhs.history.map(\.id) &&
-               lhs.shuffleSequence == rhs.shuffleSequence
+        lhs.tracks.map(\.id) == rhs.tracks.map(\.id) &&
+            lhs.currentIndex == rhs.currentIndex &&
+            lhs.shuffleMode == rhs.shuffleMode &&
+            lhs.repeatMode == rhs.repeatMode &&
+            lhs.hasNext == rhs.hasNext &&
+            lhs.hasPrevious == rhs.hasPrevious &&
+            lhs.history.map(\.id) == rhs.history.map(\.id) &&
+            lhs.shuffleSequence == rhs.shuffleSequence
     }
 }
 
 // MARK: - Codable
 
 extension QueueState: Codable {
-    
     private enum CodingKeys: String, CodingKey {
         case tracks
         case currentIndex
@@ -265,32 +263,32 @@ extension QueueState: Codable {
         case shuffleSequence
         case timestamp
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         let tracks = try container.decode([AudioTrack].self, forKey: .tracks)
         let currentIndex = try container.decodeIfPresent(Int.self, forKey: .currentIndex)
-        
+
         self.tracks = tracks
         self.currentIndex = currentIndex
-        self.shuffleMode = try container.decode(QueueShuffleMode.self, forKey: .shuffleMode)
-        self.repeatMode = try container.decode(QueueRepeatMode.self, forKey: .repeatMode)
-        self.hasNext = try container.decode(Bool.self, forKey: .hasNext)
-        self.hasPrevious = try container.decode(Bool.self, forKey: .hasPrevious)
-        self.history = try container.decode([AudioTrack].self, forKey: .history)
-        self.shuffleSequence = try container.decodeIfPresent([Int].self, forKey: .shuffleSequence)
-        self.timestamp = try container.decode(Date.self, forKey: .timestamp)
-        
+        shuffleMode = try container.decode(QueueShuffleMode.self, forKey: .shuffleMode)
+        repeatMode = try container.decode(QueueRepeatMode.self, forKey: .repeatMode)
+        hasNext = try container.decode(Bool.self, forKey: .hasNext)
+        hasPrevious = try container.decode(Bool.self, forKey: .hasPrevious)
+        history = try container.decode([AudioTrack].self, forKey: .history)
+        shuffleSequence = try container.decodeIfPresent([Int].self, forKey: .shuffleSequence)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+
         // Compute current track
-        self.currentTrack = currentIndex.flatMap { index in
+        currentTrack = currentIndex.flatMap { index in
             index >= 0 && index < tracks.count ? tracks[index] : nil
         }
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
+
         try container.encode(tracks, forKey: .tracks)
         try container.encodeIfPresent(currentIndex, forKey: .currentIndex)
         try container.encode(shuffleMode, forKey: .shuffleMode)
@@ -305,13 +303,12 @@ extension QueueState: Codable {
 
 // MARK: - Persistence
 
-extension QueueState {
-
+public extension QueueState {
     /// UserDefaults key for storing queue state
     private static let persistenceKey = "com.fonichifi.queue.state"
 
     /// Save queue state to UserDefaults
-    public func save() throws {
+    func save() throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(self)
@@ -320,7 +317,7 @@ extension QueueState {
 
     /// Load queue state from UserDefaults
     /// - Returns: Saved queue state, or nil if not found or invalid
-    public static func load() -> QueueState? {
+    static func load() -> QueueState? {
         guard let data = UserDefaults.standard.data(forKey: persistenceKey) else {
             return nil
         }
@@ -342,34 +339,33 @@ extension QueueState {
     }
 
     /// Clear saved queue state
-    public static func clear() {
+    static func clear() {
         UserDefaults.standard.removeObject(forKey: persistenceKey)
     }
 
     /// Create a persistence-safe version of the queue state
     /// This excludes tracks that may no longer be available
-    public func validateForPersistence() -> QueueState {
+    func validateForPersistence() -> QueueState {
         // Filter out tracks that no longer exist on disk
         let validTracks = tracks.filter { track in
             FileManager.default.fileExists(atPath: track.url.path)
         }
 
         // Adjust current index if needed
-        let validCurrentIndex: Int?
-        if let currentIndex = currentIndex,
-           let currentTrack = currentTrack,
-           let newIndex = validTracks.firstIndex(where: { $0.id == currentTrack.id }) {
-            validCurrentIndex = newIndex
+        let validCurrentIndex: Int? = if let currentIndex,
+                                         let currentTrack,
+                                         let newIndex = validTracks.firstIndex(where: { $0.id == currentTrack.id })
+        {
+            newIndex
         } else {
-            validCurrentIndex = nil
+            nil
         }
 
         // Adjust shuffle sequence if needed
-        let validShuffleSequence: [Int]?
-        if let shuffleSequence = shuffleSequence {
-            validShuffleSequence = shuffleSequence.filter { $0 < validTracks.count }
+        let validShuffleSequence: [Int]? = if let shuffleSequence {
+            shuffleSequence.filter { $0 < validTracks.count }
         } else {
-            validShuffleSequence = nil
+            nil
         }
 
         return QueueState(
@@ -383,7 +379,7 @@ extension QueueState {
                 FileManager.default.fileExists(atPath: track.url.path)
             },
             shuffleSequence: validShuffleSequence,
-            timestamp: Date()
+            timestamp: Date(),
         )
     }
 }
@@ -391,12 +387,11 @@ extension QueueState {
 // MARK: - Debug Description
 
 extension QueueState: CustomDebugStringConvertible {
-    
     public var debugDescription: String {
         let currentTrackTitle = currentTrack?.title ?? "None"
         let shuffleStatus = shuffleMode.isActive ? "On (\(shuffleMode.shortDescription))" : "Off"
         let repeatStatus = repeatMode.isInfinite ? "On (\(repeatMode.shortDescription))" : "Off"
-        
+
         return """
         QueueState(
           tracks: \(count),
@@ -409,4 +404,4 @@ extension QueueState: CustomDebugStringConvertible {
         )
         """
     }
-} 
+}

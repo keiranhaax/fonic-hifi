@@ -13,7 +13,7 @@ struct AudioSettingsView: View {
     @AppStorage("enableBitPerfectPlayback") private var enableBitPerfectPlayback = false
     @AppStorage("audioBufferSize") private var audioBufferSize = 512.0
     @AppStorage("sampleRate") private var sampleRate = 44100.0
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -28,7 +28,7 @@ struct AudioSettingsView: View {
                 } footer: {
                     Text("Choose the audio engine for playback. Different engines may provide different audio quality and compatibility.")
                 }
-                
+
                 Section {
                     Toggle("Enable Bit-Perfect Playback", isOn: $enableBitPerfectPlayback)
                 } header: {
@@ -36,7 +36,7 @@ struct AudioSettingsView: View {
                 } footer: {
                     Text("Bit-perfect playback ensures no digital processing is applied to the audio signal, preserving the original quality.")
                 }
-                
+
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -45,16 +45,16 @@ struct AudioSettingsView: View {
                             Text("\(Int(audioBufferSize)) samples")
                                 .foregroundColor(.secondary)
                         }
-                        
+
                         Slider(
                             value: $audioBufferSize,
-                            in: 64...2048,
-                            step: 64
+                            in: 64 ... 2048,
+                            step: 64,
                         ) {
                             Text("Buffer Size")
                         }
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("Sample Rate")
@@ -62,14 +62,14 @@ struct AudioSettingsView: View {
                             Text("\(Int(sampleRate)) Hz")
                                 .foregroundColor(.secondary)
                         }
-                        
+
                         Picker("Sample Rate", selection: $sampleRate) {
                             Text("44,100 Hz").tag(44100.0)
                             Text("48,000 Hz").tag(48000.0)
                             Text("88,200 Hz").tag(88200.0)
                             Text("96,000 Hz").tag(96000.0)
-                            Text("176,400 Hz").tag(176400.0)
-                            Text("192,000 Hz").tag(192000.0)
+                            Text("176,400 Hz").tag(176_400.0)
+                            Text("192,000 Hz").tag(192_000.0)
                         }
                         .pickerStyle(.menu)
                     }
@@ -78,12 +78,12 @@ struct AudioSettingsView: View {
                 } footer: {
                     Text("Lower buffer sizes reduce latency but may cause audio dropouts. Higher sample rates provide better quality but require more processing power.")
                 }
-                
+
                 Section {
                     Button("Test Audio Configuration") {
                         testAudioConfiguration()
                     }
-                    
+
                     Button("Reset to Defaults") {
                         resetToDefaults()
                     }
@@ -96,7 +96,7 @@ struct AudioSettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
     }
-    
+
     private func testAudioConfiguration() {
         // Test audio configuration
         Task {
@@ -104,7 +104,7 @@ struct AudioSettingsView: View {
             print("Testing audio configuration...")
         }
     }
-    
+
     private func resetToDefaults() {
         preferredAudioEngine = "AVAudioEngine"
         enableBitPerfectPlayback = false
