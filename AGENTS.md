@@ -1,26 +1,105 @@
-# Repository Guidelines
+# Repository Guidelines for AI Coding Agents
 
-## Project Structure & Module Organization
-Fonic HiFi’s SwiftUI target lives in `Fonic HiFi/`. `Core/Audio/` holds the engine facade, adapters, and playback state. Persistence actors, format models, and service boundaries are under `Data/`. UI environment values, view models, and views are organized in `Presentation/`. Shared helpers live in `Utils/`, while design assets remain in `Assets.xcassets`. Unit and integration tests mirror the runtime layout in `Fonic HiFiTests/`, with end-to-end UI flows in `Fonic HiFiUITests/`. Keep large reference documents or fixtures inside `Files/`.
+## Project Context
 
-## Build, Test, and Development Commands
-- `make build` builds the simulator app with the latest toolchain (Debug configuration for iPhone 16 Pro, iOS 26.0).
-- `make test-unit` runs unit and integration suites.
-- `make test-ui` exercises UI flows.
-- `make clean` resets derived data before reproducing release issues.
-- `make open` launches the project in Xcode.
-- `make run` builds and runs the app in the simulator.
-- `make lint` runs SwiftLint for code quality checks.
-- `make format` auto-formats code with SwiftFormat.
+Fonic HiFi is a high-fidelity iOS 26.0+ audiophile music player with bit-perfect playback.
 
-## Coding Style & Naming Conventions
-Code is Swift 6 with two-space indentation and `// MARK:` boundaries. Prefer `final` classes, explicit access control, and `@MainActor` annotations for UI-facing types. Keep pure models `Sendable`, and name files after their primary type (`PlaybackStateManager.swift`). Opt for descriptive method names in verb form (`prepareEngine`, `handleRouteChange`). Use multiline doc comments for public facades and summarize intent in one sentence.
+**Key Technologies:**
+- **Platform**: iOS 26.0 minimum (NO backwards compatibility), Swift 6.2, Xcode 26
+- **Audio**: AVAudioEngine + AudioKit dual-engine facade pattern
+- **Concurrency**: Swift 6 strict concurrency with actor isolation
+- **Data**: SwiftData with actor-based persistence (TrackDataActor)
+- **UI**: SwiftUI with custom Liquid Glass effects
 
-## Testing Guidelines
-Tests use both Swift Testing (`@Test`) for async-heavy units and XCTest for integration. Name files with the module + feature + `Tests` suffix (`AudioEngineFacadeTests`). Ensure new audio flow code gains coverage in `Fonic HiFiTests/Integration/`; UI changes should add launch or screen regressions in `Fonic HiFiUITests`. Run `make test` (or `make test-unit` for faster feedback) before opening a PR and attach logs for flaky reproductions. Use `make coverage` to generate test coverage reports.
+## Project Structure
+
+`Fonic HiFi/` contains the main SwiftUI target with these modules:
+- **Core/Audio/** - Engine facade, AVAudioEngine/AudioKit adapters, playback state
+- **Data/** - SwiftData persistence actors, format models, service boundaries
+- **Domain/** - Repository pattern, use cases, business entities
+- **Presentation/** - ViewModels, views, environment values
+- **Utils/** - Shared helpers and extensions
+- **Assets.xcassets** - Design system and visual assets
+
+Test targets: `Fonic HiFiTests/` and `Fonic HiFiUITests/` (currently no tests configured). Large reference documents live in `Files/`.
+
+## Architecture Overview
+
+**Audio Engine Facade Pattern:**
+- `AudioEngineFacade` coordinates AVAudioEngine and AudioKit adapters
+- Format detection determines optimal engine per track
+- Bit-perfect playback maintained when possible
+
+**Concurrency Model (Swift 6.2):**
+- `@MainActor`: All UI components, ViewModels, AudioEngineFacade
+- `TrackDataActor`: SwiftData operations, file I/O isolation (Data/Actors/TrackDataActor.swift:13)
+- Cross-actor types MUST conform to `Sendable`
+- Audio callbacks dispatch to MainActor via `Task { @MainActor in ... }`
+
+**State Management:**
+- `PlaybackStateManager`: Single source of truth for playback state
+- Immutable state snapshots published to observers
+
+## Essential Build Commands
+
+```bash
+make build         # Build for iPhone 16 Pro simulator (iOS 26.0)
+make run           # Build and run in simulator
+make clean         # Reset derived data
+make lint          # SwiftLint code quality checks (ALWAYS run after changes)
+make format        # SwiftFormat auto-formatting
+make open          # Launch project in Xcode
+```
+
+**Complete command reference**: See [docs/MAKEFILE.md](docs/MAKEFILE.md)
+
+## Testing Status
+
+⚠️ **IMPORTANT**: No tests are currently configured.
+
+- `make test`, `make test-unit`, `make test-ui` display "No tests configured"
+- When adding tests: Use Swift Testing (`@Test`) for async code, XCTest for integration
+- Name files with module + feature + `Tests` suffix (e.g., `AudioEngineFacadeTests`)
+
+## Coding Standards
+
+**Swift 6.2 with strict concurrency:**
+- Two-space indentation, `// MARK:` section boundaries
+- Prefer `final` classes, explicit access control
+- `@MainActor` annotations for all UI-facing types
+- Pure models MUST conform to `Sendable`
+- File names match primary type (`PlaybackStateManager.swift`)
+- Descriptive verb-form method names (`prepareEngine`, `handleRouteChange`)
+- Multiline doc comments for public APIs
 
 ## Commit & Pull Request Guidelines
-Follow the existing log: imperative, capitalized subject lines under 72 characters (e.g., "Fix NowPlaying crash"). Each commit should encapsulate a feature or fix plus tests. Pull requests must include: 1) a concise summary of user impact, 2) notes on audio format or concurrency risks, 3) proof of tests (output from `make test` or `make test-unit`, or screenshots), and 4) linked issues or task IDs. Request reviewers familiar with the touched area (audio engine vs. presentation) and document any simulator or hardware prerequisites. Use `make pr-create` to create pull requests via GitHub CLI.
 
-## Security & Configuration Tips
-Review `Fonic_HiFi.entitlements` when adding capabilities; the app currently ships without network permissions. Keep sample libraries local, avoid embedding licensed audio in git, and verify new background modes or file-access rights with manual regression passes on the iPhone 16 Pro simulator.
+**Commit Style:**
+- Imperative, capitalized subject lines under 72 characters
+- Example: "Fix NowPlaying crash", "Add gapless playback support"
+- Each commit encapsulates a complete feature or fix
+
+**Pull Requests:**
+1. Concise summary of user impact
+2. Notes on audio format or concurrency risks
+3. Proof of testing (build output, manual verification screenshots)
+4. Linked issues or task IDs
+5. Request reviewers familiar with touched area (audio vs. presentation)
+6. Document simulator/hardware prerequisites
+
+Use `make pr-create` for GitHub CLI pull request creation.
+
+## Security & Configuration
+
+- Review `Fonic_HiFi.entitlements` when adding capabilities
+- App ships without network permissions (privacy-first design)
+- Keep sample libraries local, avoid embedding licensed audio in git
+- Verify new background modes or file-access rights with manual regression on iPhone 16 Pro simulator
+
+## Comprehensive Documentation
+
+For detailed guidance, see:
+- **CLAUDE.md** - Claude Code-specific instructions (364 lines)
+- **docs/MAKEFILE.md** - Complete build command reference
+- **docs/DEBUGGING.md** - Audio debugging patterns and AVAudioSession best practices
+- **STATUS.md** - Current session state, branch recovery status, staged changes
