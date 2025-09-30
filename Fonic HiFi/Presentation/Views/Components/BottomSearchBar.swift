@@ -30,10 +30,9 @@ struct BottomSearchBar: View {
     private var enhancedSearchBar: some View {
         VStack(spacing: 0) {
             // Floating search container
-            LiquidGlassCard(style: .ultraThin) {
-                HStack(spacing: 12) {
-                    // Search icon with animation
-                    Image(systemName: "magnifyingglass")
+            HStack(spacing: 12) {
+                // Search icon with animation
+                Image(systemName: "magnifyingglass")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(.secondary)
                         .rotationEffect(.degrees(searchIconRotation))
@@ -66,7 +65,7 @@ struct BottomSearchBar: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-            }
+            .glassEffect(.regular)
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
             .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: -2)

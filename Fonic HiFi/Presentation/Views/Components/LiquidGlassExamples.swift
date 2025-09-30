@@ -17,7 +17,7 @@ struct OptimizedNowPlayingView: View {
     @State private var progress = 0.3
 
     var body: some View {
-        PerformanceOptimizedContainer(spacing: 0) { // Custom performance container
+        GlassEffectContainer(spacing: 0) {
             VStack(spacing: 0) {
                 // Main content area
                 mainContentArea
@@ -25,7 +25,7 @@ struct OptimizedNowPlayingView: View {
 
                 // Controls area with decorative glass (lower frame rate)
                 controlsArea
-                    .liquidGlass(style: .ultraThin) // Simplified
+                    .glassEffect(.clear)
                     .glassPerformanceProfiled("NowPlayingControls")
             }
         }
@@ -38,11 +38,11 @@ struct OptimizedNowPlayingView: View {
         VStack(spacing: 20) {
             // Album artwork with interactive glass
             albumArtwork
-                .liquidGlass(style: .standard, intensity: 0.8)
+                .glassEffect(.regular.tint(.white.opacity(0.8)))
 
             // Track information
             trackInformation
-                .liquidGlass(style: .thick, intensity: 0.9)
+                .glassEffect(.regular)
 
             // Progress bar
             progressBar
@@ -129,12 +129,13 @@ struct OptimizedNowPlayingView: View {
         size: CGFloat = 20,
         action: @escaping () -> Void,
     ) -> some View {
-        LiquidGlassButton(style: .standard, action: action) {
+        Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: size, weight: .medium))
                 .foregroundColor(.white)
                 .frame(width: 50, height: 50)
         }
+        .buttonStyle(.glass)
         .preferredFrameRate(
             BatteryOptimizedGlassUtilities.optimalFrameRate(for: .interactive),
         )
@@ -148,20 +149,20 @@ struct OptimizedLibraryView: View {
     let tabs = ["Songs", "Albums", "Artists", "Playlists"]
 
     var body: some View {
-        PerformanceOptimizedContainer(spacing: 0) { // Custom performance container
+        GlassEffectContainer(spacing: 0) {
             VStack(spacing: 0) {
                 // Header with adaptive glass
                 headerView
-                    .liquidGlass(style: .thick)
+                    .glassEffect(.regular)
                     .glassPerformanceProfiled("LibraryHeader")
 
                 // Tab selector with decorative glass
                 tabSelector
-                    .liquidGlass(style: .standard) // Simplified
+                    .glassEffect(.regular)
 
                 // Content area
                 contentView
-                    .liquidGlass(style: .ultraThin, intensity: 0.6)
+                    .glassEffect(.clear)
             }
         }
         // .glassSafeAreaPadding() // Not yet implemented
@@ -176,13 +177,14 @@ struct OptimizedLibraryView: View {
 
             Spacer()
 
-            LiquidGlassButton(style: .ultraThin) {
+            Button {
                 // Search action
-            } content: {
+            } label: {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.white)
                     .frame(width: 40, height: 40)
             }
+            .buttonStyle(.glass)
             .preferredFrameRate(60) // Interactive element
         }
         .padding()
@@ -220,7 +222,7 @@ struct OptimizedLibraryView: View {
             LazyVStack(spacing: 12) {
                 ForEach(0 ..< 20, id: \.self) { index in
                     songRow(index: index)
-                        .liquidGlass(style: .ultraThin) // Simplified // Background elements
+                        .glassEffect(.clear) // Background elements
                 }
             }
             .padding()
@@ -266,7 +268,7 @@ struct AdaptivePerformanceExample: View {
     @StateObject private var memoryManager = GlassEffectMemoryManager.shared
 
     var body: some View {
-        PerformanceOptimizedContainer(spacing: 0) { // Custom performance container
+        GlassEffectContainer(spacing: 0) {
             VStack(spacing: 20) {
                 headerSection
 
@@ -302,7 +304,7 @@ struct AdaptivePerformanceExample: View {
                 .foregroundColor(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
         }
-        .liquidGlass(style: .standard)
+        .glassEffect(.regular)
         .glassPerformanceProfiled("AdaptiveHeader")
     }
 
@@ -322,15 +324,16 @@ struct AdaptivePerformanceExample: View {
 
             Spacer()
 
-            LiquidGlassButton(style: .standard) {
+            Button {
                 showPerformanceStats.toggle()
-            } content: {
+            } label: {
                 Text(showPerformanceStats ? "Hide Stats" : "Show Stats")
                     .font(.caption)
                     .foregroundColor(.white)
             }
+            .buttonStyle(.glass)
         }
-        .liquidGlass(style: .thick)
+        .glassEffect(.regular)
     }
 
     private var performanceSection: some View {
@@ -369,7 +372,7 @@ struct AdaptivePerformanceExample: View {
         }
         .font(.caption)
         .padding()
-        .liquidGlass(style: .ultraThin, intensity: 0.8)
+        .glassEffect(.clear)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showPerformanceStats)
     }
 
@@ -395,10 +398,7 @@ struct AdaptivePerformanceExample: View {
                 .frame(height: 60)
         }
         .padding()
-        .liquidGlass(
-            style: index < 2 ? .standard : .ultraThin,
-            intensity: index < 2 ? 0.8 : 0.5,
-        )
+        .glassEffect(index < 2 ? .regular.tint(.white.opacity(0.8)) : .clear)
         .preferredFrameRate(
             BatteryOptimizedGlassUtilities.optimalFrameRate(
                 for: index < 2 ? .interactive : .decorative,
@@ -450,7 +450,7 @@ struct AdaptivePerformanceExample: View {
 
 struct SafeAreaGlassExample: View {
     var body: some View {
-        PerformanceOptimizedContainer(spacing: 0) { // Custom performance container
+        GlassEffectContainer(spacing: 0) {
             VStack(spacing: 0) {
                 // Top area that respects safe area
                 topSection
@@ -485,7 +485,7 @@ struct SafeAreaGlassExample: View {
                 .foregroundColor(.white.opacity(0.8))
         }
         .padding()
-        .liquidGlass(style: .standard)
+        .glassEffect(.regular)
     }
 
     private var bottomSection: some View {
@@ -501,18 +501,19 @@ struct SafeAreaGlassExample: View {
 
             HStack(spacing: 20) {
                 ForEach(["play.fill", "pause.fill", "stop.fill"], id: \.self) { icon in
-                    LiquidGlassButton(style: .standard) {
+                    Button {
                         // Action
-                    } content: {
+                    } label: {
                         Image(systemName: icon)
                             .foregroundColor(.white)
                             .frame(width: 44, height: 44)
                     }
+                    .buttonStyle(.glass)
                 }
             }
         }
         .padding()
-        .liquidGlass(style: .thick)
+        .glassEffect(.regular)
     }
 }
 
@@ -524,13 +525,13 @@ struct GlassPerformanceTestView: View {
     @StateObject private var profiler = GlassPerformanceProfiler.shared
 
     var body: some View {
-        PerformanceOptimizedContainer(spacing: 0) { // Custom performance container
+        GlassEffectContainer(spacing: 0) {
             VStack(spacing: 20) {
                 Text("Glass Performance Testing")
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
-                    .liquidGlass(style: .standard)
+                    .glassEffect(.regular)
 
                 // Stress test controls
                 VStack {
@@ -548,11 +549,11 @@ struct GlassPerformanceTestView: View {
                         Text(isStressing ? "Stop Stress Test" : "Start Stress Test")
                             .foregroundColor(.white)
                             .padding()
-                            .liquidGlass(style: .standard)
+                            .glassEffect(.regular)
                     }
                 }
                 .padding()
-                .liquidGlass(style: .thick)
+                .glassEffect(.regular)
 
                 // Performance metrics
                 if !profiler.getMetrics().isEmpty {
@@ -601,7 +602,7 @@ struct GlassPerformanceTestView: View {
             .frame(maxHeight: 150)
         }
         .padding()
-        .liquidGlass(style: .ultraThin)
+        .glassEffect(.clear)
     }
 
     private var stressTestGrid: some View {
@@ -610,7 +611,7 @@ struct GlassPerformanceTestView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(.white.opacity(0.1))
                     .frame(height: 60)
-                    .liquidGlass(style: .standard, intensity: 0.7)
+                    .glassEffect(.regular.tint(.white.opacity(0.7)))
                     .glassPerformanceProfiled("StressElement\(index)")
             }
         }

@@ -30,7 +30,7 @@ struct LiquidGlassRail<Content: View>: View {
     }
 
     var body: some View {
-        PerformanceOptimizedContainer {
+        GlassEffectContainer {
             HStack(spacing: spacing) {
                 content()
                     .glassEffect()
@@ -99,7 +99,7 @@ struct LiquidGlassSegmentedTabs: View {
     @State private var isPressed: Bool = false
 
     var body: some View {
-        PerformanceOptimizedContainer {
+        GlassEffectContainer {
             HStack(spacing: 8) {
                 ForEach(tabs.indices, id: \.self) { index in
                     tabButton(for: index)
@@ -263,7 +263,7 @@ struct LiquidGlassExpandableRail<CompactContent: View, ExpandedContent: View>: V
     }
 
     var body: some View {
-        PerformanceOptimizedContainer {
+        GlassEffectContainer {
             if isExpanded {
                 expandedContent()
                     .glassEffect()

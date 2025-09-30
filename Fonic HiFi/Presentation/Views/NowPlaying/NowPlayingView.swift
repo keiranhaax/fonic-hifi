@@ -76,7 +76,7 @@ struct NowPlayingView: View {
 
     @ViewBuilder
     private func nowPlayingContent(audioService _: AudioEngineFacade) -> some View {
-        PerformanceOptimizedContainer(spacing: 0) {
+        GlassEffectContainer(spacing: 0) {
             ZStack {
                 // Background gradient with glass effect
                 LinearGradient(
@@ -99,7 +99,7 @@ struct NowPlayingView: View {
                         .frame(width: 36, height: 5)
                         .padding(.top, 8)
                         .padding(.bottom, 20)
-                        .liquidGlass(style: .ultraThin)
+                        .glassEffect(.clear)
                         .glassPerformanceProfiled("DragHandle")
 
                     // Main content with glass container
@@ -221,7 +221,7 @@ struct NowPlayingView: View {
                 .fill(Color.gray.opacity(0.3))
                 .aspectRatio(1, contentMode: .fit)
                 .frame(maxWidth: artworkSize)
-                .liquidGlass(style: .standard, intensity: 0.8)
+                .glassEffect(.regular.tint(.white.opacity(0.8)))
                 .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
 
             Image(systemName: "music.note")
@@ -282,7 +282,7 @@ struct NowPlayingView: View {
             }
         }
         .padding()
-        .liquidGlass(style: .thick)
+        .glassEffect(.regular)
         .a11yAwareGlass(style: .thick, cornerRadius: 16)
         .glassEffectID("trackInfo", in: animationNamespace)
         .audioContextAccessibility(
@@ -337,20 +337,21 @@ struct NowPlayingView: View {
             }
         }
         .padding()
-        .liquidGlass(style: .standard)
+        .glassEffect(.regular)
     }
 
     private var playbackControlsView: some View {
         HStack(spacing: 40) {
             // Shuffle button with glass effect
-            LiquidGlassButton(style: .standard) {
+            Button {
                 toggleShuffle()
-            } content: {
+            } label: {
                 Image(systemName: "shuffle")
                     .font(.title3)
                     .foregroundColor(isShuffleEnabled ? .accentColor : .white)
                     .frame(width: 50, height: 50)
             }
+            .buttonStyle(.glass)
             .glassEffectID("shuffle", in: animationNamespace)
             .modifier(PlaybackControlAccessibility(
                 isPlaying: audioService?.isPlaying ?? false,
@@ -362,13 +363,14 @@ struct NowPlayingView: View {
             )
 
             // Previous button
-            LiquidGlassButton(style: .standard) {
+            Button {
                 playPrevious()
-            } content: {
+            } label: {
                 Image(systemName: "backward.fill")
                     .font(.title)
                     .frame(width: 50, height: 50)
             }
+            .buttonStyle(.glass)
             .glassEffectID("previous", in: animationNamespace)
             .modifier(PlaybackControlAccessibility(
                 isPlaying: audioService?.isPlaying ?? false,
@@ -380,13 +382,14 @@ struct NowPlayingView: View {
             )
 
             // Play/Pause button with morphing effect
-            LiquidGlassButton(style: .thick) {
+            Button {
                 togglePlayPause()
-            } content: {
+            } label: {
                 Image(systemName: audioService?.isPlaying == true ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 64))
                     .frame(width: 80, height: 80)
             }
+            .buttonStyle(.glass)
             .glassEffectID("playPause", in: animationNamespace)
             .glassTransition(isActive: audioService?.isPlaying ?? false)
             .modifier(PlaybackControlAccessibility(
@@ -399,13 +402,14 @@ struct NowPlayingView: View {
             )
 
             // Next button
-            LiquidGlassButton(style: .standard) {
+            Button {
                 playNext()
-            } content: {
+            } label: {
                 Image(systemName: "forward.fill")
                     .font(.title)
                     .frame(width: 50, height: 50)
             }
+            .buttonStyle(.glass)
             .glassEffectID("next", in: animationNamespace)
             .modifier(PlaybackControlAccessibility(
                 isPlaying: audioService?.isPlaying ?? false,
@@ -417,14 +421,15 @@ struct NowPlayingView: View {
             )
 
             // Repeat button
-            LiquidGlassButton(style: .standard) {
+            Button {
                 cycleRepeatMode()
-            } content: {
+            } label: {
                 Image(systemName: repeatModeIcon)
                     .font(.title3)
                     .foregroundColor(repeatMode != .none ? .accentColor : .white)
                     .frame(width: 50, height: 50)
             }
+            .buttonStyle(.glass)
             .glassEffectID("repeat", in: animationNamespace)
             .modifier(PlaybackControlAccessibility(
                 isPlaying: audioService?.isPlaying ?? false,
@@ -455,7 +460,7 @@ struct NowPlayingView: View {
                 // Update volume
             }
             .tint(.white)
-            .liquidGlass(style: .ultraThin)
+            .glassEffect(.clear)
             .modifier(PlaybackControlAccessibility(
                 isPlaying: audioService?.isPlaying ?? false,
                 controlType: .volume,
@@ -471,7 +476,7 @@ struct NowPlayingView: View {
                 )
         }
         .padding()
-        .liquidGlass(style: .standard)
+        .glassEffect(.regular)
     }
 
     // MARK: - Gestures

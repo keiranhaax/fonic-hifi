@@ -27,6 +27,7 @@ import SwiftUI
 extension View {
     /// [Custom Implementation] Applies a custom Liquid Glass-style effect
     /// This is NOT Apple's .glassEffect() - it's a custom wrapper using Material effects
+    @available(*, deprecated, message: "Use .glassEffect() instead - migrate to iOS 26 native API")
     func liquidGlass(
         style: LiquidGlassStyle = .standard,
         intensity: Double = 1.0,
@@ -438,6 +439,7 @@ struct BatteryOptimizedGlassModifier: ViewModifier {
 
 // MARK: - Custom Components
 
+@available(*, deprecated, message: "Use Button { }.buttonStyle(.glass) instead - migrate to iOS 26 native API")
 struct LiquidGlassButton<Content: View>: View {
     let action: () -> Void
     let content: Content
@@ -478,6 +480,7 @@ struct LiquidGlassButton<Content: View>: View {
     }
 }
 
+@available(*, deprecated, message: "Use .glassEffect() instead - migrate to iOS 26 native API")
 struct LiquidGlassCard<Content: View>: View {
     let content: Content
     let style: LiquidGlassStyle
