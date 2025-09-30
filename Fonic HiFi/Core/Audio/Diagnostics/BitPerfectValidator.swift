@@ -1109,6 +1109,6 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
 
     private func saveDACCompatibilityDatabase() async {
         // Future enhancement: Could save to persistent storage
-        logger.debug("DAC compatibility database saved with \(self.dacCompatibilityCache.count) entries")
+        logger.debug("DAC compatibility database saved with \(dacCompatibilityCache.count) entries")
     }
 }
