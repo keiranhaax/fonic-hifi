@@ -40,16 +40,101 @@ Version: 2.30.1
 [36;1mnote: [0mBuilding targets in dependency order
 [36;1mnote: [0mTarget dependency graph (4 targets)
 [[36mAudioKit_AudioKit[0m] [1mProcessing[0m empty-AudioKit_AudioKit.plist
-[[36mFonic HiFi[0m] [1mCompiling[0m ErrorView.swift
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Views/Components/ErrorView.swift:281:27: [31mvalue of type 'any Error' has no member 'wrappedValue'[0m
-                    error.wrappedValue = nil
-[36m                    ~~~~~ ^~~~~~~~~~~~[0m
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Views/Components/ErrorView.swift:289:42: [31m'errorDescription' is inaccessible due to 'private' protection level[0m
-            Text(ErrorView(error: error).errorDescription)
-[36m                                         ^~~~~~~~~~~~~~~~[0m
+[[36mFonic HiFi[0m] [1mCopy[0m AudioKit_AudioKit.bundle -> AudioKit_AudioKit.bundle
+[[36mFonic HiFi[0m] [1mProcessing[0m Info.plist
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackCache.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m StateCoordinator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioMonitor.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioMonitoringService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidationResult.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidator.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidatorService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DACCompatibilityInfo.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileImportView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ImportProgressView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AlbumGridView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ArtistListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LibraryView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaylistListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackListView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DiagnosticsDetailView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassMiniPlayer.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineType.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioDevice.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackStateStore.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioQueue.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioQueueManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueRepeatMode.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueShuffleMode.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m QueueState.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormatDetectionManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionManager.swift
+❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Environment/AudioEnvironment.swift:45:16: [31mstatic property 'defaultValue' is not concurrency-safe because non-'Sendable' type 'LibraryImportService?' may have shared mutable state[0m
+    static let defaultValue: LibraryImportService? = nil
+[36m               ^[0m
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FormatDetectionService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingInfo+Extensions.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearchesActor.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m TrackDataActor.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SwiftDataPagination.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearchMigrationPlan.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Album.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Artist.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormatType.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Log.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MainActorHelpers.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ContentView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ContentView_Safe.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp_Debug.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m GeneratedAssetSymbols.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m iOS26_Features_Documentation.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassDesignSystem.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassExamples.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassRail.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassTabBar.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PerformanceOptimizedContainer.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugContentView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugNowPlayingView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DebugTrackRowView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MinimalCrashTest.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DiagnosticsStatus.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PerformanceMonitor.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackDiagnostics.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineFacade.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioPlaybackSettingsStore.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ProgressTimerManager.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioKitEngineAdapter.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AVAudioEngineAdapter.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AVAudioEngineConfig.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineFactory.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MiniPlayerView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m PreviewData.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchPlaylistResultsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchResults.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AppSettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m AudioSettingsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileDetailsView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m FileManagerView.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Playlist.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearch.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m Track.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SwiftDataLibraryRepository.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ImportMetrics.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m ImportSession.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m LibraryImportService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m MetadataExtractionService.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m SearchCache.swift
+[[36mFonic HiFi[0m] [1mCompiling[0m DataManager.swift
 ❌ Build failed with exit code 65
 First 5 errors:
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Views/Components/ErrorView.swift:281:27: error: value of type 'any Error' has no member 'wrappedValue'
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Views/Components/ErrorView.swift:289:42: error: 'errorDescription' is inaccessible due to 'private' protection level
-            Text(ErrorView(error: error).errorDescription)
+/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Environment/AudioEnvironment.swift:45:16: error: static property 'defaultValue' is not concurrency-safe because non-'Sendable' type 'LibraryImportService?' may have shared mutable state
 make[1]: *** [build] Error 65

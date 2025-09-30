@@ -5,18 +5,21 @@
 //  Created by Keiran on 5/27/25.
 //
 
-import SwiftUI
-import SwiftData
 import OSLog
+import SwiftData
+import SwiftUI
 
 @main
 struct FonicHiFiApp: App {
-
     // MARK: - Properties
 
     @StateObject private var dataManager: DataManager
     @StateObject private var audioService: AudioEngineFacade
     @StateObject private var importService: LibraryImportService
+
+    @State private var launchError: LaunchError?
+    @State private var showInitializationError: Bool
+    @State private var isUsingFallbackServices: Bool
 
     private let logger = Logger(subsystem: "com.fonichifi.app", category: "FonicHiFiApp")
 
@@ -33,64 +36,49 @@ struct FonicHiFiApp: App {
         // Create logger early for error reporting
         let initLogger = Logger(subsystem: "com.fonichifi.app", category: "FonicHiFiApp.init")
 
+        _launchError = State(initialValue: nil)
+        _showInitializationError = State(initialValue: false)
+        _isUsingFallbackServices = State(initialValue: false)
+
         do {
             let dataManager = try DataManager()
-            let playbackStateManager = PlaybackStateManager()  // Shared instance
+            let playbackStateManager = PlaybackStateManager() // Shared instance
 
             // Create AudioMonitor with performance monitor connection
             let audioMonitor = AudioMonitor(performanceMonitor: performanceMonitor)
 
             let audioService = AudioEngineFacade(
                 stateManager: playbackStateManager,
-                monitor: audioMonitor
+                monitor: audioMonitor,
             )
             let importService = LibraryImportService(
                 trackDataActor: dataManager.trackDataActor,
-                metadataExtractor: dataManager.metadataExtractor
+                metadataExtractor: dataManager.metadataExtractor,
             )
 
-            self._dataManager = StateObject(wrappedValue: dataManager)
-            self._audioService = StateObject(wrappedValue: audioService)
-            self._importService = StateObject(wrappedValue: importService)
+            _dataManager = StateObject(wrappedValue: dataManager)
+            _audioService = StateObject(wrappedValue: audioService)
+            _importService = StateObject(wrappedValue: importService)
 
         } catch {
             initLogger.critical("Failed to initialize app: \(error.localizedDescription)")
+            let fallback = FonicHiFiApp.makeFallbackServices(
+                performanceMonitor: performanceMonitor,
+                errorLogger: initLogger,
+            )
 
-            // Create minimal fallback instances to allow app to launch
-            // with reduced functionality rather than crashing
-            let playbackStateManager = PlaybackStateManager()
-            let audioService = AudioEngineFacade(stateManager: playbackStateManager)
+            _dataManager = StateObject(wrappedValue: fallback.dataManager)
+            _audioService = StateObject(wrappedValue: fallback.audioService)
+            _importService = StateObject(wrappedValue: fallback.importService)
 
-            // Try to create a minimal DataManager if possible
-            if let fallbackDataManager = try? DataManager() {
-                let importService = LibraryImportService(
-                    trackDataActor: fallbackDataManager.trackDataActor,
-                    metadataExtractor: fallbackDataManager.metadataExtractor
-                )
-                self._dataManager = StateObject(wrappedValue: fallbackDataManager)
-                self._importService = StateObject(wrappedValue: importService)
-            } else {
-                // Create dummy services that won't work but allow UI to load
-                if let dummyDataManager = DataManager.makePreviewDataManager() {
-                    let dummyImportService = DataManager.makePreviewImportService()
-                    self._dataManager = StateObject(wrappedValue: dummyDataManager)
-                    self._importService = StateObject(wrappedValue: dummyImportService)
-                } else {
-                    // If even preview creation fails, try with a basic DataManager
-                    // This is a last resort - accepting potential crash
-                    let fallbackDataManager = try! DataManager()
-                    let dummyImportService = DataManager.makePreviewImportService()
-                    self._dataManager = StateObject(wrappedValue: fallbackDataManager)
-                    self._importService = StateObject(wrappedValue: dummyImportService)
-                }
-            }
-
-            self._audioService = StateObject(wrappedValue: audioService)
+            _launchError = State(initialValue: LaunchError(message: error.localizedDescription))
+            _showInitializationError = State(initialValue: true)
+            _isUsingFallbackServices = State(initialValue: true)
         }
     }
-    
+
     // MARK: - Scene
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -101,12 +89,31 @@ struct FonicHiFiApp: App {
                 .task {
                     await initializeApp()
                 }
+                .overlay(alignment: .top) {
+                    if isUsingFallbackServices {
+                        Text("Running in limited mode due to initialization issues.")
+                            .font(.footnote)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .padding()
+                    }
+                }
+                .alert("Initialization Issue", isPresented: $showInitializationError) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    if let launchError {
+                        Text(launchError.errorDescription ?? "An unknown error occurred. The app is running with limited functionality.")
+                    } else {
+                        Text("The app encountered an issue during startup and is running with limited functionality.")
+                    }
+                }
         }
         .modelContainer(dataManager.container)
     }
-    
+
     // MARK: - App Initialization
-    
+
     @MainActor
     private func initializeApp() async {
         logger.info("Initializing Fonic HiFi app...")
@@ -138,7 +145,7 @@ struct FonicHiFiApp: App {
             // For now, we'll just log the error and continue with limited functionality
         }
     }
-    
+
     @MainActor
     private func performStartupTasks() async {
         // Cleanup missing files (in background)
@@ -152,7 +159,7 @@ struct FonicHiFiApp: App {
                 logger.error("Failed to cleanup missing files: \(error.localizedDescription)")
             }
         }
-        
+
         // Log library statistics
         Task {
             do {
@@ -162,5 +169,52 @@ struct FonicHiFiApp: App {
                 logger.error("Failed to get library statistics: \(error.localizedDescription)")
             }
         }
+    }
+}
+
+// MARK: - Launch Error Representation
+
+private struct LaunchError: Identifiable, LocalizedError {
+    let id = UUID()
+    let message: String
+
+    var errorDescription: String? { message }
+}
+
+// MARK: - Fallback Service Construction
+
+private extension FonicHiFiApp {
+    typealias AppServices = (dataManager: DataManager, audioService: AudioEngineFacade, importService: LibraryImportService)
+
+    static func makeFallbackServices(
+        performanceMonitor: PerformanceMonitor,
+        errorLogger: Logger,
+    ) -> AppServices {
+        let playbackStateManager = PlaybackStateManager()
+        let audioMonitor = AudioMonitor(performanceMonitor: performanceMonitor)
+        let audioService = AudioEngineFacade(
+            stateManager: playbackStateManager,
+            monitor: audioMonitor,
+        )
+
+        let fallbackDataManager = DataManager.makeFallbackDataManager()
+            ?? DataManager.makePreviewDataManager()
+
+        guard let dataManager = fallbackDataManager else {
+            errorLogger.critical("Unable to provide a fallback DataManager; using fresh in-memory instance")
+            let resilientManager = DataManager.ensureFallbackDataManager()
+            let importService = LibraryImportService(
+                trackDataActor: resilientManager.trackDataActor,
+                metadataExtractor: resilientManager.metadataExtractor,
+            )
+            return (resilientManager, audioService, importService)
+        }
+
+        let importService = LibraryImportService(
+            trackDataActor: dataManager.trackDataActor,
+            metadataExtractor: dataManager.metadataExtractor,
+        )
+
+        return (dataManager, audioService, importService)
     }
 }

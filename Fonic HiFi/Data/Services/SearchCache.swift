@@ -10,7 +10,6 @@ import OSLog
 
 /// Cache for search results with TTL expiration
 public actor SearchCache {
-
     // MARK: - Types
 
     /// Simplified track data for cache storage
@@ -59,7 +58,7 @@ public actor SearchCache {
             albums: [CachedAlbum] = [],
             artists: [CachedArtist] = [],
             playlists: [CachedPlaylist] = [],
-            timestamp: Date = Date()
+            timestamp: Date = Date(),
         ) {
             self.query = query
             self.tracks = tracks
@@ -100,7 +99,7 @@ public actor SearchCache {
     // MARK: - Initialization
 
     public init(ttl: TimeInterval = 300, maxCacheSize: Int = 100) { // 5 minutes default TTL
-        self.cache = [:]
+        cache = [:]
         self.ttl = ttl
         self.maxCacheSize = maxCacheSize
         logger.info("SearchCache initialized with TTL: \(ttl)s, max size: \(maxCacheSize)")
@@ -165,7 +164,7 @@ public actor SearchCache {
                 title: track.title,
                 artist: track.artist,
                 album: track.album,
-                duration: track.duration
+                duration: track.duration,
             )
         }
 
@@ -177,14 +176,14 @@ public actor SearchCache {
                 albums: existing.albums,
                 artists: existing.artists,
                 playlists: existing.playlists,
-                timestamp: Date() // Reset timestamp
+                timestamp: Date(), // Reset timestamp
             )
         } else {
             // Create new result with just tracks
             cache[normalizedQuery] = SearchResult(
                 query: query,
                 tracks: cachedTracks,
-                timestamp: Date()
+                timestamp: Date(),
             )
         }
     }
@@ -249,7 +248,7 @@ public actor SearchCache {
             totalCachedResults: totalResults,
             oldestEntry: oldestEntry ?? now,
             newestEntry: newestEntry ?? now,
-            ttl: ttl
+            ttl: ttl,
         )
     }
 
@@ -282,7 +281,7 @@ public actor SearchCache {
         let sortedEntries = cache.sorted { $0.value.timestamp > $1.value.timestamp }
         let entriesToKeep = Array(sortedEntries.prefix(Int(Double(maxCacheSize) * 0.75)))
 
-        self.cache = Dictionary(uniqueKeysWithValues: entriesToKeep)
+        cache = Dictionary(uniqueKeysWithValues: entriesToKeep)
         logger.info("Trimmed cache to \(self.cache.count) entries")
     }
 

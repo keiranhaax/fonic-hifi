@@ -16,7 +16,7 @@ struct ContentView: View {
     @Namespace private var miniPlayerNamespace
     @State private var showingNowPlaying = false
     @State private var selectedDetent: PresentationDetent = .medium
-    
+
     var body: some View {
         TabView {
             LibraryView()
@@ -44,7 +44,7 @@ struct ContentView: View {
             if let audioService, audioService.currentTrack != nil, !showingNowPlaying {
                 LiquidGlassMiniPlayer(
                     namespace: miniPlayerNamespace,
-                    showingNowPlaying: $showingNowPlaying
+                    showingNowPlaying: $showingNowPlaying,
                 )
                 .environment(\.audioEngine, audioService)
             }
@@ -58,7 +58,7 @@ struct ContentView: View {
             .environment(\.audioEngine, audioService)
             .presentationDetents([
                 .medium,
-                .large
+                .large,
             ], selection: $selectedDetent)
             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
             .presentationDragIndicator(.visible)
@@ -68,7 +68,12 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
-        .importService(DataManager.makePreviewImportService())
-        .audioEngine(AudioEngineFacade())
+    if let importService = DataManager.makePreviewImportService() {
+        ContentView()
+            .importService(importService)
+            .audioEngine(AudioEngineFacade())
+    } else {
+        ContentView()
+            .audioEngine(AudioEngineFacade())
+    }
 }

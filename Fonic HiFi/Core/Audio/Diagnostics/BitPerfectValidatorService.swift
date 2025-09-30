@@ -5,15 +5,14 @@
 //  Created by Claude on 5/27/25.
 //
 
-import Foundation
 import AVFoundation
+import Foundation
 
 /// Protocol defining bit-perfect validation methods for audio playback verification
 @MainActor
 public protocol BitPerfectValidatorService: AnyObject, Sendable {
-    
     // MARK: - Core Validation
-    
+
     /// Validate if current playback setup can achieve bit-perfect output
     /// - Parameters:
     ///   - sourceFormat: The source audio format from the file
@@ -21,9 +20,9 @@ public protocol BitPerfectValidatorService: AnyObject, Sendable {
     /// - Returns: Detailed validation result
     func validateBitPerfectPlayback(
         sourceFormat: AudioFileInfo,
-        outputDevice: AudioDevice?
+        outputDevice: AudioDevice?,
     ) async -> BitPerfectValidationResult
-    
+
     /// Validate a specific audio format against output capabilities
     /// - Parameters:
     ///   - format: Audio format to validate
@@ -35,9 +34,9 @@ public protocol BitPerfectValidatorService: AnyObject, Sendable {
         _ format: AudioFormat,
         sampleRate: Int,
         bitDepth: Int,
-        outputDevice: AudioDevice?
+        outputDevice: AudioDevice?,
     ) async -> BitPerfectValidationResult
-    
+
     /// Perform real-time validation during playback
     /// - Parameters:
     ///   - audioSession: Current AVAudioSession
@@ -45,55 +44,55 @@ public protocol BitPerfectValidatorService: AnyObject, Sendable {
     /// - Returns: Current validation status
     func validateRealTime(
         audioSession: AVAudioSession,
-        sourceFormat: AudioFileInfo
+        sourceFormat: AudioFileInfo,
     ) async -> BitPerfectValidationResult
-    
+
     // MARK: - Device Analysis
-    
+
     /// Get detailed capabilities of the current output device
     /// - Returns: Device capabilities for bit-perfect validation
     func getCurrentDeviceCapabilities() async -> DeviceCapabilities
-    
+
     /// Get all available output devices with their capabilities
     /// - Returns: Array of devices with capability information
     func getAvailableDevicesWithCapabilities() async -> [DeviceWithCapabilities]
-    
+
     /// Check if a specific device supports bit-perfect playback
     /// - Parameter device: Device to check
     /// - Returns: Whether the device supports bit-perfect output
     func supportseBitPerfectPlayback(device: AudioDevice) async -> Bool
-    
+
     // MARK: - DAC Compatibility
-    
+
     /// Update DAC compatibility information
     /// - Parameter dacInfo: DAC compatibility information to cache
     func updateDACCompatibility(_ dacInfo: DACCompatibilityInfo) async
-    
+
     /// Get known DAC compatibility information
     /// - Parameter deviceIdentifier: Device identifier
     /// - Returns: Cached DAC information if available
     func getDACCompatibility(for deviceIdentifier: String) async -> DACCompatibilityInfo?
-    
+
     /// Clear all cached DAC compatibility information
     func clearDACCompatibilityCache() async
-    
+
     // MARK: - Analysis & Recommendations
-    
+
     /// Analyze current audio path for potential issues
     /// - Returns: Detailed analysis with recommendations
     func analyzeAudioPath() async -> AudioPathAnalysis
-    
+
     /// Get recommendations for optimal bit-perfect setup
     /// - Parameter sourceFormat: Source audio format
     /// - Returns: Configuration recommendations
     func getOptimalConfiguration(for sourceFormat: AudioFileInfo) async -> BitPerfectRecommendations
-    
+
     /// Check if current audio session settings are optimal
     /// - Returns: Session analysis with suggested improvements
     func analyzeAudioSession() async -> AudioSessionAnalysis
-    
+
     // MARK: - Format Conversion Analysis
-    
+
     /// Determine if format conversion is required
     /// - Parameters:
     ///   - sourceFormat: Source audio format
@@ -101,9 +100,9 @@ public protocol BitPerfectValidatorService: AnyObject, Sendable {
     /// - Returns: Conversion analysis results
     func analyzeRequiredConversion(
         sourceFormat: AudioFileInfo,
-        outputCapabilities: DeviceCapabilities
+        outputCapabilities: DeviceCapabilities,
     ) async -> ConversionAnalysis
-    
+
     /// Get supported output formats for current device
     /// - Returns: List of natively supported formats
     func getSupportedOutputFormats() async -> [AudioOutputFormat]
@@ -115,37 +114,37 @@ public protocol BitPerfectValidatorService: AnyObject, Sendable {
 public struct DeviceCapabilities: Sendable, Equatable {
     /// Supported sample rates in Hz
     public let supportedSampleRates: [Int]
-    
+
     /// Maximum supported bit depth
     public let maxBitDepth: Int
-    
+
     /// Maximum number of channels
     public let maxChannels: Int
-    
+
     /// Whether device supports hardware volume control
     public let supportsHardwareVolume: Bool
-    
+
     /// Whether device bypasses system mixer
     public let bypassesSystemMixer: Bool
-    
+
     /// Device buffer size capabilities
     public let bufferSizeRange: ClosedRange<Int>
-    
+
     /// Whether device supports exclusive mode
     public let supportsExclusiveMode: Bool
-    
+
     /// Native formats supported without conversion
     public let nativeFormats: [AudioOutputFormat]
-    
+
     public init(
         supportedSampleRates: [Int],
         maxBitDepth: Int,
         maxChannels: Int,
         supportsHardwareVolume: Bool = true,
         bypassesSystemMixer: Bool = false,
-        bufferSizeRange: ClosedRange<Int> = 128...8192,
+        bufferSizeRange: ClosedRange<Int> = 128 ... 8192,
         supportsExclusiveMode: Bool = false,
-        nativeFormats: [AudioOutputFormat] = []
+        nativeFormats: [AudioOutputFormat] = [],
     ) {
         self.supportedSampleRates = supportedSampleRates
         self.maxBitDepth = maxBitDepth
@@ -162,7 +161,7 @@ public struct DeviceCapabilities: Sendable, Equatable {
 public struct DeviceWithCapabilities: Sendable {
     public let device: AudioDevice
     public let capabilities: DeviceCapabilities
-    
+
     public init(device: AudioDevice, capabilities: DeviceCapabilities) {
         self.device = device
         self.capabilities = capabilities
@@ -175,7 +174,7 @@ public struct AudioOutputFormat: Sendable, Equatable {
     public let bitDepth: Int
     public let channels: Int
     public let isFloatingPoint: Bool
-    
+
     public init(sampleRate: Int, bitDepth: Int, channels: Int, isFloatingPoint: Bool = false) {
         self.sampleRate = sampleRate
         self.bitDepth = bitDepth
@@ -188,25 +187,25 @@ public struct AudioOutputFormat: Sendable, Equatable {
 public struct AudioPathAnalysis: Sendable {
     /// Whether the path is bit-perfect
     public let isBitPerfect: Bool
-    
+
     /// Detected signal processing stages
     public let processingStages: [AudioProcessingStage]
-    
+
     /// Identified bottlenecks or limitations
     public let limitations: [AudioPathLimitation]
-    
+
     /// Overall quality score (0.0 to 1.0)
     public let qualityScore: Double
-    
+
     /// Timestamp of analysis
     public let timestamp: Date
-    
+
     public init(
         isBitPerfect: Bool,
         processingStages: [AudioProcessingStage],
         limitations: [AudioPathLimitation],
         qualityScore: Double,
-        timestamp: Date = Date()
+        timestamp: Date = Date(),
     ) {
         self.isBitPerfect = isBitPerfect
         self.processingStages = processingStages
@@ -220,16 +219,16 @@ public struct AudioPathAnalysis: Sendable {
 public struct AudioProcessingStage: Sendable, Equatable {
     /// Type of processing
     public let type: ProcessingType
-    
+
     /// Description of the processing
     public let description: String
-    
+
     /// Whether this stage affects bit-perfect playback
     public let affectsBitPerfect: Bool
-    
+
     /// Performance impact (0.0 to 1.0)
     public let performanceImpact: Double
-    
+
     public init(type: ProcessingType, description: String, affectsBitPerfect: Bool, performanceImpact: Double) {
         self.type = type
         self.description = description
@@ -244,7 +243,7 @@ public enum ProcessingType: String, Sendable {
     case bitDepthConversion = "bit_depth_conversion"
     case channelMixing = "channel_mixing"
     case volumeControl = "volume_control"
-    case equalization = "equalization"
+    case equalization
     case dynamicsProcessing = "dynamics_processing"
     case spatialAudio = "spatial_audio"
     case systemMixer = "system_mixer"
@@ -258,16 +257,16 @@ public enum ProcessingType: String, Sendable {
 public struct AudioPathLimitation: Sendable {
     /// Type of limitation
     public let type: LimitationType
-    
+
     /// Description of the limitation
     public let description: String
-    
+
     /// Suggested resolution
     public let resolution: String
-    
+
     /// Severity level
     public let severity: LimitationSeverity
-    
+
     public init(type: LimitationType, description: String, resolution: String, severity: LimitationSeverity) {
         self.type = type
         self.description = description
@@ -287,35 +286,35 @@ public enum LimitationType: String, Sendable {
 
 /// Severity levels for limitations
 public enum LimitationSeverity: String, Sendable {
-    case info = "info"
-    case warning = "warning"
-    case error = "error"
-    case critical = "critical"
+    case info
+    case warning
+    case error
+    case critical
 }
 
 /// Recommendations for optimal bit-perfect configuration
 public struct BitPerfectRecommendations: Sendable {
     /// Recommended audio session settings
     public let sessionSettings: [String: String]
-    
+
     /// Recommended buffer size
     public let bufferSize: Int
-    
+
     /// Recommended output device (if different from current)
     public let recommendedDevice: AudioDevice?
-    
+
     /// Configuration changes required
     public let requiredChanges: [ConfigurationChange]
-    
+
     /// Expected improvement description
     public let expectedImprovement: String
-    
+
     public init(
         sessionSettings: [String: String],
         bufferSize: Int,
         recommendedDevice: AudioDevice?,
         requiredChanges: [ConfigurationChange],
-        expectedImprovement: String
+        expectedImprovement: String,
     ) {
         self.sessionSettings = sessionSettings
         self.bufferSize = bufferSize
@@ -331,7 +330,7 @@ public struct ConfigurationChange: Sendable {
     public let currentValue: String
     public let recommendedValue: String
     public let reason: String
-    
+
     public init(setting: String, currentValue: String, recommendedValue: String, reason: String) {
         self.setting = setting
         self.currentValue = currentValue
@@ -344,21 +343,21 @@ public struct ConfigurationChange: Sendable {
 public struct AudioSessionAnalysis: Sendable {
     /// Whether session is optimally configured
     public let isOptimal: Bool
-    
+
     /// Current session settings
     public let currentSettings: [String: String]
-    
+
     /// Identified issues
     public let issues: [SessionIssue]
-    
+
     /// Recommended improvements
     public let recommendations: [SessionRecommendation]
-    
+
     public init(
         isOptimal: Bool,
         currentSettings: [String: String],
         issues: [SessionIssue],
-        recommendations: [SessionRecommendation]
+        recommendations: [SessionRecommendation],
     ) {
         self.isOptimal = isOptimal
         self.currentSettings = currentSettings
@@ -372,7 +371,7 @@ public struct SessionIssue: Sendable {
     public let description: String
     public let impact: String
     public let severity: LimitationSeverity
-    
+
     public init(description: String, impact: String, severity: LimitationSeverity) {
         self.description = description
         self.impact = impact
@@ -385,7 +384,7 @@ public struct SessionRecommendation: Sendable {
     public let setting: String
     public let recommendation: String
     public let benefit: String
-    
+
     public init(setting: String, recommendation: String, benefit: String) {
         self.setting = setting
         self.recommendation = recommendation
@@ -397,25 +396,25 @@ public struct SessionRecommendation: Sendable {
 public struct ConversionAnalysis: Sendable {
     /// Whether conversion is required
     public let conversionRequired: Bool
-    
+
     /// Types of conversion needed
     public let conversionTypes: [ConversionType]
-    
+
     /// Quality impact of conversion
     public let qualityImpact: QualityImpact
-    
+
     /// Performance impact
     public let performanceImpact: Double
-    
+
     /// Alternative configurations that avoid conversion
     public let alternatives: [AlternativeConfiguration]
-    
+
     public init(
         conversionRequired: Bool,
         conversionTypes: [ConversionType],
         qualityImpact: QualityImpact,
         performanceImpact: Double,
-        alternatives: [AlternativeConfiguration]
+        alternatives: [AlternativeConfiguration],
     ) {
         self.conversionRequired = conversionRequired
         self.conversionTypes = conversionTypes
@@ -435,11 +434,11 @@ public enum ConversionType: String, Sendable {
 
 /// Quality impact assessment
 public enum QualityImpact: String, Sendable {
-    case none = "none"
-    case minimal = "minimal"
-    case moderate = "moderate"
-    case significant = "significant"
-    case severe = "severe"
+    case none
+    case minimal
+    case moderate
+    case significant
+    case severe
 }
 
 /// Alternative configuration to avoid conversion
@@ -448,11 +447,11 @@ public struct AlternativeConfiguration: Sendable, Equatable {
     public let outputFormat: AudioOutputFormat
     public let benefits: [String]
     public let tradeoffs: [String]
-    
+
     public init(description: String, outputFormat: AudioOutputFormat, benefits: [String], tradeoffs: [String]) {
         self.description = description
         self.outputFormat = outputFormat
         self.benefits = benefits
         self.tradeoffs = tradeoffs
     }
-} 
+}

@@ -5,8 +5,8 @@
 //  Debug version to test different approaches
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 /// Debug version of the app to isolate the crash
 // @main  // UNCOMMENT THIS AND COMMENT OUT @main IN FonicHiFiApp.swift TO USE
@@ -20,27 +20,30 @@ struct FonicHiFiApp_Debug: App {
         // Initialize DataManager with error handling
         do {
             let dm = try DataManager()
-            self._dataManager = StateObject(wrappedValue: dm)
+            _dataManager = StateObject(wrappedValue: dm)
         } catch {
             print("Error initializing DataManager: \(error)")
             print("Using fallback in-memory DataManager for debug")
             // Create a minimal fallback DataManager for debugging
-            if let fallbackDM = DataManager.makePreviewDataManager() {
-                self._dataManager = StateObject(wrappedValue: fallbackDM)
+            if let fallbackDM = DataManager.makeFallbackDataManager()
+                ?? DataManager.makePreviewDataManager()
+                ?? (try? DataManager())
+            {
+                _dataManager = StateObject(wrappedValue: fallbackDM)
             } else {
-                // Last resort: try to create a basic DataManager, accepting potential crash in debug mode
-                self._dataManager = StateObject(wrappedValue: try! DataManager())
+                let resilient = DataManager.ensureFallbackDataManager()
+                _dataManager = StateObject(wrappedValue: resilient)
             }
         }
 
         let playbackStateManager = PlaybackStateManager()
         self.playbackStateManager = playbackStateManager
-        self._audioEngine = StateObject(wrappedValue: AudioEngineFacade(stateManager: playbackStateManager))
+        _audioEngine = StateObject(wrappedValue: AudioEngineFacade(stateManager: playbackStateManager))
     }
-    
+
     @State private var useDebugMode = true
     @State private var useSafeContentView = false
-    
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -50,17 +53,17 @@ struct FonicHiFiApp_Debug: App {
                         VStack(spacing: 20) {
                             Text("Fonic HiFi Debug Mode")
                                 .font(.title)
-                            
+
                             Toggle("Use Safe ContentView (Sheet)", isOn: $useSafeContentView)
                                 .padding()
-                            
+
                             Button("Launch App") {
                                 useDebugMode = false
                             }
                             .buttonStyle(.borderedProminent)
-                            
+
                             Divider()
-                            
+
                             VStack(alignment: .leading) {
                                 Text("Debug Options:")
                                     .font(.headline)
@@ -69,7 +72,7 @@ struct FonicHiFiApp_Debug: App {
                                 Text("• Check console for debug logs")
                             }
                             .padding()
-                            
+
                             Spacer()
                         }
                         .padding()
@@ -90,7 +93,7 @@ struct FonicHiFiApp_Debug: App {
             .onAppear {
                 print("App launched with debug mode: \(useDebugMode)")
                 print("Main thread: \(Thread.isMainThread)")
-                
+
                 Task { @MainActor in
                     // Initialize audio engine
                     do {

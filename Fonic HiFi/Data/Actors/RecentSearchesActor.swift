@@ -5,8 +5,8 @@
 //  Created by Claude on 5/28/25.
 //
 
-import SwiftData
 import Foundation
+import SwiftData
 
 /// Actor for managing recent searches using @ModelActor pattern
 @ModelActor
@@ -22,7 +22,7 @@ public actor RecentSearchesActor {
 
         // Cleanup old searches (keep last 20)
         var descriptor = FetchDescriptor<RecentSearch>(
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)],
         )
         let allSearches = try modelContext.fetch(descriptor)
         if allSearches.count > 20 {
@@ -36,7 +36,7 @@ public actor RecentSearchesActor {
     /// Get recent searches, most recent first
     public func getRecentSearches(limit: Int = 10) async throws -> [RecentSearchData] {
         var descriptor = FetchDescriptor<RecentSearch>(
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)],
         )
         descriptor.fetchLimit = limit
         let searches = try modelContext.fetch(descriptor)
@@ -62,9 +62,9 @@ public actor RecentSearchesActor {
         var descriptor = FetchDescriptor<RecentSearch>(
             predicate: #Predicate<RecentSearch> { candidate in
                 candidate.query == searchQuery &&
-                candidate.timestamp == searchTimestamp
+                    candidate.timestamp == searchTimestamp
             },
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)],
         )
         descriptor.fetchLimit = 1
 
@@ -80,7 +80,7 @@ public actor RecentSearchesActor {
             predicate: #Predicate<RecentSearch> { search in
                 search.query == query
             },
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)],
         )
         descriptor.fetchLimit = 1
 

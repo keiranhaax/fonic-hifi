@@ -21,13 +21,13 @@ struct ExpandableMusicPlayer: View {
             let size = $0.size
             let safeArea = $0.safeAreaInsets
             let cornerRadius: CGFloat = safeArea.bottom == 0 ? 0 : 45
-            
+
             ZStack(alignment: .top) {
                 /// Background
                 ZStack {
                     Rectangle()
                         .fill(.playerBackground)
-                    
+
                     Rectangle()
                         .fill(.linearGradient(colors: [.artwork1, .artwork2, .artwork3], startPoint: .top, endPoint: .bottom))
                         .opacity(expandPlayer ? 1 : 0)
@@ -37,10 +37,10 @@ struct ExpandableMusicPlayer: View {
                 /// Shadows
                 .shadow(color: .primary.opacity(0.06), radius: 5, x: 5, y: 5)
                 .shadow(color: .primary.opacity(0.05), radius: 5, x: -5, y: -5)
-                
+
                 MiniPlayer()
                     .opacity(expandPlayer ? 0 : 1)
-                
+
                 ExpandedPlayer(size, safeArea)
                     .opacity(expandPlayer ? 1 : 0)
             }
@@ -52,18 +52,18 @@ struct ExpandableMusicPlayer: View {
             .gesture(
                 PanGesture { value in
                     guard expandPlayer else { return }
-                    
+
                     let translation = max(value.translation.height, 0)
                     offsetY = translation
                     windowProgress = max(min(translation / size.height, 1), 0) * 0.1
-                    
+
                     resizeWindow(0.1 - windowProgress)
                 } onEnd: { value in
                     guard expandPlayer else { return }
-                    
+
                     let translation = max(value.translation.height, 0)
                     let velocity = value.velocity.height / 5
-                    
+
                     withAnimation(.smooth(duration: 0.3, extraBounce: 0)) {
                         if (translation + velocity) > (size.height * 0.5) {
                             /// Closing View
@@ -77,10 +77,10 @@ struct ExpandableMusicPlayer: View {
                                 resizeWindow(0.1)
                             }
                         }
-                        
+
                         offsetY = 0
                     }
-                }
+                },
             )
             .offset(y: hideMiniPlayer && !expandPlayer ? safeArea.bottom + 200 : 0)
             .ignoresSafeArea()
@@ -91,7 +91,7 @@ struct ExpandableMusicPlayer: View {
             }
         }
     }
-    
+
     /// Mini Player
     @ViewBuilder
     func MiniPlayer() -> some View {
@@ -106,19 +106,15 @@ struct ExpandableMusicPlayer: View {
                 }
             }
             .frame(width: 45, height: 45)
-            
+
             Text("Calm Down")
-            
+
             Spacer(minLength: 0)
-            
+
             Group {
-                Button("", systemImage: "play.fill") {
-                    
-                }
-                
-                Button("", systemImage: "forward.fill") {
-                    
-                }
+                Button("", systemImage: "play.fill") {}
+
+                Button("", systemImage: "forward.fill") {}
             }
             .font(.title3)
             .foregroundStyle(Color.primary)
@@ -130,23 +126,23 @@ struct ExpandableMusicPlayer: View {
             withAnimation(.smooth(duration: 0.3, extraBounce: 0)) {
                 expandPlayer = true
             }
-            
+
             /// Reszing Window When Opening Player
             UIView.animate(withDuration: 0.3) {
                 resizeWindow(0.1)
             }
         }
     }
-    
+
     /// Expanded Player
     @ViewBuilder
-    func ExpandedPlayer(_ size: CGSize, _ safeArea: EdgeInsets) -> some View {
+    func ExpandedPlayer(_: CGSize, _ safeArea: EdgeInsets) -> some View {
         VStack(spacing: 12) {
             Capsule()
                 .fill(.white.secondary)
                 .frame(width: 35, height: 5)
                 .offset(y: -10)
-            
+
             /// Sample Player View
             HStack(spacing: 12) {
                 ZStack {
@@ -160,27 +156,23 @@ struct ExpandableMusicPlayer: View {
                     }
                 }
                 .frame(width: 80, height: 80)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Calm Down")
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
-                    
+
                     Text("Rema, Selena Gomez")
                         .font(.caption2)
                         .foregroundStyle(.white.secondary)
                 }
-                
+
                 Spacer(minLength: 0)
-                
+
                 HStack(spacing: 0) {
-                    Button("", systemImage: "star.circle.fill") {
-                        
-                    }
-                    
-                    Button("", systemImage: "ellipsis.circle.fill") {
-                        
-                    }
+                    Button("", systemImage: "star.circle.fill") {}
+
+                    Button("", systemImage: "ellipsis.circle.fill") {}
                 }
                 .foregroundStyle(.white, .white.tertiary)
                 .font(.title2)
@@ -189,19 +181,19 @@ struct ExpandableMusicPlayer: View {
         .padding(15)
         .padding(.top, safeArea.top)
     }
-    
+
     func resizeWindow(_ progress: CGFloat) {
         if let mainWindow = mainWindow?.subviews.first {
             let offsetY = (mainWindow.frame.height * progress) / 2
-            
+
             /// Your Custom Corner Radius
             mainWindow.layer.cornerRadius = (progress / 0.1) * 30
             mainWindow.layer.masksToBounds = true
-            
+
             mainWindow.transform = .identity.scaledBy(x: 1 - progress, y: 1 - progress).translatedBy(x: 0, y: offsetY)
         }
     }
-    
+
     func resetWindowWithAnimation() {
         if let mainWindow = mainWindow?.subviews.first {
             UIView.animate(withDuration: 0.3) {

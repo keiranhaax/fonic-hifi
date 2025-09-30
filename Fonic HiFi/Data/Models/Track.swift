@@ -11,145 +11,150 @@ import SwiftData
 /// Core track model representing a single audio file in the library
 @Model
 public final class Track: TrackProtocol {
-    
     // MARK: - Identity
-    
+
     /// Unique identifier for the track
     public var id: UUID
-    
+
     /// File URL where the audio file is stored
     public var url: URL
-    
+
     /// File name without extension
     public var fileName: String
-    
+
     /// File extension (e.g., "flac", "mp3")
     public var fileExtension: String
-    
+
     /// File size in bytes
     public var fileSize: Int64
-    
+
     /// Date the file was added to the library
     public var dateAdded: Date
-    
+
     /// Date the file was last modified
     public var dateModified: Date
-    
+
     // MARK: - Basic Metadata
-    
+
     /// Track title
     public var title: String
-    
+
     /// Artist name
     public var artist: String
-    
+
     /// Album name
     public var album: String
-    
+
     /// Album artist (may differ from track artist)
     public var albumArtist: String?
-    
+
     /// Genre
     public var genre: String?
-    
+
     /// Release year
     public var year: Int?
-    
+
     /// Track number within the album
     public var trackNumber: Int?
-    
+
     /// Total number of tracks on the album
     public var totalTracks: Int?
-    
+
     /// Disc number for multi-disc albums
     public var discNumber: Int?
-    
+
     /// Total number of discs
     public var totalDiscs: Int?
-    
+
     // MARK: - Extended Metadata
-    
+
     /// Composer
     public var composer: String?
-    
+
     /// Conductor
     public var conductor: String?
-    
+
     /// Record label
     public var label: String?
-    
+
     /// Catalog number
     public var catalogNumber: String?
-    
+
     /// Release date (more specific than year)
     public var releaseDate: Date?
-    
+
     /// Original artist (for covers)
     public var originalArtist: String?
-    
+
     /// Comments or notes
     public var comments: String?
-    
+
     /// Lyrics
     public var lyrics: String?
-    
+
     /// Album artwork (stored as Data)
     public var artwork: Data?
-    
+
     // MARK: - Technical Metadata
-    
+
     /// Audio format (e.g., "FLAC", "ALAC", "MP3")
     public var audioFormat: String
-    
+
     /// Duration in seconds
     public var duration: TimeInterval
-    
+
     /// Sample rate in Hz
     public var sampleRate: Double
-    
+
     /// Bit depth
     public var bitDepth: Int
-    
+
     /// Number of audio channels
     public var channels: Int
-    
+
     /// Bitrate in kbps (for lossy formats)
     public var bitrate: Int?
-    
+
     /// Whether the track is lossless
     public var isLossless: Bool
-    
+
     /// Codec used for encoding
     public var codec: String?
-    
+
     /// Container format
     public var container: String?
-    
+
     /// Whether the track supports gapless playback
     public var supportsGapless: Bool
-    
+
     // MARK: - User Data
-    
+
     /// User rating (1-5 stars)
     public var rating: Int?
-    
+
     /// Number of times played
     public var playCount: Int
-    
+
     /// Date last played
     public var lastPlayed: Date?
-    
+
     /// Whether the track is marked as favorite
     public var isFavorite: Bool
-    
+
     /// User-defined tags
     public var userTags: [String]
-    
+
     /// BPM (beats per minute) for rhythm analysis
     public var bpm: Int?
-    
+
     /// Musical key
     public var musicalKey: String?
+
+    /// Track-level replay gain adjustment in decibels
+    public var replayGainTrack: Float?
+
+    /// Album-level replay gain adjustment in decibels
+    public var replayGainAlbum: Float?
 
     // MARK: - Relationships
 
@@ -166,37 +171,37 @@ public final class Track: TrackProtocol {
     public var playlists: [Playlist] = []
 
     // MARK: - Computed Properties
-    
+
     /// Full file path as string
     public var filePath: String {
         url.path
     }
-    
+
     /// File name with extension
     public var fullFileName: String {
         fileName + "." + fileExtension
     }
-    
+
     /// Quality description based on technical specs
     public var qualityDescription: String {
         if isLossless {
             if sampleRate > 48000 || bitDepth > 16 {
-                return "Hi-Res Lossless"
+                "Hi-Res Lossless"
             } else {
-                return "Lossless"
+                "Lossless"
             }
         } else {
-            return "Lossy"
+            "Lossy"
         }
     }
-    
+
     /// Duration formatted as MM:SS
     public var formattedDuration: String {
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
-    
+
     /// File size formatted for display
     public var formattedFileSize: String {
         let formatter = ByteCountFormatter()
@@ -204,9 +209,9 @@ public final class Track: TrackProtocol {
         formatter.countStyle = .file
         return formatter.string(fromByteCount: fileSize)
     }
-    
+
     // MARK: - Initialization
-    
+
     public init(
         url: URL,
         title: String = "",
@@ -217,19 +222,19 @@ public final class Track: TrackProtocol {
         sampleRate: Double = 44100,
         bitDepth: Int = 16,
         channels: Int = 2,
-        isLossless: Bool = false
+        isLossless: Bool = false,
     ) {
         // Initialize basic properties first
-        self.id = UUID()
+        id = UUID()
         self.url = url
-        
+
         // Compute derived values
         let computedFileName = url.deletingPathExtension().lastPathComponent
         let computedFileExtension = url.pathExtension.lowercased()
-        
+
         // Initialize all properties in order
-        self.fileName = computedFileName
-        self.fileExtension = computedFileExtension
+        fileName = computedFileName
+        fileExtension = computedFileExtension
         self.title = title.isEmpty ? computedFileName : title
         self.artist = artist
         self.album = album
@@ -239,18 +244,20 @@ public final class Track: TrackProtocol {
         self.bitDepth = bitDepth
         self.channels = channels
         self.isLossless = isLossless
-        
+
         // File attributes
         let resourceValues = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
-        self.fileSize = Int64(resourceValues?.fileSize ?? 0)
-        self.dateModified = resourceValues?.contentModificationDate ?? Date()
-        self.dateAdded = Date()
-        
+        fileSize = Int64(resourceValues?.fileSize ?? 0)
+        dateModified = resourceValues?.contentModificationDate ?? Date()
+        dateAdded = Date()
+
         // Initialize user data
-        self.playCount = 0
-        self.isFavorite = false
-        self.userTags = []
-        self.supportsGapless = false
+        playCount = 0
+        isFavorite = false
+        userTags = []
+        supportsGapless = false
+        replayGainTrack = nil
+        replayGainAlbum = nil
     }
 }
 
@@ -260,7 +267,7 @@ extension Track: Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     public static func == (lhs: Track, rhs: Track) -> Bool {
         lhs.id == rhs.id
     }
@@ -268,21 +275,20 @@ extension Track: Hashable {
 
 // MARK: - Search and Filtering
 
-extension Track {
-    
+public extension Track {
     /// Check if track matches search query (searches multiple fields)
-    public func matches(searchQuery: String) -> Bool {
+    func matches(searchQuery: String) -> Bool {
         let query = searchQuery.lowercased()
         return title.lowercased().contains(query) ||
-               artist.lowercased().contains(query) ||
-               album.lowercased().contains(query) ||
-               (albumArtist?.lowercased().contains(query) ?? false) ||
-               (genre?.lowercased().contains(query) ?? false) ||
-               (composer?.lowercased().contains(query) ?? false)
+            artist.lowercased().contains(query) ||
+            album.lowercased().contains(query) ||
+            (albumArtist?.lowercased().contains(query) ?? false) ||
+            (genre?.lowercased().contains(query) ?? false) ||
+            (composer?.lowercased().contains(query) ?? false)
     }
-    
+
     /// Check if track matches specific filter criteria
-    public func matches(filter: TrackFilter) -> Bool {
+    func matches(filter: TrackFilter) -> Bool {
         switch filter {
         case .lossless:
             return isLossless
@@ -290,18 +296,18 @@ extension Track {
             return isLossless && (sampleRate > 48000 || bitDepth > 16)
         case .favorites:
             return isFavorite
-        case .recentlyAdded(let days):
+        case let .recentlyAdded(days):
             return dateAdded > Date().addingTimeInterval(-TimeInterval(days * 24 * 60 * 60))
-        case .recentlyPlayed(let days):
-            guard let lastPlayed = lastPlayed else { return false }
+        case let .recentlyPlayed(days):
+            guard let lastPlayed else { return false }
             return lastPlayed > Date().addingTimeInterval(-TimeInterval(days * 24 * 60 * 60))
-        case .genre(let genreName):
+        case let .genre(genreName):
             return genre?.lowercased() == genreName.lowercased()
-        case .year(let yearValue):
+        case let .year(yearValue):
             return year == yearValue
-        case .artist(let artistName):
+        case let .artist(artistName):
             return artist.lowercased() == artistName.lowercased()
-        case .album(let albumName):
+        case let .album(albumName):
             return album.lowercased() == albumName.lowercased()
         }
     }
@@ -323,18 +329,20 @@ public enum TrackFilter {
 
 // MARK: - AudioTrack Conversion
 
-extension Track {
-    
+public extension Track {
     /// Convert Track to AudioTrack for compatibility with audio engine
-    public func toAudioTrack() -> AudioTrack {
-        return LegacyTrack(
+    func toAudioTrack() -> AudioTrack {
+        var track = LegacyTrack(
             id: id,
             title: title,
             artist: artist,
             album: album,
             url: url,
             duration: duration,
-            audioFormat: audioFormat
+            audioFormat: audioFormat,
         )
+        track.replayGainTrack = replayGainTrack
+        track.replayGainAlbum = replayGainAlbum
+        return track
     }
 }

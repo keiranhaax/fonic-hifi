@@ -1,4 +1,4 @@
-// 
+//
 //  DataManager.swift
 //  Fonic HiFi
 //
@@ -6,14 +6,15 @@
 //
 
 import Foundation
-import SwiftData
 import OSLog
+import SwiftData
 
 /// Centralized data management for the Fonic HiFi app
 @MainActor
 public final class DataManager: ObservableObject {
-
     // MARK: - Properties
+
+    public let isFallback: Bool
 
     /// The SwiftData model container
     public let container: ModelContainer
@@ -38,87 +39,133 @@ public final class DataManager: ObservableObject {
 
     /// Logger for data operations
     private let logger = Logger(subsystem: "com.fonichifi.data", category: "DataManager")
-    
+    private static let initLogger = Logger(subsystem: "com.fonichifi.data", category: "DataManager.init")
+
     // MARK: - Initialization
-    
-    public init() throws {
+
+    public convenience init() throws {
         let schema = Schema(SchemaV1.models)
         // Use versioned schema for consistency with migration plan
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
             allowsSave: true,
-            cloudKitDatabase: .none // Disable CloudKit for now (privacy-first)
+            cloudKitDatabase: .none, // Disable CloudKit for now (privacy-first)
         )
 
         do {
-            // Supply an explicit migration plan with versioned schema
-            container = try ModelContainer(
-                for: schema,
-                migrationPlan: RecentSearchMigrationPlan.self,
-                configurations: [modelConfiguration]
+            let container = try DataManager.buildContainer(
+                schema: schema,
+                configuration: modelConfiguration,
+                logger: DataManager.initLogger,
             )
-            mainContext = container.mainContext
-            backgroundContext = ModelContext(container)
-            
-            // Configure contexts
-            mainContext.autosaveEnabled = true
-            backgroundContext.autosaveEnabled = false // Manual save control for imports
-            
-            // Initialize services
-            let formatDetectionService = AudioFormatDetectionManager()
-            metadataExtractor = MetadataExtractionService(formatDetectionService: formatDetectionService)
-            trackDataActor = TrackDataActor(modelContainer: container)
-            recentSearchesActor = RecentSearchesActor(modelContainer: container)
-            importService = LibraryImportService(
-                trackDataActor: trackDataActor,
-                metadataExtractor: metadataExtractor
-            )
-            
+            self.init(container: container, isFallback: false)
             logger.info("DataManager initialized successfully")
-            
         } catch {
-            logger.error("Failed to initialize DataManager: \(error.localizedDescription)")
+            DataManager.initLogger.error("Failed to initialize DataManager: \(error.localizedDescription)")
             throw DataManagerError.initializationFailed(error)
         }
     }
-    
+
+    private init(container: ModelContainer, isFallback: Bool) {
+        self.container = container
+        mainContext = container.mainContext
+        backgroundContext = ModelContext(container)
+        self.isFallback = isFallback
+
+        mainContext.autosaveEnabled = true
+        backgroundContext.autosaveEnabled = false
+
+        let formatDetectionService = AudioFormatDetectionManager()
+        metadataExtractor = MetadataExtractionService(formatDetectionService: formatDetectionService)
+        trackDataActor = TrackDataActor(modelContainer: container)
+        recentSearchesActor = RecentSearchesActor(modelContainer: container)
+        importService = LibraryImportService(
+            trackDataActor: trackDataActor,
+            metadataExtractor: metadataExtractor,
+        )
+
+        logger.info("DataManager initialized\(isFallback ? " in fallback mode" : "") successfully")
+    }
+
+    private static func buildContainer(
+        schema: Schema,
+        configuration: ModelConfiguration,
+        logger: Logger,
+    ) throws -> ModelContainer {
+        do {
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: RecentSearchMigrationPlan.self,
+                configurations: [configuration],
+            )
+        } catch let migrationError {
+            logger.error("Failed to create ModelContainer with migration plan: \(migrationError.localizedDescription)")
+            do {
+                return try ModelContainer(
+                    for: schema,
+                    configurations: [configuration],
+                )
+            } catch let fallbackError {
+                logger.critical("Failed to create fallback ModelContainer: \(fallbackError.localizedDescription)")
+                throw fallbackError
+            }
+        }
+    }
+
     // MARK: - Library Statistics
-    
+
     /// Get current library statistics
     public func getLibraryStatistics() async throws -> LibraryStatistics {
-        let trackDescriptor = FetchDescriptor<Track>()
-        let albumDescriptor = FetchDescriptor<Album>()
-        let artistDescriptor = FetchDescriptor<Artist>()
-        let playlistDescriptor = FetchDescriptor<Playlist>()
-        
+        let trackDescriptor = FetchDescriptor<Track>(
+            sortBy: [SortDescriptor(\.id)],
+        )
+
         do {
-            let tracks = try mainContext.fetch(trackDescriptor)
-            let albums = try mainContext.fetch(albumDescriptor)
-            let artists = try mainContext.fetch(artistDescriptor)
-            let playlists = try mainContext.fetch(playlistDescriptor)
-            
-            let totalDuration = tracks.reduce(0) { $0 + $1.duration }
-            let totalFileSize = tracks.reduce(0) { $0 + $1.fileSize }
-            let losslessCount = tracks.filter { $0.isLossless }.count
-            let hiResCount = tracks.filter { $0.sampleRate > 48000 || $0.bitDepth > 16 }.count
-            
+            let albumCount = try mainContext.fetchCount(FetchDescriptor<Album>())
+            let artistCount = try mainContext.fetchCount(FetchDescriptor<Artist>())
+            let playlistCount = try mainContext.fetchCount(FetchDescriptor<Playlist>())
+
+            var trackCount = 0
+            var totalDuration: TimeInterval = 0
+            var totalFileSize: Int64 = 0
+            var losslessCount = 0
+            var hiResCount = 0
+
+            let processor = BatchProcessor<Track>(context: mainContext, batchSize: 200)
+            try processor.processBatches(descriptor: trackDescriptor) { batch in
+                trackCount += batch.count
+
+                for track in batch {
+                    totalDuration += track.duration
+                    totalFileSize += track.fileSize
+
+                    if track.isLossless {
+                        losslessCount += 1
+                    }
+
+                    if track.sampleRate > 48000 || track.bitDepth > 16 {
+                        hiResCount += 1
+                    }
+                }
+            }
+
             return LibraryStatistics(
-                trackCount: tracks.count,
-                albumCount: albums.count,
-                artistCount: artists.count,
-                playlistCount: playlists.count,
+                trackCount: trackCount,
+                albumCount: albumCount,
+                artistCount: artistCount,
+                playlistCount: playlistCount,
                 totalDuration: totalDuration,
                 totalFileSize: totalFileSize,
                 losslessTrackCount: losslessCount,
-                hiResTrackCount: hiResCount
+                hiResTrackCount: hiResCount,
             )
         } catch {
             logger.error("Failed to get library statistics: \(error.localizedDescription)")
             throw DataManagerError.fetchFailed(error)
         }
     }
-    
+
     // MARK: - Pagination Support
 
     /// Page size for paginated queries
@@ -129,11 +176,11 @@ public final class DataManager: ObservableObject {
         predicate: Predicate<Track>? = nil,
         sortBy: [SortDescriptor<Track>] = [SortDescriptor(\.dateAdded, order: .reverse)],
         page: Int = 0,
-        pageSize: Int = defaultPageSize
+        pageSize: Int = defaultPageSize,
     ) async throws -> (tracks: [Track], hasMore: Bool) {
         var descriptor = FetchDescriptor<Track>(
             predicate: predicate,
-            sortBy: sortBy
+            sortBy: sortBy,
         )
 
         // Calculate offset and limit for pagination
@@ -146,7 +193,7 @@ public final class DataManager: ObservableObject {
             let startIndex = min(offset, allTracks.count)
             let endIndex = min(startIndex + pageSize, allTracks.count)
 
-            let tracks = Array(allTracks[startIndex..<endIndex])
+            let tracks = Array(allTracks[startIndex ..< endIndex])
             let hasMore = allTracks.count > endIndex
 
             return (tracks, hasMore)
@@ -161,11 +208,11 @@ public final class DataManager: ObservableObject {
         predicate: Predicate<Album>? = nil,
         sortBy: [SortDescriptor<Album>] = [SortDescriptor(\.title)],
         page: Int = 0,
-        pageSize: Int = defaultPageSize
+        pageSize: Int = defaultPageSize,
     ) async throws -> (albums: [Album], hasMore: Bool) {
         var descriptor = FetchDescriptor<Album>(
             predicate: predicate,
-            sortBy: sortBy
+            sortBy: sortBy,
         )
 
         let offset = page * pageSize
@@ -176,7 +223,7 @@ public final class DataManager: ObservableObject {
             let startIndex = min(offset, allAlbums.count)
             let endIndex = min(startIndex + pageSize, allAlbums.count)
 
-            let albums = Array(allAlbums[startIndex..<endIndex])
+            let albums = Array(allAlbums[startIndex ..< endIndex])
             let hasMore = allAlbums.count > endIndex
 
             return (albums, hasMore)
@@ -188,7 +235,7 @@ public final class DataManager: ObservableObject {
 
     /// Fetch all tracks in batches (for large operations like export)
     public func fetchAllTracksInBatches(
-        batchSize: Int = defaultPageSize
+        batchSize: Int = defaultPageSize,
     ) async throws -> [Track] {
         var allTracks: [Track] = []
         var page = 0
@@ -213,17 +260,17 @@ public final class DataManager: ObservableObject {
 
         let predicate = #Predicate<Track> { track in
             track.title.localizedStandardContains(searchQuery) ||
-            track.artist.localizedStandardContains(searchQuery) ||
-            track.album.localizedStandardContains(searchQuery) ||
-            (track.albumArtist?.localizedStandardContains(searchQuery) ?? false) ||
-            (track.genre?.localizedStandardContains(searchQuery) ?? false)
+                track.artist.localizedStandardContains(searchQuery) ||
+                track.album.localizedStandardContains(searchQuery) ||
+                (track.albumArtist?.localizedStandardContains(searchQuery) ?? false) ||
+                (track.genre?.localizedStandardContains(searchQuery) ?? false)
         }
 
         return try await fetchTracks(
             predicate: predicate,
             sortBy: [SortDescriptor(\.title)],
             page: page,
-            pageSize: pageSize
+            pageSize: pageSize,
         )
     }
 
@@ -231,19 +278,19 @@ public final class DataManager: ObservableObject {
     public func searchTracks(_ query: String, limit: Int = 100) async throws -> [Track] {
         let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !searchQuery.isEmpty else { return [] }
-        
+
         var descriptor = FetchDescriptor<Track>(
             predicate: #Predicate<Track> { track in
                 track.title.localizedStandardContains(searchQuery) ||
-                track.artist.localizedStandardContains(searchQuery) ||
-                track.album.localizedStandardContains(searchQuery) ||
-                (track.albumArtist?.localizedStandardContains(searchQuery) ?? false) ||
-                (track.genre?.localizedStandardContains(searchQuery) ?? false)
+                    track.artist.localizedStandardContains(searchQuery) ||
+                    track.album.localizedStandardContains(searchQuery) ||
+                    (track.albumArtist?.localizedStandardContains(searchQuery) ?? false) ||
+                    (track.genre?.localizedStandardContains(searchQuery) ?? false)
             },
-            sortBy: [SortDescriptor(\.title)]
+            sortBy: [SortDescriptor(\.title)],
         )
         descriptor.fetchLimit = limit
-        
+
         do {
             return try mainContext.fetch(descriptor)
         } catch {
@@ -251,7 +298,7 @@ public final class DataManager: ObservableObject {
             throw DataManagerError.searchFailed(error)
         }
     }
-    
+
     /// Search albums by query string with pagination
     public func searchAlbums(_ query: String, page: Int = 0, pageSize: Int = defaultPageSize) async throws -> (albums: [Album], hasMore: Bool) {
         let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -259,14 +306,14 @@ public final class DataManager: ObservableObject {
 
         let predicate = #Predicate<Album> { album in
             album.title.localizedStandardContains(searchQuery) ||
-            album.albumArtist.localizedStandardContains(searchQuery)
+                album.albumArtist.localizedStandardContains(searchQuery)
         }
 
         return try await fetchAlbums(
             predicate: predicate,
             sortBy: [SortDescriptor(\.title)],
             page: page,
-            pageSize: pageSize
+            pageSize: pageSize,
         )
     }
 
@@ -274,16 +321,16 @@ public final class DataManager: ObservableObject {
     public func searchAlbums(_ query: String, limit: Int = 50) async throws -> [Album] {
         let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !searchQuery.isEmpty else { return [] }
-        
+
         var descriptor = FetchDescriptor<Album>(
             predicate: #Predicate<Album> { album in
                 album.title.localizedStandardContains(searchQuery) ||
-                album.albumArtist.localizedStandardContains(searchQuery)
+                    album.albumArtist.localizedStandardContains(searchQuery)
             },
-            sortBy: [SortDescriptor(\.title)]
+            sortBy: [SortDescriptor(\.title)],
         )
         descriptor.fetchLimit = limit
-        
+
         do {
             return try mainContext.fetch(descriptor)
         } catch {
@@ -291,7 +338,7 @@ public final class DataManager: ObservableObject {
             throw DataManagerError.searchFailed(error)
         }
     }
-    
+
     /// Search artists by query string with pagination
     public func searchArtists(_ query: String, page: Int = 0, pageSize: Int = defaultPageSize) async throws -> (artists: [Artist], hasMore: Bool) {
         let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -300,9 +347,9 @@ public final class DataManager: ObservableObject {
         var descriptor = FetchDescriptor<Artist>(
             predicate: #Predicate<Artist> { artist in
                 artist.name.localizedStandardContains(searchQuery) ||
-                artist.sortName.localizedStandardContains(searchQuery)
+                    artist.sortName.localizedStandardContains(searchQuery)
             },
-            sortBy: [SortDescriptor(\.sortName)]
+            sortBy: [SortDescriptor(\.sortName)],
         )
 
         // Calculate offset and limit for pagination
@@ -314,7 +361,7 @@ public final class DataManager: ObservableObject {
             let startIndex = min(offset, allArtists.count)
             let endIndex = min(startIndex + pageSize, allArtists.count)
 
-            let artists = Array(allArtists[startIndex..<endIndex])
+            let artists = Array(allArtists[startIndex ..< endIndex])
             let hasMore = allArtists.count > endIndex
 
             return (artists, hasMore)
@@ -332,9 +379,9 @@ public final class DataManager: ObservableObject {
         var descriptor = FetchDescriptor<Artist>(
             predicate: #Predicate<Artist> { artist in
                 artist.name.localizedStandardContains(searchQuery) ||
-                artist.sortName.localizedStandardContains(searchQuery)
+                    artist.sortName.localizedStandardContains(searchQuery)
             },
-            sortBy: [SortDescriptor(\.sortName)]
+            sortBy: [SortDescriptor(\.sortName)],
         )
         descriptor.fetchLimit = limit
 
@@ -354,9 +401,9 @@ public final class DataManager: ObservableObject {
         var descriptor = FetchDescriptor<Playlist>(
             predicate: #Predicate<Playlist> { playlist in
                 playlist.name.localizedStandardContains(searchQuery) ||
-                playlist.playlistDescription?.localizedStandardContains(searchQuery) ?? false
+                    playlist.playlistDescription?.localizedStandardContains(searchQuery) ?? false
             },
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\.name)],
         )
 
         let offset = page * pageSize
@@ -367,7 +414,7 @@ public final class DataManager: ObservableObject {
             let startIndex = min(offset, allPlaylists.count)
             let endIndex = min(startIndex + pageSize, allPlaylists.count)
 
-            let playlists = Array(allPlaylists[startIndex..<endIndex])
+            let playlists = Array(allPlaylists[startIndex ..< endIndex])
             let hasMore = allPlaylists.count > endIndex
 
             return (playlists, hasMore)
@@ -385,9 +432,9 @@ public final class DataManager: ObservableObject {
         var descriptor = FetchDescriptor<Playlist>(
             predicate: #Predicate<Playlist> { playlist in
                 playlist.name.localizedStandardContains(searchQuery) ||
-                playlist.playlistDescription?.localizedStandardContains(searchQuery) ?? false
+                    playlist.playlistDescription?.localizedStandardContains(searchQuery) ?? false
             },
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\.name)],
         )
         descriptor.fetchLimit = limit
 
@@ -398,7 +445,7 @@ public final class DataManager: ObservableObject {
             throw DataManagerError.searchFailed(error)
         }
     }
-    
+
     // MARK: - Recent Search Management
 
     /// Add a search to recent searches history
@@ -422,14 +469,14 @@ public final class DataManager: ObservableObject {
     }
 
     // MARK: - Recent Items
-    
+
     /// Get recently added tracks
     public func getRecentlyAddedTracks(limit: Int = 50) async throws -> [Track] {
         var descriptor = FetchDescriptor<Track>(
-            sortBy: [SortDescriptor(\.dateAdded, order: .reverse)]
+            sortBy: [SortDescriptor(\.dateAdded, order: .reverse)],
         )
         descriptor.fetchLimit = limit
-        
+
         do {
             return try mainContext.fetch(descriptor)
         } catch {
@@ -437,17 +484,17 @@ public final class DataManager: ObservableObject {
             throw DataManagerError.fetchFailed(error)
         }
     }
-    
+
     /// Get recently played tracks
     public func getRecentlyPlayedTracks(limit: Int = 50) async throws -> [Track] {
         var descriptor = FetchDescriptor<Track>(
             predicate: #Predicate<Track> { track in
                 track.lastPlayed != nil
             },
-            sortBy: [SortDescriptor(\.lastPlayed, order: .reverse)]
+            sortBy: [SortDescriptor(\.lastPlayed, order: .reverse)],
         )
         descriptor.fetchLimit = limit
-        
+
         do {
             return try mainContext.fetch(descriptor)
         } catch {
@@ -455,9 +502,9 @@ public final class DataManager: ObservableObject {
             throw DataManagerError.fetchFailed(error)
         }
     }
-    
+
     // MARK: - Cleanup Operations
-    
+
     /// Remove tracks whose files no longer exist
     public func cleanupMissingFiles() async throws -> Int {
         do {
@@ -469,9 +516,9 @@ public final class DataManager: ObservableObject {
             throw DataManagerError.cleanupFailed(error)
         }
     }
-    
+
     // MARK: - Data Export
-    
+
     /// Export library data to JSON for backup with pagination
     public func exportLibraryData() async throws -> Data {
         // Fetch all tracks in batches to avoid memory issues
@@ -488,13 +535,13 @@ public final class DataManager: ObservableObject {
                     audioFormat: track.audioFormat,
                     dateAdded: track.dateAdded,
                     playCount: track.playCount,
-                    isFavorite: track.isFavorite
+                    isFavorite: track.isFavorite,
                 )
             },
             exportDate: Date(),
-            version: "1.0"
+            version: "1.0",
         )
-        
+
         do {
             return try JSONEncoder().encode(exportData)
         } catch {
@@ -516,30 +563,30 @@ public struct LibraryStatistics {
     public let totalFileSize: Int64
     public let losslessTrackCount: Int
     public let hiResTrackCount: Int
-    
+
     public var formattedTotalDuration: String {
         let hours = Int(totalDuration) / 3600
         let minutes = (Int(totalDuration) % 3600) / 60
-        
+
         if hours > 0 {
             return String(format: "%dh %dm", hours, minutes)
         } else {
             return String(format: "%dm", minutes)
         }
     }
-    
+
     public var formattedTotalFileSize: String {
         let formatter = ByteCountFormatter()
         formatter.allowedUnits = [.useGB, .useTB]
         formatter.countStyle = .file
         return formatter.string(fromByteCount: totalFileSize)
     }
-    
+
     public var losslessPercentage: Double {
         guard trackCount > 0 else { return 0 }
         return Double(losslessTrackCount) / Double(trackCount) * 100
     }
-    
+
     public var hiResPercentage: Double {
         guard trackCount > 0 else { return 0 }
         return Double(hiResTrackCount) / Double(trackCount) * 100
@@ -573,19 +620,19 @@ public enum DataManagerError: LocalizedError {
     case searchFailed(Error)
     case cleanupFailed(Error)
     case exportFailed(Error)
-    
+
     public var errorDescription: String? {
         switch self {
-        case .initializationFailed(let error):
-            return "Failed to initialize data manager: \(error.localizedDescription)"
-        case .fetchFailed(let error):
-            return "Failed to fetch data: \(error.localizedDescription)"
-        case .searchFailed(let error):
-            return "Search operation failed: \(error.localizedDescription)"
-        case .cleanupFailed(let error):
-            return "Cleanup operation failed: \(error.localizedDescription)"
-        case .exportFailed(let error):
-            return "Export operation failed: \(error.localizedDescription)"
+        case let .initializationFailed(error):
+            "Failed to initialize data manager: \(error.localizedDescription)"
+        case let .fetchFailed(error):
+            "Failed to fetch data: \(error.localizedDescription)"
+        case let .searchFailed(error):
+            "Search operation failed: \(error.localizedDescription)"
+        case let .cleanupFailed(error):
+            "Cleanup operation failed: \(error.localizedDescription)"
+        case let .exportFailed(error):
+            "Export operation failed: \(error.localizedDescription)"
         }
     }
 }
@@ -594,52 +641,144 @@ public enum DataManagerError: LocalizedError {
 
 extension DataManager {
     /// Create a preview container for SwiftUI previews
-    static var previewContainer: ModelContainer {
+    static func previewContainer() -> ModelContainer? {
         let schema = Schema(SchemaV1.models)
         let modelConfiguration = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: true
+            isStoredInMemoryOnly: true,
+            allowsSave: true,
+            cloudKitDatabase: .none,
         )
 
-        do {
-            return try ModelContainer(
-                for: schema,
-                migrationPlan: RecentSearchMigrationPlan.self,
-                configurations: [modelConfiguration]
-            )
-        } catch {
-            // Log error and return a basic in-memory container as fallback
-            print("Warning: Could not create ModelContainer with migration: \(error)")
-            print("Falling back to basic in-memory container")
-            return try! ModelContainer(
-                for: schema,
-                configurations: [modelConfiguration]
-            )
+        if let container = try? buildContainer(
+            schema: schema,
+            configuration: modelConfiguration,
+            logger: initLogger,
+        ) {
+            return container
         }
+
+        initLogger.fault("Falling back to read-only preview container")
+        let readOnlyConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            allowsSave: false,
+            cloudKitDatabase: .none,
+        )
+
+        if let container = try? ModelContainer(
+            for: schema,
+            configurations: [readOnlyConfiguration],
+        ) {
+            return container
+        }
+
+        initLogger.critical("Unable to create preview container")
+        return nil
     }
-    
+
     /// Create a preview DataManager for SwiftUI previews
     @MainActor
     static func makePreviewDataManager() -> DataManager? {
+        if let fallback = makeFallbackDataManager() {
+            return fallback
+        }
+
         do {
-            let previewDataManager = try DataManager()
-            return previewDataManager
+            return try DataManager()
         } catch {
-            print("Error creating preview DataManager: \(error)")
-            print("Preview functionality may be limited")
+            initLogger.error("Error creating preview DataManager: \(error.localizedDescription)")
             return nil
         }
     }
-    
+
     /// Create a preview import service for SwiftUI previews
     @MainActor
-    static func makePreviewImportService() -> LibraryImportService {
-        let container = previewContainer
+    static func makePreviewImportService() -> LibraryImportService? {
+        guard let container = previewContainer() else {
+            return nil
+        }
+
         let trackDataActor = TrackDataActor(modelContainer: container)
-        let metadataExtractor = MetadataExtractionService(formatDetectionService: AudioFormatDetectionManager())
+        let metadataExtractor = MetadataExtractionService(
+            formatDetectionService: AudioFormatDetectionManager(),
+        )
         return LibraryImportService(
             trackDataActor: trackDataActor,
-            metadataExtractor: metadataExtractor
+            metadataExtractor: metadataExtractor,
         )
+    }
+
+    /// Create an in-memory fallback DataManager instance for app launch recovery
+    @MainActor
+    public static func makeFallbackDataManager() -> DataManager? {
+        let schema = Schema(SchemaV1.models)
+        let configuration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            allowsSave: true,
+            cloudKitDatabase: .none,
+        )
+
+        do {
+            let container = try buildContainer(
+                schema: schema,
+                configuration: configuration,
+                logger: initLogger,
+            )
+            return DataManager(container: container, isFallback: true)
+        } catch {
+            initLogger.critical("Failed to create fallback DataManager: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Ensure a fallback data manager can always be created for emergency scenarios
+    @MainActor
+    public static func ensureFallbackDataManager() -> DataManager {
+        if let fallback = makeFallbackDataManager() {
+            return fallback
+        }
+
+        if let preview = makePreviewDataManager() {
+            return preview
+        }
+
+        let schema = Schema(SchemaV1.models)
+        let inMemoryConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            allowsSave: false,
+            cloudKitDatabase: .none,
+        )
+
+        if let container = try? buildContainer(
+            schema: schema,
+            configuration: inMemoryConfiguration,
+            logger: initLogger,
+        ) {
+            return DataManager(container: container, isFallback: true)
+        }
+
+        if let container = try? ModelContainer(
+            for: schema,
+            configurations: [inMemoryConfiguration],
+        ) {
+            return DataManager(container: container, isFallback: true)
+        }
+
+        if let container = try? ModelContainer(for: schema) {
+            return DataManager(container: container, isFallback: true)
+        }
+
+        initLogger.critical("Emergency fallback container creation failed; forcing in-memory initialization")
+        guard let container = try? ModelContainer(
+            for: schema,
+            configurations: [inMemoryConfiguration],
+        ) else {
+            fatalError("Unable to create fallback DataManager container")
+        }
+
+        return DataManager(container: container, isFallback: true)
     }
 }

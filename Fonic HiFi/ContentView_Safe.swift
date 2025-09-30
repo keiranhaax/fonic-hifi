@@ -12,10 +12,10 @@ struct ContentView_Safe: View {
     @Environment(\.importService) private var importService
     @Environment(\.audioEngine) private var audioService
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    
+
     @Namespace private var animationNamespace
     @State private var showingNowPlaying = false
-    
+
     var body: some View {
         TabView {
             // Library Tab
@@ -24,7 +24,7 @@ struct ContentView_Safe: View {
                 .tabItem {
                     Label("Library", systemImage: "music.note.list")
                 }
-            
+
             // Now Playing Tab
             NavigationStack {
                 Text("Now Playing")
@@ -33,7 +33,7 @@ struct ContentView_Safe: View {
             .tabItem {
                 Label("Now Playing", systemImage: "play.circle.fill")
             }
-            
+
             // Settings Tab
             NavigationStack {
                 Text("Settings")
@@ -52,7 +52,7 @@ struct ContentView_Safe: View {
         }
         // Mini player at bottom when track is playing but Now Playing is not shown
         .safeAreaInset(edge: .bottom) {
-            if audioService?.currentTrack != nil && !showingNowPlaying {
+            if audioService?.currentTrack != nil, !showingNowPlaying {
                 MiniPlayerView()
                     .audioEngine(audioService!)
             }
@@ -61,7 +61,12 @@ struct ContentView_Safe: View {
 }
 
 #Preview {
-    ContentView_Safe()
-        .importService(DataManager.makePreviewImportService())
-        .audioEngine(AudioEngineFacade())
+    if let importService = DataManager.makePreviewImportService() {
+        ContentView_Safe()
+            .importService(importService)
+            .audioEngine(AudioEngineFacade())
+    } else {
+        ContentView_Safe()
+            .audioEngine(AudioEngineFacade())
+    }
 }

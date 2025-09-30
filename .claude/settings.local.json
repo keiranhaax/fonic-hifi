@@ -55,7 +55,21 @@
       "Bash(git checkout:*)",
       "Bash(git ls-tree:*)",
       "Bash(git stash:*)",
-      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter 'git rm -r --cached --ignore-unmatch build/' --prune-empty --tag-name-filter cat -- --all)"
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter 'git rm -r --cached --ignore-unmatch build/' --prune-empty --tag-name-filter cat -- --all)",
+      "Bash(\"Fonic HiFi/ContentView_Safe.swift\" )",
+      "Bash(\"Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift\" )",
+      "Bash(\"Fonic HiFi/Core/Audio/Diagnostics/PerformanceMonitor.swift\" )",
+      "Bash(\"Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift\" )",
+      "Bash(\"Fonic HiFi/Data/Services/ImportSession.swift\" )",
+      "Bash(\"Fonic HiFi/Data/Services/SearchCache.swift\" )",
+      "Bash(\"Fonic HiFi/FonicHiFiApp_Debug.swift\" )",
+      "Bash(\"Fonic HiFi/Presentation/Views/Import/FileImportView.swift\" )",
+      "Bash(\"Fonic HiFi/Presentation/Views/Import/ImportProgressView.swift\" )",
+      "Bash(\"Fonic HiFi/Presentation/Views/Library/LibraryView.swift\" )",
+      "Bash(\"Fonic HiFi/Presentation/Views/Settings/FileDetailsView.swift\" )",
+      "Bash(\"Fonic HiFi/Presentation/Views/Settings/FileManagerView.swift\" )",
+      "Bash(\"Fonic HiFi/Presentation/Views/Settings/SettingsView.swift\")",
+      "Bash(\"Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift\")"
     ],
     "deny": [],
     "ask": []

@@ -99,7 +99,6 @@ public struct PerformanceThresholds: Sendable {
 
 /// Monitors and tracks performance metrics for the audio player
 public actor PerformanceMonitor: PerformanceMonitoring {
-
     // MARK: - Properties
 
     private let logger = Logger(subsystem: "com.fonichifi.diagnostics", category: "PerformanceMonitor")
@@ -132,7 +131,7 @@ public actor PerformanceMonitor: PerformanceMonitoring {
     // MARK: - Initialization
 
     public init() {
-        self.startTime = Date()
+        startTime = Date()
         logger.info("Performance monitor initialized")
     }
 
@@ -182,11 +181,11 @@ public actor PerformanceMonitor: PerformanceMonitoring {
             let usageRatio = Double(lastUsage) / Double(physicalMemory)
 
             switch usageRatio {
-            case 0..<0.5:
+            case 0 ..< 0.5:
                 return .normal
-            case 0.5..<0.7:
+            case 0.5 ..< 0.7:
                 return .warning
-            case 0.7..<0.9:
+            case 0.7 ..< 0.9:
                 return .urgent
             default:
                 return .critical
@@ -246,7 +245,7 @@ public actor PerformanceMonitor: PerformanceMonitoring {
             formatSwitchCount: formatSwitches.count,
             averageFormatSwitchTime: formatSwitches.isEmpty ? 0 : formatSwitches.map(\.duration).reduce(0, +) / Double(formatSwitches.count),
             bitPerfectSessions: bitPerfectSessionCount,
-            totalPlaybackTime: totalPlaybackTime
+            totalPlaybackTime: totalPlaybackTime,
         )
 
         // Calculate memory metrics
@@ -254,7 +253,7 @@ public actor PerformanceMonitor: PerformanceMonitoring {
             averageUsage: memoryUsages.isEmpty ? 0 : memoryUsages.reduce(Int64(0), +) / Int64(memoryUsages.count),
             peakUsage: memoryUsages.max() ?? 0,
             warningCount: memoryWarnings,
-            pressureEvents: memoryPressureEvents
+            pressureEvents: memoryPressureEvents,
         )
 
         // Calculate performance metrics
@@ -267,7 +266,7 @@ public actor PerformanceMonitor: PerformanceMonitoring {
             p95SearchLatency: searchLatencyValues.isEmpty ? 0 : searchLatencyValues[min(p95Index, searchLatencyValues.count - 1)],
             totalImports: importMetrics.count,
             averageImportTime: importMetrics.isEmpty ? 0 : importMetrics.map(\.totalImportTime).reduce(0, +) / Double(importMetrics.count),
-            failedImports: importMetrics.map(\.failedImports).reduce(0, +)
+            failedImports: importMetrics.map(\.failedImports).reduce(0, +),
         )
 
         // Calculate error metrics
@@ -281,7 +280,7 @@ public actor PerformanceMonitor: PerformanceMonitoring {
             totalErrors: errors.count,
             errorsByType: errorsByType,
             crashCount: crashes.count,
-            crashReasons: crashes.map(\.reason)
+            crashReasons: crashes.map(\.reason),
         )
 
         return PerformanceReport(
@@ -289,7 +288,7 @@ public actor PerformanceMonitor: PerformanceMonitoring {
             audioMetrics: audioMetrics,
             memoryMetrics: memoryMetrics,
             performanceMetrics: performanceMetrics,
-            errorMetrics: errorMetrics
+            errorMetrics: errorMetrics,
         )
     }
 

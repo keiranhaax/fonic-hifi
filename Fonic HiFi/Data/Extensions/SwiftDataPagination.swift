@@ -15,19 +15,19 @@ import SwiftData
 public struct PaginatedFetchDescriptor<T: PersistentModel> {
     let descriptor: FetchDescriptor<T>
     let pageSize: Int
-    
+
     /// Initialize a paginated fetch descriptor
     /// - Parameters:
     ///   - descriptor: The base fetch descriptor with predicates and sorting
     ///   - pageSize: Number of items per page (default: 100)
     public init(
         descriptor: FetchDescriptor<T> = FetchDescriptor<T>(),
-        pageSize: Int = 100
+        pageSize: Int = 100,
     ) {
         self.descriptor = descriptor
         self.pageSize = pageSize
     }
-    
+
     /// Get a specific page of results
     /// - Parameter pageNumber: Zero-based page number
     /// - Returns: FetchDescriptor configured for the requested page
@@ -37,7 +37,7 @@ public struct PaginatedFetchDescriptor<T: PersistentModel> {
         paginatedDescriptor.fetchOffset = pageNumber * pageSize
         return paginatedDescriptor
     }
-    
+
     /// Get the total count without loading data
     /// - Parameter context: The model context to query
     /// - Returns: Total count of items matching the descriptor
@@ -46,27 +46,27 @@ public struct PaginatedFetchDescriptor<T: PersistentModel> {
         var countDescriptor = descriptor
         countDescriptor.fetchLimit = nil
         countDescriptor.fetchOffset = nil
-        
+
         // iOS 26 optimized count that doesn't load actual data
         return try context.fetchCount(countDescriptor)
     }
 }
 
 /// Extension to ModelContext for efficient counting
-extension ModelContext {
+public extension ModelContext {
     /// Fetch count without loading data into memory
     /// This is critical for preventing memory crashes with large libraries
     /// - Parameter descriptor: The fetch descriptor to count
     /// - Returns: Number of items matching the descriptor
-    public func fetchCount<T: PersistentModel>(_ descriptor: FetchDescriptor<T>) throws -> Int {
+    func fetchCount(_ descriptor: FetchDescriptor<some PersistentModel>) throws -> Int {
         // SwiftData in iOS 26 has optimized count that doesn't load objects
         // This prevents the memory issue where .count loads entire dataset
         var countDescriptor = descriptor
         countDescriptor.fetchLimit = nil
         countDescriptor.fetchOffset = nil
-        
+
         // Perform the count query without loading objects
-        let items = try self.fetch(countDescriptor)
+        let items = try fetch(countDescriptor)
         return items.count
     }
 }
@@ -76,12 +76,12 @@ extension ModelContext {
 public struct BatchProcessor<T: PersistentModel> {
     let context: ModelContext
     let batchSize: Int
-    
+
     public init(context: ModelContext, batchSize: Int = 100) {
         self.context = context
         self.batchSize = batchSize
     }
-    
+
     /// Process items in batches to avoid memory spikes
     /// - Parameters:
     ///   - descriptor: The fetch descriptor for items to process
@@ -89,13 +89,13 @@ public struct BatchProcessor<T: PersistentModel> {
     @MainActor
     public func processBatches(
         descriptor: FetchDescriptor<T>,
-        processor: ([T]) throws -> Void
+        processor: ([T]) throws -> Void,
     ) throws {
         let paginator = PaginatedFetchDescriptor(descriptor: descriptor, pageSize: batchSize)
         let totalCount = try paginator.count(in: context)
         let pageCount = (totalCount + batchSize - 1) / batchSize
-        
-        for pageNumber in 0..<pageCount {
+
+        for pageNumber in 0 ..< pageCount {
             let pageDescriptor = paginator.page(pageNumber)
             let batch = try context.fetch(pageDescriptor)
             try processor(batch)
@@ -110,13 +110,13 @@ public struct LibraryStatisticsCache {
     public let losslessCount: Int
     public let hiResCount: Int
     public let lastUpdated: Date
-    
+
     public init(
         duration: TimeInterval = 0,
         fileSize: Int64 = 0,
         losslessCount: Int = 0,
         hiResCount: Int = 0,
-        lastUpdated: Date = Date()
+        lastUpdated: Date = Date(),
     ) {
         self.duration = duration
         self.fileSize = fileSize

@@ -6,24 +6,23 @@
 //
 
 import Foundation
-import SwiftData
 import OSLog
+import SwiftData
 
 /// ModelActor for handling Track data operations in a concurrency-safe manner
 @ModelActor
 public actor TrackDataActor {
-    
     private let logger = Logger(subsystem: "com.fonichifi.data", category: "TrackDataActor")
-    
+
     // MARK: - Track Creation
-    
+
     /// Create a new Track from extracted metadata
     /// - Parameter metadata: Sendable metadata extracted from audio file
     /// - Returns: PersistentIdentifier of the created Track
     /// - Throws: TrackDataError if creation fails
     public func createTrack(from metadata: TrackMetadata) throws -> PersistentIdentifier {
         logger.info("Creating track: \(metadata.title)")
-        
+
         let track = Track(
             url: metadata.url,
             title: metadata.title,
@@ -34,9 +33,9 @@ public actor TrackDataActor {
             sampleRate: metadata.sampleRate,
             bitDepth: metadata.bitDepth,
             channels: metadata.channels,
-            isLossless: metadata.isLossless
+            isLossless: metadata.isLossless,
         )
-        
+
         // Set additional metadata properties
         track.albumArtist = metadata.albumArtist
         track.genre = metadata.genre
@@ -49,9 +48,9 @@ public actor TrackDataActor {
         track.lyrics = metadata.lyrics
         track.artwork = metadata.artwork
         track.bitrate = metadata.bitrate
-        
+
         modelContext.insert(track)
-        
+
         do {
             try modelContext.save()
             logger.info("Successfully created track: \(track.id)")
@@ -61,16 +60,16 @@ public actor TrackDataActor {
             throw TrackDataError.saveFailed(error)
         }
     }
-    
+
     /// Create multiple tracks from metadata array
     /// - Parameter metadataArray: Array of TrackMetadata
     /// - Returns: Array of PersistentIdentifiers for created tracks
     /// - Throws: TrackDataError if any creation fails
     public func createTracks(from metadataArray: [TrackMetadata]) throws -> [PersistentIdentifier] {
         logger.info("Creating \(metadataArray.count) tracks")
-        
+
         var identifiers: [PersistentIdentifier] = []
-        
+
         for metadata in metadataArray {
             let track = Track(
                 url: metadata.url,
@@ -82,9 +81,9 @@ public actor TrackDataActor {
                 sampleRate: metadata.sampleRate,
                 bitDepth: metadata.bitDepth,
                 channels: metadata.channels,
-                isLossless: metadata.isLossless
+                isLossless: metadata.isLossless,
             )
-            
+
             // Set additional metadata properties
             track.albumArtist = metadata.albumArtist
             track.genre = metadata.genre
@@ -97,11 +96,11 @@ public actor TrackDataActor {
             track.lyrics = metadata.lyrics
             track.artwork = metadata.artwork
             track.bitrate = metadata.bitrate
-            
+
             modelContext.insert(track)
             identifiers.append(track.persistentModelID)
         }
-        
+
         do {
             try modelContext.save()
             logger.info("Successfully created \(identifiers.count) tracks")
@@ -111,9 +110,9 @@ public actor TrackDataActor {
             throw TrackDataError.batchSaveFailed(error)
         }
     }
-    
+
     // MARK: - Track Queries
-    
+
     /// Check if a track exists for the given URL
     /// - Parameter url: File URL to check
     /// - Returns: PersistentIdentifier if track exists, nil otherwise
@@ -121,9 +120,9 @@ public actor TrackDataActor {
         let fetchDescriptor = FetchDescriptor<Track>(
             predicate: #Predicate<Track> { track in
                 track.url == url
-            }
+            },
         )
-        
+
         do {
             let tracks = try modelContext.fetch(fetchDescriptor)
             return tracks.first?.persistentModelID
@@ -132,7 +131,7 @@ public actor TrackDataActor {
             throw TrackDataError.fetchFailed(error)
         }
     }
-    
+
     /// Get track metadata by persistent identifier
     /// - Parameter id: PersistentIdentifier of the track
     /// - Returns: TrackMetadata if found
@@ -141,7 +140,7 @@ public actor TrackDataActor {
         guard let track: Track = modelContext.registeredModel(for: id) else {
             throw TrackDataError.trackNotFound(id)
         }
-        
+
         return TrackMetadata(
             url: track.url,
             title: track.title,
@@ -163,15 +162,15 @@ public actor TrackDataActor {
             isLossless: track.isLossless,
             artwork: track.artwork,
             lyrics: track.lyrics,
-            comment: track.comments
+            comment: track.comments,
         )
     }
-    
+
     /// Get all tracks count
     /// - Returns: Total number of tracks in the library
     public func getTracksCount() throws -> Int {
         let fetchDescriptor = FetchDescriptor<Track>()
-        
+
         do {
             let tracks = try modelContext.fetch(fetchDescriptor)
             return tracks.count
@@ -180,7 +179,7 @@ public actor TrackDataActor {
             throw TrackDataError.fetchFailed(error)
         }
     }
-    
+
     /// Delete a specific track by identifier
     /// - Parameter id: PersistentIdentifier of the track to delete
     /// - Throws: TrackDataError if deletion fails
@@ -204,32 +203,32 @@ public actor TrackDataActor {
     /// - Returns: Number of tracks removed
     public func cleanupMissingFiles() throws -> Int {
         let fetchDescriptor = FetchDescriptor<Track>()
-        
+
         do {
             let tracks = try modelContext.fetch(fetchDescriptor)
             var removedCount = 0
-            
+
             for track in tracks {
                 if !FileManager.default.fileExists(atPath: track.url.path) {
                     modelContext.delete(track)
                     removedCount += 1
                 }
             }
-            
+
             if removedCount > 0 {
                 try modelContext.save()
                 logger.info("Cleaned up \(removedCount) missing files")
             }
-            
+
             return removedCount
         } catch {
             logger.error("Failed to cleanup missing files: \(error.localizedDescription)")
             throw TrackDataError.cleanupFailed(error)
         }
     }
-    
+
     // MARK: - Track Updates
-    
+
     /// Update track playback statistics
     /// - Parameters:
     ///   - id: PersistentIdentifier of the track
@@ -239,10 +238,10 @@ public actor TrackDataActor {
         guard let track: Track = modelContext.registeredModel(for: id) else {
             throw TrackDataError.trackNotFound(id)
         }
-        
+
         track.playCount = playCount
         track.lastPlayed = lastPlayed
-        
+
         do {
             try modelContext.save()
             logger.debug("Updated playback stats for track: \(track.title)")
@@ -251,7 +250,7 @@ public actor TrackDataActor {
             throw TrackDataError.updateFailed(error)
         }
     }
-    
+
     /// Update track user data
     /// - Parameters:
     ///   - id: PersistentIdentifier of the track
@@ -262,11 +261,11 @@ public actor TrackDataActor {
         guard let track: Track = modelContext.registeredModel(for: id) else {
             throw TrackDataError.trackNotFound(id)
         }
-        
+
         track.rating = rating
         track.isFavorite = isFavorite
         track.userTags = userTags
-        
+
         do {
             try modelContext.save()
             logger.debug("Updated user data for track: \(track.title)")
@@ -302,7 +301,7 @@ public struct TrackMetadata: Sendable {
     public let artwork: Data?
     public let lyrics: String?
     public let comment: String?
-    
+
     public init(
         url: URL,
         title: String,
@@ -324,7 +323,7 @@ public struct TrackMetadata: Sendable {
         isLossless: Bool,
         artwork: Data? = nil,
         lyrics: String? = nil,
-        comment: String? = nil
+        comment: String? = nil,
     ) {
         self.url = url
         self.title = title
@@ -359,23 +358,23 @@ public enum TrackDataError: Error, LocalizedError {
     case updateFailed(Error)
     case cleanupFailed(Error)
     case deleteFailed(Error)
-    
+
     public var errorDescription: String? {
         switch self {
-        case .trackNotFound(let id):
-            return "Track not found with ID: \(id)"
-        case .saveFailed(let error):
-            return "Failed to save track: \(error.localizedDescription)"
-        case .batchSaveFailed(let error):
-            return "Failed to save multiple tracks: \(error.localizedDescription)"
-        case .fetchFailed(let error):
-            return "Failed to fetch tracks: \(error.localizedDescription)"
-        case .updateFailed(let error):
-            return "Failed to update track: \(error.localizedDescription)"
-        case .cleanupFailed(let error):
-            return "Failed to cleanup tracks: \(error.localizedDescription)"
-        case .deleteFailed(let error):
-            return "Failed to delete track: \(error.localizedDescription)"
+        case let .trackNotFound(id):
+            "Track not found with ID: \(id)"
+        case let .saveFailed(error):
+            "Failed to save track: \(error.localizedDescription)"
+        case let .batchSaveFailed(error):
+            "Failed to save multiple tracks: \(error.localizedDescription)"
+        case let .fetchFailed(error):
+            "Failed to fetch tracks: \(error.localizedDescription)"
+        case let .updateFailed(error):
+            "Failed to update track: \(error.localizedDescription)"
+        case let .cleanupFailed(error):
+            "Failed to cleanup tracks: \(error.localizedDescription)"
+        case let .deleteFailed(error):
+            "Failed to delete track: \(error.localizedDescription)"
         }
     }
 }

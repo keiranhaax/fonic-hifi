@@ -5,202 +5,231 @@
 //  Created by Claude on 5/30/25.
 //
 
-import Foundation
+@preconcurrency import AudioKit
 import AVFoundation
 import Combine
-import AudioKit
+import Foundation
 
 /// AudioKit-based implementation of AudioEngineService with native scheduling
 @MainActor
 public final class AudioKitEngineAdapter: NSObject, AudioEngineService, ObservableObject {
-    
     // MARK: - AudioKit Components
 
     private let engine = AudioEngine()
-    private let player = AudioPlayer()
+    private let primaryPlayer = AudioPlayer()
+    private let secondaryPlayer = AudioPlayer()
+    private let primaryPitch: TimePitch
+    private let secondaryPitch: TimePitch
     private let mixer = Mixer()
-    
+
+    private var activePlayer: AudioPlayer
+    private var inactivePlayer: AudioPlayer
+    private var activePitch: TimePitch
+    private var inactivePitch: TimePitch
+
     // MARK: - State Management
-    
-    /// Current audio file being played
+
     private var currentFile: AVAudioFile?
-    
-    /// Published state for Combine integration
+    private var inactiveFile: AVAudioFile?
+    private var pendingNextURL: URL?
+
     @Published public private(set) var _isPlaying = false
     @Published public private(set) var _currentTime: TimeInterval = 0
     @Published public private(set) var _duration: TimeInterval = 0
     @Published public private(set) var _volume: Float = 1.0
-    
-    /// Timer for state updates
+
     private var updateTimer: Timer?
-    
-    /// Current configuration
     private var configuration: AudioEngineConfiguration = .default
-    
-    /// Completion handler for track finish
-    private var completionHandler: (() -> Void)?
-    
+    private var crossfadeTask: Task<Void, Never>?
+    private var currentPlaybackRate: Double = 1.0
+    private var currentGainDB: Float = 0
+
     // MARK: - AudioEngineService Properties
-    
-    public var currentTime: TimeInterval {
-        get async { _currentTime }
-    }
-    
-    public var duration: TimeInterval {
-        get async { _duration }
-    }
-    
-    public var isPlaying: Bool {
-        get async { _isPlaying }
-    }
-    
-    public var volume: Float {
-        get async { _volume }
-    }
-    
+
+    public var currentTime: TimeInterval { get async { _currentTime } }
+    public var duration: TimeInterval { get async { _duration } }
+    public var isPlaying: Bool { get async { _isPlaying } }
+    public var volume: Float { get async { _volume } }
+
     public var audioFormat: AudioFormat? {
         get async {
             guard let file = currentFile else { return nil }
             return AudioFormat.from(avAudioFormat: file.fileFormat)
         }
     }
-    
+
     public var isBitPerfect: Bool {
         get async {
-            // AudioKit can provide bit-perfect playback in certain configurations
-            return configuration.performanceMode == .quality
+            configuration.performanceMode == .quality && abs(currentGainDB) < .ulpOfOne
         }
     }
-    
+
     // MARK: - Initialization
 
-    /// Indicates whether AudioKit initialized successfully
     public private(set) var isInitialized: Bool = false
 
     override public init() {
+        primaryPitch = TimePitch(primaryPlayer)
+        secondaryPitch = TimePitch(secondaryPlayer)
+        activePlayer = primaryPlayer
+        inactivePlayer = secondaryPlayer
+        activePitch = primaryPitch
+        inactivePitch = secondaryPitch
         super.init()
         do {
             try setupAudioKitEngine()
         } catch {
-            print("AudioKit initialization failed: \(error)")
-            // Factory will check isInitialized to determine if fallback is needed
+            Log.logger(.audioEngine).error("AudioKit initialization failed: \(error.localizedDescription)")
         }
     }
 
-    /// Check if the engine initialized successfully
-    /// - Throws: AudioError if initialization failed
     public func checkInitialization() throws {
         guard isInitialized else {
             throw AudioError.engineInitializationFailed(
-                reason: "AudioKit engine failed to initialize. Audio system may not be available."
+                reason: "AudioKit engine failed to initialize. Audio system may not be available.",
             )
         }
     }
-    
+
     deinit {
         Task { [weak self] in
             await self?.cleanup()
         }
     }
-    
+
     // MARK: - AudioEngineService Implementation
-    
+
     public func load(url: URL) async throws {
-        guard isInitialized else {
-            throw AudioError.engineInitializationFailed(reason: "AudioKit engine is not initialized")
-        }
+        try checkInitialization()
+
+        crossfadeTask?.cancel()
+        activePlayer.stop()
+        inactivePlayer.stop()
 
         do {
-            // Load the audio file
             let avFile = try AVAudioFile(forReading: url)
             currentFile = avFile
-
-            // Load into AudioKit player
-            try player.load(file: avFile)
-
-            // Calculate duration
+            inactiveFile = nil
+            pendingNextURL = nil
+            try activePlayer.load(file: avFile)
             _duration = Double(avFile.length) / avFile.fileFormat.sampleRate
             _currentTime = 0
-
         } catch {
             throw AudioError.decodingFailed(reason: "Failed to load file: \(error.localizedDescription)")
         }
     }
-    
+
     public func play() async throws {
-        guard isInitialized else {
-            throw AudioError.engineInitializationFailed(reason: "AudioKit engine is not initialized")
-        }
+        try checkInitialization()
         guard currentFile != nil else {
             throw AudioError.playbackFailed(reason: "No file loaded")
         }
 
-        player.play()
+        applyPlaybackRate(currentPlaybackRate)
+        applyReplayGainImmediately(currentGainDB)
+
+        activePlayer.volume = AUValue(_volume)
+        activePlayer.play()
         _isPlaying = true
         startProgressPolling()
     }
-    
+
     public func pause() async {
-        player.pause()
+        crossfadeTask?.cancel()
+        activePlayer.pause()
+        inactivePlayer.pause()
         _isPlaying = false
         stopProgressPolling()
     }
-    
+
     public func stop() async {
-        player.stop()
+        crossfadeTask?.cancel()
+        activePlayer.stop()
+        inactivePlayer.stop()
         _isPlaying = false
         _currentTime = 0
         stopProgressPolling()
     }
-    
+
     public func seek(to time: TimeInterval) async throws {
         guard currentFile != nil else {
             throw AudioError.playbackFailed(reason: "No file loaded")
         }
 
-        player.play(from: time)
+        activePlayer.play(from: time)
         _currentTime = time
 
-        // If we were paused, pause again after seeking
         if !_isPlaying {
-            player.pause()
+            activePlayer.pause()
         }
     }
-    
+
     public func setVolume(_ volume: Float) async {
-        let clampedVolume = max(0.0, min(1.0, volume))
-        player.volume = AUValue(clampedVolume)
-        _volume = clampedVolume
+        let clamped = max(0.0, min(1.0, volume))
+        activePlayer.volume = AUValue(clamped)
+        inactivePlayer.volume = AUValue(clamped)
+        _volume = clamped
     }
-    
+
     public func configure(with configuration: AudioEngineConfiguration) async throws {
         self.configuration = configuration
-        
-        // Configure AudioKit engine based on performance mode
-        switch configuration.performanceMode {
-        case .efficiency:
-            // Optimize for battery life
-            break
-        case .balanced:
-            // Balanced performance
-            break
-        case .quality:
-            // Maximum quality, bit-perfect if possible
-            break
+    }
+
+    public func prepareNext(url: URL) async {
+        pendingNextURL = url
+        if let file = try? AVAudioFile(forReading: url) {
+            inactivePlayer.stop()
+            inactiveFile = file
+            try? inactivePlayer.load(file: file)
         }
     }
-    
-    public func prepareNext(url: URL) async {
-        // AudioKit doesn't have built-in gapless playback
-        // This would require more sophisticated buffer management
+
+    public func setPlaybackRate(_ rate: Double) async {
+        currentPlaybackRate = rate
+        applyPlaybackRate(rate)
     }
-    
+
+    public func applyReplayGain(_ gainDB: Float) async {
+        currentGainDB = gainDB
+        applyReplayGainImmediately(gainDB)
+    }
+
+    public func crossfade(to url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float) async throws {
+        crossfadeTask?.cancel()
+
+        let nextFile: AVAudioFile = if pendingNextURL == url, let prepared = inactiveFile {
+            prepared
+        } else {
+            try AVAudioFile(forReading: url)
+        }
+
+        try inactivePlayer.load(file: nextFile)
+        inactiveFile = nextFile
+        pendingNextURL = nil
+
+        currentPlaybackRate = playbackRate
+        currentGainDB = gainDB
+        applyPlaybackRate(playbackRate)
+        applyReplayGainImmediately(gainDB)
+
+        inactivePlayer.volume = 0
+        inactivePlayer.play()
+        _isPlaying = true
+        startProgressPolling()
+
+        if duration <= 0 {
+            await finishCrossfade(with: nextFile)
+            return
+        }
+
+        crossfadeTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await performCrossfade(with: nextFile, duration: duration)
+        }
+    }
+
     public func getMetrics() async -> AudioMetrics {
-        let sampleRate = currentFile?.fileFormat.sampleRate ?? 44100
-        let channelCount = Int(currentFile?.fileFormat.channelCount ?? 2)
-        let bitDepth = Int(getBitDepthFromFormat(currentFile?.fileFormat.commonFormat))
-        
-        return AudioMetrics(
+        AudioMetrics(
             cpuUsage: 0.0,
             memoryUsage: 0,
             bufferUnderruns: 0,
@@ -209,51 +238,16 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
             droppedFrames: 0,
             renderLatency: 0.0,
             timestamp: Date(),
-            currentBitrate: 0,
-            averageLatency: 0.0,
-            peakLatency: 0.0,
-            glitchCount: 0,
-            sampleRate: sampleRate,
-            bitDepth: bitDepth,
-            channelCount: channelCount,
-            engineType: "AudioKit",
-            audioFormat: "Unknown",
-            isBitPerfect: false,
-            bufferSize: 512,
-            bufferResets: 0,
-            averageBufferFill: 1.0,
-            underrunRate: 0.0,
-            timeSinceLastUnderrun: nil,
-            diskIOPS: 0.0,
-            networkBandwidth: 0,
-            thermalPressure: 0.0,
-            batteryUsageRate: nil,
-            threadUtilization: ThreadUtilization(),
-            estimatedSNR: nil,
-            dynamicRange: nil,
-            frequencyResponseScore: nil,
-            jitter: 0.0,
-            clockDrift: 0.0,
-            recoverableErrors: 0,
-            criticalErrors: 0,
-            recoverySuccessRate: 1.0,
-            lastRecoveryTime: nil,
-            performanceScore: 1.0,
-            qualityScore: 1.0,
-            reliabilityScore: 1.0,
-            efficiencyScore: 1.0
         )
     }
-    
-    public func collectMetrics() async {
-        // Implementation for metrics collection
-    }
-    
+
+    public func collectMetrics() async {}
+
     // MARK: - Private Methods
-    
+
     private func setupAudioKitEngine() throws {
-        // Configure AudioKit engine
-        mixer.addInput(player)
+        mixer.addInput(primaryPitch)
+        mixer.addInput(secondaryPitch)
         engine.output = mixer
 
         do {
@@ -262,62 +256,101 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         } catch {
             isInitialized = false
             throw AudioError.engineInitializationFailed(
-                reason: "AudioKit failed to start: \(error.localizedDescription)"
+                reason: "AudioKit failed to start: \(error.localizedDescription)",
             )
         }
     }
-    
+
     private func startProgressPolling() {
         stopProgressPolling()
-        
         updateTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
+            guard let self else { return }
             Task { @MainActor in
                 await self.updateProgress()
             }
         }
     }
-    
+
     private func stopProgressPolling() {
         updateTimer?.invalidate()
         updateTimer = nil
     }
-    
+
     private func updateProgress() async {
         guard _isPlaying else { return }
+        _currentTime = activePlayer.currentTime
+        _duration = activePlayer.duration
 
-        // Get current time from AudioKit player
-        _currentTime = player.currentTime
-
-        // Check if we've reached the end
         if _currentTime >= _duration {
             _isPlaying = false
             stopProgressPolling()
-            completionHandler?()
         }
     }
-    
+
     private func cleanup() async {
         stopProgressPolling()
         engine.stop()
     }
-}
 
+    private func applyPlaybackRate(_ rate: Double) {
+        let value = AUValue(rate)
+        activePitch.rate = value
+        inactivePitch.rate = value
+    }
+
+    private func applyReplayGainImmediately(_ gainDB: Float) {
+        mixer.volume = AUValue(pow(10, gainDB / 20))
+    }
+
+    private func finishCrossfade(with file: AVAudioFile) async {
+        activePlayer.stop()
+        swap(&activePlayer, &inactivePlayer)
+        swap(&activePitch, &inactivePitch)
+        activePlayer.volume = AUValue(_volume)
+        inactivePlayer.volume = 0
+        currentFile = file
+        inactiveFile = nil
+        _duration = Double(file.length) / file.fileFormat.sampleRate
+        _currentTime = 0
+        crossfadeTask = nil
+    }
+
+    private func performCrossfade(with file: AVAudioFile, duration: TimeInterval) async {
+        let steps = max(1, Int(duration / 0.02))
+        let interval = duration / Double(steps)
+        let activeStart = activePlayer.volume
+        let inactiveStart = inactivePlayer.volume
+        let inactiveTarget = AUValue(_volume)
+
+        for step in 1 ... steps {
+            guard !Task.isCancelled else { return }
+            let progress = AUValue(step) / AUValue(steps)
+            activePlayer.volume = activeStart * (1 - progress)
+            inactivePlayer.volume = inactiveStart + (inactiveTarget - inactiveStart) * progress
+            try? await Task.sleep(nanoseconds: UInt64(max(interval, 0) * 1_000_000_000))
+        }
+
+        await finishCrossfade(with: file)
+    }
+
+    private func audioFormatName() -> String {
+        guard let file = currentFile else { return "Unknown" }
+        return AudioFormat.from(avAudioFormat: file.fileFormat).rawValue
+    }
+}
 
 // MARK: - Helper Functions
 
 private func getBitDepthFromFormat(_ format: AVAudioCommonFormat?) -> Double {
-    guard let format = format else { return 16.0 }
-    
     switch format {
     case .pcmFormatFloat32:
-        return 32.0
+        32.0
     case .pcmFormatInt16:
-        return 16.0
+        16.0
     case .pcmFormatInt32:
-        return 32.0
+        32.0
     default:
-        return 16.0
+        16.0
     }
 }
 
@@ -325,12 +358,9 @@ private func getBitDepthFromFormat(_ format: AVAudioCommonFormat?) -> Double {
 
 extension AudioFormat {
     static func from(avAudioFormat: AVAudioFormat) -> AudioFormat {
-        // Try to infer format from file extension or format description
-        // This is a simplified implementation
         let sampleRate = avAudioFormat.sampleRate
         let channels = avAudioFormat.channelCount
-        
-        // For now, default to FLAC for high-res, AAC for standard
+
         if sampleRate > 48000 || channels > 2 {
             return .flac
         } else {

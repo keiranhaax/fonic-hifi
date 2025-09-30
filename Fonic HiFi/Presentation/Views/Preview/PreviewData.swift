@@ -9,8 +9,7 @@ import Foundation
 import SwiftData
 
 /// Standardized preview data for SwiftUI previews
-struct PreviewData {
-
+enum PreviewData {
     // MARK: - Sample Track Data
 
     static func makeSampleTrack() -> Track {
@@ -24,7 +23,7 @@ struct PreviewData {
             sampleRate: 44100,
             bitDepth: 16,
             channels: 2,
-            isLossless: true
+            isLossless: true,
         )
     }
 
@@ -39,7 +38,7 @@ struct PreviewData {
             sampleRate: 48000,
             bitDepth: 24,
             channels: 2,
-            isLossless: false
+            isLossless: false,
         )
     }
 

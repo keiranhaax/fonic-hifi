@@ -11,7 +11,7 @@ import SwiftUI
 struct ImportProgressView: View {
     @Environment(\.importService) private var importService
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
@@ -19,23 +19,23 @@ struct ImportProgressView: View {
                 ProgressSection(
                     progress: importService?.importProgress ?? 0.0,
                     filesProcessed: importService?.filesProcessed ?? 0,
-                    totalFiles: importService?.totalFiles ?? 0
+                    totalFiles: importService?.totalFiles ?? 0,
                 )
-                
+
                 // Status message
                 Text(importService?.statusMessage ?? "No import service available")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                
+
                 // Error summary if any
                 if !(importService?.importErrors.isEmpty ?? true) {
                     ErrorSummaryView(errors: importService?.importErrors ?? [])
                 }
-                
+
                 Spacer()
-                
+
                 // Action buttons
                 HStack(spacing: 16) {
                     if importService?.isImporting == true {
@@ -75,7 +75,7 @@ struct ProgressSection: View {
     let progress: Double
     let filesProcessed: Int
     let totalFiles: Int
-    
+
     var body: some View {
         VStack(spacing: 20) {
             // Circular progress
@@ -83,25 +83,25 @@ struct ProgressSection: View {
                 Circle()
                     .stroke(Color.secondary.opacity(0.2), lineWidth: 8)
                     .frame(width: 120, height: 120)
-                
+
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                     .frame(width: 120, height: 120)
                     .rotationEffect(.degrees(-90))
                     .animation(.easeInOut, value: progress)
-                
+
                 VStack(spacing: 4) {
                     Text("\(Int(progress * 100))%")
                         .font(.title)
                         .fontWeight(.semibold)
-                    
+
                     Text("\(filesProcessed)/\(totalFiles)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             // Linear progress bar
             ProgressView(value: progress)
                 .progressViewStyle(.linear)
@@ -114,18 +114,18 @@ struct ProgressSection: View {
 struct ErrorSummaryView: View {
     let errors: [ImportError]
     @State private var showingErrorDetails = false
-    
+
     var body: some View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
-                
+
                 Text("\(errors.count) files failed to import")
                     .font(.subheadline)
                     .foregroundColor(.orange)
             }
-            
+
             Button("View Details") {
                 showingErrorDetails = true
             }
@@ -145,7 +145,7 @@ struct ErrorSummaryView: View {
 struct ImportErrorDetailsView: View {
     let errors: [ImportError]
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationStack {
             List(errors) { error in
@@ -154,11 +154,11 @@ struct ImportErrorDetailsView: View {
                         Text(url.lastPathComponent)
                             .font(.headline)
                     }
-                    
+
                     Text(error.message)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    
+
                     Text(error.error.localizedDescription)
                         .font(.caption)
                         .foregroundColor(.red)
@@ -179,6 +179,10 @@ struct ImportErrorDetailsView: View {
 }
 
 #Preview {
-    ImportProgressView()
-        .importService(DataManager.makePreviewImportService())
+    if let importService = DataManager.makePreviewImportService() {
+        ImportProgressView()
+            .importService(importService)
+    } else {
+        ImportProgressView()
+    }
 }

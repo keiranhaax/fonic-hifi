@@ -5,8 +5,8 @@
 //  Created by Keiran on 5/27/25.
 //
 
-import Foundation
 import AVFoundation
+import Foundation
 
 /// Types of audio interruptions that can occur
 public enum AudioInterruptionType: Sendable {
@@ -24,7 +24,7 @@ public enum AudioRouteChangeReason: Sendable {
     case noSuitableRouteForCategory
     case routeConfigurationChange
     case unknown
-    
+
     /// Initialize from AVAudioSession route change reason
     init(from reason: AVAudioSession.RouteChangeReason) {
         switch reason {
@@ -58,65 +58,64 @@ public struct AudioRouteChange: Sendable {
 /// Protocol defining audio session management capabilities
 @MainActor
 public protocol AudioSessionService: Sendable {
-    
     // MARK: - Configuration
-    
+
     /// Configure the audio session for music playback
     /// - Throws: AudioError if configuration fails
     func configureAudioSession() async throws
-    
+
     /// Activate the audio session
     /// - Throws: AudioError if activation fails
     func activateAudioSession() async throws
-    
+
     /// Deactivate the audio session
     /// - Throws: AudioError if deactivation fails
     func deactivateAudioSession() async throws
-    
+
     // MARK: - Session State
-    
+
     /// Check if the audio session is currently active
     var isSessionActive: Bool { get async }
-    
+
     /// Get the current audio route
     var currentRoute: String { get async }
-    
+
     /// Check if background audio is configured
     var isBackgroundAudioEnabled: Bool { get async }
-    
+
     // MARK: - Interruption Handling
-    
+
     /// Handle audio session interruptions (calls, alarms, etc.)
     /// - Parameter interruption: Type of interruption
     func handleInterruption(_ interruption: AudioInterruptionType) async
-    
+
     /// Handle audio route changes (headphones, Bluetooth, etc.)
     /// - Parameter change: Route change information
     func handleRouteChange(_ change: AudioRouteChange) async
-    
+
     // MARK: - Now Playing
-    
+
     /// Update Now Playing info for Control Center and lock screen
     /// - Parameter info: Dictionary of now playing information
     func updateNowPlayingInfo(_ info: [String: Any]) async
-    
+
     /// Clear Now Playing info
     func clearNowPlayingInfo() async
-    
+
     // MARK: - Remote Commands
-    
+
     /// Enable remote control commands (play, pause, skip, etc.)
     func enableRemoteCommands() async
-    
+
     /// Disable remote control commands
     func disableRemoteCommands() async
-    
+
     // MARK: - Audio Output
-    
+
     /// Get available audio output routes
     /// - Returns: Array of available output devices
     func getAvailableOutputs() async -> [AudioDevice]
-    
+
     /// Set preferred audio output
     /// - Parameter device: The audio device to use
     /// - Throws: AudioError if selection fails
@@ -128,10 +127,10 @@ public protocol AudioSessionService: Sendable {
 public protocol AudioSessionDelegate: AnyObject {
     /// Called when an interruption occurs
     func audioSessionDidInterrupt(_ interruption: AudioInterruptionType) async
-    
+
     /// Called when the audio route changes
     func audioSessionRouteDidChange(_ change: AudioRouteChange) async
-    
+
     /// Called when a remote command is received
     func audioSessionDidReceiveCommand(_ command: RemoteCommand) async
 }
@@ -163,21 +162,21 @@ extension AudioRouteChangeReason: CustomStringConvertible {
     public var description: String {
         switch self {
         case .newDeviceAvailable:
-            return "newDeviceAvailable"
+            "newDeviceAvailable"
         case .oldDeviceUnavailable:
-            return "oldDeviceUnavailable"
+            "oldDeviceUnavailable"
         case .categoryChange:
-            return "categoryChange"
+            "categoryChange"
         case .override:
-            return "override"
+            "override"
         case .wakeFromSleep:
-            return "wakeFromSleep"
+            "wakeFromSleep"
         case .noSuitableRouteForCategory:
-            return "noSuitableRouteForCategory"
+            "noSuitableRouteForCategory"
         case .routeConfigurationChange:
-            return "routeConfigurationChange"
+            "routeConfigurationChange"
         case .unknown:
-            return "unknown"
+            "unknown"
         }
     }
 }
@@ -186,39 +185,39 @@ extension RemoteCommand: CustomStringConvertible {
     public var description: String {
         switch self {
         case .play:
-            return "play"
+            "play"
         case .pause:
-            return "pause"
+            "pause"
         case .stop:
-            return "stop"
+            "stop"
         case .togglePlayPause:
-            return "togglePlayPause"
+            "togglePlayPause"
         case .nextTrack:
-            return "nextTrack"
+            "nextTrack"
         case .previousTrack:
-            return "previousTrack"
+            "previousTrack"
         case .seekForward:
-            return "seekForward"
+            "seekForward"
         case .seekBackward:
-            return "seekBackward"
-        case .changePlaybackRate(let rate):
-            return "changePlaybackRate(\(rate))"
-        case .seek(let time):
-            return "seek(to: \(time))"
-        case .skipForward(let interval):
-            return "skipForward(\(interval))"
-        case .skipBackward(let interval):
-            return "skipBackward(\(interval))"
+            "seekBackward"
+        case let .changePlaybackRate(rate):
+            "changePlaybackRate(\(rate))"
+        case let .seek(time):
+            "seek(to: \(time))"
+        case let .skipForward(interval):
+            "skipForward(\(interval))"
+        case let .skipBackward(interval):
+            "skipBackward(\(interval))"
         case .changeRepeatMode:
-            return "changeRepeatMode"
+            "changeRepeatMode"
         case .changeShuffleMode:
-            return "changeShuffleMode"
+            "changeShuffleMode"
         case .like:
-            return "like"
+            "like"
         case .dislike:
-            return "dislike"
+            "dislike"
         case .bookmark:
-            return "bookmark"
+            "bookmark"
         }
     }
 }

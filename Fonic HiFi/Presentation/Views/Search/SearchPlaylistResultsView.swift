@@ -10,7 +10,7 @@ import SwiftUI
 /// Dedicated view for displaying playlist search results
 /// This avoids double-filtering issues that can occur with PlaylistListView
 struct SearchPlaylistResultsView: View {
-    let playlists: [Playlist]  // Pre-filtered, no internal filtering
+    let playlists: [Playlist] // Pre-filtered, no internal filtering
 
     var body: some View {
         List(playlists) { playlist in

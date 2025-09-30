@@ -12,18 +12,18 @@ struct DebugContentView: View {
     @EnvironmentObject private var audioService: AudioEngineFacade
     @State private var testScenario = 0
     @State private var debugLogs: [String] = []
-    
+
     // Test different presentation methods
     @State private var showingSheet = false
     @State private var showingFullScreen = false
     @State private var showingOverlay = false
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
                 Text("Debug Test Scenarios")
                     .font(.title)
-                
+
                 Picker("Scenario", selection: $testScenario) {
                     Text("Sheet Presentation").tag(0)
                     Text("Full Screen Cover").tag(1)
@@ -32,26 +32,26 @@ struct DebugContentView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding()
-                
+
                 // Test buttons
                 VStack(spacing: 16) {
                     Button("Test Selected Scenario") {
                         testSelectedScenario()
                     }
                     .buttonStyle(.borderedProminent)
-                    
+
                     Button("Test Direct State Change") {
                         addLog("Testing direct state change")
                         // appState.showingNowPlaying = true // Property moved to local view state
                     }
-                    
+
                     Button("Test With Animation") {
                         addLog("Testing with animation")
                         withAnimation {
                             // appState.showingNowPlaying = true // Property moved to local view state
                         }
                     }
-                    
+
                     Button("Test Async Update") {
                         Task { @MainActor in
                             addLog("Testing async update")
@@ -59,14 +59,14 @@ struct DebugContentView: View {
                         }
                     }
                 }
-                
+
                 Divider()
-                
+
                 // Debug logs
                 VStack(alignment: .leading) {
                     Text("Debug Logs:")
                         .font(.headline)
-                    
+
                     ScrollView {
                         VStack(alignment: .leading) {
                             ForEach(debugLogs, id: \.self) { log in
@@ -80,7 +80,7 @@ struct DebugContentView: View {
                     .border(Color.gray)
                 }
                 .padding()
-                
+
                 Spacer()
             }
             .navigationTitle("Debug Mode")
@@ -112,10 +112,10 @@ struct DebugContentView: View {
             addLog("Main thread: \(Thread.isMainThread)")
         }
     }
-    
+
     private func testSelectedScenario() {
         addLog("\n=== Testing Scenario \(testScenario) ===")
-        
+
         switch testScenario {
         case 0:
             addLog("Presenting via sheet")
@@ -132,7 +132,7 @@ struct DebugContentView: View {
             break
         }
     }
-    
+
     private func addLog(_ message: String) {
         let timestamp = Date().timeIntervalSince1970
         let log = "\(String(format: "%.3f", timestamp)): \(message)"

@@ -12,7 +12,7 @@ import SwiftUI
 struct DebugTrackRowView: View {
     let track: Track
     @Environment(\.audioEngine) private var audioService
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
@@ -30,51 +30,51 @@ struct DebugTrackRowView: View {
             debugPlayTrack()
         }
     }
-    
+
     private func debugPlayTrack() {
         print("\n=== DEBUG TRACK TAP START ===")
         print("1. Tap gesture triggered")
         print("   isMainThread: \(Thread.isMainThread)")
         print("   Queue: \(String(cString: __dispatch_queue_get_label(nil)))")
-        
+
         Task { @MainActor in
             print("\n2. Inside Task block")
             print("   Queue: \(String(cString: __dispatch_queue_get_label(nil)))")
-            
+
             // Verify precondition
             dispatchPrecondition(condition: .onQueue(.main))
             print("3. Dispatch precondition passed - we are on main queue")
-            
+
             // Update app state
-            guard let audioService = audioService else {
+            guard let audioService else {
                 print("4. ❌ No audioService available")
                 return
             }
-            
+
             print("\n4. About to update audioService.currentTrack")
             print("   Current track before: \(audioService.currentTrack?.title ?? "nil")")
             audioService.setCurrentTrack(track)
             print("   Current track after: \(audioService.currentTrack?.title ?? "nil")")
-            
+
             // Show Now Playing
             print("\n5. About to set showingNowPlaying = true")
             // print("   showingNowPlaying before: \(audioService.showingNowPlaying)") // Property moved to local view state
-            
+
             // Try different approaches to see which crashes
-            
+
             // Approach 1: Direct set
             // audioService.showingNowPlaying = true
-            
+
             // Approach 2: Via method
             // audioService.showNowPlaying() // Method removed - showingNowPlaying moved to local view state
-            
+
             // Approach 3: With animation
             // withAnimation {
             //     audioService.showingNowPlaying = true
             // }
-            
+
             // print("   showingNowPlaying after: \(audioService.showingNowPlaying)") // Property moved to local view state
-            
+
             // Play audio
             print("\n6. About to call audioService.play")
             do {
@@ -83,7 +83,7 @@ struct DebugTrackRowView: View {
             } catch {
                 print("7. audioService.play failed: \(error)")
             }
-            
+
             print("\n=== DEBUG TRACK TAP END ===\n")
         }
     }
@@ -100,7 +100,7 @@ struct DebugTrackRowView: View {
         sampleRate: 44100,
         bitDepth: 16,
         channels: 2,
-        isLossless: true
+        isLossless: true,
     ))
     .audioEngine(AudioEngineFacade())
 }

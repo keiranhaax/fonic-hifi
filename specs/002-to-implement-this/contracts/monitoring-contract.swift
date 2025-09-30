@@ -129,7 +129,7 @@ final class MonitoringContractTests {
             failedImports: 2,
             duplicatesSkipped: 5,
             averageFileProcessingTime: 0.5,
-            totalImportTime: 50
+            totalImportTime: 50,
         )
         await monitor.recordImportPerformance(importMetrics)
 

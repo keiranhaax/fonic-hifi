@@ -10,126 +10,125 @@ import Foundation
 /// Comprehensive metadata and format information for an audio file
 @frozen
 public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
-    
     // MARK: - Core Properties
-    
+
     /// File URL location
     public let url: URL
-    
+
     /// Audio format type (FLAC, MP3, etc.)
     public let format: AudioFormat
-    
+
     /// Track duration in seconds
     public let duration: TimeInterval
-    
+
     /// Bit depth (16, 24, 32 bits)
     public let bitDepth: UInt16
-    
+
     /// Sample rate in Hz (44100, 96000, etc.)
     public let sampleRate: Double
-    
+
     /// Number of audio channels (1=mono, 2=stereo, etc.)
     public let channels: UInt8
-    
+
     /// File size in bytes
     public let fileSize: UInt64
-    
+
     /// Bitrate in bits per second (optional for lossless formats)
     public let bitrate: UInt64?
-    
+
     // MARK: - Metadata
-    
+
     /// Key-value metadata extracted from the file
     public let metadata: [String: String]
-    
+
     /// Audio codec used for encoding
     public let codec: String?
-    
+
     /// Container format information
     public let container: String?
-    
+
     /// Whether the file supports gapless playback
     public let supportsGapless: Bool
-    
+
     /// File creation/modification timestamp
     public let timestamp: Date
-    
+
     // MARK: - Computed Properties
-    
+
     /// Whether this is a lossless audio format
     public var isLossless: Bool {
         format.isLossless
     }
-    
+
     /// Whether this is a high-resolution audio file (>16-bit or >48kHz)
     public var isHighResolution: Bool {
         bitDepth > 16 || sampleRate > 48000
     }
-    
+
     /// Formatted file size string (e.g., "45.2 MB")
     public var formattedFileSize: String {
         ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file)
     }
-    
+
     /// Formatted duration string (e.g., "3:45")
     public var formattedDuration: String {
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
-    
+
     /// Formatted sample rate string (e.g., "96 kHz")
     public var formattedSampleRate: String {
         if sampleRate >= 1000 {
-            return String(format: "%.0f kHz", sampleRate / 1000)
+            String(format: "%.0f kHz", sampleRate / 1000)
         } else {
-            return String(format: "%.0f Hz", sampleRate)
+            String(format: "%.0f Hz", sampleRate)
         }
     }
-    
+
     /// Formatted bit depth string (e.g., "24-bit")
     public var formattedBitDepth: String {
-        return "\(bitDepth)-bit"
+        "\(bitDepth)-bit"
     }
-    
+
     /// Technical format description (e.g., "FLAC 96kHz/24-bit")
     public var technicalDescription: String {
-        return "\(format.displayName) \(formattedSampleRate)/\(formattedBitDepth)"
+        "\(format.displayName) \(formattedSampleRate)/\(formattedBitDepth)"
     }
-    
+
     /// Quality rating based on format and resolution
     public var qualityRating: AudioQuality {
         if !isLossless {
-            return .standard
+            .standard
         } else if isHighResolution {
-            return .highResolution
+            .highResolution
         } else {
-            return .cd
+            .cd
         }
     }
-    
+
     // MARK: - Metadata Accessors
-    
+
     /// Track title from metadata
     public var title: String? {
         metadata["title"] ?? metadata["TIT2"]
     }
-    
+
     /// Artist name from metadata
     public var artist: String? {
         metadata["artist"] ?? metadata["TPE1"]
     }
-    
+
     /// Album name from metadata
     public var album: String? {
         metadata["album"] ?? metadata["TALB"]
     }
-    
+
     /// Album artist from metadata
     public var albumArtist: String? {
         metadata["albumArtist"] ?? metadata["TPE2"]
     }
-    
+
     /// Track number from metadata
     public var trackNumber: Int? {
         if let trackStr = metadata["trackNumber"] ?? metadata["TRCK"] {
@@ -139,7 +138,7 @@ public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
         }
         return nil
     }
-    
+
     /// Total tracks from metadata
     public var totalTracks: Int? {
         if let trackStr = metadata["trackNumber"] ?? metadata["TRCK"] {
@@ -150,39 +149,39 @@ public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
         }
         return Int(metadata["totalTracks"] ?? "")
     }
-    
+
     /// Disc number from metadata
     public var discNumber: Int? {
         Int(metadata["discNumber"] ?? metadata["TPOS"] ?? "")
     }
-    
+
     /// Release year from metadata
     public var year: Int? {
         Int(metadata["year"] ?? metadata["TYER"] ?? metadata["TDRC"] ?? "")
     }
-    
+
     /// Genre from metadata
     public var genre: String? {
         metadata["genre"] ?? metadata["TCON"]
     }
-    
+
     /// Composer from metadata
     public var composer: String? {
         metadata["composer"] ?? metadata["TCOM"]
     }
-    
+
     /// Comment from metadata
     public var comment: String? {
         metadata["comment"] ?? metadata["COMM"]
     }
-    
+
     /// Artwork data (if embedded)
     public var hasArtwork: Bool {
         metadata.keys.contains { $0.lowercased().contains("artwork") || $0.lowercased().contains("picture") }
     }
-    
+
     // MARK: - Initialization
-    
+
     public init(
         url: URL,
         format: AudioFormat,
@@ -196,7 +195,7 @@ public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
         codec: String? = nil,
         container: String? = nil,
         supportsGapless: Bool = false,
-        timestamp: Date = Date()
+        timestamp: Date = Date(),
     ) {
         self.url = url
         self.format = format
@@ -212,12 +211,12 @@ public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
         self.supportsGapless = supportsGapless
         self.timestamp = timestamp
     }
-    
+
     // MARK: - Factory Methods
-    
+
     /// Create AudioFileInfo for unknown/failed files
     public static func unknown(url: URL) -> AudioFileInfo {
-        return AudioFileInfo(
+        AudioFileInfo(
             url: url,
             format: .unknown,
             duration: 0,
@@ -225,17 +224,17 @@ public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
             sampleRate: 0,
             channels: 0,
             fileSize: 0,
-            metadata: [:]
+            metadata: [:],
         )
     }
-    
+
     /// Create AudioFileInfo with minimal information
     public static func minimal(
         url: URL,
         format: AudioFormat,
-        duration: TimeInterval
+        duration: TimeInterval,
     ) -> AudioFileInfo {
-        return AudioFileInfo(
+        AudioFileInfo(
             url: url,
             format: format,
             duration: duration,
@@ -243,7 +242,7 @@ public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
             sampleRate: 44100,
             channels: 2,
             fileSize: 0,
-            metadata: [:]
+            metadata: [:],
         )
     }
 }
@@ -255,26 +254,26 @@ public enum AudioQuality: String, Sendable, CaseIterable {
     case standard = "Standard"
     case cd = "CD Quality"
     case highResolution = "High Resolution"
-    
+
     public var description: String {
         switch self {
         case .standard:
-            return "Standard quality (compressed)"
+            "Standard quality (compressed)"
         case .cd:
-            return "CD quality (16-bit/44.1kHz lossless)"
+            "CD quality (16-bit/44.1kHz lossless)"
         case .highResolution:
-            return "High resolution (>16-bit or >48kHz lossless)"
+            "High resolution (>16-bit or >48kHz lossless)"
         }
     }
-    
+
     public var shortDescription: String {
         switch self {
         case .standard:
-            return "Standard"
+            "Standard"
         case .cd:
-            return "CD"
+            "CD"
         case .highResolution:
-            return "Hi-Res"
+            "Hi-Res"
         }
     }
 }
@@ -283,10 +282,10 @@ public enum AudioQuality: String, Sendable, CaseIterable {
 
 // AudioFormat.isLossless is already defined in AudioFormat.swift
 
-extension AudioFileInfo {
+public extension AudioFileInfo {
     /// Create a copy with updated metadata
-    public func withMetadata(_ newMetadata: [String: String]) -> AudioFileInfo {
-        return AudioFileInfo(
+    func withMetadata(_ newMetadata: [String: String]) -> AudioFileInfo {
+        AudioFileInfo(
             url: url,
             format: format,
             duration: duration,
@@ -299,30 +298,30 @@ extension AudioFileInfo {
             codec: codec,
             container: container,
             supportsGapless: supportsGapless,
-            timestamp: timestamp
+            timestamp: timestamp,
         )
     }
-    
+
     /// Create a copy with additional metadata
-    public func addingMetadata(_ additionalMetadata: [String: String]) -> AudioFileInfo {
+    func addingMetadata(_ additionalMetadata: [String: String]) -> AudioFileInfo {
         var newMetadata = metadata
         newMetadata.merge(additionalMetadata) { _, new in new }
         return withMetadata(newMetadata)
     }
-    
+
     /// Validate that the file info contains essential data
-    public var isValid: Bool {
-        return !url.path.isEmpty &&
-               format != .unknown &&
-               duration > 0 &&
-               bitDepth > 0 &&
-               sampleRate > 0 &&
-               channels > 0
+    var isValid: Bool {
+        !url.path.isEmpty &&
+            format != .unknown &&
+            duration > 0 &&
+            bitDepth > 0 &&
+            sampleRate > 0 &&
+            channels > 0
     }
-    
+
     /// Get a summary description suitable for debugging
-    public var debugDescription: String {
-        return """
+    var debugDescription: String {
+        """
         AudioFileInfo:
           URL: \(url.lastPathComponent)
           Format: \(technicalDescription)

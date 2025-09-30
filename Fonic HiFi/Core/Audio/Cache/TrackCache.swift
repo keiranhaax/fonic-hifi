@@ -10,7 +10,6 @@ import os.log
 
 /// LRU cache for track data with actor isolation
 public actor TrackCache {
-
     // MARK: - Types
 
     /// Simplified track data for cache storage
@@ -30,7 +29,7 @@ public actor TrackCache {
             album: String,
             duration: TimeInterval,
             url: URL,
-            fileSize: Int64
+            fileSize: Int64,
         ) {
             self.id = id
             self.title = title
@@ -61,8 +60,8 @@ public actor TrackCache {
 
     public init(maxSize: Int = 1000) {
         self.maxSize = maxSize
-        self.cache = [:]
-        self.accessOrder = []
+        cache = [:]
+        accessOrder = []
         logger.info("TrackCache initialized with max size: \(maxSize)")
     }
 
@@ -80,7 +79,7 @@ public actor TrackCache {
         cache[id] = CacheEntry(
             trackData: trackData,
             lastAccessed: Date(),
-            accessCount: 1
+            accessCount: 1,
         )
 
         // Evict if needed
@@ -133,7 +132,7 @@ public actor TrackCache {
             count: cache.count,
             totalSizeBytes: totalSize,
             averageAccessCount: avgAccessCount,
-            maxSize: maxSize
+            maxSize: maxSize,
         )
     }
 

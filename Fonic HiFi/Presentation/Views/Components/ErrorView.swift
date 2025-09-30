@@ -39,7 +39,7 @@ struct ErrorView: View {
 
             // Actions
             VStack(spacing: 12) {
-                if let retryAction = retryAction {
+                if let retryAction {
                     Button(action: retryAction) {
                         Label("Try Again", systemImage: "arrow.clockwise")
                             .font(.headline)
@@ -67,59 +67,59 @@ struct ErrorView: View {
     private var errorIcon: String {
         switch categorizeError() {
         case .network:
-            return "wifi.exclamationmark"
+            "wifi.exclamationmark"
         case .fileAccess:
-            return "folder.badge.questionmark"
+            "folder.badge.questionmark"
         case .audio:
-            return "speaker.slash"
+            "speaker.slash"
         case .storage:
-            return "externaldrive.badge.exclamationmark"
+            "externaldrive.badge.exclamationmark"
         case .format:
-            return "doc.badge.ellipsis"
+            "doc.badge.ellipsis"
         case .permission:
-            return "lock.shield"
+            "lock.shield"
         case .memory:
-            return "memorychip"
+            "memorychip"
         case .general:
-            return "exclamationmark.triangle"
+            "exclamationmark.triangle"
         }
     }
 
     private var iconColor: Color {
         switch categorizeError() {
         case .network:
-            return .blue
+            .blue
         case .fileAccess, .storage:
-            return .orange
+            .orange
         case .audio, .format:
-            return .purple
+            .purple
         case .permission:
-            return .red
+            .red
         case .memory:
-            return .yellow
+            .yellow
         case .general:
-            return .secondary
+            .secondary
         }
     }
 
     private var errorTitle: String {
         switch categorizeError() {
         case .network:
-            return "Network Connection Issue"
+            "Network Connection Issue"
         case .fileAccess:
-            return "Cannot Access File"
+            "Cannot Access File"
         case .audio:
-            return "Audio Playback Error"
+            "Audio Playback Error"
         case .storage:
-            return "Storage Issue"
+            "Storage Issue"
         case .format:
-            return "Unsupported Format"
+            "Unsupported Format"
         case .permission:
-            return "Permission Required"
+            "Permission Required"
         case .memory:
-            return "Memory Warning"
+            "Memory Warning"
         case .general:
-            return "Something Went Wrong"
+            "Something Went Wrong"
         }
     }
 
@@ -136,21 +136,21 @@ struct ErrorView: View {
     private var additionalHelpText: String? {
         switch categorizeError() {
         case .network:
-            return "Check your internet connection and try again"
+            "Check your internet connection and try again"
         case .fileAccess:
-            return "Make sure the file exists and you have permission to access it"
+            "Make sure the file exists and you have permission to access it"
         case .audio:
-            return "Try selecting a different audio engine in Settings"
+            "Try selecting a different audio engine in Settings"
         case .storage:
-            return "Free up some space on your device"
+            "Free up some space on your device"
         case .format:
-            return "This file format may not be supported. Try converting it to a compatible format"
+            "This file format may not be supported. Try converting it to a compatible format"
         case .permission:
-            return "Grant the necessary permissions in Settings > Privacy & Security"
+            "Grant the necessary permissions in Settings > Privacy & Security"
         case .memory:
-            return "Close some apps to free up memory"
+            "Close some apps to free up memory"
         case .general:
-            return nil
+            nil
         }
     }
 
@@ -173,37 +173,44 @@ struct ErrorView: View {
 
         // Check for specific error types
         if errorString.contains("network") || errorString.contains("connection") ||
-           localizedString.contains("network") || localizedString.contains("internet") {
+            localizedString.contains("network") || localizedString.contains("internet")
+        {
             return .network
         }
 
         if errorString.contains("file") || errorString.contains("url") ||
-           localizedString.contains("file") || localizedString.contains("cannot open") {
+            localizedString.contains("file") || localizedString.contains("cannot open")
+        {
             return .fileAccess
         }
 
         if errorString.contains("audio") || errorString.contains("playback") ||
-           errorString.contains("engine") || localizedString.contains("audio") {
+            errorString.contains("engine") || localizedString.contains("audio")
+        {
             return .audio
         }
 
         if errorString.contains("storage") || errorString.contains("disk") ||
-           localizedString.contains("storage") || localizedString.contains("space") {
+            localizedString.contains("storage") || localizedString.contains("space")
+        {
             return .storage
         }
 
         if errorString.contains("format") || errorString.contains("codec") ||
-           localizedString.contains("format") || localizedString.contains("unsupported") {
+            localizedString.contains("format") || localizedString.contains("unsupported")
+        {
             return .format
         }
 
         if errorString.contains("permission") || errorString.contains("denied") ||
-           localizedString.contains("permission") || localizedString.contains("not allowed") {
+            localizedString.contains("permission") || localizedString.contains("not allowed")
+        {
             return .permission
         }
 
         if errorString.contains("memory") || errorString.contains("ram") ||
-           localizedString.contains("memory") {
+            localizedString.contains("memory")
+        {
             return .memory
         }
 
@@ -246,7 +253,7 @@ struct ErrorView: View {
             return "This audio format is not supported on your device."
         }
 
-        if errorString.contains("NSCocoaErrorDomain") && errorString.contains("512") {
+        if errorString.contains("NSCocoaErrorDomain"), errorString.contains("512") {
             return "The file couldn't be saved. Check your storage space."
         }
 
@@ -270,12 +277,12 @@ struct ErrorView: View {
 
 extension View {
     func errorAlert(error: Binding<Error?>, retryAction: (() -> Void)? = nil) -> some View {
-        self.alert(
+        alert(
             "Error",
             isPresented: .constant(error.wrappedValue != nil),
-            presenting: error.wrappedValue
-        ) { presentedError in
-            if let retryAction = retryAction {
+            presenting: error.wrappedValue,
+        ) { _ in
+            if let retryAction {
                 Button("Try Again", action: retryAction)
                 Button("OK", role: .cancel) {
                     error.wrappedValue = nil
@@ -298,11 +305,11 @@ extension View {
         error: NSError(
             domain: NSURLErrorDomain,
             code: NSURLErrorNotConnectedToInternet,
-            userInfo: [NSLocalizedDescriptionKey: "The Internet connection appears to be offline."]
+            userInfo: [NSLocalizedDescriptionKey: "The Internet connection appears to be offline."],
         ),
         retryAction: {
             print("Retry tapped")
-        }
+        },
     )
 }
 
@@ -311,11 +318,11 @@ extension View {
         error: NSError(
             domain: NSCocoaErrorDomain,
             code: NSFileReadNoSuchFileError,
-            userInfo: [NSLocalizedDescriptionKey: "The file could not be found."]
+            userInfo: [NSLocalizedDescriptionKey: "The file could not be found."],
         ),
         retryAction: {
             print("Retry tapped")
-        }
+        },
     )
 }
 
@@ -324,10 +331,10 @@ extension View {
         error: NSError(
             domain: "com.fonichifi.audio",
             code: 1001,
-            userInfo: [NSLocalizedDescriptionKey: "Audio engine initialization failed"]
+            userInfo: [NSLocalizedDescriptionKey: "Audio engine initialization failed"],
         ),
         retryAction: {
             print("Retry tapped")
-        }
+        },
     )
 }

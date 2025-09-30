@@ -11,7 +11,7 @@ struct SettingsView: View {
     @Environment(\.dataManager) private var dataManager
     @Environment(\.importService) private var importService
     @State private var selectedTab = 0
-    
+
     var body: some View {
         NavigationStack {
             List {
@@ -39,7 +39,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Storage")
                 }
-                
+
                 // Import Section
                 Section {
                     NavigationLink(destination: FileImportView()) {
@@ -64,7 +64,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Library")
                 }
-                
+
                 // Audio Settings Section
                 Section {
                     NavigationLink(destination: AudioSettingsView()) {
@@ -89,7 +89,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Playback")
                 }
-                
+
                 // App Settings Section
                 Section {
                     NavigationLink(destination: AppSettingsView()) {
@@ -122,10 +122,12 @@ struct SettingsView: View {
 }
 
 #Preview {
-    if let previewDataManager = DataManager.makePreviewDataManager() {
+    if let previewDataManager = DataManager.makePreviewDataManager(),
+       let importService = DataManager.makePreviewImportService()
+    {
         SettingsView()
             .dataManager(previewDataManager)
-            .importService(DataManager.makePreviewImportService())
+            .importService(importService)
     } else {
         Text("Preview unavailable")
     }

@@ -6,8 +6,8 @@
 //
 
 import Foundation
-import SwiftData
 import OSLog
+import SwiftData
 
 // MARK: - Protocol Definition
 
@@ -82,7 +82,6 @@ public enum ImportSessionError: Error, Sendable {
 
 /// Actor for managing transactional import operations
 public actor ImportSession: ImportSessionProtocol {
-
     // MARK: - Types
 
     public struct ImportItem: Sendable {
@@ -109,14 +108,14 @@ public actor ImportSession: ImportSessionProtocol {
 
         public var errorDescription: String? {
             switch self {
-            case .metadataExtractionFailed(let error):
-                return "Failed to extract metadata: \(error.localizedDescription)"
-            case .fileCopyFailed(let error):
-                return "Failed to copy file: \(error.localizedDescription)"
-            case .databaseSaveFailed(let error):
-                return "Failed to save to database: \(error.localizedDescription)"
+            case let .metadataExtractionFailed(error):
+                "Failed to extract metadata: \(error.localizedDescription)"
+            case let .fileCopyFailed(error):
+                "Failed to copy file: \(error.localizedDescription)"
+            case let .databaseSaveFailed(error):
+                "Failed to save to database: \(error.localizedDescription)"
             case .transactionRolledBack:
-                return "Import transaction was rolled back"
+                "Import transaction was rolled back"
             }
         }
     }
@@ -142,20 +141,20 @@ public actor ImportSession: ImportSessionProtocol {
 
     public init(
         trackDataActor: TrackDataActor,
-        metadataExtractor: MetadataExtractionService
+        metadataExtractor: MetadataExtractionService,
     ) {
         self.trackDataActor = trackDataActor
         self.metadataExtractor = metadataExtractor
 
         // Setup music container URL
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        self.musicContainerURL = documentsURL.appendingPathComponent("Music", isDirectory: true)
+        musicContainerURL = documentsURL.appendingPathComponent("Music", isDirectory: true)
 
         // Ensure directory exists
         try? FileManager.default.createDirectory(
             at: musicContainerURL,
             withIntermediateDirectories: true,
-            attributes: nil
+            attributes: nil,
         )
     }
 
@@ -175,7 +174,7 @@ public actor ImportSession: ImportSessionProtocol {
             sourceURL: url,
             destinationURL: destinationURL,
             metadata: metadata,
-            status: .pending
+            status: .pending,
         )
 
         items.append(item)
@@ -188,30 +187,30 @@ public actor ImportSession: ImportSessionProtocol {
     public func commit() async throws {
         logger.info("Committing import session with \(self.items.count) items")
 
-        for index in self.items.indices {
-            self.items[index].status = .extractingMetadata
+        for index in items.indices {
+            items[index].status = .extractingMetadata
 
             do {
                 // Already have metadata from addItem
 
                 // Copy file
-                self.items[index].status = .copying
-                try await copyFile(from: self.items[index].sourceURL, to: self.items[index].destinationURL)
-                copiedFiles.append(self.items[index].destinationURL)
+                items[index].status = .copying
+                try await copyFile(from: items[index].sourceURL, to: items[index].destinationURL)
+                copiedFiles.append(items[index].destinationURL)
 
                 // Save to database
-                self.items[index].status = .savingToDatabase
-                let trackId = try await trackDataActor.createTrack(from: self.items[index].metadata)
+                items[index].status = .savingToDatabase
+                let trackId = try await trackDataActor.createTrack(from: items[index].metadata)
                 savedTrackIds.append(trackId)
 
                 // Mark complete
-                self.items[index].status = .complete
+                items[index].status = .complete
                 progressTracker.completedUnitCount = Int64(index + 1)
 
                 logger.debug("Successfully imported: \(self.items[index].sourceURL.lastPathComponent)")
 
             } catch {
-                self.items[index].status = .failed(ImportError.databaseSaveFailed(error))
+                items[index].status = .failed(ImportError.databaseSaveFailed(error))
                 logger.error("Failed to import item: \(error.localizedDescription)")
 
                 // Rollback on failure
@@ -378,7 +377,8 @@ public actor ImportSession: ImportSessionProtocol {
         }
 
         if let item = fileIdMap[id],
-           let index = items.firstIndex(where: { $0.sourceURL == item.sourceURL }) {
+           let index = items.firstIndex(where: { $0.sourceURL == item.sourceURL })
+        {
             items.remove(at: index)
             fileIdMap.removeValue(forKey: id)
             progressTracker.totalUnitCount = Int64(items.count)
@@ -394,7 +394,7 @@ public actor ImportSession: ImportSessionProtocol {
                 processedFiles: completed,
                 currentFile: currentFile,
                 phase: currentPhase,
-                errors: sessionErrors
+                errors: sessionErrors,
             )
         }
     }
@@ -439,7 +439,7 @@ public actor ImportSession: ImportSessionProtocol {
         let isDuplicate = await checkDuplicate(url)
         if isDuplicate {
             // Try to find existing track ID
-            if (try? await trackDataActor.trackExists(for: url)) != nil {
+            if await (try? trackDataActor.trackExists(for: url)) != nil {
                 issues.append(ImportValidationIssue.duplicateFile(existingId: UUID()))
             }
         }
@@ -452,14 +452,14 @@ public actor ImportSession: ImportSessionProtocol {
             return ValidationResult(
                 isValid: issues.isEmpty,
                 format: format,
-                issues: issues
+                issues: issues,
             )
         } catch {
             issues.append(ImportValidationIssue.corruptedFile)
             return ValidationResult(
                 isValid: false,
                 format: nil,
-                issues: issues
+                issues: issues,
             )
         }
     }

@@ -91,14 +91,14 @@ enum AudioFormat: String, Sendable, CaseIterable {
 
     var fileExtensions: [String] {
         switch self {
-        case .mp3: return ["mp3"]
-        case .aac: return ["aac", "m4a"]
-        case .alac: return ["m4a", "alac"]
-        case .flac: return ["flac"]
-        case .wav: return ["wav", "wave"]
-        case .aiff: return ["aiff", "aif"]
-        case .opus: return ["opus"]
-        case .ogg: return ["ogg", "oga"]
+        case .mp3: ["mp3"]
+        case .aac: ["aac", "m4a"]
+        case .alac: ["m4a", "alac"]
+        case .flac: ["flac"]
+        case .wav: ["wav", "wave"]
+        case .aiff: ["aiff", "aif"]
+        case .opus: ["opus"]
+        case .ogg: ["ogg", "oga"]
         }
     }
 }

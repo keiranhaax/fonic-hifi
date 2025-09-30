@@ -21,102 +21,86 @@ struct ContentView: View {
                         expandMiniPlayer.toggle()
                     }
             }
-        .fullScreenCover(isPresented: $expandMiniPlayer) {
-            ScrollView {
-                
-            }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                VStack(spacing: 10) {
-                    /// Drag Indicator Mimick
-                    Capsule()
-                        .fill(.primary.secondary)
-                        .frame(width: 35, height: 3)
-                    
-                    HStack(spacing: 0) {
-                        PlayerInfo(.init(width: 80, height: 80))
-                        
-                        Spacer(minLength: 0)
-                        
-                        /// Expanded Actions
-                        Group {
-                            Button("", systemImage: "star.circle.fill") {
-                                
+            .fullScreenCover(isPresented: $expandMiniPlayer) {
+                ScrollView {}
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        VStack(spacing: 10) {
+                            /// Drag Indicator Mimick
+                            Capsule()
+                                .fill(.primary.secondary)
+                                .frame(width: 35, height: 3)
+
+                            HStack(spacing: 0) {
+                                PlayerInfo(.init(width: 80, height: 80))
+
+                                Spacer(minLength: 0)
+
+                                /// Expanded Actions
+                                Group {
+                                    Button("", systemImage: "star.circle.fill") {}
+
+                                    Button("", systemImage: "ellipsis.circle.fill") {}
+                                }
+                                .font(.title)
+                                .foregroundStyle(Color.primary, Color.primary.opacity(0.1))
                             }
-                            
-                            Button("", systemImage: "ellipsis.circle.fill") {
-                                
-                            }
+                            .padding(.horizontal, 15)
                         }
-                        .font(.title)
-                        .foregroundStyle(Color.primary, Color.primary.opacity(0.1))
+                        .navigationTransition(.zoom(sourceID: "MINIPLAYER", in: animation))
                     }
-                    .padding(.horizontal, 15)
-                }
-                .navigationTransition(.zoom(sourceID: "MINIPLAYER", in: animation))
+                    /// To Avoid Transparency!
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.background)
             }
-            /// To Avoid Transparency!
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.background)
-        }
     }
-    
+
     /// Let's First Start with TabView
     @ViewBuilder
     func NativeTabView(_ safeAreaBottomPadding: CGFloat = 0) -> some View {
         TabView {
-            Tab.init("Home", systemImage: "house.fill") {
+            Tab("Home", systemImage: "house.fill") {
                 NavigationStack {
-                    List {
-                        
-                    }
-                    .navigationTitle("Home")
-                    .safeAreaPadding(.bottom, safeAreaBottomPadding)
+                    List {}
+                        .navigationTitle("Home")
+                        .safeAreaPadding(.bottom, safeAreaBottomPadding)
                 }
             }
-            
-            Tab.init("New", systemImage: "square.grid.2x2.fill") {
+
+            Tab("New", systemImage: "square.grid.2x2.fill") {
                 NavigationStack {
-                    List {
-                        
-                    }
-                    .navigationTitle("What's New")
-                    .safeAreaPadding(.bottom, safeAreaBottomPadding)
+                    List {}
+                        .navigationTitle("What's New")
+                        .safeAreaPadding(.bottom, safeAreaBottomPadding)
                 }
             }
-            
-            Tab.init("Radio", systemImage: "dot.radiowaves.left.and.right") {
+
+            Tab("Radio", systemImage: "dot.radiowaves.left.and.right") {
                 NavigationStack {
-                    List {
-                        
-                    }
-                    .navigationTitle("Radio")
-                    .safeAreaPadding(.bottom, safeAreaBottomPadding)
+                    List {}
+                        .navigationTitle("Radio")
+                        .safeAreaPadding(.bottom, safeAreaBottomPadding)
                 }
             }
-            
-            Tab.init("Library", systemImage: "square.stack.fill") {
+
+            Tab("Library", systemImage: "square.stack.fill") {
                 NavigationStack {
-                    List {
-                        
-                    }
-                    .navigationTitle("Library")
-                    .safeAreaPadding(.bottom, safeAreaBottomPadding)
+                    List {}
+                        .navigationTitle("Library")
+                        .safeAreaPadding(.bottom, safeAreaBottomPadding)
                 }
             }
-            
-            Tab.init("Search", systemImage: "magnifyingglass", role: .search) {
+
+            Tab("Search", systemImage: "magnifyingglass", role: .search) {
                 NavigationStack {
-                    List {
-                        
-                    }
-                    .navigationTitle("Search")
-                    .searchable(text: $searchText, placement: .toolbar, prompt: Text("Search..."))
-                    .safeAreaPadding(.bottom, safeAreaBottomPadding)
+                    List {}
+                        .navigationTitle("Search")
+                        .searchable(text: $searchText, placement: .toolbar, prompt: Text("Search..."))
+                        .safeAreaPadding(.bottom, safeAreaBottomPadding)
                 }
             }
         }
     }
-    
+
     /// Resuable Player Info
     @ViewBuilder
     func PlayerInfo(_ size: CGSize) -> some View {
@@ -124,11 +108,11 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: size.height / 4)
                 .fill(.blue.gradient)
                 .frame(width: size.width, height: size.height)
-            
+
             VStack(alignment: .leading, spacing: 6) {
                 Text("Some Apple Music Title")
                     .font(.callout)
-                
+
                 Text("Some Artist Name")
                     .font(.caption2)
                     .foregroundStyle(.gray)
@@ -136,27 +120,23 @@ struct ContentView: View {
             .lineLimit(1)
         }
     }
-    
+
     /// MiniPlayer View
     @ViewBuilder
     func MiniPlayerView() -> some View {
         HStack(spacing: 15) {
             PlayerInfo(.init(width: 30, height: 30))
-            
+
             Spacer(minLength: 0)
-            
+
             /// Action Buttons
-            Button {
-                
-            } label: {
+            Button {} label: {
                 Image(systemName: "play.fill")
                     .contentShape(.rect)
             }
             .padding(.trailing, 10)
 
-            Button {
-                
-            } label: {
+            Button {} label: {
                 Image(systemName: "forward.fill")
                     .contentShape(.rect)
             }

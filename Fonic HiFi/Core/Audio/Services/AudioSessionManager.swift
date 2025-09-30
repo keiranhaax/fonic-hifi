@@ -5,8 +5,8 @@
 //  Created by Keiran on 5/27/25.
 //
 
-import Foundation
 import AVFoundation
+import Foundation
 import MediaPlayer
 
 /// Protocol for audio session management with proper actor isolation
@@ -33,36 +33,35 @@ public protocol AudioSessionManaging: Sendable {
 /// Concrete implementation of AudioSessionService using AVAudioSession
 @MainActor
 public final class AudioSessionManager: NSObject, AudioSessionService, AudioSessionManaging {
-    
     // MARK: - Properties
-    
+
     /// Shared instance for global access
     public static let shared = AudioSessionManager()
-    
+
     /// The underlying AVAudioSession
     private let session = AVAudioSession.sharedInstance()
-    
+
     /// Remote command center for handling media controls
     private let commandCenter = MPRemoteCommandCenter.shared()
-    
+
     /// Now playing info center
     private let nowPlayingCenter = MPNowPlayingInfoCenter.default()
-    
+
     /// Delegate for session events
     public weak var delegate: AudioSessionDelegate?
-    
+
     /// Internal state tracking
     private var _isSessionActive = false
     private var hasRegisteredForNotifications = false
-    
+
     // MARK: - Initialization
-    
-    public override init() {
+
+    override public init() {
         super.init()
     }
-    
+
     // MARK: - AudioSessionService Implementation
-    
+
     public func configureAudioSession() async throws {
         // ✅ AudioKit handles audio session configuration automatically
         // Only register for notifications if not already done
@@ -71,13 +70,13 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             hasRegisteredForNotifications = true
         }
     }
-    
+
     public func activateAudioSession() async throws {
-        // ✅ AudioKit handles audio session activation automatically  
+        // ✅ AudioKit handles audio session activation automatically
         // Just update our internal tracking
         _isSessionActive = true
     }
-    
+
     public func deactivateAudioSession() async throws {
         do {
             try session.setActive(false, options: .notifyOthersOnDeactivation)
@@ -86,13 +85,13 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             throw AudioError.sessionConfigurationFailed(reason: "Failed to deactivate session: \(error.localizedDescription)")
         }
     }
-    
+
     // MARK: - Session State
-    
+
     public var isSessionActive: Bool {
         get async { _isSessionActive }
     }
-    
+
     public var currentRoute: String {
         get async {
             let outputs = session.currentRoute.outputs
@@ -102,36 +101,36 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             return "Unknown"
         }
     }
-    
+
     public var isBackgroundAudioEnabled: Bool {
         get async {
             // Check if background audio capability is configured
-            return session.category == .playback
+            session.category == .playback
         }
     }
-    
+
     // MARK: - Interruption Handling
-    
+
     public func handleInterruption(_ interruption: AudioInterruptionType) async {
         await delegate?.audioSessionDidInterrupt(interruption)
     }
-    
+
     public func handleRouteChange(_ change: AudioRouteChange) async {
         await delegate?.audioSessionRouteDidChange(change)
     }
-    
+
     // MARK: - Now Playing
-    
+
     public func updateNowPlayingInfo(_ info: [String: Any]) async {
         nowPlayingCenter.nowPlayingInfo = info
     }
-    
+
     public func clearNowPlayingInfo() async {
         nowPlayingCenter.nowPlayingInfo = nil
     }
-    
+
     // MARK: - Remote Commands
-    
+
     public func enableRemoteCommands() async {
         // Play/Pause
         commandCenter.playCommand.isEnabled = true
@@ -142,7 +141,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
             return .success
         }
-        
+
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -150,7 +149,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
             return .success
         }
-        
+
         // Next/Previous
         commandCenter.nextTrackCommand.isEnabled = true
         commandCenter.nextTrackCommand.addTarget { [weak self] _ in
@@ -159,7 +158,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
             return .success
         }
-        
+
         commandCenter.previousTrackCommand.isEnabled = true
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -167,7 +166,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
             return .success
         }
-        
+
         // Seek
         commandCenter.changePlaybackPositionCommand.isEnabled = true
         commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
@@ -179,7 +178,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
             return .success
         }
-        
+
         // Skip intervals (15 seconds default)
         commandCenter.skipForwardCommand.isEnabled = true
         commandCenter.skipForwardCommand.preferredIntervals = [15]
@@ -192,7 +191,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
             return .success
         }
-        
+
         commandCenter.skipBackwardCommand.isEnabled = true
         commandCenter.skipBackwardCommand.preferredIntervals = [15]
         commandCenter.skipBackwardCommand.addTarget { [weak self] event in
@@ -205,7 +204,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             return .success
         }
     }
-    
+
     public func disableRemoteCommands() async {
         commandCenter.playCommand.isEnabled = false
         commandCenter.pauseCommand.isEnabled = false
@@ -214,7 +213,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         commandCenter.changePlaybackPositionCommand.isEnabled = false
         commandCenter.skipForwardCommand.isEnabled = false
         commandCenter.skipBackwardCommand.isEnabled = false
-        
+
         // Remove all targets
         commandCenter.playCommand.removeTarget(nil)
         commandCenter.pauseCommand.removeTarget(nil)
@@ -224,15 +223,15 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         commandCenter.skipForwardCommand.removeTarget(nil)
         commandCenter.skipBackwardCommand.removeTarget(nil)
     }
-    
+
     // MARK: - Audio Output
-    
+
     public func getAvailableOutputs() async -> [AudioDevice] {
         var devices: [AudioDevice] = []
-        
+
         // Get current route outputs
         let outputs = session.currentRoute.outputs
-        
+
         for output in outputs {
             let device = AudioDevice(
                 id: output.uid,
@@ -240,11 +239,11 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                 type: audioDeviceType(from: output.portType),
                 isOutput: true,
                 supportedSampleRates: [44100, 48000], // Common iOS sample rates
-                supportedBitDepths: [16, 24] // Assume 16 and 24-bit for iOS devices
+                supportedBitDepths: [16, 24], // Assume 16 and 24-bit for iOS devices
             )
             devices.append(device)
         }
-        
+
         // Add available ports if different from current
         if let availableInputs = session.availableInputs {
             for input in availableInputs {
@@ -255,58 +254,59 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                         type: audioDeviceType(from: input.portType),
                         isOutput: false,
                         supportedSampleRates: [44100, 48000],
-                        supportedBitDepths: [16, 24]
+                        supportedBitDepths: [16, 24],
                     )
                     devices.append(device)
                 }
             }
         }
-        
+
         return devices
     }
-    
-    public func setPreferredOutput(_ device: AudioDevice) async throws {
+
+    public func setPreferredOutput(_: AudioDevice) async throws {
         // Note: iOS doesn't allow direct output selection via AVAudioSession
         // This would typically be done through MPVolumeView or system settings
         // For now, we'll throw an error indicating this limitation
         throw AudioError.deviceError(reason: "Direct audio output selection is not supported on iOS. Use system settings or AirPlay.")
     }
-    
+
     // MARK: - Private Methods
-    
+
     private func registerForNotifications() {
         // Interruption notifications
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleInterruptionNotification(_:)),
             name: AVAudioSession.interruptionNotification,
-            object: session
+            object: session,
         )
-        
+
         // Route change notifications
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleRouteChangeNotification(_:)),
             name: AVAudioSession.routeChangeNotification,
-            object: session
+            object: session,
         )
-        
+
         // Media services reset (rare but important)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleMediaServicesReset(_:)),
             name: AVAudioSession.mediaServicesWereResetNotification,
-            object: session
+            object: session,
         )
     }
-    
+
     @objc private func handleInterruptionNotification(_ notification: Notification) {
         guard let info = notification.userInfo,
               let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
-              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue)
+        else {
             return
         }
-        
+
         Task { @MainActor [weak self] in
             switch type {
             case .began:
@@ -321,31 +321,32 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
         }
     }
-    
+
     @objc private func handleRouteChangeNotification(_ notification: Notification) {
         guard let info = notification.userInfo,
               let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
-              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue)
+        else {
             return
         }
-        
+
         let previousRoute = (info[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription)?
             .outputs.first?.portName
-        
+
         let currentRoute = session.currentRoute.outputs.first?.portName ?? "Unknown"
-        
+
         let change = AudioRouteChange(
             reason: AudioRouteChangeReason(from: reason),
             previousRoute: previousRoute,
-            currentRoute: currentRoute
+            currentRoute: currentRoute,
         )
-        
+
         Task { @MainActor [weak self] in
             await self?.handleRouteChange(change)
         }
     }
-    
-    @objc private func handleMediaServicesReset(_ notification: Notification) {
+
+    @objc private func handleMediaServicesReset(_: Notification) {
         // Re-configure audio session after media services reset
         Task { @MainActor [weak self] in
             do {
@@ -358,24 +359,24 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
         }
     }
-    
+
     private func audioDeviceType(from portType: AVAudioSession.Port) -> AudioDeviceType {
         switch portType {
         case .builtInSpeaker, .builtInReceiver:
-            return .builtin
+            .builtin
         case .bluetoothA2DP, .bluetoothHFP, .bluetoothLE:
-            return .bluetooth
+            .bluetooth
         case .airPlay:
-            return .airplay
+            .airplay
         case .usbAudio:
-            return .usb
+            .usb
         case .HDMI:
-            return .hdmi
+            .hdmi
         default:
-            return .builtin
+            .builtin
         }
     }
-    
+
     // MARK: - AudioSessionManaging Protocol Methods
 
     /// Alias for configureAudioSession to match protocol

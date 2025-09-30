@@ -11,18 +11,18 @@ import SwiftUI
 struct MiniPlayerView: View {
     @Environment(\.audioEngine) private var audioService
     @Environment(\.showingNowPlaying) private var showingNowPlaying
-    
+
     // Drag gesture state
     @GestureState private var dragOffset: CGFloat = 0
     @State private var isDragging = false
-    
+
     // Constants
     private let miniPlayerHeight: CGFloat = 64
     private let pillHeight: CGFloat = 4
     private let pillWidth: CGFloat = 36
     private let albumArtSize: CGFloat = 48
     private let dragThreshold: CGFloat = 150
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Drag indicator pill
@@ -31,7 +31,7 @@ struct MiniPlayerView: View {
                 .frame(width: pillWidth, height: pillHeight)
                 .padding(.top, 6)
                 .padding(.bottom, 4)
-            
+
             // Main content
             HStack(spacing: 12) {
                 // Album artwork
@@ -41,29 +41,29 @@ struct MiniPlayerView: View {
                         .frame(width: albumArtSize, height: albumArtSize)
                         .overlay(
                             Image(systemName: "music.note")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.secondary),
                         )
                 } else {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.gray.opacity(0.3))
                         .frame(width: albumArtSize, height: albumArtSize)
                 }
-                
+
                 // Track info
                 VStack(alignment: .leading, spacing: 2) {
                     Text(audioService?.currentTrack?.title ?? "Not Playing")
                         .font(.body)
                         .fontWeight(.medium)
                         .lineLimit(1)
-                    
+
                     Text(audioService?.currentTrack?.artist ?? "No Artist")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
-                
+
                 Spacer()
-                
+
                 // Playback controls
                 HStack(spacing: 20) {
                     // Play/Pause button
@@ -72,7 +72,7 @@ struct MiniPlayerView: View {
                             .font(.title3)
                             .frame(width: 24, height: 24)
                     }
-                    
+
                     // Next button
                     Button(action: playNext) {
                         Image(systemName: "forward.fill")
@@ -88,7 +88,7 @@ struct MiniPlayerView: View {
         .background(
             Rectangle()
                 .fill(.ultraThinMaterial)
-                .ignoresSafeArea()
+                .ignoresSafeArea(),
         )
         .offset(y: dragOffset)
         .gesture(
@@ -99,7 +99,7 @@ struct MiniPlayerView: View {
                         state = value.translation.height
                     }
                 }
-                .onChanged { value in
+                .onChanged { _ in
                     // Gesture callbacks may run on background thread
                     Task { @MainActor in
                         isDragging = true
@@ -109,40 +109,40 @@ struct MiniPlayerView: View {
                     // Gesture callbacks may run on background thread
                     Task { @MainActor in
                         isDragging = false
-                        
+
                         // Check if we've passed the threshold or have sufficient velocity
                         let shouldExpand = value.translation.height < -dragThreshold ||
-                                         (value.translation.height < -50 && value.predictedEndTranslation.height < -200)
-                        
+                            (value.translation.height < -50 && value.predictedEndTranslation.height < -200)
+
                         if shouldExpand {
                             // Haptic feedback
                             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                             impactFeedback.impactOccurred()
-                            
+
                             // Show full Now Playing view
                             withAnimation(.interactiveSpring(response: 0.6, dampingFraction: 0.8)) {
                                 showingNowPlaying.wrappedValue = true
                             }
                         }
                     }
-                }
+                },
         )
         .onTapGesture {
             // Tap to expand
             let impactFeedback = UIImpactFeedbackGenerator(style: .light)
             impactFeedback.impactOccurred()
-            
+
             withAnimation(.interactiveSpring(response: 0.6, dampingFraction: 0.8)) {
                 showingNowPlaying.wrappedValue = true
             }
         }
     }
-    
+
     // MARK: - Actions
-    
+
     private func togglePlayPause() {
         Task { @MainActor in
-            guard let audioService = audioService else { return }
+            guard let audioService else { return }
             do {
                 if audioService.isPlaying {
                     await audioService.pause()
@@ -154,10 +154,10 @@ struct MiniPlayerView: View {
             }
         }
     }
-    
+
     private func playNext() {
         Task { @MainActor in
-            guard let audioService = audioService else { return }
+            guard let audioService else { return }
             do {
                 try await audioService.playNext()
             } catch {
