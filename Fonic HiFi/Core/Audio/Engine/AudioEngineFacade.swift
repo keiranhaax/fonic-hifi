@@ -198,7 +198,7 @@ public final class AudioEngineFacade: ObservableObject {
         self.monitor = monitor ?? AudioMonitor()
         self.playbackSettingsStore = playbackSettingsStore ?? AudioPlaybackSettingsStore()
 
-        logger.info("AudioEngineFacade initialized with \(configuration.performanceMode) performance mode")
+        logger.info("AudioEngineFacade initialized with \(String(describing: configuration.performanceMode)) performance mode")
 
         // Setup playback state observation for UI updates
         setupPlaybackStateObservation()
@@ -601,14 +601,14 @@ public final class AudioEngineFacade: ObservableObject {
     /// - Parameter mode: Shuffle mode to set
     public func setShuffleMode(_ mode: QueueShuffleMode) {
         queueManager.shuffleMode = mode
-        logger.info("Shuffle mode set to: \(mode)")
+        logger.info("Shuffle mode set to: \(String(describing: mode))")
     }
 
     /// Set repeat mode
     /// - Parameter mode: Repeat mode to set
     public func setRepeatMode(_ mode: QueueRepeatMode) {
         queueManager.repeatMode = mode
-        logger.info("Repeat mode set to: \(mode)")
+        logger.info("Repeat mode set to: \(String(describing: mode))")
     }
 
     // MARK: - Validation & Diagnostics
@@ -859,7 +859,7 @@ public final class AudioEngineFacade: ObservableObject {
             }
 
             // Need to switch engines - cleanup current one first
-            logger.debug("Switching from \(currentEngineType) to \(requiredEngineType)")
+            logger.debug("Switching from \(String(describing: currentEngineType)) to \(String(describing: requiredEngineType))")
             await cleanupCurrentEngine()
         }
 

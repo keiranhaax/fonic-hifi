@@ -68,7 +68,8 @@ struct ContentView: View {
 }
 
 #Preview {
-    if let importService = DataManager.makePreviewImportService() {
+    let importService = DataManager.makePreviewImportService()
+    if importService != nil {
         ContentView()
             .importService(importService)
             .audioEngine(AudioEngineFacade())

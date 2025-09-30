@@ -256,7 +256,8 @@ struct LoadingOverlay: View {
 }
 
 #Preview {
-    if let importService = DataManager.makePreviewImportService() {
+    let importService = DataManager.makePreviewImportService()
+    if importService != nil {
         LibraryView()
             .importService(importService)
     } else {

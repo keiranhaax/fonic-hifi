@@ -282,7 +282,7 @@ public actor SearchCache {
         let entriesToKeep = Array(sortedEntries.prefix(Int(Double(maxCacheSize) * 0.75)))
 
         cache = Dictionary(uniqueKeysWithValues: entriesToKeep)
-        logger.info("Trimmed cache to \(cache.count) entries")
+        logger.info("Trimmed cache to \(self.cache.count) entries")
     }
 
     // MARK: - Cache Statistics

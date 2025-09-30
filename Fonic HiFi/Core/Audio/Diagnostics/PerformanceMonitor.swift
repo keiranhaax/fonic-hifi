@@ -147,7 +147,7 @@ public actor PerformanceMonitor: PerformanceMonitoring {
 
     public func recordBufferUnderrun() async {
         bufferUnderruns += 1
-        logger.warning("Buffer underrun detected. Total: \(bufferUnderruns)")
+        logger.warning("Buffer underrun detected. Total: \(self.bufferUnderruns)")
     }
 
     public func recordFormatSwitch(from: AudioFormat, to: AudioFormat, duration: TimeInterval) async {
@@ -168,7 +168,7 @@ public actor PerformanceMonitor: PerformanceMonitoring {
     public func recordMemoryWarning() async {
         memoryWarnings += 1
         memoryPressureEvents.append(.warning)
-        logger.warning("Memory warning received. Total: \(memoryWarnings)")
+        logger.warning("Memory warning received. Total: \(self.memoryWarnings)")
     }
 
     public func checkMemoryPressure() async -> MemoryPressure {

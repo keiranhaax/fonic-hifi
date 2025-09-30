@@ -180,12 +180,12 @@ public actor ImportSession: ImportSessionProtocol {
         items.append(item)
         progressTracker.totalUnitCount = Int64(items.count)
 
-        logger.debug("Item added to session. Total items: \(items.count)")
+        logger.debug("Item added to session. Total items: \(self.items.count)")
     }
 
     /// Commit the import transaction
     public func commit() async throws {
-        logger.info("Committing import session with \(items.count) items")
+        logger.info("Committing import session with \(self.items.count) items")
 
         for index in items.indices {
             items[index].status = .extractingMetadata
@@ -207,7 +207,7 @@ public actor ImportSession: ImportSessionProtocol {
                 items[index].status = .complete
                 progressTracker.completedUnitCount = Int64(index + 1)
 
-                logger.debug("Successfully imported: \(items[index].sourceURL.lastPathComponent)")
+                logger.debug("Successfully imported: \(self.items[index].sourceURL.lastPathComponent)")
 
             } catch {
                 items[index].status = .failed(ImportError.databaseSaveFailed(error))

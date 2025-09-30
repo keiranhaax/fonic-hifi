@@ -25,14 +25,11 @@ struct FonicHiFiApp_Debug: App {
             print("Error initializing DataManager: \(error)")
             print("Using fallback in-memory DataManager for debug")
             // Create a minimal fallback DataManager for debugging
-            if let fallbackDM = DataManager.makeFallbackDataManager()
-                ?? DataManager.makePreviewDataManager()
-                ?? (try? DataManager())
-            {
+            if let fallbackDM = DataManager.makePreviewDataManager() ?? (try? DataManager()) {
                 _dataManager = StateObject(wrappedValue: fallbackDM)
             } else {
-                let resilient = DataManager.ensureFallbackDataManager()
-                _dataManager = StateObject(wrappedValue: resilient)
+                // Last resort: force create DataManager
+                _dataManager = StateObject(wrappedValue: try! DataManager())
             }
         }
 
