@@ -122,11 +122,11 @@ struct SettingsView: View {
 }
 
 #Preview {
-    let previewDataManager = DataManager.makePreviewDataManager()
-    let importService = DataManager.makePreviewImportService()
-    if let dataManager = previewDataManager, importService != nil {
+    if let previewDataManager = DataManager.makePreviewDataManager(),
+       let importService = DataManager.makePreviewImportService()
+    {
         SettingsView()
-            .dataManager(dataManager)
+            .dataManager(previewDataManager)
             .importService(importService)
     } else {
         Text("Preview unavailable")

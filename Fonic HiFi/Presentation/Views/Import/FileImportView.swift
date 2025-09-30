@@ -211,8 +211,7 @@ struct SelectedFilesView: View {
 }
 
 #Preview {
-    let importService = DataManager.makePreviewImportService()
-    if importService != nil {
+    if let importService = DataManager.makePreviewImportService() {
         FileImportView()
             .importService(importService)
     } else {

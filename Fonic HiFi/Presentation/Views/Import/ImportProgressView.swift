@@ -179,8 +179,7 @@ struct ImportErrorDetailsView: View {
 }
 
 #Preview {
-    let importService = DataManager.makePreviewImportService()
-    if importService != nil {
+    if let importService = DataManager.makePreviewImportService() {
         ImportProgressView()
             .importService(importService)
     } else {

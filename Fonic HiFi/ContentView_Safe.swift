@@ -61,8 +61,7 @@ struct ContentView_Safe: View {
 }
 
 #Preview {
-    let importService = DataManager.makePreviewImportService()
-    if importService != nil {
+    if let importService = DataManager.makePreviewImportService() {
         ContentView_Safe()
             .importService(importService)
             .audioEngine(AudioEngineFacade())

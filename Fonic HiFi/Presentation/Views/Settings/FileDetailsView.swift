@@ -304,8 +304,7 @@ extension DateFormatter {
 }
 
 #Preview {
-    let importService = DataManager.makePreviewImportService()
-    if importService != nil {
+    if let importService = DataManager.makePreviewImportService() {
         FileDetailsView(
             file: FileItem(
                 id: "1",

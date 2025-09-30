@@ -42,7 +42,7 @@ extension EnvironmentValues {
 
 /// Environment key for LibraryImportService dependency injection
 struct ImportServiceKey: EnvironmentKey {
-    static let defaultValue: LibraryImportService? = nil
+    nonisolated(unsafe) static let defaultValue: LibraryImportService? = nil
 }
 
 extension EnvironmentValues {
