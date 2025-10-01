@@ -99,7 +99,7 @@ Use `make pr-create` for GitHub CLI pull request creation.
 ## Comprehensive Documentation
 
 For detailed guidance, see:
-- **CLAUDE.md** - Claude Code-specific instructions (364 lines)
+- ** @CLAUDE.md** - Claude Code-specific instructions (364 lines)
 - **docs/MAKEFILE.md** - Complete build command reference
 - **docs/DEBUGGING.md** - Audio debugging patterns and AVAudioSession best practices
-- **STATUS.md** - Current session state, branch recovery status, staged changes
+- ** @STATUS.md** - Current session state, branch recovery status, staged changes

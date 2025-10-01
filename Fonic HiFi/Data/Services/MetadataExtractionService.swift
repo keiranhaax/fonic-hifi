@@ -28,11 +28,13 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
     /// - Returns: TrackMetadata with extracted information
     /// - Throws: MetadataExtractionError if extraction fails
     public func extractTrackMetadata(from url: URL) async throws -> TrackMetadata {
-        // Ensure file exists and is accessible
-        guard url.startAccessingSecurityScopedResource() else {
-            throw MetadataExtractionError.fileNotAccessible(url)
+        // Start security-scoped access if needed (returns false for app container files)
+        let startedAccessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if startedAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
         }
-        defer { url.stopAccessingSecurityScopedResource() }
 
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw MetadataExtractionError.fileNotFound(url)

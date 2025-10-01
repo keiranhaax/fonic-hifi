@@ -63,26 +63,55 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     // MARK: - AudioSessionService Implementation
 
     public func configureAudioSession() async throws {
-        // ✅ AudioKit handles audio session configuration automatically
-        // Only register for notifications if not already done
-        if !hasRegisteredForNotifications {
-            registerForNotifications()
-            hasRegisteredForNotifications = true
+        do {
+            // Set category for high-quality music playback. Avoid incompatible
+            // option combinations (OSStatus -50) – we start with a minimal
+            // configuration and layer in the optional AirPlay flag when allowed.
+            do {
+                try session.setCategory(
+                    .playback,
+                    mode: .default,
+                    options: [.allowAirPlay]
+                )
+            } catch {
+                // Some simulator/device builds reject .allowAirPlay with -50; fall
+                // back to bare playback which still routes correctly.
+                try session.setCategory(.playback, mode: .default, options: [])
+            }
+
+            // Register for system notifications
+            if !hasRegisteredForNotifications {
+                registerForNotifications()
+                hasRegisteredForNotifications = true
+            }
+        } catch {
+            throw AudioError.sessionConfigurationFailed(
+                reason: "Failed to configure session: \(error.localizedDescription)"
+            )
         }
     }
 
     public func activateAudioSession() async throws {
-        // ✅ AudioKit handles audio session activation automatically
-        // Just update our internal tracking
-        _isSessionActive = true
+        do {
+            try session.setActive(true, options: [])
+            _isSessionActive = true
+            print("✅ Audio session activated: category=\(session.category.rawValue), active=\(session.isOtherAudioPlaying)")
+        } catch {
+            throw AudioError.sessionConfigurationFailed(
+                reason: "Failed to activate session: \(error.localizedDescription)"
+            )
+        }
     }
 
     public func deactivateAudioSession() async throws {
         do {
             try session.setActive(false, options: .notifyOthersOnDeactivation)
             _isSessionActive = false
+            print("✅ Audio session deactivated")
         } catch {
-            throw AudioError.sessionConfigurationFailed(reason: "Failed to deactivate session: \(error.localizedDescription)")
+            throw AudioError.sessionConfigurationFailed(
+                reason: "Failed to deactivate session: \(error.localizedDescription)"
+            )
         }
     }
 

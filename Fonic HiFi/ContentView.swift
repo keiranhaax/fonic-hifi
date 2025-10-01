@@ -41,7 +41,7 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewBottomAccessory {
-            if let audioService, audioService.currentTrack != nil, !showingNowPlaying {
+            if let audioService, !showingNowPlaying {
                 LiquidGlassMiniPlayer(
                     namespace: miniPlayerNamespace,
                     showingNowPlaying: $showingNowPlaying,

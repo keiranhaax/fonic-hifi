@@ -363,3 +363,4 @@ struct MyView: View { ... }
 - **Recovery**: plan2/fix2.md - 4-phase recovery execution guide
 - **Issues**: plan2/next-steps.md - P0/P1 prioritized tasks
 - **Global Rules**: ~/.claude/CLAUDE.md - Universal Swift/iOS development rules
+ Always read @STATUS.md for the current status of the project.

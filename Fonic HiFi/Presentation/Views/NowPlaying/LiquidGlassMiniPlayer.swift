@@ -119,6 +119,8 @@ struct LiquidGlassMiniPlayer: View {
                 .frame(width: 32, height: 32)
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(audioService?.currentTrack == nil)
+        .opacity(audioService?.currentTrack == nil ? 0.4 : 1.0)
         .accessibilityLabel(audioService?.isPlaying == true ? "Pause" : "Play")
     }
 
@@ -130,6 +132,8 @@ struct LiquidGlassMiniPlayer: View {
                 .frame(width: 32, height: 32)
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(audioService?.currentTrack == nil)
+        .opacity(audioService?.currentTrack == nil ? 0.4 : 1.0)
         .accessibilityLabel("Next Track")
     }
 
