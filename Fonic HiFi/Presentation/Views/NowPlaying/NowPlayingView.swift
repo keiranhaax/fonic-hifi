@@ -27,7 +27,6 @@ struct NowPlayingView: View {
     // UI State (moved from AppState to local state)
     @State private var showingQueue = false
     @State private var dominantColor: Color = .accentColor
-    @State private var hasStartedPlayback = false
     @State private var trackDetailItem: TrackDetailItem?
 
     // UI Preferences (now using @AppStorage for persistence)
@@ -90,7 +89,6 @@ struct NowPlayingView: View {
                 )
                 .ignoresSafeArea()
                 .clearGlassFix() // iOS 26 Beta 6 fix
-                .glassPerformanceProfiled("NowPlayingBackground")
 
                 VStack(spacing: 0) {
                     // Drag handle with glass effect
@@ -100,7 +98,6 @@ struct NowPlayingView: View {
                         .padding(.top, 8)
                         .padding(.bottom, 20)
                         .glassEffect(.clear)
-                        .glassPerformanceProfiled("DragHandle")
 
                     // Main content with glass container
                     ScrollView(.vertical, showsIndicators: false) {
@@ -109,28 +106,23 @@ struct NowPlayingView: View {
                             albumArtworkView
                                 .padding(.horizontal, 40)
                                 .padding(.top, 20)
-                                .glassPerformanceProfiled("AlbumArtwork")
 
                             // Track info with glass effect
                             trackInfoView
                                 .padding(.horizontal, 40)
-                                .glassPerformanceProfiled("TrackInfo")
 
                             // Progress bar with fluid glass effect
                             progressView
                                 .padding(.horizontal, 40)
-                                .glassPerformanceProfiled("ProgressBar")
 
                             // Playback controls with glass effect
                             playbackControlsView
                                 .padding(.horizontal, 40)
-                                .glassPerformanceProfiled("PlaybackControls")
 
                             // Volume slider with glass effect
                             volumeView
                                 .padding(.horizontal, 40)
                                 .padding(.bottom, 40)
-                                .glassPerformanceProfiled("VolumeControl")
                         }
                     }
                 }
@@ -149,68 +141,18 @@ struct NowPlayingView: View {
     private func performInitialSetup() async {
         guard let audioService else { return }
 
-        print("=== NOW PLAYING VIEW TASK ===")
-        print("Has started playback: \(hasStartedPlayback)")
-        print("Current track: \(audioService.currentTrack?.title ?? "nil")")
-
+        // Extract dominant color for UI aesthetics
         extractDominantColor()
 
-        // Start audio playback after the view has loaded
-        guard !hasStartedPlayback, let track = audioService.currentTrack else {
-            print("Not starting playback - hasStartedPlayback: \(hasStartedPlayback), track: \(audioService.currentTrack?.title ?? "nil")")
-            return
-        }
-
-        hasStartedPlayback = true
-
-        print("\n=== AUDIO PLAYBACK DEBUG ===")
-        print("1. Starting playback for: \(track.title)")
-        print("2. Track file path: \(track.url.path)")
-        print("3. Track artist: \(track.artist)")
-        print("4. Track duration: \(track.duration)")
-        print("5. Track format: \(track.audioFormat)")
-
-        // Check if file exists
-        if FileManager.default.fileExists(atPath: track.url.path) {
-            print("6. ✅ File exists at path")
-        } else {
-            print("6. ❌ File NOT found at path")
-        }
-
-        // Check audio service state
-        print("7. Audio service ready: \(audioService.isReady)")
-        print("8. Audio service current track: \(audioService.currentTrack?.title ?? "nil")")
-        print("9. Audio service is playing: \(audioService.isPlaying)")
-
-        // Ensure audio service is ready
-        guard audioService.isReady else {
-            print("10. ❌ Audio service not ready yet")
-            return
-        }
-
-        print("11. Calling audioService.play")
-
-        // Start audio playback
-        do {
-            try await audioService.play(track: track)
-            print("12. ✅ audioService.play completed successfully")
-
-            // Check audio state after play
-            print("13. Post-play is playing: \(audioService.isPlaying)")
-            print("14. Post-play current track: \(audioService.currentTrack?.title ?? "nil")")
-            print("15. Post-play audio service is playing: \(audioService.isPlaying)")
-
-        } catch {
-            print("12. ❌ Failed to start audio playback: \(error)")
-            print("    Error type: \(type(of: error))")
-            print("    Error description: \(error.localizedDescription)")
-
-            // Reset state if playback failed
-            audioService.setCurrentTrack(nil)
-            dismiss()
-        }
-
-        print("=== END AUDIO PLAYBACK DEBUG ===\n")
+        // ✅ This view is a passive observer of playback state
+        // Playback is initiated from:
+        // - LibraryView (when user taps a track row)
+        // - MiniPlayerView (when user taps play button)
+        // - Remote commands (Control Center, AirPods, lock screen)
+        //
+        // NowPlayingView ONLY observes and displays the current playback state.
+        // It should NEVER call audioService.play() as this causes 2-9 second delays
+        // when the sheet opens due to re-initializing already-playing audio.
     }
 
     // MARK: - Subviews

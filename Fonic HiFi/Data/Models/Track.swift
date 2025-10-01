@@ -142,6 +142,7 @@ public final class Track: TrackProtocol {
     public var isFavorite: Bool
 
     /// User-defined tags
+    @Attribute(.transformable(by: NSSecureUnarchiveFromDataTransformer.self))
     public var userTags: [String]
 
     /// BPM (beats per minute) for rhythm analysis

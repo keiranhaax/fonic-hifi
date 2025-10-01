@@ -31,6 +31,7 @@ public final class Artist {
     public var primaryGenre: String?
 
     /// All genres associated with this artist
+    @Attribute(.transformable(by: NSSecureUnarchiveFromDataTransformer.self))
     public var genres: [String]
 
     /// Country of origin
@@ -43,6 +44,7 @@ public final class Artist {
     public var isActive: Bool
 
     /// External URLs (website, social media, etc.)
+    @Attribute(.transformable(by: NSSecureUnarchiveFromDataTransformer.self))
     public var externalUrls: [String: String]
 
     // MARK: - Artwork
