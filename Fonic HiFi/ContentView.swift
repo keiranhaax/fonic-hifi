@@ -16,27 +16,33 @@ struct ContentView: View {
     @Namespace private var miniPlayerNamespace
     @State private var showingNowPlaying = false
     @State private var selectedDetent: PresentationDetent = .medium
+    @State private var searchText = ""
 
     var body: some View {
         TabView {
-            LibraryView()
-                .environment(\.showingNowPlaying, $showingNowPlaying)
-                .tabItem {
-                    Label("Library", systemImage: "music.note.list")
-                }
+            Tab("Home", systemImage: "house.fill") {
+                HomeView()
+                    .environment(\.showingNowPlaying, $showingNowPlaying)
+            }
 
-            SearchView()
-                .environment(\.showingNowPlaying, $showingNowPlaying)
-                .environment(\.audioEngine, audioService)
-                .environment(\.importService, importService)
-                .tabItem {
-                    Label("Search", systemImage: "magnifyingglass")
-                }
+            Tab("Library", systemImage: "music.note.list") {
+                LibraryView()
+                    .environment(\.showingNowPlaying, $showingNowPlaying)
+            }
 
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
+            Tab("Settings", systemImage: "gear") {
+                SettingsView()
+            }
+
+            Tab("Search", systemImage: "magnifyingglass", role: .search) {
+                NavigationStack {
+                    SearchView(searchText: $searchText)
+                        .searchable(text: $searchText, placement: .toolbar, prompt: Text("Search Library"))
+                        .environment(\.showingNowPlaying, $showingNowPlaying)
+                        .environment(\.audioEngine, audioService)
+                        .environment(\.importService, importService)
                 }
+            }
         }
         .preferredColorScheme(.dark)
         .tabBarMinimizeBehavior(.onScrollDown)

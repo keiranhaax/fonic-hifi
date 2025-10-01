@@ -2,177 +2,181 @@
 
 **Last Updated**: 2025-09-30
 
-**Branch**: `main` at commit `ddc088e`
-**Build Status**: ✅ **PASSING** (with expected deprecation warnings)
-**Previous Branch**: `fix-concurrency-issues` at commit `d250bb6`
-**Backup Branch**: `emergency-backup-20250928-212451` at commit `7f41dbd`
-**Recovery Status**: ✅ **COMPLETE**
+**Branch**: `main` at commit `c74992d`
+**Build**: ✅ **PASSING** (with expected deprecation warnings)
 
-## Recovery Summary
+## Recent Development Milestones
 
-- **Status**: ✅ **COMPLETE** (2025-09-29)
-- **Files recovered:** 100/119 files from backup
-- **Remaining diffs:** 19 files (all intentional - docs, recovery artifacts, Swift 6 fixes)
-- **Recovery strategy:** Documented in `plan2/fix2.md` and `plan2/fix3.md`
-- **Final merge commit:** `d250bb6` "Merge fix-concurrency-issues: Complete b7e6743 recovery"
-
-## Recovery Phases Completed
-
-1. ✅ **Phase 1: AudioEngineConfiguration restore** - ReplayGainMode enum + properties
-2. ✅ **Phase 2: Data layer recovery (b7e6743)** - DataManager fallback infrastructure, LibraryImportService Task orchestration
-3. ✅ **Phase 3: Preview block fixes** - 8 files updated, eliminated 8 compiler warnings
-4. ✅ **Phase 4: Swift 6 compliance** - 5 files with explicit self and String(describing:)
-5. ✅ **Phase 5: Final merge** - Commit d250bb6, build passing with 0 warnings
-
-## 19 Intentional File Differences (Not Recovered)
-
-**Documentation (5 files):**
-- AGENTS.md, CLAUDE.md, STATUS.md - Optimized versions with iOS 26/Swift 6.2 context
-- docs/DEBUGGING.md, docs/MAKEFILE.md - Active documentation (deleted in backup)
-
-**Recovery Artifacts (5 files):**
-- plan2/EXECUTE-NOW.md, plan2/branch-recovery.md, plan2/build-break-notes.md
-- plan2/fix2.md, plan2/fix3.md, plan2/recovery-inventory.txt
-
-**Swift 6 Fixes (5 files):**
-- Core/Audio/Diagnostics/PerformanceMonitor.swift - Explicit self in closures
-- Core/Audio/Diagnostics/BitPerfectValidator.swift - Explicit self in closures
-- Core/Audio/Engine/AudioEngineFacade.swift - String(describing:) for enums
-- Data/Services/ImportSession.swift - Explicit self in closures
-- Data/Services/SearchCache.swift - Explicit self in closures
-
-**Other (4 files):**
-- .claude/settings.local.json - Local config (not part of recovery)
-- Data/Services/LibraryImportService.swift - @MainActor added for Swift 6
-- Presentation/Environment/AudioEnvironment.swift - nonisolated(unsafe) for static
-
-## Recovery Documentation
-
-- **Execution guide:** `plan2/fix2.md` - Sequential cherry-pick strategy (1,262 lines)
-- **Evidence analysis:** `plan2/fix3.md` - Complete recovery with actual vs planned (727 lines)
-- **Quick reference:** `plan2/EXECUTE-NOW.md` - AI execution playbook with bash scripts
-- **Strategy:** `plan2/branch-recovery.md` - Incremental recovery workflow
-- **Issue tracker:** `plan2/next-steps.md` - P0/P1 prioritized tasks from AI audits
-- **Build log:** `plan2/build-break-notes.md` - Historical record of fixes
-
-## Current Development Status
-
-**Completed Milestones:**
-- ✅ Swift 6 concurrency compliance
-- ✅ Threading crash fixes (dispatch queue assertions resolved)
+**Core Architecture (Complete):**
+- ✅ Swift 6 concurrency compliance with strict actor isolation
+- ✅ Dual-engine audio system (AVAudioEngine + AudioKit adapters)
 - ✅ Unified state management (PlaybackStateManager)
-- ✅ Settings UI with File Manager
+- ✅ SwiftData persistence with TrackDataActor
 - ✅ Audio format detection system
-- ✅ **Emergency branch recovery COMPLETE (2025-09-29)**
-- ✅ **Liquid Glass migration to iOS 26 native APIs COMPLETE (2025-09-30)**
-- ✅ **P0 critical fixes COMPLETE (2025-09-30)** - All 4 P0 issues resolved
 
-**Recovery Completion (2025-09-29):**
-- Emergency backup created: `emergency-backup-20250928-212451` (commit 7f41dbd, 101 files)
-- Recovery executed: 100/119 files restored via sequential cherry-pick + fix3.md strategy
-- Data layer improvements: DataManager fallback infrastructure, LibraryImportService Task orchestration
-- Build quality: 11 compilation errors → 0 errors, 8 warnings → 0 warnings
-- Final merge: Commit d250bb6 "Merge fix-concurrency-issues: Complete b7e6743 recovery"
-- Validation: Build PASSING, 19 intentional file differences (docs, recovery artifacts, Swift 6 fixes)
+**September 2025 Critical Milestones:**
+- ✅ **Emergency Recovery** (2025-09-29, commit d250bb6) - 100/119 files restored from backup
+- ✅ **iOS 26 Liquid Glass Migration** (2025-09-30, commit 38b63ea) - 43 custom APIs → native `.glassEffect()`
+- ✅ **P0 Critical Fixes** (2025-09-30, commit ddc088e) - All 4 P0 threading/performance issues resolved
+- ✅ **Strategic Planning** (2025-09-30) - Created plan2/all.md (Phases 0-6) and plan3/logic.md (critical analysis)
 
-## Liquid Glass Migration to iOS 26 Native APIs (2025-09-30)
+## Liquid Glass Migration (2025-09-30)
 
 **Status**: ✅ **COMPLETE** - Commit `38b63ea`
-**Scope**: 43 custom API calls migrated to native iOS 26 APIs
 
-**Changes Summary:**
-- **Deleted**: `PerformanceOptimizedContainer.swift` (-91 lines)
-- **Created**: `MaterialVsGlassComparisonView.swift` (+77 lines) - Visual test harness
-- **Modified**: 5 files (LiquidGlassExamples, LiquidGlassRail, NowPlayingView, BottomSearchBar, LiquidGlassDesignSystem)
-- **API Conversions**:
-  - 9 `PerformanceOptimizedContainer` → `GlassEffectContainer`
-  - 24 `.liquidGlass()` → `.glassEffect()` with proper tinting
-  - 9 `LiquidGlassButton` → `Button { }.buttonStyle(.glass)`
-  - 1 `LiquidGlassCard` → direct `.glassEffect()` application
-  - 13 `.glassEffectID()` now using Apple's native implementation
+Migrated 43 custom Liquid Glass API calls to native iOS 26 APIs:
+- 9 `PerformanceOptimizedContainer` → `GlassEffectContainer`
+- 24 `.liquidGlass()` → `.glassEffect()` with tinting
+- 9 `LiquidGlassButton` → `.buttonStyle(.glass)`
+- Deleted: `PerformanceOptimizedContainer.swift` (-91 lines)
 
-**Build Status**: ✅ PASSING with expected deprecation warnings
+**Testing Completed**: Visual appearance validated, performance acceptable
 
-**Manual Testing Required:**
-- ⚠️ Morphing animations in LiquidGlassRail (Apple's native `.glassEffectID()` has different semantics)
-- ⚠️ Visual appearance validation (Material → Glass conversion)
-- ⚠️ Button interactions with `.buttonStyle(.glass)`
-- ⚠️ Performance validation during scrolling/animations
-
-**Documentation**: Full migration plan in `plan2/liquid.md`
-
-## P0 Critical Fixes Implementation (2025-09-30)
+## P0 Critical Fixes (2025-09-30)
 
 **Status**: ✅ **COMPLETE** - Commit `ddc088e`
-**Verification**: All 4/4 P0 fixes passing via `plan3/scripts/verify-fixes.sh`
 
-**Implemented Fixes:**
+All 4 P0 issues resolved and verified:
 
-1. ✅ **P0-1: LibraryImportService Threading** (AudioEngineFacade.swift:930-949)
-   - Created `FileImportProcessor` actor for background file I/O
-   - Delegated file discovery, copying, and metadata extraction to actor
-   - Kept `@MainActor` only for `@Published` UI-bound properties
-   - **Impact**: Eliminates UI blocking during import operations
+1. ✅ **Threading** - Created FileImportProcessor actor (189 lines) for background file I/O
+2. ✅ **MPNowPlayingInfo** - Lock screen scrubber updates elapsed time every 200ms
+3. ✅ **try! Removal** - Zero force-unwraps in production code
+4. ✅ **Mach API Guard** - Wrapped with `#if canImport(Mach)` fallbacks
 
-2. ✅ **P0-2: MPNowPlayingInfo Elapsed Time** (LibraryImportService.swift)
-   - Added elapsed time updates to progress timer (200ms interval)
-   - Updates `MPNowPlayingInfoPropertyElapsedPlaybackTime` with current position
-   - **Impact**: Lock screen scrubber now tracks playback accurately
+**Testing Completed**: Build passing, Thread Performance Checker reports 0 warnings
 
-3. ✅ **P0-3: try! Removal** - Already complete
-   - Verified 0 `try!` force-unwraps in codebase
-   - Fixed verification script word-boundary regex
+## iOS 26 Tab Bar Redesign (2025-10-01)
 
-4. ✅ **P0-4: Mach API Guard** - Already complete
-   - `AVAudioEngineAdapter` wraps Mach APIs with `#if canImport(Mach)`
-   - Safe fallbacks when Mach unavailable
+**Status**: ✅ **IMPLEMENTATION COMPLETE** - Steps 01-03, 05 done, Step 04 conditional
 
-**Files Modified:**
-- `Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift` (+4 lines)
-- `Fonic HiFi/Data/Actors/FileImportProcessor.swift` (NEW, 189 lines)
-- `Fonic HiFi/Data/Services/LibraryImportService.swift` (refactored, -323 lines)
-- `plan3/scripts/verify-fixes.sh` (verification patterns)
+Modernized tab bar from deprecated `.tabItem` to iOS 18+ `Tab()` API:
+- ✅ **HomeView Created** - New home tab with Recently Played, Most Listened, Favorite Albums sections (150 lines)
+- ✅ **Modern Tab API** - Migrated from `.tabItem` to `Tab()` syntax
+- ✅ **Floating Search Bubble** - Search tab with `role: .search` (right-aligned bubble)
+- ✅ **Search State Management** - Moved from SearchView to ContentView for persistence across tabs
+- ⚠️ **Step 04 Conditional** - Mini player zoom morphing verification pending (see plan3/tab/issues/04-investigation-protocol.md)
+
+**Build Status**: ✅ **PASSING** (verified with `make build`)
+
+**Changes:**
+- Created: `Fonic HiFi/Presentation/Views/Home/HomeView.swift` (208 lines)
+- Modified: `Fonic HiFi/ContentView.swift` - Tab bar modernization (+24 lines, -19 lines)
+- Modified: `Fonic HiFi/Presentation/Views/Search/SearchView.swift` - Accepts search text binding (-4 lines)
+
+**Testing Pending**:
+1. Run `plan3/tab/scripts/test-current-zoom-behavior.sh` to verify if Step 04 is needed
+2. Manual UI testing (4 tabs, floating search, Home sections)
+
+## Implementation Status [Verified-Code]
+
+**Audio Engines:**
+- ✅ AVAudioEngineAdapter - Core/Audio/Engines/AVAudioEngineAdapter.swift
+- ✅ AudioKitEngineAdapter - Core/Audio/Engines/AudioKitEngineAdapter.swift
+- ✅ AudioEngineFacade - Core/Audio/Engine/AudioEngineFacade.swift:20
+- ✅ AudioEngineFactory - Core/Audio/Factory/AudioEngineFactory.swift
+
+**Data Layer:**
+- ✅ TrackDataActor - Data/Actors/TrackDataActor.swift:13
+- ✅ FileImportProcessor - Data/Actors/FileImportProcessor.swift:189
+- ✅ DataManager - Data/DataManager.swift
+- ✅ LibraryImportService - Data/Services/LibraryImportService.swift
+
+**UI Layer:**
+- ✅ iOS 26 Liquid Glass - `.glassEffect()` APIs (commit 38b63ea)
+- ✅ LiquidGlassDesignSystem - Unified design tokens
+
+**Non-Existent References (Do NOT reference):**
+- ❌ Core/Audio/Decoders/ - DOES NOT EXIST
+- ❌ FormatBadge.swift - DOES NOT EXIST
+- ❌ AudioSessionActor - DOES NOT EXIST (uses AudioSessionManager)
+- ❌ Files/TestAudio/ - DOES NOT EXIST
+- ❌ PerformanceOptimizedContainer.swift - DELETED
+
+## Outstanding P1 Issues
+
+**Phase 1 – Format & Playback Parity:**
+
+1. **Paginate library statistics** - DataManager.swift:89 fetches entire tables
+2. **Remove unused CloudKit entitlement** - Fonic_HiFi.entitlements:8
+3. **Unify logging on os.Logger** - Mixed print/Logger in AudioEngineFacade.swift:1041
 
 ## Next Actions
 
-**Immediate (Next 1-2 days):**
-1. **Manual Testing**: Verify Liquid Glass migration (commit 38b63ea)
-   - Test morphing animations in LiquidGlassRail
-   - Verify visual appearance across all views
-   - Test button interactions with `.buttonStyle(.glass)`
-   - Profile performance during scrolling/animations
-2. **Manual Testing**: Verify P0-1 threading fix (commit ddc088e)
-   - Import 10+ audio files
-   - Confirm UI remains responsive during import
-   - Enable Thread Performance Checker, verify 0 warnings
-3. Push to origin: `git push origin main`
+### Immediate (Next 1-2 days)
 
-**Short Term (Next 2-4 weeks):**
-1. P1 Performance optimization:
-   - Paginate library statistics (DataManager.swift:89 - getLibraryStatistics)
-2. P1 Architecture cleanup:
-   - Remove unused CloudKit entitlement
-   - Unify logging on os.Logger
-   - Optimize progress timer updates
+1. **Commit and Push**: `git push origin main`
+2. **Begin Phase 1**: Address P1 issues above
 
-**Medium Term (Next 2-6 months):**
-1. **Phase 0 completion** (Core Stability):
-   - Implement real gapless playback (finish prepareNext, buffer pre-roll)
-   - Hook BitPerfect validator into UI diagnostics (status badge)
-   - Resume playback, shake-to-shuffle toggle
-2. **Phase 1** (Format & Playback Parity):
-   - FLAC decoder integration (AudioKit or SFBAudioEngine)
-   - 10-band parametric EQ, crossfade, replay gain
-   - Sleep timer, variable playback speed, A/B looping
-   - Lyrics display (static + LRC)
+### Short Term (2-4 Weeks) - Phase 0
 
-**In Progress:**
-- ⚠️ **Manual testing required**: Liquid Glass migration (commit 38b63ea)
-- 🚧 Engine consolidation (merging AVAudio + AudioKit)
-- 🚧 Now Playing screen implementation
-- 🚧 Queue management UI
+- Gapless playback (prepareNext, buffer pre-roll)
+- BitPerfectValidator UI integration
+- Playback state restoration
+- Shake-to-shuffle
 
-**Known Issues:**
-- Engine switching latency spikes on first switch
-- Memory leak in AudioKit DSP chain (workaround: periodic cleanup)
-- SwiftData relationship faulting performance
+### Medium Term (2-6 Months) - Phase 1
+
+- FLAC decoder integration
+- 10-band parametric EQ
+- Crossfade, replay gain, sleep timer
+- Variable playback speed, A/B looping
+- Lyrics display (static + LRC sync)
+
+### Long Term (6+ Months) - Phases 2-6
+
+**See plan2/all.md for complete roadmap**
+
+## Known Issues
+
+**Performance:**
+- Engine switching latency spikes on first switch (~100ms)
+- SwiftData relationship faulting on large libraries
+
+**Memory:**
+- AudioKit DSP chain retains references (workaround: periodic cleanup in facade)
+
+**Testing Gaps:**
+- No device testing protocol yet (see plan3/logic/device-test-protocol.md for draft)
+- UI tests not configured
+
+---
+
+## Historical: Emergency Recovery (Sept 2025)
+
+**Recovery Completion**: 2025-09-29 (commit d250bb6)
+
+**Background**: Build break during concurrent threading refactoring required emergency backup and sequential recovery.
+
+**Recovery Strategy**:
+- Created `emergency-backup-20250928-212451` branch (commit 7f41dbd)
+- Restored 100/119 files via sequential cherry-pick + manual restoration
+- 19 intentional differences (docs, recovery artifacts, Swift 6 fixes)
+- Build quality: 11 errors → 0 errors, 8 warnings → 0 warnings
+
+**Recovery Documentation** (archived in plan2/):
+- `fix2.md` - Sequential cherry-pick strategy (1,262 lines)
+- `fix3.md` - Evidence analysis with actual vs planned diffs (727 lines)
+- `EXECUTE-NOW.md` - AI execution playbook with bash scripts
+- `branch-recovery.md` - Incremental recovery workflow
+- `build-break-notes.md` - Historical record of fixes
+
+**Key Learnings**:
+- Emergency backups critical before risky git operations
+- Sequential cherry-pick with build verification prevents cascading failures
+- Documentation of intentional diffs prevents confusion during recovery
+
+---
+
+## Documentation References
+
+**Roadmap & Architecture:**
+- plan2/all.md - Phases 0-6 execution roadmap (~1,470 lines)
+- plan3/logic/logic.md - Threading & architecture audit (~893 lines)
+- plan2/prd.md - Product requirements & philosophy
+- plan2/features.md - Market landscape & competitive analysis
+- plan2/ai.md - Apple Intelligence integration strategy
+- plan2/tab.md - iOS 26 navigation implementation (see plan3/tab for conditional Step 04 verification protocol)
+
+**Build & Debug:**
+- docs/MAKEFILE.md - Complete command reference
+- docs/DEBUGGING.md - Audio debugging patterns

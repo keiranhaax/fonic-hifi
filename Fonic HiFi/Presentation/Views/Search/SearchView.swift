@@ -11,8 +11,8 @@ import SwiftUI
 /// Main search interface for Fonic HiFi
 @MainActor
 struct SearchView: View {
+    @Binding var searchText: String
     @Environment(\.dataManager) private var dataManager
-    @State private var searchText = ""
     @State private var searchResults = SearchResults()
     @State private var searchTask: Task<Void, Never>?
     @State private var isSearching = false
@@ -20,44 +20,37 @@ struct SearchView: View {
     @State private var showingRecentSearches = true
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if searchText.isEmpty, showingRecentSearches {
-                    // Show recent searches when search is empty
-                    RecentSearchesView(
-                        recentSearches: recentSearches,
-                        onSelectSearch: { query in
-                            searchText = query
-                        },
-                        onClearSearches: {
-                            Task {
-                                try? await dataManager?.clearRecentSearches()
-                                recentSearches = []
-                            }
-                        },
-                    )
-                } else if searchResults.isEmpty, !searchText.isEmpty, !isSearching {
-                    // Show no results message
-                    NoResultsView(query: searchText)
-                } else if !searchResults.isEmpty {
-                    // Show search results
-                    SearchResultsListView(results: searchResults)
-                } else if isSearching {
-                    // Show loading state
-                    ProgressView("Searching...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    // Empty state before search
-                    EmptySearchView()
-                }
+        Group {
+            if searchText.isEmpty, showingRecentSearches {
+                // Show recent searches when search is empty
+                RecentSearchesView(
+                    recentSearches: recentSearches,
+                    onSelectSearch: { query in
+                        searchText = query
+                    },
+                    onClearSearches: {
+                        Task {
+                            try? await dataManager?.clearRecentSearches()
+                            recentSearches = []
+                        }
+                    },
+                )
+            } else if searchResults.isEmpty, !searchText.isEmpty, !isSearching {
+                // Show no results message
+                NoResultsView(query: searchText)
+            } else if !searchResults.isEmpty {
+                // Show search results
+                SearchResultsListView(results: searchResults)
+            } else if isSearching {
+                // Show loading state
+                ProgressView("Searching...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // Empty state before search
+                EmptySearchView()
             }
-            .navigationTitle("Search")
         }
-        .searchable(
-            text: $searchText,
-            placement: .toolbar,
-            prompt: Text("Search your library"),
-        )
+        .navigationTitle("Search")
         .onChange(of: searchText) { _, newValue in
             // Cancel previous search task
             searchTask?.cancel()
