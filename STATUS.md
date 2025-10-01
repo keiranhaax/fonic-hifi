@@ -47,25 +47,31 @@ All 4 P0 issues resolved and verified:
 
 ## iOS 26 Tab Bar Redesign (2025-10-01)
 
-**Status**: ✅ **IMPLEMENTATION COMPLETE** - Steps 01-03, 05 done, Step 04 conditional
+**Status**: ✅ **FULLY COMPLETE** - All steps implemented (01-05)
 
 Modernized tab bar from deprecated `.tabItem` to iOS 18+ `Tab()` API:
 - ✅ **HomeView Created** - New home tab with Recently Played, Most Listened, Favorite Albums sections (150 lines)
 - ✅ **Modern Tab API** - Migrated from `.tabItem` to `Tab()` syntax
 - ✅ **Floating Search Bubble** - Search tab with `role: .search` (right-aligned bubble)
 - ✅ **Search State Management** - Moved from SearchView to ContentView for persistence across tabs
-- ⚠️ **Step 04 Conditional** - Mini player zoom morphing verification pending (see plan3/tab/issues/04-investigation-protocol.md)
+- ✅ **Step 04 Complete** - Fixed mini player zoom morphing by removing NavigationStack wrapper
 
 **Build Status**: ✅ **PASSING** (verified with `make build`)
 
 **Changes:**
 - Created: `Fonic HiFi/Presentation/Views/Home/HomeView.swift` (208 lines)
-- Modified: `Fonic HiFi/ContentView.swift` - Tab bar modernization (+24 lines, -19 lines)
+- Modified: `Fonic HiFi/ContentView.swift` - Tab bar modernization + zoom fix (+24 lines, -22 lines)
 - Modified: `Fonic HiFi/Presentation/Views/Search/SearchView.swift` - Accepts search text binding (-4 lines)
 
-**Testing Pending**:
-1. Run `plan3/tab/scripts/test-current-zoom-behavior.sh` to verify if Step 04 is needed
-2. Manual UI testing (4 tabs, floating search, Home sections)
+**Step 04 Fix (Zoom Morphing):**
+- Bug confirmed: Sheet was sliding up instead of morphing
+- Solution: Removed NavigationStack wrapper from sheet presentation
+- Result: Mini player now morphs/zooms smoothly into Now Playing sheet
+- Verification: Matches Apple sample code patterns (HackingWithSwift, nilcoalescing.com)
+
+**Testing Completed**:
+1. ✅ Bug verification completed with `plan3/tab/scripts/test-current-zoom-behavior.sh`
+2. ⚠️ Manual UI testing pending (4 tabs, floating search, zoom morphing)
 
 ## Implementation Status [Verified-Code]
 

@@ -56,12 +56,9 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showingNowPlaying) {
-            NavigationStack {
-                NowPlayingView(animationNamespace: miniPlayerNamespace)
-                    .navigationTransition(.zoom(sourceID: "miniplayer", in: miniPlayerNamespace))
-                    .toolbar(.hidden, for: .navigationBar)
-            }
-            .environment(\.audioEngine, audioService)
+            NowPlayingView(animationNamespace: miniPlayerNamespace)
+                .navigationTransition(.zoom(sourceID: "miniplayer", in: miniPlayerNamespace))
+                .environment(\.audioEngine, audioService)
             .presentationDetents([
                 .medium,
                 .large,
