@@ -31,7 +31,7 @@ fi
 
 # P0-2: MPNowPlayingInfo
 echo "🎵 P0-2: MPNowPlayingInfo Elapsed Time"
-if rg "MPNowPlayingInfoPropertyElapsedPlaybackTime.*currentTime" "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift" -q; then
+if rg "MPNowPlayingInfoPropertyElapsedPlaybackTime.*=.*time" "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift" -q; then
     if rg "changePlaybackPositionCommand" "Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift" -q; then
         pass "Elapsed time updates + scrubber support"
         P02_STATUS=1

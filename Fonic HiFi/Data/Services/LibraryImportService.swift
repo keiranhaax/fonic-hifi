@@ -11,61 +11,54 @@ import OSLog
 import SwiftData
 
 /// Service responsible for importing audio files into the library
+/// UI-bound properties are @MainActor, file I/O delegated to FileImportProcessor actor
 @MainActor
 public final class LibraryImportService: ObservableObject {
     // MARK: - Published Properties
 
     /// Current import progress (0.0 to 1.0)
-    @MainActor @Published public private(set) var importProgress: Double = 0.0
+    @Published public private(set) var importProgress: Double = 0.0
 
     /// Whether an import is currently in progress
-    @MainActor @Published public private(set) var isImporting: Bool = false
+    @Published public private(set) var isImporting: Bool = false
 
     /// Current status message
-    @MainActor @Published public private(set) var statusMessage: String = ""
+    @Published public private(set) var statusMessage: String = ""
 
     /// Number of files processed
-    @MainActor @Published public private(set) var filesProcessed: Int = 0
+    @Published public private(set) var filesProcessed: Int = 0
 
     /// Total number of files to process
-    @MainActor @Published public private(set) var totalFiles: Int = 0
+    @Published public private(set) var totalFiles: Int = 0
 
     /// Import errors encountered
-    @MainActor @Published public private(set) var importErrors: [ImportError] = []
+    @Published public private(set) var importErrors: [ImportError] = []
 
     /// Recently imported track identifiers
-    @MainActor @Published public private(set) var recentlyImported: [PersistentIdentifier] = []
+    @Published public private(set) var recentlyImported: [PersistentIdentifier] = []
 
     // MARK: - Dependencies
 
-    private let trackDataActor: TrackDataActor
-    private let metadataExtractor: MetadataExtractionService
+    private let fileProcessor: FileImportProcessor
     private let logger = Logger(subsystem: "com.fonichifi.library", category: "LibraryImportService")
 
     // MARK: - Private Properties
 
     private var importTask: Task<Void, Never>?
-    private let supportedExtensions: Set<String> = [
-        "mp3", "m4a", "aac", "flac", "alac", "wav", "aiff", "aif", "ape", "wv", "ogg", "opus",
-    ]
 
     // Transaction tracking
     private var currentTransaction: ImportTransaction?
-
-    /// App container directory for storing copied music files
-    private lazy var musicContainerURL: URL = {
-        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        return documentsURL.appendingPathComponent("Music", isDirectory: true)
-    }()
 
     // MARK: - Initialization
 
     public init(
         trackDataActor: TrackDataActor,
-        metadataExtractor: MetadataExtractionService,
+        metadataExtractor: MetadataExtractionService
     ) {
-        self.trackDataActor = trackDataActor
-        self.metadataExtractor = metadataExtractor
+        self.fileProcessor = FileImportProcessor(
+            trackDataActor: trackDataActor,
+            metadataExtractor: metadataExtractor
+        )
     }
 
     // MARK: - Public Methods
@@ -125,28 +118,26 @@ public final class LibraryImportService: ObservableObject {
 
     /// Check if a file is already in the library
     public func isFileInLibrary(_ url: URL) async -> Bool {
-        do {
-            let existingTrackId = try await trackDataActor.trackExists(for: url)
-            return existingTrackId != nil
-        } catch {
-            logger.error("Error checking if file exists: \(error.localizedDescription)")
-            return false
-        }
+        await fileProcessor.fileExists(url)
     }
 
     /// Import a single file (for testing or manual import)
     public func importSingleFile(_ url: URL) async -> PersistentIdentifier? {
         do {
-            return try await processAudioFile(url)
+            let hasSecurityScope = url.startAccessingSecurityScopedResource()
+            defer {
+                if hasSecurityScope {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            return try await fileProcessor.processAudioFile(url, hasSecurityScope: hasSecurityScope)
         } catch {
             logger.error("Failed to import single file: \(error.localizedDescription)")
-            await MainActor.run {
-                importErrors.append(ImportError(
-                    url: url,
-                    error: error,
-                    message: "Failed to import file",
-                ))
-            }
+            importErrors.append(ImportError(
+                url: url,
+                error: error,
+                message: "Failed to import file"
+            ))
             return nil
         }
     }
@@ -154,232 +145,40 @@ public final class LibraryImportService: ObservableObject {
     // MARK: - Private Methods
 
     private func executeImportPipeline(urls: [URL]) async {
-        let audioFiles = await discoverAudioFilesWithSecurityScope(from: urls)
+        // Delegate file discovery to background actor
+        let audioFilesWithScope = await fileProcessor.discoverAudioFiles(from: urls)
 
-        await MainActor.run {
-            totalFiles = audioFiles.count
-        }
+        totalFiles = audioFilesWithScope.count
 
-        logger.info("Found \(audioFiles.count) audio files to import")
+        logger.info("Found \(audioFilesWithScope.count) audio files to import")
 
-        guard !audioFiles.isEmpty else {
-            await MainActor.run {
-                statusMessage = "No audio files found"
-                isImporting = false
-            }
+        guard !audioFilesWithScope.isEmpty else {
+            statusMessage = "No audio files found"
+            isImporting = false
             return
         }
 
         let batchSize = 10
-        let batches = audioFiles.chunked(into: batchSize)
+        let batches = audioFilesWithScope.chunked(into: batchSize)
 
         for batch in batches {
             await processBatch(batch)
 
             if Task.isCancelled {
-                await MainActor.run {
-                    statusMessage = "Import cancelled"
-                    isImporting = false
-                }
+                statusMessage = "Import cancelled"
+                isImporting = false
                 logger.info("Import task cancelled")
                 return
             }
         }
 
-        await MainActor.run {
-            statusMessage = "Import completed: \(filesProcessed) files imported"
-            isImporting = false
-        }
+        statusMessage = "Import completed: \(filesProcessed) files imported"
+        isImporting = false
         logger.info("Import completed successfully")
     }
 
-    /// Discover all audio files from the provided URLs (including subdirectories)
-    private func discoverAudioFiles(from urls: [URL]) async -> [URL] {
-        var audioFiles: [URL] = []
-
-        for url in urls {
-            var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
-                continue
-            }
-
-            if isDirectory.boolValue {
-                // Recursively scan directory
-                await audioFiles.append(contentsOf: scanDirectory(url))
-            } else if isSupportedAudioFile(url) {
-                audioFiles.append(url)
-            }
-        }
-
-        return audioFiles
-    }
-
-    /// Discover audio files with proper security-scoped resource handling
-    private func discoverAudioFilesWithSecurityScope(from urls: [URL]) async -> [URL] {
-        var audioFiles: [URL] = []
-
-        for url in urls {
-            // Start accessing security-scoped resource
-            let startedAccessing = url.startAccessingSecurityScopedResource()
-            defer {
-                if startedAccessing {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
-                logger.warning("File does not exist: \(url.path)")
-                continue
-            }
-
-            if isDirectory.boolValue {
-                // Recursively scan directory with security scope
-                await audioFiles.append(contentsOf: scanDirectoryWithSecurityScope(url))
-            } else if isSupportedAudioFile(url) {
-                audioFiles.append(url)
-            }
-        }
-
-        return audioFiles
-    }
-
-    /// Scan a directory for audio files
-    private func scanDirectory(_ directoryURL: URL) async -> [URL] {
-        var audioFiles: [URL] = []
-
-        do {
-            let resourceKeys: [URLResourceKey] = [.isDirectoryKey, .isRegularFileKey]
-            let contents = try FileManager.default.contentsOfDirectory(
-                at: directoryURL,
-                includingPropertiesForKeys: resourceKeys,
-                options: [.skipsHiddenFiles],
-            )
-
-            for url in contents {
-                let resourceValues = try url.resourceValues(forKeys: Set(resourceKeys))
-
-                if resourceValues.isDirectory == true {
-                    // Recursively scan subdirectory
-                    let nested = await scanDirectory(url)
-                    audioFiles.append(contentsOf: nested)
-                } else if resourceValues.isRegularFile == true, isSupportedAudioFile(url) {
-                    audioFiles.append(url)
-                }
-            }
-        } catch {
-            logger.error("Error scanning directory \(directoryURL.path): \(error.localizedDescription)")
-        }
-
-        return audioFiles
-    }
-
-    /// Scan a directory with security-scoped resource handling
-    private func scanDirectoryWithSecurityScope(_ directoryURL: URL) async -> [URL] {
-        var audioFiles: [URL] = []
-
-        let startedAccessing = directoryURL.startAccessingSecurityScopedResource()
-        defer {
-            if startedAccessing {
-                directoryURL.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        do {
-            let resourceKeys: [URLResourceKey] = [.isDirectoryKey, .isRegularFileKey]
-            let contents = try FileManager.default.contentsOfDirectory(
-                at: directoryURL,
-                includingPropertiesForKeys: resourceKeys,
-                options: [.skipsHiddenFiles],
-            )
-
-            for url in contents {
-                // Each subdirectory/file needs its own security scope
-                let childStartedAccessing = url.startAccessingSecurityScopedResource()
-                defer {
-                    if childStartedAccessing {
-                        url.stopAccessingSecurityScopedResource()
-                    }
-                }
-
-                let resourceValues = try url.resourceValues(forKeys: Set(resourceKeys))
-
-                if resourceValues.isDirectory == true {
-                    // Recursively scan subdirectory
-                    let nested = await scanDirectoryWithSecurityScope(url)
-                    audioFiles.append(contentsOf: nested)
-                } else if resourceValues.isRegularFile == true, isSupportedAudioFile(url) {
-                    audioFiles.append(url)
-                }
-            }
-        } catch {
-            logger.error("Error scanning directory \(directoryURL.path): \(error.localizedDescription)")
-        }
-
-        return audioFiles
-    }
-
-    /// Check if a file is a supported audio format
-    private func isSupportedAudioFile(_ url: URL) -> Bool {
-        let pathExtension = url.pathExtension.lowercased()
-        return supportedExtensions.contains(pathExtension)
-    }
-
-    // MARK: - File Management
-
-    /// Ensure the music container directory exists
-    private func setupMusicContainer() throws {
-        guard !FileManager.default.fileExists(atPath: musicContainerURL.path) else {
-            return
-        }
-
-        try FileManager.default.createDirectory(
-            at: musicContainerURL,
-            withIntermediateDirectories: true,
-            attributes: nil,
-        )
-        logger.info("Created music container directory at: \(self.musicContainerURL.path)")
-    }
-
-    /// Copy an imported file to the app container
-    private func copyImportedFile(_ sourceURL: URL) throws -> URL {
-        // Start accessing security-scoped resource before copying
-        let startedAccessing = sourceURL.startAccessingSecurityScopedResource()
-        defer {
-            if startedAccessing {
-                sourceURL.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        // Ensure music container exists
-        try setupMusicContainer()
-
-        // Generate destination URL with unique name if needed
-        let destinationURL = generateUniqueDestinationURL(for: sourceURL)
-
-        // Copy file to app container
-        try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
-        logger.debug("✅ Copied file: \(sourceURL.lastPathComponent) -> \(destinationURL.lastPathComponent)")
-
-        return destinationURL
-    }
-
-    /// Generate a unique destination URL, handling duplicate file names
-    private func generateUniqueDestinationURL(for sourceURL: URL) -> URL {
-        let fileName = sourceURL.deletingPathExtension().lastPathComponent
-        let fileExtension = sourceURL.pathExtension
-        var destinationURL = musicContainerURL.appendingPathComponent("\(fileName).\(fileExtension)")
-
-        // Handle duplicates by appending a number
-        var counter = 1
-        while FileManager.default.fileExists(atPath: destinationURL.path) {
-            let uniqueFileName = "\(fileName) (\(counter)).\(fileExtension)"
-            destinationURL = musicContainerURL.appendingPathComponent(uniqueFileName)
-            counter += 1
-        }
-
-        return destinationURL
-    }
+    // MARK: - File Management (Delegated to FileImportProcessor)
+    // All file I/O operations moved to FileImportProcessor actor
 
     /// Verify that a track file is accessible for playback
     public func verifyTrackAccess(_ track: Track) -> Bool {
@@ -392,56 +191,32 @@ public final class LibraryImportService: ObservableObject {
         return fileExists
     }
 
-    /// Get the total size of the music container directory
-    public func getMusicContainerSize() -> Int64 {
-        do {
-            try setupMusicContainer()
-            let resourceKeys: [URLResourceKey] = [.fileSizeKey]
-            let enumerator = FileManager.default.enumerator(
-                at: musicContainerURL,
-                includingPropertiesForKeys: resourceKeys,
-                options: [.skipsHiddenFiles],
-                errorHandler: nil,
-            )
-
-            var totalSize: Int64 = 0
-            while let url = enumerator?.nextObject() as? URL {
-                let resourceValues = try url.resourceValues(forKeys: Set(resourceKeys))
-                totalSize += Int64(resourceValues.fileSize ?? 0)
-            }
-
-            return totalSize
-        } catch {
-            logger.error("Failed to calculate music container size: \(error.localizedDescription)")
-            return 0
-        }
-    }
-
     /// Process a batch of audio files
-    private func processBatch(_ urls: [URL]) async {
+    private func processBatch(_ filesWithScope: [(URL, Bool)]) async {
         // Process files sequentially to avoid concurrency issues with @MainActor properties
-        for url in urls {
-            await processSingleFile(url)
+        for (url, hasSecurityScope) in filesWithScope {
+            await processSingleFile(url, hasSecurityScope: hasSecurityScope)
         }
     }
 
     /// Process a single audio file
-    private func processSingleFile(_ url: URL) async {
+    private func processSingleFile(_ url: URL, hasSecurityScope: Bool) async {
         do {
-            // Check if file already exists
-            if await isFileInLibrary(url) {
+            // Check if file already exists (delegated to actor)
+            if await fileProcessor.fileExists(url) {
                 logger.debug("File already in library: \(url.lastPathComponent)")
                 await updateProgress()
+                // Clean up security scope if needed
+                if hasSecurityScope {
+                    url.stopAccessingSecurityScopedResource()
+                }
                 return
             }
 
-            // Import the file
-            if let trackId = try await processAudioFile(url) {
-                await MainActor.run {
-                    recentlyImported.append(trackId)
-                }
-                logger.debug("Successfully imported track with ID: \(String(describing: trackId))")
-            }
+            // Import the file (delegated to actor for heavy I/O)
+            let trackId = try await fileProcessor.processAudioFile(url, hasSecurityScope: hasSecurityScope)
+            recentlyImported.append(trackId)
+            logger.debug("Successfully imported track with ID: \(String(describing: trackId))")
 
         } catch {
             logger.error("Error processing file \(url.lastPathComponent): \(error.localizedDescription)")
@@ -457,46 +232,11 @@ public final class LibraryImportService: ObservableObject {
         await updateProgress()
     }
 
-    /// Process an audio file and create a Track via TrackDataActor
-    private func processAudioFile(_ url: URL) async throws -> PersistentIdentifier? {
-        await MainActor.run {
-            statusMessage = "Processing \(url.lastPathComponent)..."
-        }
-
-        // Start accessing security-scoped resource
-        let startedAccessing = url.startAccessingSecurityScopedResource()
-        defer {
-            if startedAccessing {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        // Copy file to app container for persistent access
-        let copiedFileURL: URL
-        do {
-            copiedFileURL = try copyImportedFile(url)
-            logger.debug("File copied to app container: \(copiedFileURL.lastPathComponent)")
-        } catch {
-            logger.error("Failed to copy file \(url.lastPathComponent): \(error.localizedDescription)")
-            throw error
-        }
-
-        // Extract metadata using MetadataExtractionService (use copied file)
-        let trackMetadata = try await metadataExtractor.extractTrackMetadata(from: copiedFileURL)
-
-        // Create Track via TrackDataActor (handles persistence)
-        let trackId = try await trackDataActor.createTrack(from: trackMetadata)
-
-        return trackId
-    }
-
     /// Update import progress
     private func updateProgress() async {
-        await MainActor.run {
-            filesProcessed += 1
-            importProgress = totalFiles > 0 ? Double(filesProcessed) / Double(totalFiles) : 0.0
-            statusMessage = "Processed \(filesProcessed) of \(totalFiles) files"
-        }
+        filesProcessed += 1
+        importProgress = totalFiles > 0 ? Double(filesProcessed) / Double(totalFiles) : 0.0
+        statusMessage = "Processed \(filesProcessed) of \(totalFiles) files"
     }
 }
 

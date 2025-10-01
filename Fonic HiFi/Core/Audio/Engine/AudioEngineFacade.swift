@@ -940,6 +940,12 @@ public final class AudioEngineFacade: ObservableObject {
 
             let (time, dur) = await (currentTime, duration)
             stateManager.updateTime(time, duration: dur)
+
+            // Update Now Playing elapsed time for lock screen scrubber
+            var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = time
+            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
+            await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
         }
     }
 

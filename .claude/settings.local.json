@@ -79,7 +79,8 @@
       "Bash(codex:*)",
       "mcp__code-index__get_file_summary",
       "mcp__filesystem__read_multiple_files",
-      "Bash(/Users/keiran/.npm-global/bin/codex \"Analyze the Fonic HiFi codebase and validate these claims from plan3/issues/p0/:\n\n1. P0-1: Is LibraryImportService actually marked @MainActor at the class level? Check Data/Services/LibraryImportService.swift\n\n2. P0-2: Is MPNowPlayingInfoPropertyElapsedPlaybackTime hardcoded to 0 and never updated? Check Core/Audio/Engine/AudioEngineFacade.swift\n\n3. P0-3: Are there any remaining try! force-unwraps in production code?\n\n4. P0-4: Is Mach API usage guarded with #if canImport(Mach)?\n\n5. Does the progress timer currently update MPNowPlayingInfo elapsed time?\n\nVerify each claim with actual code snippets.\")"
+      "Bash(/Users/keiran/.npm-global/bin/codex \"Analyze the Fonic HiFi codebase and validate these claims from plan3/issues/p0/:\n\n1. P0-1: Is LibraryImportService actually marked @MainActor at the class level? Check Data/Services/LibraryImportService.swift\n\n2. P0-2: Is MPNowPlayingInfoPropertyElapsedPlaybackTime hardcoded to 0 and never updated? Check Core/Audio/Engine/AudioEngineFacade.swift\n\n3. P0-3: Are there any remaining try! force-unwraps in production code?\n\n4. P0-4: Is Mach API usage guarded with #if canImport(Mach)?\n\n5. Does the progress timer currently update MPNowPlayingInfo elapsed time?\n\nVerify each claim with actual code snippets.\")",
+      "Bash(bash:*)"
     ],
     "deny": [],
     "ask": []
