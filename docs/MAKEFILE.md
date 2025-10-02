@@ -10,15 +10,20 @@
 - `make build-check` - Quick build check (exit code only)
 - `make error-report` - Generate detailed error report
 - `make run` - Build and run in simulator
+- `make run-verify` - Build, install, launch, verify app is running (NEW)
 - `make test` - Shows message about no tests configured
 - `make lint` - Check code quality
 - `make format` - Auto-format code
 - `make clean` - Clean build artifacts
 - `make search PATTERN='text'` - Fast code search
+- `make crash-latest` - Show most recent crash log (NEW)
+- `make monitor-app DURATION=30` - Monitor app for crashes (NEW)
 - `make profile-cpu` - CPU profiling
 - `make profile-memory` - Memory profiling
 - `make memory-leaks` - Check for leaks
 - `make logs-stream` - Stream live logs
+- `make logs-errors` - Show only error-level logs (NEW)
+- `make logs-audio` - Filter logs for audio subsystem (NEW)
 
 ## Build Verification Best Practices
 
@@ -266,3 +271,205 @@ make parse-errors
 - Use `make search-interactive` for real-time search as you type
 - Use `make tree` to understand project structure
 - Use `make stats-features` to see code distribution across modules
+
+## Crash Detection & Monitoring
+
+### Crash Log Management
+```bash
+# List all recent crash logs (sorted by modification time)
+make crash-logs
+
+# Show the most recent crash log
+make crash-latest
+
+# iOS 26 modern crash diagnostics (uses simctl)
+make crash-simctl
+
+# Symbolicate a specific crash log
+make crash-symbolicate CRASH_LOG=path/to/crashlog.crash
+```
+
+### App Launch Verification
+```bash
+# Build, install, launch, and verify app is running
+make run-verify
+
+# Check if app is currently running
+make app-status
+
+# Monitor app for crashes over 60 seconds
+make monitor-app DURATION=60
+```
+
+**Example Workflow:**
+```bash
+# Launch app with verification
+make run-verify
+
+# Monitor for stability
+make monitor-app DURATION=120
+
+# If crash detected, view latest crash log
+make crash-latest
+
+# Symbolicate crash log for detailed analysis
+make crash-symbolicate CRASH_LOG=~/Library/Logs/DiagnosticReports/Fonic\ HiFi-2025-10-01-*.crash
+```
+
+## Advanced Log Filtering
+
+```bash
+# Show only error-level logs from last hour
+make logs-errors
+
+# Filter logs for audio subsystem
+make logs-audio
+
+# Standard log filtering by subsystem (existing)
+make logs-filter SUBSYSTEM='com.fonichifi.audio'
+```
+
+## Python Automation
+
+### Setup Virtual Environment
+```bash
+# Create and setup Python virtual environment
+make venv-setup
+
+# Activate the environment
+source venv/bin/activate
+
+# Check if environment is active
+make venv-check
+
+# Deactivate when done
+deactivate
+```
+
+### Python-Based Simulator Control
+```bash
+# Launch simulator using Python isim library
+source venv/bin/activate
+make sim-python
+```
+
+### Available Python Packages
+After running `make venv-setup`, the following packages are installed:
+- **isim** - iOS simulator management wrapper
+- **pymobiledevice3** - Real device control (USB/network)
+- **tidevice** - Simplified pymobiledevice3 wrapper
+- **Appium-Python-Client** - UI testing automation
+- **pytest** - Testing framework
+
+### Python Scripts Best Practices
+1. Always activate venv before Python operations: `source venv/bin/activate`
+2. Check venv status with: `make venv-check`
+3. Deactivate when done: `deactivate`
+4. For custom Python scripts, place them in `scripts/` directory
+
+## Codex CLI Integration
+
+**Note**: All codex commands use `codex exec --full-auto` for non-interactive execution, suitable for automation and CI/CD environments without TTY.
+
+**Security**: All Codex commands require `CODEX_ALLOW_UPLOAD=1` to prevent accidental code transmission to OpenAI's service.
+
+### Code Assistance with OpenAI Codex
+```bash
+# Explain a Swift file with Codex
+make codex-explain FILE="Fonic HiFi/Core/Audio/AudioEngineFacade.swift" CODEX_ALLOW_UPLOAD=1
+
+# Fix an issue with Codex
+make codex-fix ISSUE="NowPlayingView re-plays track on sheet open" CODEX_ALLOW_UPLOAD=1
+
+# Generate tests with Codex
+make codex-test FILE="Fonic HiFi/Core/Audio/AudioEngineFactory.swift" CODEX_ALLOW_UPLOAD=1
+
+# Review staged changes with Codex
+git add .
+make codex-review CODEX_ALLOW_UPLOAD=1
+```
+
+### Codex vs Mods Commands
+
+| Task | Codex CLI | Mods CLI |
+|------|-----------|----------|
+| Explain code | `make codex-explain FILE=path` | `make ai-explain FILE=path` |
+| Generate tests | `make codex-test FILE=path` | `make ai-test-generate FILE=path` |
+| Code review | `make codex-review` | `make ai-review` |
+| Fix issues | `make codex-fix ISSUE='desc'` | Manual workflow |
+
+**When to use Codex:**
+- Need direct file editing capabilities (`codex exec`)
+- Want GPT-4o-optimized code generation
+- Prefer OpenAI ecosystem
+
+**When to use Mods:**
+- Need streaming output
+- Want model flexibility (Claude, Gemini, etc.)
+- Prefer conversational interface
+
+### Security & Reliability Improvements
+
+**October 1, 2025 - Initial Security Hardening:**
+
+1. **PID Validation** (run-verify:736-744):
+   - Added regex check that extracted PID is numeric
+   - Prevents invalid PID values from passing through
+
+2. **Duration Limiting** (monitor-app:762-769):
+   - Capped maximum duration at 3600 seconds (1 hour)
+   - Prevents accidental infinite loops or DoS
+
+3. **Bundle ID Matching** (app-status:758):
+   - Changed from `grep -i "fonic"` to `grep "$(BUNDLE_ID)"`
+   - Prevents false matches with unrelated processes
+
+**October 2, 2025 - Codex Security Review Fixes:**
+
+4. **Temp File Security** (codex-review:887-894):
+   - Fixed symlink attack vulnerability
+   - Changed from predictable `/tmp/codex_review_diff.txt` to `mktemp`
+   - Added trap cleanup to ensure temp file deletion
+
+5. **Enhanced Error Handling** (venv-setup:814-818):
+   - Chain all commands with `&&` to fail fast
+   - Added `--require-virtualenv` flag to ensure packages install in venv
+   - Explicit error messages on failure
+
+6. **Input Validation** (monitor-app:769-771):
+   - Added regex validation for DURATION parameter
+   - Prevents "integer expression expected" errors
+   - Clear error message for invalid input
+
+7. **Crash Log Recency** (crash-logs:706, crash-latest:711):
+   - Fixed sorting to use modification time instead of alphabetical
+   - Added `-maxdepth 1` for performance
+   - Uses `ls -t` to get newest files first
+
+8. **Crash Symbolication Safety** (crash-symbolicate:725-735):
+   - Added `atos` availability check
+   - Validates crash log file exists
+   - Extracts only address frames with grep
+   - Checks atos exit status
+
+9. **Python Package Check** (venv-check:837):
+   - Appended `|| echo "No tracked packages installed yet"`
+   - Prevents false failures when venv is fresh
+
+10. **Codex Upload Protection** (codex-*:875-924):
+    - All Codex commands now require `CODEX_ALLOW_UPLOAD=1`
+    - Prevents accidental code transmission to OpenAI
+    - Clear warning messages when flag is missing
+
+## Integration with bash-commands.md
+
+The Makefile now implements patterns from `~/bash-commands.md`:
+- ✅ Build verification with exit codes (Section 1)
+- ✅ Crash detection and monitoring (Section 5)
+- ✅ App launch verification with PID tracking (Section 6)
+- ✅ Process monitoring with kill -0 checks (Section 6)
+- ✅ Advanced log filtering with predicates (Section 4)
+- ✅ Python automation via isim/pymobiledevice3 (Section 11)
+- ✅ Security hardening (PID validation, duration limits, bundle ID matching)
+
+See `~/bash-commands.md` for complete reference on Bash patterns for iOS/Xcode automation.

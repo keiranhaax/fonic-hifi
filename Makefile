@@ -55,9 +55,12 @@ LLM = llm
 .PHONY: search find-files find-todos find-viewmodels find-audio find-core stats stats-features tree view
 .PHONY: watch-lint watch-build watch-test benchmark-build benchmark-test benchmark-all
 .PHONY: profile-cpu profile-memory profile-audio memory-graph memory-leaks
-.PHONY: logs-show logs-stream logs-filter symbolicate
+.PHONY: logs-show logs-stream logs-filter logs-errors logs-audio symbolicate
 .PHONY: ai-explain ai-test-generate ai-review ai-commit pr-create issues diff find-interactive search-interactive parse-errors test-json
 .PHONY: build-verify build-check error-report
+.PHONY: crash-logs crash-latest crash-symbolicate crash-simctl run-verify app-status monitor-app
+.PHONY: venv-setup venv-activate venv-check sim-python
+.PHONY: codex-explain codex-fix codex-test codex-review
 
 # Help target - displays all available commands
 help:
@@ -121,13 +124,33 @@ help:
 	@echo "  make logs-show      - Show recent app logs"
 	@echo "  make logs-stream    - Stream live debug logs"
 	@echo "  make logs-filter SUBSYSTEM=name - Filter logs by subsystem"
-	@echo "  make symbolicate CRASH_LOG=path - Symbolicate crash logs"
+	@echo "  make logs-errors    - Show only error-level logs"
+	@echo "  make logs-audio     - Filter logs for audio subsystem"
+	@echo "  make symbolicate CRASH_LOG=path - Symbolicate crash logs (legacy)"
 	@echo ""
-	@echo "AI Assistance (mods, llm):"
-	@echo "  make ai-explain FILE=path - Explain code with AI"
-	@echo "  make ai-test-generate FILE=path - Generate tests with AI"
-	@echo "  make ai-review            - AI code review of changes"
-	@echo "  make ai-commit            - Generate commit message"
+	@echo "Crash Detection & Monitoring:"
+	@echo "  make crash-logs     - List recent crash logs"
+	@echo "  make crash-latest   - Show most recent crash log"
+	@echo "  make crash-symbolicate CRASH_LOG=path - Symbolicate crash log"
+	@echo "  make run-verify     - Build, install, launch, verify app is running"
+	@echo "  make app-status     - Check if app is currently running"
+	@echo "  make monitor-app DURATION=30 - Monitor app for crashes (default 30s)"
+	@echo ""
+	@echo "Python Automation:"
+	@echo "  make venv-setup     - Create Python virtual environment"
+	@echo "  make venv-activate  - Show activation instructions"
+	@echo "  make venv-check     - Check if venv is active"
+	@echo "  make sim-python     - Launch simulator via Python isim"
+	@echo ""
+	@echo "AI Assistance (mods, llm, codex):"
+	@echo "  make ai-explain FILE=path - Explain code with AI (mods)"
+	@echo "  make ai-test-generate FILE=path - Generate tests with AI (mods)"
+	@echo "  make ai-review            - AI code review of changes (mods)"
+	@echo "  make ai-commit            - Generate commit message (mods)"
+	@echo "  make codex-explain FILE=path - Explain code with Codex CLI"
+	@echo "  make codex-fix ISSUE='description' - Fix issue with Codex"
+	@echo "  make codex-test FILE=path - Generate tests with Codex"
+	@echo "  make codex-review         - Code review with Codex CLI"
 	@echo ""
 	@echo "Git & GitHub (gh, bat):"
 	@echo "  make pr-create      - Create pull request"
@@ -674,6 +697,241 @@ test-json:
 	@command -v $(JQ) >/dev/null 2>&1 || { echo "jq not installed. Install with: brew install jq"; exit 1; }
 	@$(XCODEBUILD) test -project "$(PROJECT_NAME).xcodeproj" -scheme "$(SCHEME)" -destination "$(DESTINATION)" -resultBundlePath result.xcresult >/dev/null 2>&1
 	@xcrun xcresulttool get --format json --path result.xcresult | $(JQ) '.metrics'
+
+# ===== CRASH DETECTION & MONITORING =====
+
+# List recent crash logs
+crash-logs:
+	@echo "Recent crash logs for Fonic HiFi..."
+	@find ~/Library/Logs/DiagnosticReports -maxdepth 1 -type f \( -name "Fonic HiFi*.crash" -o -name "Fonic HiFi*.ips" \) 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -10 || echo "No crash logs found"
+
+# Show most recent crash log
+crash-latest:
+	@echo "Most recent crash log..."
+	@LATEST=$$(find ~/Library/Logs/DiagnosticReports -maxdepth 1 -type f \( -name "Fonic HiFi*.crash" -o -name "Fonic HiFi*.ips" \) -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1); \
+	if [ -n "$$LATEST" ]; then \
+		echo "File: $$LATEST"; \
+		cat "$$LATEST"; \
+	else \
+		echo "No crash logs found"; \
+	fi
+
+# iOS 26 simulator crash diagnostics (modern alternative)
+crash-simctl:
+	@echo "Fetching crash reports from iOS 26 simulator..."
+	@$(XCRUN) simctl diagnose booted --crashes 2>/dev/null || \
+		$(XCRUN) simctl crashreporter show booted 2>/dev/null || \
+		echo "No crashes found or simctl diagnostics unavailable"
+
+# Enhanced crash log symbolication
+crash-symbolicate:
+	@if [ -z "$(CRASH_LOG)" ]; then \
+		echo "Usage: make crash-symbolicate CRASH_LOG=path/to/crashlog.crash"; \
+		exit 1; \
+	fi
+	@command -v atos >/dev/null 2>&1 || { echo "❌ atos not found. Install Xcode Command Line Tools."; exit 1; }
+	@if [ ! -f "$(CRASH_LOG)" ]; then \
+		echo "❌ Crash log not found: $(CRASH_LOG)"; \
+		exit 1; \
+	fi
+	@echo "Symbolicating crash log: $(CRASH_LOG)..."
+	@DSYM_PATH="$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app.dSYM/Contents/Resources/DWARF/Fonic HiFi"; \
+	if [ -f "$$DSYM_PATH" ]; then \
+		grep -E '^\s*[0-9]+\s+Fonic HiFi\s+0x[0-9a-f]+' "$(CRASH_LOG)" | \
+		atos -arch arm64 -o "$$DSYM_PATH" -l 0x100000000 || \
+		{ echo "❌ Symbolication failed"; exit 1; }; \
+	else \
+		echo "❌ dSYM file not found. Build the app first with: make build"; \
+		exit 1; \
+	fi
+
+# ===== APP LAUNCH VERIFICATION =====
+
+# Build, install, launch, and verify app is running
+run-verify: build simulator-boot
+	@echo "Installing $(PROJECT_NAME) on simulator..."
+	@$(XCRUN) simctl install booted "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app" || { echo "Failed to install app"; exit 1; }
+	@echo "Launching $(PROJECT_NAME) and verifying..."
+	@LAUNCH_OUTPUT=$$($(XCRUN) simctl launch booted $(BUNDLE_ID) 2>&1); \
+	APP_PID=$$(echo "$$LAUNCH_OUTPUT" | awk '{print $$NF}'); \
+	if [ -z "$$APP_PID" ]; then \
+		echo "❌ Failed to launch app"; \
+		exit 1; \
+	fi; \
+	if ! [[ "$$APP_PID" =~ ^[0-9]+$$ ]]; then \
+		echo "❌ Invalid PID extracted: $$APP_PID"; \
+		exit 1; \
+	fi; \
+	echo "App launched with PID: $$APP_PID"; \
+	sleep 3; \
+	if kill -0 $$APP_PID 2>/dev/null; then \
+		echo "✅ App is running and verified (PID: $$APP_PID)"; \
+	else \
+		echo "❌ App crashed after launch (PID $$APP_PID no longer exists)"; \
+		make crash-latest; \
+		exit 1; \
+	fi
+
+# Check if app is currently running
+app-status:
+	@echo "Checking $(PROJECT_NAME) status..."
+	@$(XCRUN) simctl spawn booted launchctl list | grep "$(BUNDLE_ID)" || echo "App is not running"
+
+# Monitor app for crashes over duration
+monitor-app:
+	@if [ -z "$(DURATION)" ]; then \
+		DURATION=30; \
+	elif ! [[ "$(DURATION)" =~ ^[0-9]+$$ ]]; then \
+		echo "❌ DURATION must be a positive integer"; \
+		exit 1; \
+	elif [ $(DURATION) -gt 3600 ]; then \
+		echo "⚠️  Duration capped at 3600 seconds (1 hour)"; \
+		DURATION=3600; \
+	else \
+		DURATION=$(DURATION); \
+	fi; \
+	echo "Monitoring $(PROJECT_NAME) for $$DURATION seconds..."; \
+	APP_PID=$$($(XCRUN) simctl spawn booted launchctl list | grep -i "fonic" | awk '{print $$1}'); \
+	if [ -z "$$APP_PID" ]; then \
+		echo "❌ App is not running. Launch it first with: make run"; \
+		exit 1; \
+	fi; \
+	echo "Monitoring PID: $$APP_PID"; \
+	for i in $$(seq 1 $$DURATION); do \
+		if ! kill -0 $$APP_PID 2>/dev/null; then \
+			echo "❌ App crashed at $$i seconds"; \
+			make crash-latest; \
+			exit 1; \
+		fi; \
+		sleep 1; \
+		echo -n "."; \
+	done; \
+	echo ""; \
+	echo "✅ App stable for $$DURATION seconds"
+
+# ===== ADVANCED LOG FILTERING =====
+
+# Show only error-level logs
+logs-errors:
+	@echo "Showing error-level logs for Fonic HiFi..."
+	@log show --predicate 'process == "Fonic HiFi" && level == "error"' --last 1h --style syslog
+
+# Filter logs for audio subsystem
+logs-audio:
+	@echo "Filtering logs for audio subsystem..."
+	@log show --predicate 'process == "Fonic HiFi" && subsystem CONTAINS "audio"' --last 1h --style syslog
+
+# ===== PYTHON AUTOMATION =====
+
+# Setup Python virtual environment
+venv-setup:
+	@echo "Setting up Python virtual environment..."
+	@if [ -d "venv" ]; then \
+		echo "Virtual environment already exists at venv/"; \
+	else \
+		python3 -m venv venv && \
+		echo "Virtual environment created" && \
+		echo "Activating and installing packages..." && \
+		. venv/bin/activate && \
+		python3 -m pip install --require-virtualenv isim pymobiledevice3 tidevice Appium-Python-Client pytest && \
+		echo "✅ Virtual environment ready" || \
+		{ echo "❌ Failed to setup virtual environment"; exit 1; }; \
+	fi
+	@echo "\nTo activate: source venv/bin/activate"
+
+# Show activation instructions
+venv-activate:
+	@echo "To activate the Python virtual environment, run:"
+	@echo "  source venv/bin/activate"
+	@echo ""
+	@echo "To deactivate when done:"
+	@echo "  deactivate"
+
+# Check if venv is activated
+venv-check:
+	@if [ -n "$$VIRTUAL_ENV" ]; then \
+		echo "✅ Virtual environment is active: $$VIRTUAL_ENV"; \
+		echo "Installed packages:"; \
+		pip list | grep -E "isim|pymobiledevice3|tidevice|Appium|pytest" || echo "No tracked packages installed yet"; \
+	else \
+		echo "❌ Virtual environment is not active"; \
+		echo "Activate with: source venv/bin/activate"; \
+	fi
+
+# Launch simulator using Python isim
+sim-python:
+	@echo "Launching simulator via isim (Python)..."
+	@if [ -n "$$VIRTUAL_ENV" ]; then \
+		python3 -c "from isim import Runtime, DeviceType, Device; runtime = Runtime.from_name('iOS $(SIMULATOR_OS)'); device_type = DeviceType.from_name('$(SIMULATOR_NAME)'); devices = Device.from_name('$(SIMULATOR_NAME)'); device = devices[0] if devices else Device.create('Test iPhone', device_type, runtime); device.boot(); print('Simulator booted:', device.name)"; \
+	else \
+		echo "❌ Virtual environment not active. Run: source venv/bin/activate"; \
+		exit 1; \
+	fi
+
+# ===== CODEX CLI COMMANDS =====
+
+# Explain code with Codex CLI
+codex-explain:
+	@if [ -z "$(CODEX_ALLOW_UPLOAD)" ]; then \
+		echo "⚠️  WARNING: This will upload code to OpenAI Codex service"; \
+		echo "Set CODEX_ALLOW_UPLOAD=1 to proceed: make codex-explain FILE=... CODEX_ALLOW_UPLOAD=1"; \
+		exit 1; \
+	fi
+	@if [ -z "$(FILE)" ]; then \
+		echo "Usage: make codex-explain FILE=path/to/file.swift CODEX_ALLOW_UPLOAD=1"; \
+		exit 1; \
+	fi
+	@command -v codex >/dev/null 2>&1 || { echo "codex not installed. Install with: npm install -g @openai/codex"; exit 1; }
+	@echo "Explaining $(FILE) with Codex..."
+	@codex exec --full-auto "Explain this Swift code file focusing on iOS 26 features, SwiftUI patterns, and audio processing: $(FILE)"
+
+# Fix issue with Codex CLI
+codex-fix:
+	@if [ -z "$(CODEX_ALLOW_UPLOAD)" ]; then \
+		echo "⚠️  WARNING: This will upload code to OpenAI Codex service"; \
+		echo "Set CODEX_ALLOW_UPLOAD=1 to proceed: make codex-fix ISSUE='...' CODEX_ALLOW_UPLOAD=1"; \
+		exit 1; \
+	fi
+	@if [ -z "$(ISSUE)" ]; then \
+		echo "Usage: make codex-fix ISSUE='description of the issue' CODEX_ALLOW_UPLOAD=1"; \
+		exit 1; \
+	fi
+	@command -v codex >/dev/null 2>&1 || { echo "codex not installed. Install with: npm install -g @openai/codex"; exit 1; }
+	@echo "Fixing issue with Codex: $(ISSUE)"
+	@codex exec "$(ISSUE)"
+
+# Generate tests with Codex CLI
+codex-test:
+	@if [ -z "$(CODEX_ALLOW_UPLOAD)" ]; then \
+		echo "⚠️  WARNING: This will upload code to OpenAI Codex service"; \
+		echo "Set CODEX_ALLOW_UPLOAD=1 to proceed: make codex-test FILE=... CODEX_ALLOW_UPLOAD=1"; \
+		exit 1; \
+	fi
+	@if [ -z "$(FILE)" ]; then \
+		echo "Usage: make codex-test FILE=path/to/file.swift CODEX_ALLOW_UPLOAD=1"; \
+		exit 1; \
+	fi
+	@command -v codex >/dev/null 2>&1 || { echo "codex not installed. Install with: npm install -g @openai/codex"; exit 1; }
+	@echo "Generating tests for $(FILE) with Codex..."
+	@codex exec --full-auto "Generate comprehensive Swift Testing (@Test) unit tests for this file with edge cases: $(FILE)"
+
+# Code review with Codex CLI
+codex-review:
+	@if [ -z "$(CODEX_ALLOW_UPLOAD)" ]; then \
+		echo "⚠️  WARNING: This will upload git diff to OpenAI Codex service"; \
+		echo "Set CODEX_ALLOW_UPLOAD=1 to proceed: make codex-review CODEX_ALLOW_UPLOAD=1"; \
+		exit 1; \
+	fi
+	@command -v codex >/dev/null 2>&1 || { echo "codex not installed. Install with: npm install -g @openai/codex"; exit 1; }
+	@echo "Running Codex code review on staged changes..."
+	@TEMP_DIFF=$$(mktemp); \
+	trap 'rm -f "$$TEMP_DIFF"' EXIT; \
+	git diff --cached > "$$TEMP_DIFF"; \
+	if [ ! -s "$$TEMP_DIFF" ]; then \
+		echo "No staged changes to review"; \
+		exit 1; \
+	fi; \
+	codex exec --full-auto "Review this git diff for iOS 26 best practices, Swift 6.2 concurrency, security issues, and potential bugs. Provide actionable feedback." < "$$TEMP_DIFF"
 
 # Combined commands for common workflows
 all: clean lint build
