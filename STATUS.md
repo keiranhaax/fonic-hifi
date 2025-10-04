@@ -7,6 +7,8 @@
 
 ## Recent Development Milestones
 
+- Emergency rollback (2025-10-01): Restored main to commit `d9ae53b` to resolve a SwiftData startup crash caused by schema mismatch; current work preserved on backup branch `emergency-backup-20251001-230224`.
+
 **Core Architecture (Complete):**
 - ✅ Swift 6 concurrency compliance with strict actor isolation
 - ✅ Dual-engine audio system (AVAudioEngine + AudioKit adapters)
@@ -176,13 +178,16 @@ Modernized tab bar from deprecated `.tabItem` to iOS 18+ `Tab()` API:
 ## Documentation References
 
 **Roadmap & Architecture:**
-- plan2/all.md - Phases 0-6 execution roadmap (~1,470 lines)
+- plan2/all.md - MASTER PLAN (Version 2.0, consolidated, ~2,800 lines)
+  - Complete roadmap with Phases 0-4
+  - Market analysis & competitive intelligence
+  - Product requirements & acceptance criteria
+  - Apple Intelligence integration strategy
+  - Legacy knowledge & critical context
+- plan2/archive/ - Archived planning documents (prd.md, features.md, ai.md, roadmap.md, files-summary.md)
 - plan3/logic/logic.md - Threading & architecture audit (~893 lines)
-- plan2/prd.md - Product requirements & philosophy
-- plan2/features.md - Market landscape & competitive analysis
-- plan2/ai.md - Apple Intelligence integration strategy
 - plan2/tab.md - iOS 26 navigation implementation (see plan3/tab for conditional Step 04 verification protocol)
 
 **Build & Debug:**
-- docs/MAKEFILE.md - Complete command reference
+- docs/COMMANDS.md - Build patterns and best practices (run `make help` for all commands)
 - docs/DEBUGGING.md - Audio debugging patterns

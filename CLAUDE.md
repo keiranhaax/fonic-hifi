@@ -27,35 +27,8 @@ See global `~/.claude/CLAUDE.md` for universal Swift/iOS development rules.
 
 ## Project Status
 
-**Current Status**: See [STATUS.md](STATUS.md) for volatile session state
-**Build**: ✅ PASSING (fix-concurrency-issues @ 80ab4e2)
-**Recovery**: Following plan2/fix2.md (4-phase cherry-pick strategy)
-**Critical Issues**: See plan2/next-steps.md for P0/P1 prioritized tasks
-
-## Implementation Status [Verified-Code]
-
-**Audio Engines:**
-- ✅ AVAudioEngineAdapter - COMPLETE (Core/Audio/Engines/AVAudioEngineAdapter.swift)
-- ✅ AudioKitEngineAdapter - COMPLETE (Core/Audio/Engines/AudioKitEngineAdapter.swift)
-- ✅ AudioEngineFacade - Main coordinator (Core/Audio/Engine/AudioEngineFacade.swift:20)
-- ✅ AudioEngineFactory - Engine selection (Core/Audio/Factory/AudioEngineFactory.swift)
-
-**Data Layer:**
-- ✅ TrackDataActor - SwiftData operations (Data/Actors/TrackDataActor.swift:13)
-- ✅ DataManager - Main data coordinator (Data/DataManager.swift)
-- ✅ LibraryImportService - File import (Data/Services/LibraryImportService.swift)
-- ⚠️ LibraryImportService: Main-thread I/O blocks UI (P0 - needs background actor)
-
-**UI Layer:**
-- ⚠️ Native `.glassEffect()` - iOS 26 API documented but NOT USED IN CODE
-- ✅ `.liquidGlass()` - CUSTOM implementation using Material (LiquidGlassDesignSystem.swift:30)
-- ✅ PerformanceOptimizedContainer - CUSTOM container (PerformanceOptimizedContainer.swift:16)
-
-**Non-Existent References (Do NOT reference these):**
-- ❌ Core/Audio/Decoders/ - DOES NOT EXIST
-- ❌ FormatBadge.swift - DOES NOT EXIST
-- ❌ AudioSessionActor - DOES NOT EXIST (uses AudioSessionManager instead)
-- ❌ Files/TestAudio/ - DOES NOT EXIST
+**Current**: @STATUS.md
+**Commands**: Run `make help` for all commands, @docs/COMMANDS.md for build patterns
 
 ## iOS 26 Modern API Requirements
 
@@ -135,7 +108,7 @@ make search PATTERN='x' # Fast code search
 make find-audio         # Find all audio-related code
 ```
 
-**Full Command Reference**: See [docs/MAKEFILE.md](docs/MAKEFILE.md)
+**Full Command Reference**: Run `make help` or see @docs/COMMANDS.md for build patterns
 
 ## Required Development Tools
 
@@ -148,41 +121,6 @@ make find-audio         # Find all audio-related code
 - `fzf` - Interactive fuzzy finder
 
 **Install**: `make install-deps` | **Check**: `make check-deps`
-
-## Outstanding P0/P1 Issues [From plan2/next-steps.md]
-
-**Source:** Multiple AI assessments (2025-09-28) identified systemic issues requiring focused follow-up.
-
-### Phase 1 – Crash & Build Safeguards (P0)
-
-1. **Replace residual `try!`/fatal fallbacks**
-   - Fonic HiFi/FonicHiFiApp.swift:81 - App init escalates to `try! DataManager()` when all fallbacks fail
-   - Fonic HiFi/Data/DataManager.swift:614 - Preview builder falls back to `try! ModelContainer`
-   - **Action:** Propagate errors to user-visible failure state (alert/placeholder)
-
-2. **Guard Mach API usage**
-   - Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:369 - Direct Mach API calls without availability checks
-   - **Action:** Wrap with `#if canImport(Mach)`, provide zero/placeholder metrics when unavailable
-
-### Phase 2 – Performance & Threading (P0)
-
-3. **Move import pipeline off `@MainActor`**
-   - Fonic HiFi/Data/Services/LibraryImportService.swift:15,146 - Synchronous FileManager work on main actor
-   - **Action:** Convert to non-main actor, perform file I/O on background actor/task
-   - **Risk Level:** HIGH - Commit b7e6743 in backup branch contains these changes (342 lines modified)
-   - **Testing Required:** Manual import of 10+ files, verify NO UI freezing
-
-4. **Paginate library statistics & heavy fetches**
-   - Fonic HiFi/Data/DataManager.swift:89 - `getLibraryStatistics()` fetches entire tables on main context
-   - **Action:** Use `fetchCount`, batched fetches, or existing pagination helpers
-
-### Phase 3 – Architecture Cleanup (P1)
-
-5. **Remove unused CloudKit entitlement** - Fonic HiFi/Fonic_HiFi.entitlements:8
-6. **Unify logging on `os.Logger`** - Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:1041
-7. **Optimize progress timer updates** - Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:930
-
-**Full Details**: See plan2/next-steps.md
 
 ## Development Workflow Patterns
 
@@ -251,8 +189,6 @@ make search PATTERN='AudioEngine'    # Search for patterns
 make logs-stream                     # Stream live logs
 make memory-leaks                    # Check for leaks
 ```
-
-**Full Debugging Guide**: See [docs/DEBUGGING.md](docs/DEBUGGING.md)
 
 ## Critical Implementation Patterns
 
@@ -357,10 +293,6 @@ struct MyView: View { ... }
 
 ## References
 
-- **Session Status**: [STATUS.md](STATUS.md) - Volatile session state (updated per session)
-- **Build Commands**: [docs/MAKEFILE.md](docs/MAKEFILE.md) - Complete command reference
-- **Debugging**: [docs/DEBUGGING.md](docs/DEBUGGING.md) - Audio debugging patterns
-- **Recovery**: plan2/fix2.md - 4-phase recovery execution guide
-- **Issues**: plan2/next-steps.md - P0/P1 prioritized tasks
-- **Global Rules**: ~/.claude/CLAUDE.md - Universal Swift/iOS development rules
- Always read @STATUS.md for the current status of the project.
+- @STATUS.md - Current project state and progress
+- @docs/COMMANDS.md - Build patterns and best practices (run `make help` for all commands)
+- @~/.claude/CLAUDE.md - Universal Swift/iOS development standards

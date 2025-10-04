@@ -62,91 +62,16 @@ LLM = llm
 .PHONY: venv-setup venv-activate venv-check sim-python
 .PHONY: codex-explain codex-fix codex-test codex-review
 
-# Help target - displays all available commands
-help:
-	@echo "Fonic HiFi iOS App - Available Commands:"
+## Self-documenting help - reads inline ## comments from targets below
+help: ## Show all available commands
+	@echo "Fonic HiFi iOS App - Self-Documenting Makefile"
 	@echo ""
-	@echo "Build Commands:"
-	@echo "  make build          - Build the app in Debug configuration"
-	@echo "  make build-release  - Build the app in Release configuration"
-	@echo "  make build-verify   - Comprehensive build verification with full output"
-	@echo "  make build-check    - Quick build check (exit code only)"
-	@echo "  make error-report   - Generate detailed error report from build"
-	@echo "  make run            - Build and run the app in the simulator"
-	@echo "  make clean          - Clean build artifacts and derived data"
-	@echo "  make open           - Open the project in Xcode"
+	@echo "Usage: make [target]"
 	@echo ""
-	@echo "Testing Commands:"
-	@echo "  make test           - Run all unit and UI tests"
-	@echo "  make test-unit      - Run unit tests only (faster)"
-	@echo "  make test-ui        - Run UI tests only (slower)"
-	@echo "  make coverage       - Generate test coverage report"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-25s\033[0m %s\n", $$1, $$2}'
 	@echo ""
-	@echo "Code Quality Commands:"
-	@echo "  make lint           - Run SwiftLint"
-	@echo "  make format         - Auto-format code using SwiftFormat"
-	@echo "  make analyze        - Run static analysis on the codebase"
-	@echo ""
-	@echo "Search & Navigation (ripgrep, fd, fzf):"
-	@echo "  make search PATTERN='text'     - Fast code search"
-	@echo "  make find-files PATTERN='*.swift' - Find files by pattern"
-	@echo "  make find-todos                - Find all TODO/FIXME comments"
-	@echo "  make find-viewmodels           - Locate all ViewModel files"
-	@echo "  make find-audio                - Find AudioKit/audio references"
-	@echo "  make find-core                 - Find Core module references"
-	@echo "  make find-interactive          - Interactive file finder with preview"
-	@echo "  make search-interactive        - Interactive code search"
-	@echo ""
-	@echo "Code Analysis (tokei, eza, bat):"
-	@echo "  make stats          - Show code statistics"
-	@echo "  make stats-features - Statistics per feature module"
-	@echo "  make tree           - Visual project structure"
-	@echo "  make view FILE=path - View file with syntax highlighting"
-	@echo ""
-	@echo "Monitoring & Automation (watchman):"
-	@echo "  make watch-lint     - Auto-lint on file changes"
-	@echo "  make watch-build    - Auto-build on changes"
-	@echo "  make watch-test     - Auto-test on changes"
-	@echo ""
-	@echo "Performance (hyperfine):"
-	@echo "  make benchmark-build - Measure build performance"
-	@echo "  make benchmark-test  - Compare test execution times"
-	@echo "  make benchmark-all   - Full performance analysis"
-	@echo ""
-	@echo "Profiling & Memory (xctrace):"
-	@echo "  make profile-cpu    - CPU profiling (app must be running)"
-	@echo "  make profile-memory - Memory allocation profiling"
-	@echo "  make profile-audio  - Audio system trace profiling"
-	@echo "  make memory-graph   - Capture memory graph"
-	@echo "  make memory-leaks   - Check for memory leaks"
-	@echo ""
-	@echo "Debugging & Logging:"
-	@echo "  make logs-show      - Show recent app logs"
-	@echo "  make logs-stream    - Stream live debug logs"
-	@echo "  make logs-filter SUBSYSTEM=name - Filter logs by subsystem"
-	@echo "  make logs-errors    - Show only error-level logs"
-	@echo "  make logs-audio     - Filter logs for audio subsystem"
-	@echo "  make symbolicate CRASH_LOG=path - Symbolicate crash logs (legacy)"
-	@echo ""
-	@echo "Crash Detection & Monitoring:"
-	@echo "  make crash-logs     - List recent crash logs"
-	@echo "  make crash-latest   - Show most recent crash log"
-	@echo "  make crash-symbolicate CRASH_LOG=path - Symbolicate crash log"
-	@echo "  make run-verify     - Build, install, launch, verify app is running"
-	@echo "  make app-status     - Check if app is currently running"
-	@echo "  make monitor-app DURATION=30 - Monitor app for crashes (default 30s)"
-	@echo ""
-	@echo "Python Automation:"
-	@echo "  make venv-setup     - Create Python virtual environment"
-	@echo "  make venv-activate  - Show activation instructions"
-	@echo "  make venv-check     - Check if venv is active"
-	@echo "  make sim-python     - Launch simulator via Python isim"
-	@echo ""
-	@echo "AI Assistance (mods, llm, codex):"
-	@echo "  make ai-explain FILE=path - Explain code with AI (mods)"
-	@echo "  make ai-test-generate FILE=path - Generate tests with AI (mods)"
-	@echo "  make ai-review            - AI code review of changes (mods)"
-	@echo "  make ai-commit            - Generate commit message (mods)"
+	@echo "📖 See docs/COMMANDS.md for build best practices and iOS 26 patterns"
 	@echo "  make codex-explain FILE=path - Explain code with Codex CLI"
 	@echo "  make codex-fix ISSUE='description' - Fix issue with Codex"
 	@echo "  make codex-test FILE=path - Generate tests with Codex"
@@ -167,7 +92,7 @@ help:
 	@echo "  make install-deps   - Install missing dependencies"
 
 # Check if required dependencies are installed
-check-deps:
+check-deps: ## Check if required development tools are installed
 	@echo "Checking dependencies..."
 	@echo "\nCritical (Required):"
 	@command -v $(XCODEBUILD) >/dev/null 2>&1 && echo "  [OK] xcodebuild" || { echo "  [FAIL] xcodebuild - Please install Xcode"; exit 1; }
@@ -193,7 +118,7 @@ check-deps:
 	@echo "\nDependency check complete"
 
 # Install missing dependencies
-install-deps:
+install-deps: ## Install missing dependencies via Homebrew
 	@echo "Installing dependencies..."
 	@command -v brew >/dev/null 2>&1 || { echo "Installing Homebrew..."; /bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; }
 	@echo "\nInstalling essential tools..."
@@ -248,7 +173,7 @@ build: check-deps
 	echo "Build complete"
 
 # Build the app in Release configuration
-build-release: check-deps
+build-release: check-deps ## Build app in Release configuration
 	@echo "Building $(PROJECT_NAME) (Release)..."
 	@set -o pipefail && $(XCODEBUILD) build \
 		-project "$(PROJECT_NAME).xcodeproj" \
@@ -262,7 +187,7 @@ build-release: check-deps
 	@echo "Release build complete"
 
 # Comprehensive build verification with full output capture
-build-verify: clean
+build-verify: clean ## Comprehensive build verification with full output
 	@echo "🔍 Running comprehensive build verification..."
 	@$(MAKE) build > build_verify.log 2>&1; \
 	EXIT_CODE=$$?; \
@@ -283,11 +208,11 @@ build-verify: clean
 	fi
 
 # Quick build check - exit code only
-build-check:
+build-check: ## Quick build check (exit code only, no output)
 	@$(MAKE) build >/dev/null 2>&1 && echo "✅ Build OK" || echo "❌ Build FAILED (exit code: $$?)"
 
 # Detailed error report with filtering
-error-report:
+error-report: ## Generate detailed error report from build
 	@echo "📋 Generating detailed error report..."
 	@$(MAKE) build 2>&1 | tee build_errors.log | grep -E "error:|warning:" || true
 	@ERROR_COUNT=$$(grep -c "error:" build_errors.log 2>/dev/null || echo 0); \
@@ -297,7 +222,7 @@ error-report:
 	echo "Full log saved to build_errors.log"
 
 # Build and run the app in the simulator
-run: build simulator-boot
+run: build simulator-boot ## Build and run app in simulator
 	@echo "Installing $(PROJECT_NAME) on simulator..."
 	@$(XCRUN) simctl install booted "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app" || { echo "Failed to install app"; exit 1; }
 	@echo "Launching $(PROJECT_NAME)..."
@@ -305,27 +230,27 @@ run: build simulator-boot
 	@echo "App is running on simulator"
 
 # Run all tests (unit and UI)
-test:
+test: ## Run all tests (none configured yet)
 	@echo "No tests configured for this project."
 	@echo "Debug views are available in the app under Debug menu."
 
 # Run unit tests only
-test-unit:
+test-unit: ## Run unit tests (none configured yet)
 	@echo "No unit tests configured."
 	@echo "To add tests, create a new test target in Xcode."
 
 # Run UI tests only
-test-ui:
+test-ui: ## Run UI tests (none configured yet)
 	@echo "No UI tests configured."
 	@echo "To add tests, create a new UI test target in Xcode."
 
 # Generate test coverage report
-coverage:
+coverage: ## Generate test coverage report (no tests yet)
 	@echo "No tests configured for coverage analysis."
 	@echo "Add test targets first to enable coverage reporting."
 
 # Run SwiftLint
-lint:
+lint: ## Run SwiftLint code quality checks
 	@echo "Running SwiftLint..."
 	@if command -v $(SWIFTLINT) >/dev/null 2>&1; then \
 		$(SWIFTLINT) lint --strict --reporter emoji || exit 1; \
@@ -336,7 +261,7 @@ lint:
 	@echo "Linting complete"
 
 # Auto-format code using SwiftFormat
-format:
+format: ## Auto-format code with SwiftFormat
 	@echo "Formatting code with SwiftFormat..."
 	@if command -v $(SWIFTFORMAT) >/dev/null 2>&1; then \
 		$(SWIFTFORMAT) . --swiftversion 6.2 --verbose; \
@@ -347,7 +272,7 @@ format:
 	@echo "Formatting complete"
 
 # Run static analysis
-analyze: check-deps
+analyze: check-deps ## Run static analysis on codebase
 	@echo "Running static analysis..."
 	@set -o pipefail && $(XCODEBUILD) analyze \
 		-project "$(PROJECT_NAME).xcodeproj" \
@@ -359,12 +284,12 @@ analyze: check-deps
 	@echo "Static analysis complete"
 
 # Open project in Xcode
-open:
+open: ## Open project in Xcode
 	@echo "Opening project in Xcode..."
 	@open "$(PROJECT_NAME).xcodeproj"
 
 # Boot the simulator
-simulator-boot:
+simulator-boot: ## Boot iPhone 16 Pro simulator (iOS 26)
 	@echo "Booting $(SIMULATOR_NAME) simulator..."
 	@$(XCRUN) simctl boot "$(SIMULATOR_NAME)" 2>/dev/null || echo "Simulator already booted or not available"
 
@@ -382,7 +307,7 @@ simulator-list:
 # ===== SEARCH & NAVIGATION COMMANDS =====
 
 # Fast code search using ripgrep
-search:
+search: ## Fast code search (usage: PATTERN='text')
 	@if [ -z "$(PATTERN)" ]; then \
 		echo "Usage: make search PATTERN='your search term'"; \
 		exit 1; \
@@ -392,7 +317,7 @@ search:
 	@$(RG) "$(PATTERN)" "Fonic HiFi" --type swift --line-number --column --pretty || echo "No matches found"
 
 # Find files using fd
-find-files:
+find-files: ## Find files by pattern (usage: PATTERN='*.swift')
 	@if [ -z "$(PATTERN)" ]; then \
 		echo "Usage: make find-files PATTERN='*.swift'"; \
 		exit 1; \
@@ -402,7 +327,7 @@ find-files:
 	@$(FD) "$(PATTERN)" "Fonic HiFi" --type f || echo "No files found"
 
 # Find all TODO/FIXME comments
-find-todos:
+find-todos: ## Find all TODO/FIXME comments
 	@echo "Finding all TODO/FIXME/HACK comments..."
 	@command -v $(RG) >/dev/null 2>&1 || { echo "ripgrep not installed. Install with: brew install ripgrep"; exit 1; }
 	@command -v $(BAT) >/dev/null 2>&1 || { echo "bat not installed. Install with: brew install bat"; exit 1; }
@@ -445,7 +370,7 @@ search-interactive:
 # ===== CODE ANALYSIS COMMANDS =====
 
 # Show code statistics with tokei
-stats:
+stats: ## Show code statistics with tokei
 	@echo "Code Statistics:"
 	@command -v $(TOKEI) >/dev/null 2>&1 || { echo "tokei not installed. Install with: brew install tokei"; exit 1; }
 	@$(TOKEI) --type=Swift --sort lines "Fonic HiFi"
@@ -464,7 +389,7 @@ stats-features:
 	@$(TOKEI) "Fonic HiFi/Utils" --type=Swift --sort lines || echo "No Utils module found"
 
 # Visual project structure with eza
-tree:
+tree: ## Visual project structure with eza
 	@command -v $(EZA) >/dev/null 2>&1 || { echo "eza not installed. Install with: brew install eza"; exit 1; }
 	@echo "Project Structure:"
 	@$(EZA) --tree --level=3 --icons --ignore-glob=".git|build|DerivedData|*.xcodeproj" "Fonic HiFi/"
@@ -547,7 +472,7 @@ benchmark-all:
 # ===== PERFORMANCE PROFILING (xctrace) =====
 
 # CPU profiling with xctrace
-profile-cpu:
+profile-cpu: ## CPU profiling (app must be running)
 	@echo "Starting CPU profiling..."
 	@$(XCRUN) xctrace record --template "CPU Profiler" \
 		--output cpu_profile.trace \
@@ -556,7 +481,7 @@ profile-cpu:
 	@echo "Open with: open cpu_profile.trace"
 
 # Memory allocation profiling
-profile-memory:
+profile-memory: ## Memory allocation profiling
 	@echo "Starting memory allocation profiling..."
 	@$(XCRUN) xctrace record --template "Allocations" \
 		--output memory_allocations.trace \
@@ -583,7 +508,7 @@ memory-graph:
 	@echo "Memory graph saved to memory_graph.trace"
 
 # Check for memory leaks
-memory-leaks:
+memory-leaks: ## Check for memory leaks
 	@echo "Checking for memory leaks..."
 	@if [ -d "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app" ]; then \
 		leaks --atExit -- "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app/Fonic HiFi" || echo "Leak check complete"; \
@@ -600,7 +525,7 @@ logs-show:
 	@log show --predicate 'process == "Fonic HiFi"' --last 1h --style syslog
 
 # Stream live logs
-logs-stream:
+logs-stream: ## Stream live debug logs
 	@echo "Streaming live logs for Fonic HiFi..."
 	@echo "Press Ctrl+C to stop."
 	@log stream --predicate 'process == "Fonic HiFi"' --level debug
@@ -706,7 +631,7 @@ crash-logs:
 	@find ~/Library/Logs/DiagnosticReports -maxdepth 1 -type f \( -name "Fonic HiFi*.crash" -o -name "Fonic HiFi*.ips" \) 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -10 || echo "No crash logs found"
 
 # Show most recent crash log
-crash-latest:
+crash-latest: ## Show most recent crash log
 	@echo "Most recent crash log..."
 	@LATEST=$$(find ~/Library/Logs/DiagnosticReports -maxdepth 1 -type f \( -name "Fonic HiFi*.crash" -o -name "Fonic HiFi*.ips" \) -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1); \
 	if [ -n "$$LATEST" ]; then \
@@ -748,7 +673,7 @@ crash-symbolicate:
 # ===== APP LAUNCH VERIFICATION =====
 
 # Build, install, launch, and verify app is running
-run-verify: build simulator-boot
+run-verify: build simulator-boot ## Build, install, launch, verify app running
 	@echo "Installing $(PROJECT_NAME) on simulator..."
 	@$(XCRUN) simctl install booted "$(BUILD_DIR)/Build/Products/Debug-iphonesimulator/Fonic HiFi.app" || { echo "Failed to install app"; exit 1; }
 	@echo "Launching $(PROJECT_NAME) and verifying..."
@@ -778,7 +703,7 @@ app-status:
 	@$(XCRUN) simctl spawn booted launchctl list | grep "$(BUNDLE_ID)" || echo "App is not running"
 
 # Monitor app for crashes over duration
-monitor-app:
+monitor-app: ## Monitor app for crashes (usage: DURATION=30)
 	@if [ -z "$(DURATION)" ]; then \
 		DURATION=30; \
 	elif ! [[ "$(DURATION)" =~ ^[0-9]+$$ ]]; then \
@@ -812,7 +737,7 @@ monitor-app:
 # ===== ADVANCED LOG FILTERING =====
 
 # Show only error-level logs
-logs-errors:
+logs-errors: ## Show only error-level logs from last hour
 	@echo "Showing error-level logs for Fonic HiFi..."
 	@log show --predicate 'process == "Fonic HiFi" && level == "error"' --last 1h --style syslog
 
@@ -934,5 +859,5 @@ codex-review:
 	codex exec --full-auto "Review this git diff for iOS 26 best practices, Swift 6.2 concurrency, security issues, and potential bugs. Provide actionable feedback." < "$$TEMP_DIFF"
 
 # Combined commands for common workflows
-all: clean lint build
+all: clean lint build ## Run full build cycle (clean, lint, build)
 	@echo "Full build and test cycle complete"
