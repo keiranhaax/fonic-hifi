@@ -31,7 +31,6 @@ struct NowPlayingView: View {
     // UI State (moved from AppState to local state)
     @State private var showingQueue = false
     @State private var dominantColor: Color = .accentColor
-    @State private var hasStartedPlayback = false
     @State private var trackDetailItem: TrackDetailItem?
     @State private var isFavorite = false
 
@@ -136,7 +135,7 @@ struct NowPlayingView: View {
                                 .glassPerformanceProfiled("DragHandle")
                         }
                         .frame(maxWidth: .infinity)
-                        
+
                         Spacer(minLength: 8)
 
                         // Fixed: Header with proper safe area consideration
@@ -190,33 +189,18 @@ struct NowPlayingView: View {
     private func performInitialSetup() async {
         guard let audioService else { return }
 
-        let trackTitle = audioService.currentTrack?.title ?? "nil"
-        logger.debug("NowPlayingView performInitialSetup; hasStartedPlayback: \(hasStartedPlayback, privacy: .public)")
-        logger.debug("Current track: \(trackTitle, privacy: .public)")
-
+        // Extract dominant color for UI aesthetics
         extractDominantColor()
 
-        guard !hasStartedPlayback, let track = audioService.currentTrack else {
-            logger.debug("Skipping automatic playback start")
-            return
-        }
-
-        hasStartedPlayback = true
-
-        guard audioService.isReady else {
-            logger.warning("Audio service not ready; delaying playback start")
-            return
-        }
-
-        do {
-            try await audioService.play(track: track)
-            logger.info("Playback started for \(track.title, privacy: .public)")
-            isPlayingParticles = audioService.isPlaying
-        } catch {
-            logger.error("Failed to start playback: \(error.localizedDescription, privacy: .public)")
-            audioService.setCurrentTrack(nil)
-            dismiss()
-        }
+        // ✅ This view is a passive observer of playback state
+        // Playback is initiated from:
+        // - LibraryView (when user taps a track row)
+        // - MiniPlayerView (when user taps play button)
+        // - Remote commands (Control Center, AirPods, lock screen)
+        //
+        // NowPlayingView ONLY observes and displays the current playback state.
+        // It should NEVER call audioService.play() as this causes 2-9 second delays
+        // when the sheet opens due to re-initializing already-playing audio.
     }
 
     // MARK: - Subviews

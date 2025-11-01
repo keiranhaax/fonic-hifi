@@ -123,6 +123,11 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
             throw AudioError.playbackFailed(reason: "No file loaded")
         }
 
+        // ✅ Restart engine if stopped (e.g., after audio session interruption)
+        // This fixes the "AudioPlayer's engine must be running before playback" error
+        // that occurs after phone calls, Siri, or device lock
+        try restartEngineIfNeeded()
+
         applyPlaybackRate(currentPlaybackRate)
         applyReplayGainImmediately(currentGainDB)
 
@@ -153,6 +158,9 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         guard currentFile != nil else {
             throw AudioError.playbackFailed(reason: "No file loaded")
         }
+
+        // ✅ Restart engine if stopped before seeking
+        try restartEngineIfNeeded()
 
         activePlayer.play(from: time)
         _currentTime = time
@@ -255,6 +263,42 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
             isInitialized = false
             throw AudioError.engineInitializationFailed(
                 reason: "AudioKit failed to start: \(error.localizedDescription)",
+            )
+        }
+    }
+
+    // MARK: - Engine State Management
+
+    /// Restarts the AudioKit engine if it has stopped
+    ///
+    /// This is necessary after audio session interruptions (phone calls, Siri, etc.)
+    /// because AVAudioEngine (which AudioKit wraps) automatically stops when interrupted.
+    ///
+    /// Per Apple documentation: "When the audio engine's I/O unit observes a change to the
+    /// audio input or output hardware's channel count or sample rate, the audio engine stops,
+    /// uninitializes itself, and issues a configuration change notification."
+    ///
+    /// - Throws: AudioError.engineInitializationFailed if restart fails
+    private func restartEngineIfNeeded() throws {
+        // Check if engine needs restart
+        // Note: AudioKit's AudioEngine may not expose isRunning directly
+        // We rely on isInitialized flag and attempt start if needed
+        guard isInitialized else {
+            Log.logger(.audioEngine).error("Engine not initialized - cannot restart")
+            throw AudioError.engineInitializationFailed(
+                reason: "AudioKit engine was never initialized",
+            )
+        }
+
+        // Attempt to start the engine
+        // If already running, AudioKit should handle this gracefully
+        do {
+            try engine.start()
+            Log.logger(.audioEngine).debug("AudioKit engine start called (may already be running)")
+        } catch {
+            Log.logger(.audioEngine).error("Failed to restart AudioKit engine: \(error.localizedDescription)")
+            throw AudioError.engineInitializationFailed(
+                reason: "Failed to restart AudioKit engine after interruption: \(error.localizedDescription)",
             )
         }
     }

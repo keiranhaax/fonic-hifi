@@ -34,6 +34,9 @@ struct FonicHiFiApp: App {
         // Disable SwiftUI's async rendering if it's causing issues
         UserDefaults.standard.set(false, forKey: "SwiftUI.Animation.AsyncRendering")
 
+        // Register custom SwiftData transformers
+        UUIDArrayTransformer.register()
+
         // Create logger early for error reporting
         let initLogger = Log.logger(.appLifecycle)
 
