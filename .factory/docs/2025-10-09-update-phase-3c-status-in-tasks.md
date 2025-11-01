@@ -1,0 +1,2 @@
+1. In the Phase 3C checklist, mark the bounded-concurrency batch implementation and logging/metrics instrumentation items as completed, leaving the manual validation item unchecked. Add a short parenthetical note indicating the tests now cover streaming discovery and concurrent processing.
+2. Update the Quick Reference – Critical Open Items section so Phase 3 highlights only the remaining manual import validation work, keeping the other phase entries unchanged.

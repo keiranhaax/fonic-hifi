@@ -16,21 +16,21 @@ struct MaterialVsGlassComparisonView: View {
                 ComparisonRow(
                     title: "ultraThin → clear",
                     material: { Text("Material").background(.thinMaterial) },
-                    glass: { Text("Glass").glassEffect(.clear) }
+                    glass: { Text("Glass").glassEffect(.clear) },
                 )
 
                 // Test 2: standard → regular
                 ComparisonRow(
                     title: "standard → regular",
                     material: { Text("Material").background(.regularMaterial) },
-                    glass: { Text("Glass").glassEffect(.regular) }
+                    glass: { Text("Glass").glassEffect(.regular) },
                 )
 
                 // Test 3: thick → regular
                 ComparisonRow(
                     title: "thick → regular",
                     material: { Text("Material").background(.thickMaterial) },
-                    glass: { Text("Glass").glassEffect(.regular) }
+                    glass: { Text("Glass").glassEffect(.regular) },
                 )
 
                 // Test 4: intensity mappings (0.6, 0.7, 0.8, 0.9)
@@ -39,7 +39,7 @@ struct MaterialVsGlassComparisonView: View {
                         ComparisonRow(
                             title: "intensity: \(intensity)",
                             material: { Text("Material \(intensity)").background(.regularMaterial.opacity(intensity)) },
-                            glass: { Text("Glass \(intensity)").glassEffect(.regular.tint(.white.opacity(intensity))) }
+                            glass: { Text("Glass \(intensity)").glassEffect(.regular.tint(.white.opacity(intensity))) },
                         )
                     }
                 }

@@ -8,6 +8,7 @@
 import AVFoundation
 import Foundation
 import MediaPlayer
+import OSLog
 
 /// Protocol for audio session management with proper actor isolation
 @MainActor
@@ -54,6 +55,8 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     private var _isSessionActive = false
     private var hasRegisteredForNotifications = false
 
+    private let logger = Log.logger(.audioSession)
+
     // MARK: - Initialization
 
     override public init() {
@@ -71,7 +74,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                 try session.setCategory(
                     .playback,
                     mode: .default,
-                    options: [.allowAirPlay]
+                    options: [.allowAirPlay],
                 )
             } catch {
                 // Some simulator/device builds reject .allowAirPlay with -50; fall
@@ -86,7 +89,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
         } catch {
             throw AudioError.sessionConfigurationFailed(
-                reason: "Failed to configure session: \(error.localizedDescription)"
+                reason: "Failed to configure session: \(error.localizedDescription)",
             )
         }
     }
@@ -95,10 +98,16 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         do {
             try session.setActive(true, options: [])
             _isSessionActive = true
-            print("✅ Audio session activated: category=\(session.category.rawValue), active=\(session.isOtherAudioPlaying)")
+            logger.notice(
+                """
+                Audio session activated:
+                category=\(self.session.category.rawValue, privacy: .public)
+                otherAudioPlaying=\(self.session.isOtherAudioPlaying, privacy: .public)
+                """
+            )
         } catch {
             throw AudioError.sessionConfigurationFailed(
-                reason: "Failed to activate session: \(error.localizedDescription)"
+                reason: "Failed to activate session: \(error.localizedDescription)",
             )
         }
     }
@@ -107,10 +116,10 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         do {
             try session.setActive(false, options: .notifyOthersOnDeactivation)
             _isSessionActive = false
-            print("✅ Audio session deactivated")
+            logger.notice("Audio session deactivated")
         } catch {
             throw AudioError.sessionConfigurationFailed(
-                reason: "Failed to deactivate session: \(error.localizedDescription)"
+                reason: "Failed to deactivate session: \(error.localizedDescription)",
             )
         }
     }
@@ -297,7 +306,12 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         // Note: iOS doesn't allow direct output selection via AVAudioSession
         // This would typically be done through MPVolumeView or system settings
         // For now, we'll throw an error indicating this limitation
-        throw AudioError.deviceError(reason: "Direct audio output selection is not supported on iOS. Use system settings or AirPlay.")
+        throw AudioError.deviceError(
+            reason: """
+            Direct audio output selection is not supported on iOS.
+            Use system settings or AirPlay to choose an output.
+            """
+        )
     }
 
     // MARK: - Private Methods
@@ -342,7 +356,9 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                 await self?.handleInterruption(.began)
 
             case .ended:
-                let shouldResume = (info[AVAudioSessionInterruptionOptionKey] as? UInt) == AVAudioSession.InterruptionOptions.shouldResume.rawValue
+                let interruptionOption = info[AVAudioSessionInterruptionOptionKey] as? UInt
+                let resumeFlag = AVAudioSession.InterruptionOptions.shouldResume.rawValue
+                let shouldResume = interruptionOption == resumeFlag
                 await self?.handleInterruption(.ended(shouldResume: shouldResume))
 
             @unknown default:
@@ -384,7 +400,12 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                     try await self?.activateAudioSession()
                 }
             } catch {
-                print("Failed to reconfigure audio session after media services reset: \(error)")
+                self?.logger.error(
+                    """
+                    Failed to reconfigure audio session after media services reset:
+                    \(String(describing: error), privacy: .public)
+                    """
+                )
             }
         }
     }

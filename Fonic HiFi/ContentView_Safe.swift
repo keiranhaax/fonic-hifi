@@ -11,6 +11,7 @@ import SwiftUI
 struct ContentView_Safe: View {
     @Environment(\.importService) private var importService
     @Environment(\.audioEngine) private var audioService
+    @Environment(\.libraryRepository) private var libraryRepository
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @Namespace private var animationNamespace
@@ -19,11 +20,18 @@ struct ContentView_Safe: View {
     var body: some View {
         TabView {
             // Library Tab
-            LibraryView()
-                .environment(\.showingNowPlaying, $showingNowPlaying)
-                .tabItem {
-                    Label("Library", systemImage: "music.note.list")
+            Group {
+                if let repository = libraryRepository {
+                    LibraryView(viewModel: LibraryViewModel(repository: repository))
+                } else {
+                    Text("Library unavailable")
+                        .foregroundStyle(.secondary)
                 }
+            }
+            .environment(\.showingNowPlaying, $showingNowPlaying)
+            .tabItem {
+                Label("Library", systemImage: "music.note.list")
+            }
 
             // Now Playing Tab
             NavigationStack {
@@ -46,15 +54,19 @@ struct ContentView_Safe: View {
         .preferredColorScheme(.dark) // Dark mode by default
         // Use sheet presentation instead of overlay
         .sheet(isPresented: $showingNowPlaying) {
-            NowPlayingView(animationNamespace: animationNamespace)
-                .audioEngine(audioService!)
-                .interactiveDismissDisabled(false)
+            if let audioService {
+                NowPlayingView(animationNamespace: animationNamespace)
+                    .audioEngine(audioService)
+                    .interactiveDismissDisabled(false)
+            } else {
+                Text("Audio engine unavailable.")
+            }
         }
         // Mini player at bottom when track is playing but Now Playing is not shown
         .safeAreaInset(edge: .bottom) {
-            if audioService?.currentTrack != nil, !showingNowPlaying {
+            if let audioService, audioService.currentTrack != nil, !showingNowPlaying {
                 MiniPlayerView()
-                    .audioEngine(audioService!)
+                    .audioEngine(audioService)
             }
         }
     }

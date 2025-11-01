@@ -12,6 +12,7 @@ struct MiniPlayerView: View {
     @Environment(\.audioEngine) private var audioService
     @Environment(\.showingNowPlaying) private var showingNowPlaying
 
+    private let logger = Log.logger(.playback)
     // Drag gesture state
     @GestureState private var dragOffset: CGFloat = 0
     @State private var isDragging = false
@@ -85,11 +86,8 @@ struct MiniPlayerView: View {
             .padding(.bottom, 10)
         }
         .frame(height: miniPlayerHeight + pillHeight + 10)
-        .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .ignoresSafeArea(),
-        )
+        .glassSurface(style: .dynamic, tint: Color.white.opacity(0.25), cornerRadius: 0, interactive: true)
+        .ignoresSafeArea(edges: .bottom)
         .offset(y: dragOffset)
         .gesture(
             DragGesture()
@@ -136,6 +134,7 @@ struct MiniPlayerView: View {
                 showingNowPlaying.wrappedValue = true
             }
         }
+        .accessibilityIdentifier("MiniPlayer")
     }
 
     // MARK: - Actions
@@ -150,7 +149,7 @@ struct MiniPlayerView: View {
                     try await audioService.resume()
                 }
             } catch {
-                print("Failed to toggle playback: \(error)")
+                logger.error("Failed to toggle playback: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -161,7 +160,7 @@ struct MiniPlayerView: View {
             do {
                 try await audioService.playNext()
             } catch {
-                print("Failed to play next: \(error)")
+                logger.error("Failed to queue next track: \(error.localizedDescription, privacy: .public)")
             }
         }
     }

@@ -476,6 +476,7 @@ public enum DeviceConnectionType: String, Sendable {
     case usb
     case thunderbolt
     case lightning
+    case builtin
     case `internal`
     case unknown
 
@@ -484,7 +485,7 @@ public enum DeviceConnectionType: String, Sendable {
         switch self {
         case .wired, .usb, .thunderbolt, .lightning, .internal:
             true
-        case .bluetooth, .airplay:
+        case .builtin, .bluetooth, .airplay:
             false
         case .unknown:
             false

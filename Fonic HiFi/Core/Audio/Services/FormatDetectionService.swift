@@ -51,8 +51,7 @@ public enum DetectionError: LocalizedError, Sendable {
 }
 
 /// Protocol for audio format detection services
-@MainActor
-public protocol FormatDetectionService: Sendable {
+public protocol FormatDetectionService: Actor {
     /// Detect format information from a file URL
     /// - Parameter url: Local file URL to analyze
     /// - Returns: Detailed audio format information
@@ -145,7 +144,7 @@ public extension AudioFileInfo {
             sampleRate: Double(sampleRate),
             channels: UInt8(channels),
             fileSize: UInt64(fileSize),
-            bitrate: bitrate != nil ? UInt64(bitrate!) : nil,
+            bitrate: bitrate.map { UInt64($0) },
         )
     }
 

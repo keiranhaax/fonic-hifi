@@ -103,7 +103,7 @@ public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
         } else if isHighResolution {
             .highResolution
         } else {
-            .cd
+            .compactDisc
         }
     }
 
@@ -252,14 +252,14 @@ public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
 /// Audio quality classification
 public enum AudioQuality: String, Sendable, CaseIterable {
     case standard = "Standard"
-    case cd = "CD Quality"
+    case compactDisc = "CD Quality"
     case highResolution = "High Resolution"
 
     public var description: String {
         switch self {
         case .standard:
             "Standard quality (compressed)"
-        case .cd:
+        case .compactDisc:
             "CD quality (16-bit/44.1kHz lossless)"
         case .highResolution:
             "High resolution (>16-bit or >48kHz lossless)"
@@ -270,7 +270,7 @@ public enum AudioQuality: String, Sendable, CaseIterable {
         switch self {
         case .standard:
             "Standard"
-        case .cd:
+        case .compactDisc:
             "CD"
         case .highResolution:
             "Hi-Res"

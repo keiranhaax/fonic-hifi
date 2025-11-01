@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os.log
+import OSLog
 
 // MARK: - Protocol Definition
 
@@ -101,7 +101,7 @@ public struct PerformanceThresholds: Sendable {
 public actor PerformanceMonitor: PerformanceMonitoring {
     // MARK: - Properties
 
-    private let logger = Logger(subsystem: "com.fonichifi.diagnostics", category: "PerformanceMonitor")
+    private let logger = Log.logger(.diagnosticsPerformance)
 
     // Audio metrics storage
     private var audioLatencies: [TimeInterval] = []
@@ -132,43 +132,43 @@ public actor PerformanceMonitor: PerformanceMonitoring {
 
     public init() {
         startTime = Date()
-        logger.info("Performance monitor initialized")
+        self.logger.info("Performance monitor initialized")
     }
 
     // MARK: - Audio Metrics
 
     public func recordAudioLatency(_ latency: TimeInterval) async {
-        audioLatencies.append(latency)
+        self.audioLatencies.append(latency)
 
         if latency > PerformanceThresholds.targetAudioLatency {
-            logger.warning("Audio latency exceeded target: \(latency)s > \(PerformanceThresholds.targetAudioLatency)s")
+            self.logger.warning("Audio latency exceeded target: \(latency)s > \(PerformanceThresholds.targetAudioLatency)s")
         }
     }
 
     public func recordBufferUnderrun() async {
-        bufferUnderruns += 1
-        logger.warning("Buffer underrun detected. Total: \(self.bufferUnderruns)")
+        self.bufferUnderruns += 1
+        self.logger.warning("Buffer underrun detected. Total: \(self.bufferUnderruns)")
     }
 
     public func recordFormatSwitch(from: AudioFormat, to: AudioFormat, duration: TimeInterval) async {
-        formatSwitches.append((from: from, to: to, duration: duration))
-        logger.info("Format switch: \(from.rawValue) -> \(to.rawValue) in \(duration)s")
+        self.formatSwitches.append((from: from, to: to, duration: duration))
+        self.logger.info("Format switch: \(from.rawValue) -> \(to.rawValue) in \(duration)s")
     }
 
     // MARK: - Memory Metrics
 
     public func recordMemoryUsage(_ bytes: Int64) async {
-        memoryUsages.append(bytes)
+        self.memoryUsages.append(bytes)
 
         if bytes > PerformanceThresholds.targetMemoryUsage {
-            logger.warning("Memory usage exceeded target: \(bytes / 1024 / 1024)MB > \(PerformanceThresholds.targetMemoryUsage / 1024 / 1024)MB")
+            self.logger.warning("Memory usage exceeded target: \(bytes / 1024 / 1024)MB > \(PerformanceThresholds.targetMemoryUsage / 1024 / 1024)MB")
         }
     }
 
     public func recordMemoryWarning() async {
-        memoryWarnings += 1
-        memoryPressureEvents.append(.warning)
-        logger.warning("Memory warning received. Total: \(self.memoryWarnings)")
+        self.memoryWarnings += 1
+        self.memoryPressureEvents.append(.warning)
+        self.logger.warning("Memory warning received. Total: \(self.memoryWarnings)")
     }
 
     public func checkMemoryPressure() async -> MemoryPressure {
@@ -177,7 +177,7 @@ public actor PerformanceMonitor: PerformanceMonitoring {
         let physicalMemory = info.physicalMemory
 
         // This is a simplified check - in production, use more sophisticated methods
-        if let lastUsage = memoryUsages.last {
+        if let lastUsage = self.memoryUsages.last {
             let usageRatio = Double(lastUsage) / Double(physicalMemory)
 
             switch usageRatio {
@@ -198,89 +198,89 @@ public actor PerformanceMonitor: PerformanceMonitoring {
     // MARK: - Performance Metrics
 
     public func recordAppLaunchTime(_ duration: TimeInterval) async {
-        appLaunchTime = duration
+        self.appLaunchTime = duration
 
         if duration > PerformanceThresholds.targetAppLaunchTime {
-            logger.warning("App launch time exceeded target: \(duration)s > \(PerformanceThresholds.targetAppLaunchTime)s")
+            self.logger.warning("App launch time exceeded target: \(duration)s > \(PerformanceThresholds.targetAppLaunchTime)s")
         } else {
-            logger.info("App launched in \(duration)s")
+            self.logger.info("App launched in \(duration)s")
         }
     }
 
     public func recordSearchLatency(_ duration: TimeInterval, resultCount: Int) async {
-        searchLatencies.append((duration: duration, resultCount: resultCount))
+        self.searchLatencies.append((duration: duration, resultCount: resultCount))
 
         if duration > PerformanceThresholds.targetSearchLatency {
-            logger.warning("Search latency exceeded target: \(duration)s > \(PerformanceThresholds.targetSearchLatency)s")
+            self.logger.warning("Search latency exceeded target: \(duration)s > \(PerformanceThresholds.targetSearchLatency)s")
         }
     }
 
     public func recordImportPerformance(_ metrics: ImportMetrics) async {
-        importMetrics.append(metrics)
-        logger.info("Import completed: \(metrics.successfulImports)/\(metrics.totalFiles) files in \(metrics.totalImportTime)s")
+        self.importMetrics.append(metrics)
+        self.logger.info("Import completed: \(metrics.successfulImports)/\(metrics.totalFiles) files in \(metrics.totalImportTime)s")
     }
 
     // MARK: - Error Tracking
 
     public func recordError(_ error: Error, context: String) async {
-        errors.append((error: error, context: context, timestamp: Date()))
-        logger.error("Error in \(context): \(error.localizedDescription)")
+        self.errors.append((error: error, context: context, timestamp: Date()))
+        self.logger.error("Error in \(context): \(error.localizedDescription)")
     }
 
     public func recordCrash(_ reason: String) async {
-        crashes.append((reason: reason, timestamp: Date()))
-        logger.critical("Crash recorded: \(reason)")
+        self.crashes.append((reason: reason, timestamp: Date()))
+        self.logger.critical("Crash recorded: \(reason)")
     }
 
     // MARK: - Reporting
 
     public func generateReport() async -> PerformanceReport {
-        let period = DateInterval(start: startTime, end: Date())
+        let period = DateInterval(start: self.startTime, end: Date())
 
         // Calculate audio metrics
         let audioMetrics = AudioPerformanceMetrics(
-            averageLatency: audioLatencies.isEmpty ? 0 : audioLatencies.reduce(0, +) / Double(audioLatencies.count),
-            maxLatency: audioLatencies.max() ?? 0,
-            bufferUnderrunCount: bufferUnderruns,
-            formatSwitchCount: formatSwitches.count,
-            averageFormatSwitchTime: formatSwitches.isEmpty ? 0 : formatSwitches.map(\.duration).reduce(0, +) / Double(formatSwitches.count),
-            bitPerfectSessions: bitPerfectSessionCount,
-            totalPlaybackTime: totalPlaybackTime,
+            averageLatency: self.audioLatencies.isEmpty ? 0 : self.audioLatencies.reduce(0, +) / Double(self.audioLatencies.count),
+            maxLatency: self.audioLatencies.max() ?? 0,
+            bufferUnderrunCount: self.bufferUnderruns,
+            formatSwitchCount: self.formatSwitches.count,
+            averageFormatSwitchTime: self.formatSwitches.isEmpty ? 0 : self.formatSwitches.map(\.duration).reduce(0, +) / Double(self.formatSwitches.count),
+            bitPerfectSessions: self.bitPerfectSessionCount,
+            totalPlaybackTime: self.totalPlaybackTime,
         )
 
         // Calculate memory metrics
         let memoryMetrics = MemoryMetrics(
-            averageUsage: memoryUsages.isEmpty ? 0 : memoryUsages.reduce(Int64(0), +) / Int64(memoryUsages.count),
-            peakUsage: memoryUsages.max() ?? 0,
-            warningCount: memoryWarnings,
-            pressureEvents: memoryPressureEvents,
+            averageUsage: self.memoryUsages.isEmpty ? 0 : self.memoryUsages.reduce(Int64(0), +) / Int64(self.memoryUsages.count),
+            peakUsage: self.memoryUsages.max() ?? 0,
+            warningCount: self.memoryWarnings,
+            pressureEvents: self.memoryPressureEvents,
         )
 
         // Calculate performance metrics
-        let searchLatencyValues = searchLatencies.map(\.duration).sorted()
+        let searchLatencyValues = self.searchLatencies.map(\.duration).sorted()
         let p95Index = Int(Double(searchLatencyValues.count) * 0.95)
 
         let performanceMetrics = AppPerformanceMetrics(
-            appLaunchTime: appLaunchTime,
-            averageSearchLatency: searchLatencies.isEmpty ? 0 : searchLatencies.map(\.duration).reduce(0, +) / Double(searchLatencies.count),
+            appLaunchTime: self.appLaunchTime,
+            averageSearchLatency: self.searchLatencies.isEmpty ? 0 : self.searchLatencies.map(\.duration).reduce(0, +) / Double(self.searchLatencies.count),
             p95SearchLatency: searchLatencyValues.isEmpty ? 0 : searchLatencyValues[min(p95Index, searchLatencyValues.count - 1)],
-            totalImports: importMetrics.count,
-            averageImportTime: importMetrics.isEmpty ? 0 : importMetrics.map(\.totalImportTime).reduce(0, +) / Double(importMetrics.count),
-            failedImports: importMetrics.map(\.failedImports).reduce(0, +),
+            totalImports: self.importMetrics.count,
+            averageImportTime: self.importMetrics.isEmpty ? 0 : self.importMetrics.map(\.totalImportTime).reduce(0, +) / Double(self.importMetrics.count),
+            failedImports: self.importMetrics.map(\.failedImports).reduce(0, +),
         )
 
         // Calculate error metrics
         var errorsByType: [String: Int] = [:]
-        for (error, _, _) in errors {
+        for (error, _, _) in self.errors {
             let typeName = String(describing: type(of: error))
             errorsByType[typeName, default: 0] += 1
         }
 
         let errorMetrics = ErrorMetrics(
-            totalErrors: errors.count,
+            totalErrors: self.errors.count,
             errorsByType: errorsByType,
-            crashCount: crashes.count,
-            crashReasons: crashes.map(\.reason),
+            crashCount: self.crashes.count,
+            crashReasons: self.crashes.map(\.reason),
         )
 
         return PerformanceReport(
@@ -293,26 +293,26 @@ public actor PerformanceMonitor: PerformanceMonitoring {
     }
 
     public func reset() async {
-        logger.info("Resetting performance metrics")
+        self.logger.info("Resetting performance metrics")
 
         // Clear all metrics
-        audioLatencies.removeAll()
-        bufferUnderruns = 0
-        formatSwitches.removeAll()
-        bitPerfectSessionCount = 0
-        totalPlaybackTime = 0
-        playbackStartTime = nil
+        self.audioLatencies.removeAll()
+        self.bufferUnderruns = 0
+        self.formatSwitches.removeAll()
+        self.bitPerfectSessionCount = 0
+        self.totalPlaybackTime = 0
+        self.playbackStartTime = nil
 
-        memoryUsages.removeAll()
-        memoryWarnings = 0
-        memoryPressureEvents.removeAll()
+        self.memoryUsages.removeAll()
+        self.memoryWarnings = 0
+        self.memoryPressureEvents.removeAll()
 
-        appLaunchTime = nil
-        searchLatencies.removeAll()
-        importMetrics.removeAll()
+        self.appLaunchTime = nil
+        self.searchLatencies.removeAll()
+        self.importMetrics.removeAll()
 
-        errors.removeAll()
-        crashes.removeAll()
+        self.errors.removeAll()
+        self.crashes.removeAll()
     }
 
     // MARK: - Helper Methods

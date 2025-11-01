@@ -12,7 +12,17 @@ struct FileManagerView: View {
     @Environment(\.dataManager) private var dataManager
     @Environment(\.importService) private var importService
 
-    @State private var currentDirectory: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    private static let defaultDirectory: URL = {
+        if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            return documentsURL
+        }
+
+        let fallback = FileManager.default.temporaryDirectory
+        Log.logger(.presentation).error("Documents directory unavailable; using temporary directory fallback at \(fallback.path, privacy: .public)")
+        return fallback
+    }()
+
+    @State private var currentDirectory: URL = FileManagerView.defaultDirectory
     @State private var directoryContents: [FileItem] = []
     @State private var selectedItems: Set<FileItem> = []
     @State private var isLoading = false
@@ -22,6 +32,9 @@ struct FileManagerView: View {
     @State private var sortOption: SortOption = .name
     @State private var showingDetails = false
     @State private var selectedFileForDetails: FileItem?
+
+    private let logger = Log.logger(.presentation)
+    private let documentsDirectoryURL = FileManagerView.defaultDirectory
 
     private var filteredContents: [FileItem] {
         let filtered = searchText.isEmpty ? directoryContents : directoryContents.filter {
@@ -178,8 +191,7 @@ struct FileManagerView: View {
     // MARK: - Private Methods
 
     private var isRootDirectory: Bool {
-        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        return currentDirectory.path == documentsURL.path
+        currentDirectory.standardizedFileURL == documentsDirectoryURL.standardizedFileURL
     }
 
     private func loadDirectoryContents() async {
@@ -219,7 +231,7 @@ struct FileManagerView: View {
             }
 
         } catch {
-            print("Error loading directory contents: \(error)")
+            logger.error("Failed to load directory contents for \(currentDirectory.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -257,7 +269,7 @@ struct FileManagerView: View {
             do {
                 try FileManager.default.removeItem(at: item.url)
             } catch {
-                print("Error deleting file \(item.name): \(error)")
+                logger.error("Failed to delete file \(item.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
 
@@ -271,7 +283,7 @@ struct FileManagerView: View {
 
         Task {
             guard let importService else { return }
-            await importService.importFiles(from: urls)
+            importService.importFiles(from: urls)
         }
 
         selectedItems.removeAll()
@@ -286,7 +298,7 @@ struct FileManagerView: View {
                 await loadDirectoryContents()
             }
         case let .failure(error):
-            print("File import error: \(error)")
+            logger.error("File import failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -321,12 +333,12 @@ struct FileManagerView: View {
                 do {
                     let fm = FileManager.default
                     if fm.fileExists(atPath: targetURL.path) {
-                        print("Destination already exists at \(targetURL.lastPathComponent), skipping copy")
+                        logger.info("Destination exists at \(targetURL.lastPathComponent, privacy: .public); skipping copy")
                         return
                     }
                     try fm.copyItem(at: sourceURL, to: targetURL)
                 } catch {
-                    print("Error copying file \(sourceURL.lastPathComponent): \(error)")
+                    logger.error("Failed to copy file \(sourceURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 }
             }
         }
@@ -373,15 +385,14 @@ struct FileManagerView: View {
                     await loadDirectoryContents()
                 }
             } catch {
-                print("Error creating folder: \(error)")
+                logger.error("Failed to create folder \(folderName, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         })
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
 
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootViewController = windowScene.windows.first?.rootViewController
-        {
+           let rootViewController = windowScene.windows.first?.rootViewController {
             rootViewController.present(alert, animated: true)
         }
     }
@@ -451,8 +462,7 @@ enum SortOption: CaseIterable {
 
 #Preview {
     if let previewDataManager = DataManager.makePreviewDataManager(),
-       let importService = DataManager.makePreviewImportService()
-    {
+       let importService = DataManager.makePreviewImportService() {
         FileManagerView()
             .dataManager(previewDataManager)
             .importService(importService)

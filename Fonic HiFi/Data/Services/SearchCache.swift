@@ -88,7 +88,7 @@ public actor SearchCache {
 
     private var cache: [String: SearchResult]
     private let ttl: TimeInterval
-    private let logger = Logger(subsystem: "com.fonichifi.cache", category: "SearchCache")
+    private let logger = Log.logger(.dataSearchCache)
 
     /// Maximum number of cached searches
     private let maxCacheSize: Int
@@ -99,63 +99,57 @@ public actor SearchCache {
     // MARK: - Initialization
 
     public init(ttl: TimeInterval = 300, maxCacheSize: Int = 100) { // 5 minutes default TTL
-        cache = [:]
+        self.cache = [:]
         self.ttl = ttl
         self.maxCacheSize = maxCacheSize
-        logger.info("SearchCache initialized with TTL: \(ttl)s, max size: \(maxCacheSize)")
+        self.logger.info("SearchCache initialized with TTL: \(ttl)s, max size: \(maxCacheSize)")
 
         // Start periodic cleanup task
         Task {
-            await startCleanupTask()
+            await self.startCleanupTask()
         }
     }
 
     deinit {
-        cleanupTask?.cancel()
+        self.cleanupTask?.cancel()
     }
 
     // MARK: - Public Methods
 
     /// Get cached search result
     public func get(_ query: String) async -> SearchResult? {
-        let normalizedQuery = normalizeQuery(query)
+        let normalizedQuery = self.normalizeQuery(query)
 
-        guard let result = cache[normalizedQuery] else {
-            logger.debug("Cache miss for query: '\(query)'")
+        guard let result = self.cache[normalizedQuery] else {
+            self.logger.debug("Cache miss for query: '\(query)'")
             return nil
         }
 
         // Check if expired
-        if result.isExpired(ttl: ttl) {
-            cache.removeValue(forKey: normalizedQuery)
-            logger.debug("Cache expired for query: '\(query)'")
+        if result.isExpired(ttl: self.ttl) {
+            self.cache.removeValue(forKey: normalizedQuery)
+            self.logger.debug("Cache expired for query: '\(query)'")
             return nil
         }
 
-        logger.debug("Cache hit for query: '\(query)' (result count: \(result.totalCount))")
+        self.logger.debug("Cache hit for query: '\(query)' (result count: \(result.totalCount))")
         return result
     }
 
     /// Cache search result
     public func set(_ query: String, result: SearchResult) async {
-        let normalizedQuery = normalizeQuery(query)
+        let normalizedQuery = self.normalizeQuery(query)
 
-        // Don't cache empty results
-        guard !result.isEmpty else {
-            logger.debug("Skipping cache for empty result: '\(query)'")
-            return
-        }
-
-        cache[normalizedQuery] = result
-        logger.debug("Cached result for query: '\(query)' (result count: \(result.totalCount))")
+        self.cache[normalizedQuery] = result
+        self.logger.debug("Cached result for query: '\(query)' (result count: \(result.totalCount))")
 
         // Trim cache if needed
-        await trimCacheIfNeeded()
+        await self.trimCacheIfNeeded()
     }
 
     /// Update specific result type for a query
     public func updateTracks(_ query: String, tracks: [Track]) async {
-        let normalizedQuery = normalizeQuery(query)
+        let normalizedQuery = self.normalizeQuery(query)
 
         // Convert Track objects to CachedTrack
         let cachedTracks = tracks.map { track in
@@ -168,9 +162,9 @@ public actor SearchCache {
             )
         }
 
-        if var existing = cache[normalizedQuery], !existing.isExpired(ttl: ttl) {
+        if let existing = self.cache[normalizedQuery], !existing.isExpired(ttl: self.ttl) {
             // Update with new tracks while preserving other results
-            cache[normalizedQuery] = SearchResult(
+            self.cache[normalizedQuery] = SearchResult(
                 query: existing.query,
                 tracks: cachedTracks,
                 albums: existing.albums,
@@ -180,7 +174,7 @@ public actor SearchCache {
             )
         } else {
             // Create new result with just tracks
-            cache[normalizedQuery] = SearchResult(
+            self.cache[normalizedQuery] = SearchResult(
                 query: query,
                 tracks: cachedTracks,
                 timestamp: Date(),
@@ -190,33 +184,32 @@ public actor SearchCache {
 
     /// Invalidate expired entries
     public func invalidateExpired() async {
-        let now = Date()
         var expiredCount = 0
 
-        for (key, result) in cache {
-            if result.isExpired(ttl: ttl) {
-                cache.removeValue(forKey: key)
+        for (key, result) in self.cache {
+            if result.isExpired(ttl: self.ttl) {
+                self.cache.removeValue(forKey: key)
                 expiredCount += 1
             }
         }
 
         if expiredCount > 0 {
-            logger.info("Invalidated \(expiredCount) expired cache entries")
+            self.logger.info("Invalidated \(expiredCount) expired cache entries")
         }
     }
 
     /// Clear entire cache
     public func clear() async {
-        let previousSize = cache.count
-        cache.removeAll()
-        logger.info("Cleared search cache (removed \(previousSize) entries)")
+        let previousSize = self.cache.count
+        self.cache.removeAll()
+        self.logger.info("Cleared search cache (removed \(previousSize) entries)")
     }
 
     /// Invalidate cache for specific query
     public func invalidate(_ query: String) async {
-        let normalizedQuery = normalizeQuery(query)
-        if cache.removeValue(forKey: normalizedQuery) != nil {
-            logger.debug("Invalidated cache for query: '\(query)'")
+        let normalizedQuery = self.normalizeQuery(query)
+        if self.cache.removeValue(forKey: normalizedQuery) != nil {
+            self.logger.debug("Invalidated cache for query: '\(query)'")
         }
     }
 
@@ -228,27 +221,29 @@ public actor SearchCache {
         var oldestEntry: Date?
         var newestEntry: Date?
 
-        for result in cache.values {
-            if result.isExpired(ttl: ttl) {
+        for result in self.cache.values {
+            if result.isExpired(ttl: self.ttl) {
                 expiredCount += 1
             }
             totalResults += result.totalCount
 
-            if oldestEntry == nil || result.timestamp < oldestEntry! {
+            if (oldestEntry.map { result.timestamp < $0 }) ?? true {
                 oldestEntry = result.timestamp
             }
-            if newestEntry == nil || result.timestamp > newestEntry! {
+
+            if (newestEntry.map { result.timestamp > $0 }) ?? true {
                 newestEntry = result.timestamp
             }
         }
 
         return CacheStatistics(
-            entryCount: cache.count,
+            entryCount: self.cache.count,
             expiredCount: expiredCount,
             totalCachedResults: totalResults,
-            oldestEntry: oldestEntry ?? now,
-            newestEntry: newestEntry ?? now,
-            ttl: ttl,
+            oldestEntry: oldestEntry,
+            newestEntry: newestEntry,
+            ttl: self.ttl,
+            snapshotDate: now,
         )
     }
 
@@ -263,26 +258,26 @@ public actor SearchCache {
 
     /// Start periodic cleanup task
     private func startCleanupTask() {
-        cleanupTask = Task {
+        self.cleanupTask = Task {
             while !Task.isCancelled {
                 // Wait for half of TTL before cleaning
-                try? await Task.sleep(nanoseconds: UInt64(ttl * 0.5 * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(self.ttl * 0.5 * 1_000_000_000))
 
-                await invalidateExpired()
+                await self.invalidateExpired()
             }
         }
     }
 
     /// Trim cache if it exceeds maximum size
     private func trimCacheIfNeeded() async {
-        guard cache.count > maxCacheSize else { return }
+        guard self.cache.count > self.maxCacheSize else { return }
 
         // Sort by timestamp and keep most recent
-        let sortedEntries = cache.sorted { $0.value.timestamp > $1.value.timestamp }
-        let entriesToKeep = Array(sortedEntries.prefix(Int(Double(maxCacheSize) * 0.75)))
+        let sortedEntries = self.cache.sorted { $0.value.timestamp > $1.value.timestamp }
+        let entriesToKeep = Array(sortedEntries.prefix(Int(Double(self.maxCacheSize) * 0.75)))
 
-        cache = Dictionary(uniqueKeysWithValues: entriesToKeep)
-        logger.info("Trimmed cache to \(self.cache.count) entries")
+        self.cache = Dictionary(uniqueKeysWithValues: entriesToKeep)
+        self.logger.info("Trimmed cache to \(self.cache.count) entries")
     }
 
     // MARK: - Cache Statistics
@@ -291,9 +286,10 @@ public actor SearchCache {
         public let entryCount: Int
         public let expiredCount: Int
         public let totalCachedResults: Int
-        public let oldestEntry: Date
-        public let newestEntry: Date
+        public let oldestEntry: Date?
+        public let newestEntry: Date?
         public let ttl: TimeInterval
+        public let snapshotDate: Date
 
         public var averageResultsPerEntry: Int {
             entryCount > 0 ? totalCachedResults / entryCount : 0
@@ -302,6 +298,14 @@ public actor SearchCache {
         public var cacheEfficiency: Double {
             let validCount = entryCount - expiredCount
             return entryCount > 0 ? Double(validCount) / Double(entryCount) : 0
+        }
+
+        public var isEmpty: Bool { entryCount == 0 }
+
+        public var cacheFreshnessDescription: String {
+            guard let newestEntry else { return "No cache entries" }
+            let age = snapshotDate.timeIntervalSince(newestEntry)
+            return age < ttl ? "Fresh" : "Stale"
         }
     }
 }

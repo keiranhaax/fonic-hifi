@@ -20,6 +20,11 @@ DESTINATION = platform=iOS Simulator,name=$(SIMULATOR_NAME),OS=$(SIMULATOR_OS)
 # Derived Data Path
 DERIVED_DATA = $(HOME)/Library/Developer/Xcode/DerivedData
 BUILD_DIR = build
+RESULT_BUNDLE = $(BUILD_DIR)/TestResults.xcresult
+OVERALL_COVERAGE_THRESHOLD ?= 0
+APP_COVERAGE_THRESHOLD ?= 0
+COVERAGE_MIN_PERCENT ?= 65
+APP_COVERAGE_MIN_PERCENT ?= 65
 
 # Detect Homebrew prefix dynamically (works on Intel and ARM Macs)
 BREW_PREFIX := $(shell brew --prefix 2>/dev/null || echo /usr/local)
@@ -51,7 +56,7 @@ LLM = llm
 .DEFAULT_GOAL := help
 
 # Phony targets
-.PHONY: all help clean build build-release test test-unit test-ui coverage lint format analyze open check-deps install-deps simulator-boot simulator-shutdown simulator-list run
+.PHONY: all help clean build build-release test test-unit test-ui coverage coverage-check lint format analyze open check-deps install-deps simulator-boot simulator-shutdown simulator-list run
 .PHONY: search find-files find-todos find-viewmodels find-audio find-core stats stats-features tree view
 .PHONY: watch-lint watch-build watch-test benchmark-build benchmark-test benchmark-all
 .PHONY: profile-cpu profile-memory profile-audio memory-graph memory-leaks
@@ -151,6 +156,10 @@ clean:
 
 # Build the app in Debug configuration
 build: check-deps
+	@echo "Verifying lint before build..."
+	@$(MAKE) lint
+	@echo "Verifying tests before build..."
+	@$(MAKE) test
 	@echo "Building $(PROJECT_NAME) (Debug)..."
 	@set -o pipefail && $(XCODEBUILD) build \
 		-project "$(PROJECT_NAME).xcodeproj" \
@@ -230,24 +239,47 @@ run: build simulator-boot ## Build and run app in simulator
 	@echo "App is running on simulator"
 
 # Run all tests (unit and UI)
-test: ## Run all tests (none configured yet)
-	@echo "No tests configured for this project."
-	@echo "Debug views are available in the app under Debug menu."
+test: check-deps ## Run all Swift test targets
+	@echo "Running Swift test suite..."
+	@rm -rf "$(RESULT_BUNDLE)"
+	@set -o pipefail && $(XCODEBUILD) test \
+		-project "$(PROJECT_NAME).xcodeproj" \
+		-scheme "$(SCHEME)" \
+		-configuration $(CONFIGURATION_DEBUG) \
+		-destination "$(DESTINATION)" \
+		-derivedDataPath $(BUILD_DIR) \
+		-enableCodeCoverage YES \
+		-resultBundlePath "$(RESULT_BUNDLE)" \
+		2>&1 | tee .test_output.tmp | $(XCBEAUTIFY); \
+	EXIT_CODE=$${PIPESTATUS[0]}; \
+	rm -f .test_output.tmp; \
+	if [ $$EXIT_CODE -ne 0 ]; then \
+		echo "❌ Tests failed with exit code $$EXIT_CODE"; \
+		exit $$EXIT_CODE; \
+	fi; \
+	echo "✅ Test suite complete"
 
 # Run unit tests only
-test-unit: ## Run unit tests (none configured yet)
-	@echo "No unit tests configured."
-	@echo "To add tests, create a new test target in Xcode."
+test-unit: ## Run unit tests (alias of make test)
+	@$(MAKE) test
 
 # Run UI tests only
-test-ui: ## Run UI tests (none configured yet)
-	@echo "No UI tests configured."
-	@echo "To add tests, create a new UI test target in Xcode."
+test-ui: ## Run UI tests (alias of make test)
+	@$(MAKE) test
 
 # Generate test coverage report
-coverage: ## Generate test coverage report (no tests yet)
-	@echo "No tests configured for coverage analysis."
-	@echo "Add test targets first to enable coverage reporting."
+coverage: ## Generate test coverage report for the latest test run
+	@if [ ! -d "$(RESULT_BUNDLE)" ]; then \
+		echo "Test result bundle not found. Running tests..."; \
+		$(MAKE) test; \
+	fi
+	@echo "Calculating coverage metrics..."
+	@xcrun xccov view --report --json "$(RESULT_BUNDLE)" > $(BUILD_DIR)/coverage.json
+	@xcrun xccov view --report "$(RESULT_BUNDLE)"
+	@python3 scripts/coverage_summary.py $(BUILD_DIR)/coverage.json --build-dir $(BUILD_DIR) --overall-threshold $(OVERALL_COVERAGE_THRESHOLD) --app-threshold $(APP_COVERAGE_THRESHOLD)
+
+coverage-check: ## Generate coverage report and enforce coverage thresholds (defaults 65%)
+	@$(MAKE) coverage OVERALL_COVERAGE_THRESHOLD=$(COVERAGE_MIN_PERCENT) APP_COVERAGE_THRESHOLD=$(APP_COVERAGE_MIN_PERCENT)
 
 # Run SwiftLint
 lint: ## Run SwiftLint code quality checks

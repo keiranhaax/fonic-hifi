@@ -14,6 +14,8 @@ struct AppSettingsView: View {
     @AppStorage("enableHapticFeedback") private var enableHapticFeedback = true
     @AppStorage("showFileExtensions") private var showFileExtensions = true
 
+    private let logger = Log.logger(.presentation)
+
     var body: some View {
         NavigationStack {
             Form {
@@ -76,12 +78,12 @@ struct AppSettingsView: View {
 
     private func exportSettings() {
         // Export settings functionality
-        print("Exporting settings...")
+        logger.info("Exporting settings from AppSettingsView")
     }
 
     private func importSettings() {
         // Import settings functionality
-        print("Importing settings...")
+        logger.info("Importing settings from AppSettingsView")
     }
 
     private func resetAllSettings() {
@@ -177,14 +179,24 @@ struct PrivacyPolicyView: View {
                 Text("Data Collection")
                     .font(.headline)
 
-                Text("Fonic HiFi only accesses your music files with your explicit permission. We do not collect, store, or transmit any personal data or music files to external servers.")
-                    .font(.body)
+                Text(
+                    """
+                    Fonic HiFi only accesses your music files with your explicit permission.
+                    We do not collect, store, or transmit any personal data or music files to external servers.
+                    """
+                )
+                .font(.body)
 
                 Text("Local Storage")
                     .font(.headline)
 
-                Text("All app data, including your music library metadata and preferences, is stored locally on your device. This data is not shared with third parties.")
-                    .font(.body)
+                Text(
+                    """
+                    All app data, including your music library metadata and preferences, is stored locally on your device.
+                    This data is not shared with third parties.
+                    """
+                )
+                .font(.body)
             }
             .padding()
         }
@@ -207,14 +219,25 @@ struct TermsOfServiceView: View {
                 Text("Usage")
                     .font(.headline)
 
-                Text("Fonic HiFi is intended for personal use with legally obtained music files. Users are responsible for ensuring they have the right to play the music files they import.")
-                    .font(.body)
+                Text(
+                    """
+                    Fonic HiFi is intended for personal use with legally obtained music files.
+                    Users are responsible for ensuring they have the right to play the music files they import.
+                    """
+                )
+                .font(.body)
+                .font(.body)
 
                 Text("Liability")
                     .font(.headline)
 
-                Text("The app is provided 'as is' without warranties. We are not liable for any data loss or damage resulting from the use of this app.")
-                    .font(.body)
+                Text(
+                    """
+                    The app is provided 'as is' without warranties.
+                    We are not liable for any data loss or damage resulting from the use of this app.
+                    """
+                )
+                .font(.body)
             }
             .padding()
         }

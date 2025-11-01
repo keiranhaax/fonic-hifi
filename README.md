@@ -96,6 +96,8 @@ make open
 make build        # Debug build for iPhone 16 Pro (iOS 26)
 make test-unit    # Unit + integration test suites
 make test-ui      # End-to-end UI flows
+make coverage     # Generates coverage report (xccov JSON + HTML bundle)
+make coverage-check  # Fails if overall/app targets drop below configured thresholds
 make lint         # SwiftLint quality checks
 make format       # SwiftFormat auto-formatting
 make clean        # Reset derived data and build artifacts
@@ -140,6 +142,13 @@ Contributions are welcome! Please follow these guidelines:
 - SwiftUI best practices
 - Comprehensive documentation for public APIs
 - Unit tests for business logic
+
+### Observability & Telemetry
+
+- Logging routes through `Log.logger(_:)` using the category taxonomy defined in `Utils/Logging/Log.swift`.
+- Redact file paths and long user-provided strings with `LogPrivacy` helpers before emitting log or metric metadata.
+- Optional counters for imports, engine switches, and queue mutations reside in `Utils/Logging/Metrics.swift`; enable them in debug/testing contexts via `Metrics.enable(true)`.
+- See `docs/refactor/observability-walkthrough.md` for an end-to-end walkthrough of instrumentation, privacy guards, and validation steps.
 
 ## Performance
 

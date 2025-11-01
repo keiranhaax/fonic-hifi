@@ -21,7 +21,7 @@ Fonic HiFi is a high-fidelity iOS 26.0+ audiophile music player with bit-perfect
 - **Utils/** - Shared helpers and extensions
 - **Assets.xcassets** - Design system and visual assets
 
-Test targets: `Fonic HiFiTests/` and `Fonic HiFiUITests/` (currently no tests configured). Large reference documents live in `Files/`.
+Test targets: `Fonic HiFiTests/` (active Swift Testing & XCTest suites) and `Fonic HiFiUITests/` (UI automation scaffolding). Large reference documents live in `Files/`.
 
 ## Architecture Overview
 
@@ -51,15 +51,16 @@ make format        # SwiftFormat auto-formatting
 make open          # Launch project in Xcode
 ```
 
-**Complete command reference**: See [docs/MAKEFILE.md](docs/MAKEFILE.md)
+**Complete command reference**: Run `make help` or see [docs/COMMANDS.md](docs/COMMANDS.md)
 
 ## Testing Status
 
-⚠️ **IMPORTANT**: No tests are currently configured.
+✅ **Swift Testing & XCTest suites are active.**
 
-- `make test`, `make test-unit`, `make test-ui` display "No tests configured"
-- When adding tests: Use Swift Testing (`@Test`) for async code, XCTest for integration
-- Name files with module + feature + `Tests` suffix (e.g., `AudioEngineFacadeTests`)
+- Run `make lint` and `make test` after code changes (see `docs/COMMANDS.md` for variants).
+- Tests live in `Fonic HiFiTests/` (145+ cases covering audio engines, diagnostics, data, and UI models).
+- Follow Swift Testing (`@Test`) for async/unit coverage and XCTest for integration; name files `<Module><Feature>Tests.swift`.
+- Review `docs/testing/` for coverage expectations and recent reports.
 
 ## Coding Standards
 
@@ -71,6 +72,14 @@ make open          # Launch project in Xcode
 - File names match primary type (`PlaybackStateManager.swift`)
 - Descriptive verb-form method names (`prepareEngine`, `handleRouteChange`)
 - Multiline doc comments for public APIs
+- `.swiftlint.yml` defines lint/style expectations—consult it before proposing new conventions or overrides.
+
+### Observability & Logging
+
+- Use `Log.logger(_:)` with the predefined taxonomy in `Utils/Logging/Log.swift`; avoid ad-hoc category strings.[Verified-Code]
+- Apply `LogPrivacy.filename(_:)` and `LogPrivacy.truncated(_:limit:)` when logging user-sourced paths or long strings.[Verified-Code]
+- Optional counters live in `Utils/Logging/Metrics.swift`; call `Metrics.enable(true)` only in debug/testing contexts before using `Metrics.increment`.[Verified-Code]
+- Reference `docs/refactor/observability-walkthrough.md` for the end-to-end instrumentation guide.
 
 ## Commit & Pull Request Guidelines
 
@@ -96,10 +105,19 @@ Use `make pr-create` for GitHub CLI pull request creation.
 - Keep sample libraries local, avoid embedding licensed audio in git
 - Verify new background modes or file-access rights with manual regression on iPhone 16 Pro simulator
 
+## Project Status & AI Tools
+
+- `STATUS.md` tracks the current project status, active phases, verification history, and next steps—review it before making scope assumptions.
+- Custom droids live under `.factory/droids/`; invoke them via the Task tool, e.g.:
+  ```json
+  { "subagent_type": "generated-droid", "description": "Analyze diagnostics architecture", "prompt": "Summarize open Phase 2A follow-ups" }
+  ```
+  Adjust `subagent_type`, `description`, and `prompt` per task requirements.
+
 ## Comprehensive Documentation
 
 For detailed guidance, see:
 - ** @CLAUDE.md** - Claude Code-specific instructions (364 lines)
-- **docs/MAKEFILE.md** - Complete build command reference
+- **docs/COMMANDS.md** - Build command reference and workflow patterns
 - **docs/DEBUGGING.md** - Audio debugging patterns and AVAudioSession best practices
 - ** @STATUS.md** - Current session state, branch recovery status, staged changes

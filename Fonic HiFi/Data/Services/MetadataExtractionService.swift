@@ -7,17 +7,26 @@
 
 @preconcurrency import AVFoundation
 import Foundation
+import OSLog
+
+/// Service for extracting metadata from audio files into Sendable data structures
+public protocol MetadataExtracting: Sendable {
+    func extractTrackMetadata(from url: URL) async throws -> TrackMetadata
+    func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata]
+}
 
 /// Service for extracting metadata from audio files into Sendable data structures
 public final class MetadataExtractionService: ObservableObject, Sendable {
+    private let logger = Log.logger(.dataMetadataExtraction)
+
     // MARK: - Properties
 
     /// Audio format detection service
-    private let formatDetectionService: FormatDetectionService
+    private let formatDetectionService: any FormatDetectionService
 
     // MARK: - Initialization
 
-    public init(formatDetectionService: FormatDetectionService) {
+    public init(formatDetectionService: any FormatDetectionService) {
         self.formatDetectionService = formatDetectionService
     }
 
@@ -103,7 +112,14 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
                     do {
                         return try await self.extractTrackMetadata(from: url)
                     } catch {
-                        print("Failed to extract metadata from \(url): \(error)")
+                        let filename = url.lastPathComponent
+                        let details = error.localizedDescription
+                        self.logger.error(
+                            """
+                            Failed to extract metadata from \(filename, privacy: .public):
+                            \(details, privacy: .public)
+                            """
+                        )
                         return nil
                     }
                 }
@@ -240,8 +256,7 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
 
         for item in metadata {
             if item.commonKey == .commonKeyArtwork,
-               let data = item.dataValue
-            {
+               let data = item.dataValue {
                 return data
             }
         }
@@ -254,8 +269,9 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
         let yearRegex = try? NSRegularExpression(pattern: "\\b(19|20)\\d{2}\\b")
         let range = NSRange(location: 0, length: dateString.count)
 
-        if let match = yearRegex?.firstMatch(in: dateString, options: [], range: range) {
-            let yearString = String(dateString[Range(match.range, in: dateString)!])
+        if let match = yearRegex?.firstMatch(in: dateString, options: [], range: range),
+           let matchRange = Range(match.range, in: dateString) {
+            let yearString = String(dateString[matchRange])
             return Int(yearString)
         }
 
@@ -351,3 +367,7 @@ public enum MetadataExtractionError: Error, LocalizedError {
         }
     }
 }
+
+// MARK: - Protocol Conformance
+
+extension MetadataExtractionService: MetadataExtracting {}

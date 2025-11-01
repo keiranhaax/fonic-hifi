@@ -12,7 +12,35 @@ import SwiftData
 /// ModelActor for handling Track data operations in a concurrency-safe manner
 @ModelActor
 public actor TrackDataActor {
-    private let logger = Logger(subsystem: "com.fonichifi.data", category: "TrackDataActor")
+    private let logger = Log.logger(.dataTrackActor)
+
+    // MARK: - Helpers
+
+    private func resolveTrack(with id: PersistentIdentifier) throws -> Track {
+        if let registered: Track = modelContext.registeredModel(for: id) {
+            return registered
+        }
+
+        var descriptor = FetchDescriptor<Track>(
+            predicate: #Predicate<Track> { track in
+                track.persistentModelID == id
+            }
+        )
+        descriptor.fetchLimit = 1
+
+        let fetched: [Track]
+        do {
+            fetched = try modelContext.fetch(descriptor)
+        } catch {
+            throw TrackDataError.fetchFailed(error)
+        }
+
+        guard let track = fetched.first else {
+            throw TrackDataError.trackNotFound(id)
+        }
+
+        return track
+    }
 
     // MARK: - Track Creation
 
@@ -48,6 +76,16 @@ public actor TrackDataActor {
         track.lyrics = metadata.lyrics
         track.artwork = metadata.artwork
         track.bitrate = metadata.bitrate
+        track.sourceURLBookmark = metadata.sourceBookmark
+        track.sourceURLString = metadata.sourceURL?.absoluteString
+        track.sourceURLHash = metadata.sourceURLHash ?? metadata.sourceURL?.librarySourceHash()
+        track.sourceBookmarkHash = metadata.sourceBookmarkHash
+        if track.sourceURLHash == nil, let source = metadata.sourceURL {
+            track.sourceURLHash = source.librarySourceHash()
+        }
+        if track.sourceBookmarkHash == nil, let bookmark = metadata.sourceBookmark {
+            track.sourceBookmarkHash = bookmark.sha256Hex()
+        }
 
         modelContext.insert(track)
 
@@ -96,6 +134,16 @@ public actor TrackDataActor {
             track.lyrics = metadata.lyrics
             track.artwork = metadata.artwork
             track.bitrate = metadata.bitrate
+            track.sourceURLBookmark = metadata.sourceBookmark
+            track.sourceURLString = metadata.sourceURL?.absoluteString
+            track.sourceURLHash = metadata.sourceURLHash ?? metadata.sourceURL?.librarySourceHash()
+            track.sourceBookmarkHash = metadata.sourceBookmarkHash
+            if track.sourceURLHash == nil, let source = metadata.sourceURL {
+                track.sourceURLHash = source.librarySourceHash()
+            }
+            if track.sourceBookmarkHash == nil, let bookmark = metadata.sourceBookmark {
+                track.sourceBookmarkHash = bookmark.sha256Hex()
+            }
 
             modelContext.insert(track)
             identifiers.append(track.persistentModelID)
@@ -116,12 +164,28 @@ public actor TrackDataActor {
     /// Check if a track exists for the given URL
     /// - Parameter url: File URL to check
     /// - Returns: PersistentIdentifier if track exists, nil otherwise
-    public func trackExists(for url: URL) throws -> PersistentIdentifier? {
-        let fetchDescriptor = FetchDescriptor<Track>(
-            predicate: #Predicate<Track> { track in
-                track.url == url
-            },
-        )
+    public func trackExists(for url: URL, bookmark: Data? = nil) throws -> PersistentIdentifier? {
+        let normalizedHash = url.librarySourceHash()
+        let absoluteSource = url.absoluteString
+        let bookmarkHash = bookmark?.sha256Hex()
+
+        let predicate: Predicate<Track>
+        if let bookmarkHash {
+            predicate = #Predicate<Track> { track in
+                track.sourceBookmarkHash == bookmarkHash ||
+                    track.sourceURLHash == normalizedHash ||
+                    track.sourceURLString == absoluteSource ||
+                    track.url == url
+            }
+        } else {
+            predicate = #Predicate<Track> { track in
+                track.sourceURLHash == normalizedHash ||
+                    track.sourceURLString == absoluteSource ||
+                    track.url == url
+            }
+        }
+
+        let fetchDescriptor = FetchDescriptor<Track>(predicate: predicate)
 
         do {
             let tracks = try modelContext.fetch(fetchDescriptor)
@@ -137,9 +201,7 @@ public actor TrackDataActor {
     /// - Returns: TrackMetadata if found
     /// - Throws: TrackDataError if not found or fetch fails
     public func getTrackMetadata(for id: PersistentIdentifier) throws -> TrackMetadata {
-        guard let track: Track = modelContext.registeredModel(for: id) else {
-            throw TrackDataError.trackNotFound(id)
-        }
+        let track = try resolveTrack(with: id)
 
         return TrackMetadata(
             url: track.url,
@@ -163,6 +225,10 @@ public actor TrackDataActor {
             artwork: track.artwork,
             lyrics: track.lyrics,
             comment: track.comments,
+            sourceURL: track.sourceURLString.flatMap { URL(string: $0) },
+            sourceBookmark: track.sourceURLBookmark,
+            sourceURLHash: track.sourceURLHash,
+            sourceBookmarkHash: track.sourceBookmarkHash,
         )
     }
 
@@ -184,9 +250,7 @@ public actor TrackDataActor {
     /// - Parameter id: PersistentIdentifier of the track to delete
     /// - Throws: TrackDataError if deletion fails
     public func deleteTrack(_ id: PersistentIdentifier) throws {
-        guard let track: Track = modelContext.registeredModel(for: id) else {
-            throw TrackDataError.trackNotFound(id)
-        }
+        let track = try resolveTrack(with: id)
 
         modelContext.delete(track)
 
@@ -235,9 +299,7 @@ public actor TrackDataActor {
     ///   - playCount: New play count
     ///   - lastPlayed: Last played date
     public func updatePlaybackStats(for id: PersistentIdentifier, playCount: Int, lastPlayed: Date) throws {
-        guard let track: Track = modelContext.registeredModel(for: id) else {
-            throw TrackDataError.trackNotFound(id)
-        }
+        let track = try resolveTrack(with: id)
 
         track.playCount = playCount
         track.lastPlayed = lastPlayed
@@ -258,9 +320,7 @@ public actor TrackDataActor {
     ///   - isFavorite: Favorite status
     ///   - userTags: User-defined tags
     public func updateUserData(for id: PersistentIdentifier, rating: Int?, isFavorite: Bool, userTags: [String]) throws {
-        guard let track: Track = modelContext.registeredModel(for: id) else {
-            throw TrackDataError.trackNotFound(id)
-        }
+        let track = try resolveTrack(with: id)
 
         track.rating = rating
         track.isFavorite = isFavorite
@@ -301,6 +361,10 @@ public struct TrackMetadata: Sendable {
     public let artwork: Data?
     public let lyrics: String?
     public let comment: String?
+    public let sourceURL: URL?
+    public let sourceBookmark: Data?
+    public let sourceURLHash: String?
+    public let sourceBookmarkHash: String?
 
     public init(
         url: URL,
@@ -324,6 +388,10 @@ public struct TrackMetadata: Sendable {
         artwork: Data? = nil,
         lyrics: String? = nil,
         comment: String? = nil,
+        sourceURL: URL? = nil,
+        sourceBookmark: Data? = nil,
+        sourceURLHash: String? = nil,
+        sourceBookmarkHash: String? = nil,
     ) {
         self.url = url
         self.title = title
@@ -346,6 +414,50 @@ public struct TrackMetadata: Sendable {
         self.artwork = artwork
         self.lyrics = lyrics
         self.comment = comment
+        self.sourceURL = sourceURL
+        self.sourceBookmark = sourceBookmark
+        self.sourceURLHash = sourceURLHash
+        self.sourceBookmarkHash = sourceBookmarkHash
+    }
+}
+
+public extension TrackMetadata {
+    func withSourceInfo(
+        sourceURL: URL,
+        sourceBookmark: Data?,
+        sourceURLHash: String? = nil,
+        sourceBookmarkHash: String? = nil
+    ) -> TrackMetadata {
+        let resolvedURLHash = sourceURLHash ?? sourceURL.librarySourceHash()
+        let resolvedBookmarkHash = sourceBookmarkHash ?? sourceBookmark?.sha256Hex()
+
+        return TrackMetadata(
+            url: url,
+            title: title,
+            artist: artist,
+            album: album,
+            albumArtist: albumArtist,
+            genre: genre,
+            year: year,
+            trackNumber: trackNumber,
+            discNumber: discNumber,
+            composer: composer,
+            conductor: conductor,
+            audioFormat: audioFormat,
+            duration: duration,
+            sampleRate: sampleRate,
+            bitDepth: bitDepth,
+            bitrate: bitrate,
+            channels: channels,
+            isLossless: isLossless,
+            artwork: artwork,
+            lyrics: lyrics,
+            comment: comment,
+            sourceURL: sourceURL,
+            sourceBookmark: sourceBookmark,
+            sourceURLHash: resolvedURLHash,
+            sourceBookmarkHash: resolvedBookmarkHash,
+        )
     }
 }
 

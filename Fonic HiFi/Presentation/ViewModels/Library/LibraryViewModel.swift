@@ -98,23 +98,43 @@ final class LibraryViewModel: ObservableObject {
     private func fetch(section: Section, query: String?, reset: Bool) async {
         switch section {
         case .tracks:
-            trackState = await fetchPage(state: trackState, section: .tracks, query: query, reset: reset) { page, q in
-                try await tracksUseCase.tracksPage(page: page, query: q)
+            trackState = await fetchPage(
+                state: trackState,
+                section: .tracks,
+                query: query,
+                reset: reset,
+            ) { page, searchQuery in
+                try await tracksUseCase.tracksPage(page: page, query: searchQuery)
             }
             tracks = trackState.items
         case .albums:
-            albumState = await fetchPage(state: albumState, section: .albums, query: query, reset: reset) { page, q in
-                try await albumsUseCase.albumsPage(page: page, query: q)
+            albumState = await fetchPage(
+                state: albumState,
+                section: .albums,
+                query: query,
+                reset: reset,
+            ) { page, searchQuery in
+                try await albumsUseCase.albumsPage(page: page, query: searchQuery)
             }
             albums = albumState.items
         case .artists:
-            artistState = await fetchPage(state: artistState, section: .artists, query: query, reset: reset) { page, q in
-                try await artistsUseCase.artistsPage(page: page, query: q)
+            artistState = await fetchPage(
+                state: artistState,
+                section: .artists,
+                query: query,
+                reset: reset,
+            ) { page, searchQuery in
+                try await artistsUseCase.artistsPage(page: page, query: searchQuery)
             }
             artists = artistState.items
         case .playlists:
-            playlistState = await fetchPage(state: playlistState, section: .playlists, query: query, reset: reset) { page, q in
-                try await playlistsUseCase.playlistsPage(page: page, query: q)
+            playlistState = await fetchPage(
+                state: playlistState,
+                section: .playlists,
+                query: query,
+                reset: reset,
+            ) { page, searchQuery in
+                try await playlistsUseCase.playlistsPage(page: page, query: searchQuery)
             }
             playlists = playlistState.items
         }

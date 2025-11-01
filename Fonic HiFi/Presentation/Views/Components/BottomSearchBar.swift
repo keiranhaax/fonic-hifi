@@ -15,7 +15,6 @@ struct BottomSearchBar: View {
     @Binding var searchText: String
     @FocusState private var isFocused: Bool
     @State private var isInteracting = false
-    @State private var glassIntensity: Double = 0.3
 
     // Animation state
     @State private var searchIconRotation: Double = 0
@@ -33,39 +32,39 @@ struct BottomSearchBar: View {
             HStack(spacing: 12) {
                 // Search icon with animation
                 Image(systemName: "magnifyingglass")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(searchIconRotation))
-                        .scaleEffect(isInteracting ? 1.1 : 1.0)
-                        .animation(.liquidBouncy, value: isInteracting)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(searchIconRotation))
+                    .scaleEffect(isInteracting ? 1.1 : 1.0)
+                    .animation(.liquidBouncy, value: isInteracting)
 
-                    // Search text field
-                    TextField("Search Tracks", text: $searchText)
-                        .textFieldStyle(.plain)
-                        .font(.body)
-                        .focused($isFocused)
-                        .submitLabel(.search)
-                        .scaleEffect(searchFieldScale)
-                        .animation(.liquidSmooth, value: searchFieldScale)
-                        .onSubmit {
-                            performSearch()
-                        }
-
-                    // Clear button when text exists
-                    if !searchText.isEmpty {
-                        Button(action: clearSearch) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundStyle(Color.secondary.opacity(0.5))
-                                .transition(.scale.combined(with: .opacity))
-                        }
-                        .buttonStyle(.plain)
-                        .animation(.liquidSmooth, value: !searchText.isEmpty)
+                // Search text field
+                TextField("Search Tracks", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .focused($isFocused)
+                    .submitLabel(.search)
+                    .scaleEffect(searchFieldScale)
+                    .animation(.liquidSmooth, value: searchFieldScale)
+                    .onSubmit {
+                        performSearch()
                     }
+
+                // Clear button when text exists
+                if !searchText.isEmpty {
+                    Button(action: clearSearch) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color.secondary.opacity(0.5))
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                    .buttonStyle(.plain)
+                    .animation(.liquidSmooth, value: !searchText.isEmpty)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            .glassEffect(.regular)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .glassSurface(style: .standard, cornerRadius: 22, interactive: true)
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
             .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: -2)
@@ -110,7 +109,8 @@ struct BottomSearchBar: View {
         }
 
         // Reset scale
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100))
             withAnimation(.liquidSmooth) {
                 searchFieldScale = 1.0
             }
@@ -125,11 +125,6 @@ struct BottomSearchBar: View {
             let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
             impactGenerator.impactOccurred(intensity: 0.8)
         }
-
-        // Animate glass intensity
-        withAnimation(.liquidMorph) {
-            glassIntensity = focused ? 0.5 : 0.3
-        }
     }
 
     private func animateSearchIcon() {
@@ -139,7 +134,8 @@ struct BottomSearchBar: View {
         }
 
         // Reset rotation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
             withAnimation(.liquidSmooth) {
                 searchIconRotation = 0
             }

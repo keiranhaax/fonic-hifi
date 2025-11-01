@@ -123,8 +123,7 @@ struct SettingsView: View {
 
 #Preview {
     if let previewDataManager = DataManager.makePreviewDataManager(),
-       let importService = DataManager.makePreviewImportService()
-    {
+       let importService = DataManager.makePreviewImportService() {
         SettingsView()
             .dataManager(previewDataManager)
             .importService(importService)

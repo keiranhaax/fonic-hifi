@@ -43,7 +43,9 @@ public enum AVAudioEngineConfig {
         }
 
         // Otherwise, create a format that matches output device
-        let channelLayout = fileFormat.channelLayout ?? AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_Stereo)!
+        guard let channelLayout = fileFormat.channelLayout ?? AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_Stereo) else {
+            return nil
+        }
 
         return AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
@@ -56,20 +58,22 @@ public enum AVAudioEngineConfig {
     // MARK: - Channel Configuration
 
     /// Get appropriate channel layout for number of channels
-    public static func channelLayout(for channelCount: Int) -> AVAudioChannelLayout {
-        switch channelCount {
+    public static func channelLayout(for channelCount: Int) -> AVAudioChannelLayout? {
+        let preferredTag: AudioChannelLayoutTag = switch channelCount {
         case 1:
-            AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_Mono)!
+            kAudioChannelLayoutTag_Mono
         case 2:
-            AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_Stereo)!
+            kAudioChannelLayoutTag_Stereo
         case 6:
-            AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_MPEG_5_1_A)!
+            kAudioChannelLayoutTag_MPEG_5_1_A
         case 8:
-            AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_MPEG_7_1_A)!
+            kAudioChannelLayoutTag_MPEG_7_1_A
         default:
-            // Default to stereo for unsupported channel counts
-            AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_Stereo)!
+            kAudioChannelLayoutTag_Stereo
         }
+
+        return AVAudioChannelLayout(layoutTag: preferredTag)
+            ?? AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_Stereo)
     }
 
     // MARK: - Sample Rate Configuration

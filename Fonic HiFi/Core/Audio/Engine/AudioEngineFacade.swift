@@ -13,164 +13,94 @@ import Observation
 import OSLog
 import UIKit
 
-/// High-level facade that coordinates all audio infrastructure components
-/// Provides a unified interface for audio playback, state management, queue operations,
-/// validation, and monitoring
-///
-/// Phase 3: Now serves as the single source of truth for all audio-related state,
-/// including UI state previously managed by AppState
+/// High-level facade that composes the modular audio subsystems introduced in Phase 2C.
+/// Responsibilities:
+///  - Wire audio session, queue, diagnostics, and playback state managers
+///  - Delegate engine lifecycle to `AudioEngineManager`
+///  - Forward playback commands through `PlaybackController`
+///  - Surface UI-facing state via `AudioUIState`
 @MainActor
 public final class AudioEngineFacade: ObservableObject {
     // MARK: - Core Services
 
-    /// Audio session management
     public let sessionManager: AudioSessionManager
-
-    /// Format detection and validation
     public let formatDetectionManager: AudioFormatDetectionManager
-
-    /// Engine factory for creating appropriate audio engines
     public let engineFactory: AudioEngineFactory
-
-    /// Current audio engine instance
-    public private(set) var currentEngine: AudioEngineService?
-
-    /// Playback state management
     public let stateManager: PlaybackStateManager
-
-    /// Audio queue management
     public let queueManager: AudioQueueManager
-
-    /// Bit-perfect validation
     public let validator: BitPerfectValidator
-
-    /// Audio monitoring and metrics
     public let monitor: AudioMonitor
-
-    /// Persistent playback settings store
     public let playbackSettingsStore: AudioPlaybackSettingsStore
 
-    // MARK: - Published State
+    // MARK: - Derived Read-Only State
 
-    /// Current playback state
-    public var currentState: PlaybackState {
-        stateManager.currentState
-    }
+    public var currentState: PlaybackState { stateCoordinator.currentState }
+    public var queueState: QueueState { stateCoordinator.queueState }
+    public var isPlaying: Bool { currentState.isPlaying }
+    public var playbackProgress: Double { currentState.progress ?? 0.0 }
+    public var currentTime: TimeInterval { currentState.currentTime ?? 0.0 }
+    public var duration: TimeInterval { currentState.duration ?? 0.0 }
 
-    /// Current queue state
-    public var queueState: QueueState {
-        queueManager.queueState
-    }
-
-    /// Whether audio is currently playing
-    public var isPlaying: Bool {
-        currentState.isPlaying
-    }
-
-    /// Whether the facade is properly initialized and ready
-    public private(set) var isReady: Bool = false
-
-    // MARK: - UI State (merged from AppState)
-
-    /// Currently playing track (UI representation)
-    @Published public var currentTrack: Track? {
-        didSet {
-            let title = currentTrack?.title ?? "nil"
-            print("currentTrack changed to: \(title)")
-        }
-    }
-
-    /// Live diagnostics summary for the current playback session
-    @Published public private(set) var diagnosticsStatus: DiagnosticsStatus = .empty
-
-    /// Whether the mini player should be visible
-    @Published public var showMiniPlayer: Bool = false
-
-    // MARK: - Derived Properties
-
-    /// Progress of the current track (0.0 to 1.0)
-    public var playbackProgress: Double {
-        currentState.progress ?? 0.0
-    }
-
-    /// Current playback time in seconds
-    public var currentTime: TimeInterval {
-        currentState.currentTime ?? 0.0
-    }
-
-    /// Duration of the current track in seconds
-    public var duration: TimeInterval {
-        currentState.duration ?? 0.0
-    }
-
-    // MARK: - Progress Management
-
-    /// Timer manager for progress updates - no longer needs AppState binding
-    let progressTimer = ProgressTimerManager()
-
-    // MARK: - Thread Management
-
-    /// Dedicated queue for audio operations to prevent dispatch assertion failures
-    private let audioQueue = DispatchQueue(label: "com.fonichifi.audio.engine", qos: .userInitiated)
-
-    // MARK: - Configuration
-
-    /// Current audio engine configuration
-    public private(set) var engineConfiguration: AudioEngineConfiguration
-
-    /// Performance mode setting
     public var performanceMode: PerformanceMode {
-        get { engineConfiguration.performanceMode }
+        get { engineManager.configuration.performanceMode }
         set {
-            engineConfiguration = engineConfiguration.with(performanceMode: newValue)
-            Task { await updateEngineConfiguration() }
-        }
-    }
-
-    /// Crossfade duration convenience accessor
-    public var crossfadeDuration: TimeInterval { engineConfiguration.crossfadeDuration }
-
-    /// Replay gain mode accessor
-    public var replayGainMode: ReplayGainMode { engineConfiguration.replayGainMode }
-
-    /// Playback rate accessor
-    public var playbackRate: Double { engineConfiguration.playbackRate }
-
-    public func updateCrossfadeDuration(_ duration: TimeInterval) async {
-        objectWillChange.send()
-        engineConfiguration = engineConfiguration.with(crossfadeDuration: duration)
-        await playbackSettingsStore.setCrossfadeDuration(duration)
-    }
-
-    public func updateReplayGainMode(_ mode: ReplayGainMode) async {
-        objectWillChange.send()
-        engineConfiguration = engineConfiguration.with(replayGainMode: mode)
-        await playbackSettingsStore.setReplayGainMode(mode)
-
-        if let track = currentTrack, let engine = currentEngine {
-            let gain = replayGainValue(for: track, mode: mode)
-            await engine.applyReplayGain(gain)
-        }
-    }
-
-    public func updatePlaybackRate(_ rate: Double) async {
-        objectWillChange.send()
-        engineConfiguration = engineConfiguration.with(playbackRate: rate)
-        await playbackSettingsStore.setPlaybackRate(rate)
-
-        if let engine = currentEngine {
-            await engine.setPlaybackRate(rate)
-            if let track = currentTrack {
-                let duration = await engine.duration
-                await updateNowPlayingInfo(track: track, duration: duration)
+            let updated = engineManager.configuration.with(performanceMode: newValue)
+            Task { [weak self] in
+                guard let self else { return }
+                await engineManager.updateConfiguration(updated)
             }
         }
     }
 
-    // MARK: - Private Properties
+    public var crossfadeDuration: TimeInterval { engineManager.configuration.crossfadeDuration }
+    public var replayGainMode: ReplayGainMode { engineManager.configuration.replayGainMode }
+    public var playbackRate: Double { engineManager.configuration.playbackRate }
+
+    public private(set) var isReady: Bool = false
+
+    // MARK: - UI State Proxies
+
+    @Published public private(set) var currentTrack: Track?
+    @Published public private(set) var showMiniPlayer: Bool = false
+    @Published public private(set) var diagnosticsStatus: DiagnosticsStatus = .empty
+
+    // MARK: - Components
+
+    private let progressTimer = ProgressTimerManager()
+    private let uiStateStore: AudioUIState
+    private let engineManager: AudioEngineManager
+    private lazy var playbackController: PlaybackController = .init(
+        sessionManager: sessionManager,
+        formatDetectionManager: formatDetectionManager,
+        validator: validator,
+        stateManager: stateManager,
+        queueManager: queueManager,
+        engineManager: engineManager,
+        progressTimer: progressTimer,
+        uiState: uiStateStore,
+        diagnosticsHandler: { [weak self] track, info in
+            guard let self else { return }
+            await refreshDiagnostics(for: track, formatInfo: info)
+        },
+    )
+
+    private lazy var queueCoordinator: QueueCoordinator = .init(
+        queueManager: queueManager,
+        stateManager: stateManager,
+        engineManager: engineManager,
+        playbackController: playbackController,
+    )
+
+    private lazy var stateCoordinator: StateCoordinator = .init(
+        stateManager: stateManager,
+        queueManager: queueManager,
+        sessionManager: sessionManager,
+        uiStateStore: uiStateStore,
+        facade: self,
+    )
 
     private var cancellables = Set<AnyCancellable>()
-    private let logger = Logger(subsystem: "com.fonichifi.audio", category: "AudioEngineFacade")
+    private let logger = Log.logger(.audioEngineFacade)
     private var isInitialized = false
 
     // MARK: - Initialization
@@ -185,10 +115,8 @@ public final class AudioEngineFacade: ObservableObject {
         validator: BitPerfectValidator? = nil,
         monitor: AudioMonitor? = nil,
         playbackSettingsStore: AudioPlaybackSettingsStore? = nil,
+        uiStateStore: AudioUIState? = nil,
     ) {
-        engineConfiguration = configuration
-
-        // Initialize services with dependency injection support
         self.sessionManager = sessionManager ?? AudioSessionManager()
         self.formatDetectionManager = formatDetectionManager ?? AudioFormatDetectionManager()
         self.engineFactory = engineFactory ?? AudioEngineFactory()
@@ -197,462 +125,202 @@ public final class AudioEngineFacade: ObservableObject {
         self.validator = validator ?? BitPerfectValidator()
         self.monitor = monitor ?? AudioMonitor()
         self.playbackSettingsStore = playbackSettingsStore ?? AudioPlaybackSettingsStore()
+        self.uiStateStore = uiStateStore ?? AudioUIState()
+        engineManager = AudioEngineManager(
+            configuration: configuration,
+            engineFactory: self.engineFactory,
+            monitor: self.monitor,
+        )
 
-        logger.info("AudioEngineFacade initialized with \(String(describing: configuration.performanceMode)) performance mode")
+        currentTrack = self.uiStateStore.currentTrack
+        showMiniPlayer = self.uiStateStore.showMiniPlayer
+        diagnosticsStatus = self.uiStateStore.diagnosticsStatus
 
-        // Setup playback state observation for UI updates
-        setupPlaybackStateObservation()
+        setupStateBindings()
+        _ = queueCoordinator
+        _ = stateCoordinator
+
+        logger.info("AudioEngineFacade initialised with configuration: \(String(describing: configuration.performanceMode))")
     }
 
-    /// Initialize the facade and wire up all service integrations
+    // MARK: - Configuration Mutations
+
+    public func updateCrossfadeDuration(_ duration: TimeInterval) async {
+        objectWillChange.send()
+        let updated = engineManager.configuration.with(crossfadeDuration: duration)
+        await engineManager.updateConfiguration(updated)
+        await playbackSettingsStore.setCrossfadeDuration(duration)
+    }
+
+    public func updateReplayGainMode(_ mode: ReplayGainMode) async {
+        objectWillChange.send()
+        let updated = engineManager.configuration.with(replayGainMode: mode)
+        await engineManager.updateConfiguration(updated)
+        await playbackSettingsStore.setReplayGainMode(mode)
+        await playbackController.reapplyPlaybackParameters()
+    }
+
+    public func updatePlaybackRate(_ rate: Double) async {
+        objectWillChange.send()
+        let updated = engineManager.configuration.with(playbackRate: rate)
+        await engineManager.updateConfiguration(updated)
+        await playbackSettingsStore.setPlaybackRate(rate)
+        if let engine = engineManager.currentEngine {
+            await engine.setPlaybackRate(rate)
+        }
+        await playbackController.reapplyPlaybackParameters()
+        await playbackController.refreshNowPlayingMetadata()
+    }
+
+    // MARK: - Lifecycle
+
     public func initialize() async throws {
         guard !isInitialized else {
-            logger.warning("AudioEngineFacade already initialized")
+            logger.warning("AudioEngineFacade already initialised")
             return
         }
 
-        logger.info("Initializing AudioEngineFacade...")
+        logger.info("Initialising AudioEngineFacade…")
 
         do {
-            engineConfiguration = await playbackSettingsStore.configuration(merging: engineConfiguration)
+            let mergedConfiguration = await playbackSettingsStore.configuration(merging: engineManager.configuration)
+            await engineManager.updateConfiguration(mergedConfiguration)
 
-            // 1. Initialize audio session
             try await sessionManager.configureAudioSession()
-            logger.debug("Audio session configured")
-
-            // 2. Setup service integrations
             await setupServiceIntegrations()
-            logger.debug("Service integrations configured")
-
-            // 3. Initialize monitoring
             await monitor.startMonitoring(updateInterval: 1.0)
-            logger.debug("Audio monitoring started")
-
-            // 4. Enable remote commands for Control Center
             await sessionManager.enableRemoteCommands()
-            logger.debug("Remote commands enabled")
 
-            // 5. Restore queue state from previous session
             if queueManager.restoreState() {
-                logger.info("Queue state restored from previous session")
-
-                // If we have a current track, update UI state
-                if let currentTrack = queueManager.currentTrack {
-                    self.currentTrack = Track(
-                        url: currentTrack.url,
-                        title: currentTrack.title,
-                        artist: currentTrack.artist,
-                        album: currentTrack.album,
-                        audioFormat: currentTrack.audioFormat,
-                    )
-                    showMiniPlayer = true
-                    logger.info("Restored current track: \(currentTrack.title)")
+                logger.info("Restored persisted queue state")
+                if let restoredTrack = queueManager.currentTrack {
+                    uiStateStore.currentTrack = createTrackFromAudioTrack(restoredTrack)
+                    uiStateStore.showMiniPlayer = true
                 }
-            } else {
-                logger.debug("No saved queue state to restore")
             }
 
             isInitialized = true
             isReady = true
-
-            logger.info("AudioEngineFacade initialization complete")
-
+            logger.info("AudioEngineFacade initialisation complete")
         } catch {
-            logger.error("AudioEngineFacade initialization failed: \(error.localizedDescription)")
+            logger.error("AudioEngineFacade initialisation failed: \(error.localizedDescription)")
             isReady = false
             throw AudioError.engineInitializationFailed(reason: error.localizedDescription)
         }
     }
 
-    /// Shutdown the facade and cleanup resources
     public func shutdown() async {
-        logger.info("Shutting down AudioEngineFacade...")
+        logger.info("Shutting down AudioEngineFacade…")
 
-        // Stop progress timer
         progressTimer.stop()
-
-        // Stop monitoring
         await monitor.stopMonitoring()
+        await playbackController.stop()
+        await engineManager.cleanupCurrentEngine()
 
-        // Stop playback
-        await stop()
-
-        // Cleanup engine properly
-        await cleanupCurrentEngine()
-
-        // Cancel subscriptions
         cancellables.removeAll()
-
-        isReady = false
         isInitialized = false
+        isReady = false
 
         logger.info("AudioEngineFacade shutdown complete")
     }
 
     // MARK: - Playback Control
 
-    /// Play a specific track
-    /// - Parameter track: The track to play
     public func play(track: Track) async throws {
         assertMainThread()
-
-        guard isReady else {
-            throw AudioError.engineInitializationFailed(reason: "Engine not ready")
-        }
-
-        logger.info("Playing track: \(track.title)")
-
-        // Ensure we're on MainActor since this is a public API
-        dispatchPrecondition(condition: .onQueue(.main))
-
-        do {
-            // 1. Ensure audio session is active first
-            try await sessionManager.activateAudioSession()
-            logger.debug("Audio session activated")
-
-            // 2. Detect format
-            let formatInfo = try await formatDetectionManager.detectFormat(at: track.url)
-            logger.debug("Format detected: \(formatInfo.format.displayName)")
-
-            // 3. Validate bit-perfect capability if needed
-            if engineConfiguration.performanceMode == .quality {
-                let validationResult = await validator.validateBitPerfectPlayback(
-                    sourceFormat: formatInfo,
-                    outputDevice: nil,
-                )
-
-                if !validationResult.isValid {
-                    let reason = validationResult.mismatchReason?.userFriendlyDescription ?? "Unknown"
-                    logger.warning("Bit-perfect validation failed: \(reason)")
-                }
-            }
-
-            // 4. Create or reconfigure engine if needed
-            try await ensureEngineForFormat(formatInfo)
-
-            // 5. Update queue - we're already on MainActor
-            if queueManager.currentTrack?.id != track.id {
-                queueManager.setCurrentTrack(track.toAudioTrack())
-            }
-            currentTrack = track
-            showMiniPlayer = true
-            stateManager.updateState(.loading())
-
-            // 6. Load and play
-            guard let engine = currentEngine else {
-                throw AudioError.engineInitializationFailed(reason: "Engine not ready")
-            }
-
-            try await engine.load(url: track.url)
-            await applyPlaybackParameters(for: track)
-
-            try await engine.play()
-
-            stateManager.updateState(.playing(currentTime: 0, duration: formatInfo.duration))
-
-            // Update Now Playing info for Control Center
-            await updateNowPlayingInfo(track: track, duration: formatInfo.duration)
-
-            // Start progress timer for continuous updates (batched at 0.2s intervals)
-            startProgressTracking()
-
-            logger.info("Playback started successfully")
-            await refreshDiagnostics(for: track, formatInfo: formatInfo)
-            await prepareUpcomingTrack()
-
-        } catch {
-            // Handle errors - we're already on MainActor
-            logger.error("Failed to play track: \(error.localizedDescription)")
-            stateManager.updateState(.error(error as? AudioError ?? .playbackFailed(reason: error.localizedDescription), lastKnownTime: nil))
-            throw error
-        }
+        guard isReady else { throw AudioError.engineInitializationFailed(reason: "Engine not ready") }
+        logger.info("Playing track: \(track.title, privacy: .public)")
+        try await playbackController.play(track: track)
     }
 
-    /// Resume playback from current position
     public func resume() async throws {
         assertMainThread()
-
-        guard isReady else {
-            throw AudioError.engineInitializationFailed(reason: "Engine not ready")
-        }
-
-        guard let engine = currentEngine else {
-            throw AudioError.engineInitializationFailed(reason: "Engine not ready")
-        }
-
-        logger.info("Resuming playback")
-
-        do {
-            if let nextState = currentState.nextPlayState {
-                stateManager.updateState(nextState)
-            }
-
-            if let track = currentTrack {
-                await applyPlaybackParameters(for: track)
-            }
-
-            try await engine.play()
-
-            // Update state to playing with current time
-            let currentTime = await engine.currentTime
-            let duration = await engine.duration
-            stateManager.updateState(.playing(currentTime: currentTime, duration: duration))
-
-            if let track = currentTrack {
-                await updateNowPlayingInfo(track: track, duration: duration)
-                await prepareUpcomingTrack()
-                await refreshDiagnostics(for: track)
-            }
-
-            // Restart progress timer (batched at 0.2s intervals)
-            startProgressTracking()
-
-        } catch {
-            logger.error("Failed to resume playback: \(error.localizedDescription)")
-            stateManager.updateState(.error(error as? AudioError ?? .playbackFailed(reason: error.localizedDescription), lastKnownTime: nil))
-            throw error
-        }
+        guard isReady else { throw AudioError.engineInitializationFailed(reason: "Engine not ready") }
+        try await playbackController.resume()
     }
 
-    /// Pause playback
     public func pause() async {
         assertMainThread()
-
-        guard isReady, let engine = currentEngine else {
-            logger.warning("Cannot pause: engine not ready")
-            return
-        }
-
-        logger.info("Pausing playback")
-
-        // Stop progress timer
-        progressTimer.stop()
-
-        await engine.pause()
-
-        // Update state to paused with current time
-        let currentTime = await engine.currentTime
-        let duration = await engine.duration
-        stateManager.updateState(.paused(currentTime: currentTime, duration: duration))
+        guard isReady else { return }
+        await playbackController.pause()
     }
 
-    /// Stop playback completely
     public func stop() async {
         assertMainThread()
-
-        guard let engine = currentEngine else {
-            stateManager.updateState(.stopped)
-            return
-        }
-
-        logger.info("Stopping playback")
-
-        // Stop progress timer
-        progressTimer.stop()
-
-        await engine.stop()
-        stateManager.updateState(.stopped)
-
-        // Clear Now Playing info
-        await clearNowPlayingInfo()
-
-        // Clear the current track
-        currentTrack = nil
-        showMiniPlayer = false
-        diagnosticsStatus = .empty
+        await playbackController.stop()
     }
 
-    /// Seek to a specific time position
-    /// - Parameter time: Target time in seconds
     public func seek(to time: TimeInterval) async throws {
         assertMainThread()
+        guard isReady else { throw AudioError.engineInitializationFailed(reason: "Engine not ready") }
+        try await playbackController.seek(to: time)
+    }
 
-        guard isReady, let engine = currentEngine else {
-            throw AudioError.engineInitializationFailed(reason: "Engine not ready")
-        }
+    public func setVolume(_ volume: Float) async {
+        assertMainThread()
+        guard isReady else { return }
+        await playbackController.setVolume(volume)
+    }
 
-        guard currentState.canSeek else {
-            throw AudioError.playbackFailed(reason: "Cannot seek in current state")
-        }
+    public func setCurrentEngine(_ engine: AudioEngineService, type: AudioEngineType? = nil, format: AudioFormat? = nil) {
+        engineManager.overrideCurrentEngine(engine, type: type, format: format)
+    }
 
-        logger.info("Seeking to \(time)s")
+    public func playNext() async throws {
+        try await queueCoordinator.playNext()
+    }
 
-        let currentTime = await engine.currentTime
-        let duration = await engine.duration
-
-        stateManager.updateState(.seeking(targetTime: time, currentTime: currentTime))
-
-        do {
-            try await engine.seek(to: time)
-
-            // Update state based on previous playing status
-            if currentState.isPlaying {
-                stateManager.updateState(.playing(currentTime: time, duration: duration))
-            } else {
-                stateManager.updateState(.paused(currentTime: time, duration: duration))
-            }
-
-        } catch {
-            logger.error("Seek failed: \(error.localizedDescription)")
-            // Restore previous state
-            if currentState.isPlaying {
-                stateManager.updateState(.playing(currentTime: currentTime, duration: duration))
-            } else {
-                stateManager.updateState(.paused(currentTime: currentTime, duration: duration))
-            }
-            throw error
-        }
+    public func playPrevious() async throws {
+        try await queueCoordinator.playPrevious()
     }
 
     // MARK: - Queue Operations
 
-    /// Play the next track in the queue
-    public func playNext() async throws {
-        guard let nextTrack = queueManager.next() else {
-            logger.info("No next track available")
-            await stop()
-            return
-        }
-        let track = createTrackFromAudioTrack(nextTrack)
-
-        if crossfadeDuration > 0,
-           currentState.isPlaying,
-           let engine = currentEngine
-        {
-            queueManager.setCurrentTrack(nextTrack)
-            currentTrack = track
-            showMiniPlayer = true
-            stateManager.updateState(.loading())
-
-            let gain = replayGainValue(for: nextTrack, mode: replayGainMode)
-            try await engine.crossfade(
-                to: nextTrack.url,
-                duration: crossfadeDuration,
-                playbackRate: playbackRate,
-                gainDB: gain,
-            )
-
-            stateManager.updateState(.playing(currentTime: 0, duration: nextTrack.duration))
-            await updateNowPlayingInfo(track: track, duration: nextTrack.duration)
-            startProgressTracking()
-            await refreshDiagnostics(for: track)
-            await prepareUpcomingTrack()
-            return
-        }
-
-        queueManager.setCurrentTrack(nextTrack)
-        try await play(track: track)
-    }
-
-    /// Play the previous track in the queue
-    public func playPrevious() async throws {
-        guard let previousTrack = queueManager.previous() else {
-            logger.info("No previous track available")
-            return
-        }
-
-        let track = createTrackFromAudioTrack(previousTrack)
-
-        if crossfadeDuration > 0,
-           currentState.isPlaying,
-           let engine = currentEngine
-        {
-            queueManager.setCurrentTrack(previousTrack)
-            currentTrack = track
-            showMiniPlayer = true
-            stateManager.updateState(.loading())
-
-            let gain = replayGainValue(for: previousTrack, mode: replayGainMode)
-            try await engine.crossfade(
-                to: previousTrack.url,
-                duration: crossfadeDuration,
-                playbackRate: playbackRate,
-                gainDB: gain,
-            )
-
-            stateManager.updateState(.playing(currentTime: 0, duration: previousTrack.duration))
-            await updateNowPlayingInfo(track: track, duration: previousTrack.duration)
-            startProgressTracking()
-            await refreshDiagnostics(for: track)
-            await prepareUpcomingTrack()
-            return
-        }
-
-        queueManager.setCurrentTrack(previousTrack)
-        try await play(track: track)
-    }
-
-    /// Add tracks to the queue
-    /// - Parameter tracks: Tracks to add
     public func enqueue(_ tracks: [Track]) {
-        let audioTracks = tracks.map { $0.toAudioTrack() }
-        queueManager.enqueue(tracks: audioTracks)
-        logger.info("Enqueued \(tracks.count) tracks")
+        queueCoordinator.enqueue(tracks)
     }
 
-    /// Add a track to play next
-    /// - Parameter track: Track to play next
     public func enqueueNext(_ track: Track) {
-        queueManager.enqueueNext(tracks: [track.toAudioTrack()])
-        logger.info("Enqueued next: \(track.title)")
+        queueCoordinator.enqueueNext(track)
     }
 
-    /// Set shuffle mode
-    /// - Parameter mode: Shuffle mode to set
     public func setShuffleMode(_ mode: QueueShuffleMode) {
-        queueManager.shuffleMode = mode
-        logger.info("Shuffle mode set to: \(String(describing: mode))")
+        queueCoordinator.setShuffleMode(mode)
     }
 
-    /// Set repeat mode
-    /// - Parameter mode: Repeat mode to set
     public func setRepeatMode(_ mode: QueueRepeatMode) {
-        queueManager.repeatMode = mode
-        logger.info("Repeat mode set to: \(String(describing: mode))")
+        queueCoordinator.setRepeatMode(mode)
     }
 
-    // MARK: - Validation & Diagnostics
+    // MARK: - Diagnostics & Monitoring
 
-    /// Perform comprehensive validation of current playback setup
     public func validatePlaybackSetup() async -> BitPerfectValidationResult? {
-        guard let currentTrack else {
-            return nil
-        }
-
+        guard let track = uiStateStore.currentTrack else { return nil }
         do {
-            let formatInfo = try await formatDetectionManager.detectFormat(at: currentTrack.url)
-            return await validator.validateBitPerfectPlayback(
-                sourceFormat: formatInfo,
-                outputDevice: nil,
-            )
+            let info = try await formatDetectionManager.detectFormat(at: track.url)
+            return await validator.validateBitPerfectPlayback(sourceFormat: info, outputDevice: nil)
         } catch {
             logger.error("Validation failed: \(error.localizedDescription)")
             return nil
         }
     }
 
-    /// Get current diagnostics snapshot
     public func getCurrentDiagnostics() async -> PlaybackDiagnostics {
         await monitor.performDiagnosticsCheck()
     }
 
-    /// Get current audio metrics
     public func getCurrentMetrics() async -> AudioMetrics {
         await monitor.getCurrentMetrics()
     }
 
-    /// Refresh diagnostics for the provided track, optionally reusing detected format info
     public func refreshDiagnostics(for track: Track, formatInfo: AudioFileInfo? = nil) async {
         do {
-            let info: AudioFileInfo = if let provided = formatInfo {
-                provided
+            let info: AudioFileInfo = if let formatInfo {
+                formatInfo
             } else {
                 try await formatDetectionManager.detectFormat(at: track.url)
             }
-            let validation = await validator.validateBitPerfectPlayback(
-                sourceFormat: info,
-                outputDevice: nil,
-            )
+            let validation = await validator.validateBitPerfectPlayback(sourceFormat: info, outputDevice: nil)
 
             let devices = await validator.getAvailableDevicesWithCapabilities()
             let defaultDevice = devices.first(where: { $0.device.isDefault }) ?? devices.first
@@ -662,7 +330,7 @@ public final class AudioEngineFacade: ObservableObject {
             }
 
             let metrics = await monitor.getCurrentMetrics()
-            diagnosticsStatus = DiagnosticsStatus(
+            let status = DiagnosticsStatus(
                 track: trackSummary(for: track),
                 validationResult: validation,
                 device: defaultDevice?.device,
@@ -670,9 +338,11 @@ public final class AudioEngineFacade: ObservableObject {
                 metrics: metrics,
                 updatedAt: Date(),
             )
+            uiStateStore.diagnosticsStatus = status
+            diagnosticsStatus = status
         } catch {
             let metrics = await monitor.getCurrentMetrics()
-            diagnosticsStatus = DiagnosticsStatus(
+            let status = DiagnosticsStatus(
                 track: trackSummary(for: track),
                 validationResult: nil,
                 device: nil,
@@ -680,272 +350,74 @@ public final class AudioEngineFacade: ObservableObject {
                 metrics: metrics,
                 updatedAt: Date(),
             )
+            uiStateStore.diagnosticsStatus = status
+            diagnosticsStatus = status
             logger.warning("Diagnostics refresh failed: \(error.localizedDescription)")
         }
     }
 
-    // MARK: - UI State Management (merged from AppState)
+    // MARK: - UI Bridging
 
-    /// Updates the current track and shows mini player
     public func setCurrentTrack(_ track: Track?) {
-        guard let track else {
-            currentTrack = nil
-            showMiniPlayer = false
-            diagnosticsStatus = .empty
-            return
+        uiStateStore.currentTrack = track
+        if track == nil {
+            uiStateStore.showMiniPlayer = false
+            uiStateStore.diagnosticsStatus = .empty
+        } else {
+            uiStateStore.showMiniPlayer = true
         }
-
-        // Store the Track object directly
-        currentTrack = track
-        showMiniPlayer = true
     }
 
-    /// Setup observation of playback state changes for UI updates
-    private func setupPlaybackStateObservation() {
-        stateManager.statePublisher
+    // MARK: - Private Helpers
+
+    private func setupStateBindings() {
+        uiStateStore.$currentTrack
             .receive(on: RunLoop.main)
-            .sink { [weak self] change in
-                // Update derived UI state when playback state changes
-                self?.handlePlaybackStateChange(change)
-            }
+            .sink { [weak self] track in self?.currentTrack = track }
             .store(in: &cancellables)
-    }
 
-    /// Handle playback state changes and update UI accordingly
-    private func handlePlaybackStateChange(_ change: PlaybackStateChange) {
-        // Update mini player visibility based on playback state
-        switch change.to {
-        case .idle, .stopped:
-            showMiniPlayer = false
-        case .playing, .paused, .loading, .buffering:
-            showMiniPlayer = true
-        default:
-            break
-        }
+        uiStateStore.$showMiniPlayer
+            .receive(on: RunLoop.main)
+            .sink { [weak self] visible in self?.showMiniPlayer = visible }
+            .store(in: &cancellables)
 
-        // Trigger UI updates for derived properties
-        objectWillChange.send()
-    }
-
-    /// Access to the playback state manager for advanced operations
-    public var playbackManager: PlaybackStateManager {
-        stateManager
-    }
-
-    // MARK: - Private Implementation
-
-    /// Update Now Playing info for Control Center and Lock Screen
-    private func updateNowPlayingInfo(track: Track, duration: TimeInterval) async {
-        let nowPlayingInfo: [String: Any] = [
-            MPMediaItemPropertyTitle: track.title,
-            MPMediaItemPropertyAlbumTitle: track.album,
-            MPMediaItemPropertyArtist: track.artist,
-            MPMediaItemPropertyPlaybackDuration: duration,
-            MPNowPlayingInfoPropertyElapsedPlaybackTime: 0,
-            MPNowPlayingInfoPropertyPlaybackRate: playbackRate,
-        ]
-
-        await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
-    }
-
-    /// Clear Now Playing info when playback stops
-    private func clearNowPlayingInfo() async {
-        await sessionManager.clearNowPlayingInfo()
+        uiStateStore.$diagnosticsStatus
+            .receive(on: RunLoop.main)
+            .sink { [weak self] status in self?.diagnosticsStatus = status }
+            .store(in: &cancellables)
     }
 
     private func setupServiceIntegrations() async {
-        logger.debug("Setting up service integrations...")
-
-        // 1. Queue manager delegate for state updates
-        queueManager.delegate = QueueToStateBridge(stateManager: stateManager)
-
-        // 2. Progress timer will be started when playback begins
-
-        // 3. Monitor integration
-        if let engine = currentEngine {
+        queueManager.delegate = FacadeQueueDelegateBridge(stateManager: stateManager)
+        if let engine = engineManager.currentEngine {
             await monitor.attachToEngine(engine)
         }
-
-        // 4. Session delegate for interruption handling
         sessionManager.delegate = self
-
-        // 5. Monitor audio engine preference changes
         setupPreferenceMonitoring()
-
-        logger.debug("Service integrations complete")
     }
 
     private func setupPreferenceMonitoring() {
-        // Observe changes to the preferred audio engine setting
         NotificationCenter.default
             .publisher(for: UserDefaults.didChangeNotification)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self else { return }
-                Task { @MainActor in
-                    await self.handlePreferenceChange()
+                Task { @MainActor [weak self] in
+                    await self?.handlePreferenceChange()
                 }
             }
             .store(in: &cancellables)
-
-        logger.debug("Preference monitoring configured")
     }
 
     private func handlePreferenceChange() async {
-        let newPreference = UserDefaults.standard.string(forKey: "preferredAudioEngine") ?? "AVAudioEngine"
+        let preferred = UserDefaults.standard.string(forKey: "preferredAudioEngine") ?? "AVAudioEngine"
+        let current = engineManager.currentEngineType?.rawValue ?? "None"
 
-        // Determine current engine type
-        let currentEngineType = if let engine = currentEngine {
-            switch engine {
-            case is AudioKitEngineAdapter:
-                "AudioKit"
-            case is AVAudioEngineAdapter:
-                "AVAudioEngine"
-            default:
-                "Unknown"
-            }
-        } else {
-            "None"
-        }
+        guard preferred != current else { return }
+        logger.info("Audio engine preference changed from \(current) to \(preferred)")
 
-        // Check if preference actually changed
-        if currentEngineType == newPreference ||
-            (newPreference == "AudioKitEngine" && currentEngineType == "AudioKit")
-        {
-            return // No change needed
-        }
-
-        logger.info("Audio engine preference changed from \(currentEngineType) to \(newPreference)")
-
-        // If we're not idle, the engine will be recreated on the next load
-        // The PlaybackCoordinator's ensureEngineForFormat will handle the switch
-        let currentState = stateManager.currentState
-        if !currentState.isIdle {
-            logger.debug("Engine will be recreated on next playback to honor preference change")
-        }
-    }
-
-    /// Cleanup current engine properly to avoid memory leaks
-    private func cleanupCurrentEngine() async {
-        guard let engine = currentEngine else { return }
-
-        // Stop playback if needed
-        if await engine.isPlaying {
-            await engine.stop()
-        }
-
-        // Detach from monitoring
-        await monitor.detachFromEngine()
-
-        // Clear reference to allow deallocation
-        currentEngine = nil
-
-        logger.debug("Cleaned up previous audio engine")
-    }
-
-    private func ensureEngineForFormat(_ formatInfo: AudioFileInfo) async throws {
-        // Check if we need a different engine type for this format
-        let requiredEngineType = engineFactory.selectEngineType(
-            for: formatInfo.format,
-            configuration: engineConfiguration,
-        )
-
-        // Check if current engine is the right type
-        if let engine = currentEngine {
-            let currentEngineType: AudioEngineType = engine is AudioKitEngineAdapter ? .audioKitEngine : .avAudioEngine
-
-            if currentEngineType == requiredEngineType {
-                // Current engine can handle this format
-                return
-            }
-
-            // Need to switch engines - cleanup current one first
-            logger.debug("Switching from \(String(describing: currentEngineType)) to \(String(describing: requiredEngineType))")
-            await cleanupCurrentEngine()
-        }
-
-        // Create new engine
-        let engine = try await engineFactory.makeEngine(
-            for: formatInfo.format,
-            configuration: engineConfiguration,
-        )
-
-        // Attach to monitoring
-        await monitor.attachToEngine(engine)
-
-        currentEngine = engine
-        logger.debug("Created new audio engine for format: \(formatInfo.format.displayName)")
-    }
-
-    private func updateEngineConfiguration() async {
-        guard currentEngine != nil else { return }
-        logger.info("Engine configuration updated - may require recreation for some changes")
-    }
-
-    /// Set the current engine (internal use by coordinators)
-    func setCurrentEngine(_ engine: AudioEngineService?) {
-        assertMainThread()
-        currentEngine = engine
-    }
-
-    private func handleSessionInterruption(_ interruption: AudioInterruptionType) async {
-        switch interruption {
-        case .began:
-            logger.info("Audio session interrupted - pausing playback")
-            await pause()
-        case let .ended(shouldResume):
-            if shouldResume {
-                logger.info("Audio session interruption ended - resuming playback")
-                try? await resume()
-            }
-        }
-    }
-
-    private func replayGainValue(for track: any TrackProtocol, mode: ReplayGainMode) -> Float {
-        switch mode {
-        case .off:
-            0
-        case .track:
-            track.replayGainTrack ?? 0
-        case .album:
-            track.replayGainAlbum ?? track.replayGainTrack ?? 0
-        }
-    }
-
-    private func applyPlaybackParameters(for track: any TrackProtocol) async {
-        guard let engine = currentEngine else { return }
-        await engine.setPlaybackRate(engineConfiguration.playbackRate)
-        let gain = replayGainValue(for: track, mode: replayGainMode)
-        await engine.applyReplayGain(gain)
-    }
-
-    private func prepareUpcomingTrack() async {
-        guard engineConfiguration.enableGapless || crossfadeDuration > 0,
-              let engine = currentEngine,
-              let nextTrack = queueManager.getNextTrack() else { return }
-
-        await engine.prepareNext(url: nextTrack.url)
-    }
-
-    private func startProgressTracking() {
-        progressTimer.start(pollInterval: 0.2) { [weak self] in
-            guard let self,
-                  let engine = currentEngine,
-                  currentState.isPlaying
-            else {
-                return
-            }
-
-            async let currentTime = engine.currentTime
-            async let duration = engine.duration
-
-            let (time, dur) = await (currentTime, duration)
-            stateManager.updateTime(time, duration: dur)
-
-            // Update Now Playing elapsed time for lock screen scrubber
-            var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
-            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = time
-            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
-            await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
+        if !stateManager.currentState.isIdle {
+            logger.debug("Engine will be recreated on next playback to honour preference change")
+            engineManager.invalidateCurrentEngine()
         }
     }
 
@@ -959,8 +431,6 @@ public final class AudioEngineFacade: ObservableObject {
         )
     }
 
-    /// Helper method to create a Track from AudioTrack data
-    /// This is a temporary solution for type conversion compatibility
     private func createTrackFromAudioTrack(_ audioTrack: AudioTrack) -> Track {
         let track = Track(
             url: audioTrack.url,
@@ -974,70 +444,53 @@ public final class AudioEngineFacade: ObservableObject {
         track.replayGainAlbum = audioTrack.replayGainAlbum
         return track
     }
-}
 
-// MARK: - AudioSessionDelegate
-
-extension AudioEngineFacade: AudioSessionDelegate {
-    public func audioSessionDidInterrupt(_ interruption: AudioInterruptionType) async {
-        await handleSessionInterruption(interruption)
-    }
-
-    public func audioSessionRouteDidChange(_ change: AudioRouteChange) async {
-        logger.info("Audio route changed: \(change.currentRoute) (reason: \(change.reason))")
-        // Handle route changes if needed
-    }
-
-    public func audioSessionDidReceiveCommand(_ command: RemoteCommand) async {
-        switch command {
-        case .play:
-            try? await resume()
-        case .pause:
-            await pause()
-        case .stop:
-            await stop()
-        case .nextTrack:
-            try? await playNext()
-        case .previousTrack:
-            try? await playPrevious()
-        case let .seek(time):
-            try? await seek(to: time)
-        default:
-            logger.debug("Unhandled remote command: \(command)")
-        }
-    }
-}
-
-// MARK: - Extensions
-
-extension Timer {
-    func store(in set: inout Set<AnyCancellable>) {
-        AnyCancellable { [weak self] in
-            self?.invalidate()
-        }.store(in: &set)
-    }
-}
-
-extension AudioError {
-    static let engineNotReady = AudioError.engineInitializationFailed
-    static let invalidOperation = AudioError.playbackFailed
-}
-
-// MARK: - Thread Safety Utilities
-
-extension AudioEngineFacade {
-    /// Assert that we're running on the main thread
-    /// Helps catch threading issues during development
     private func assertMainThread(
         file: StaticString = #file,
         line: UInt = #line,
         function: StaticString = #function,
     ) {
         #if DEBUG
-            assert(
-                Thread.isMainThread,
-                "\(function) must be called on the main thread. Called from \(file):\(line)",
-            )
+            assert(Thread.isMainThread, "\(function) must run on main thread. Called from \(file):\(line)")
         #endif
     }
+}
+
+// MARK: - AudioSessionDelegate
+
+extension AudioEngineFacade: AudioSessionDelegate {
+    public func audioSessionDidInterrupt(_ interruption: AudioInterruptionType) async {
+        await stateCoordinator.handleSessionInterruption(interruption)
+    }
+
+    public func audioSessionRouteDidChange(_ change: AudioRouteChange) async {
+        stateCoordinator.handleRouteChange(change)
+    }
+
+    public func audioSessionDidReceiveCommand(_ command: RemoteCommand) async {
+        await stateCoordinator.handleRemoteCommand(command)
+    }
+}
+
+// MARK: - Supporting Types
+
+private final class FacadeQueueDelegateBridge: AudioQueueDelegate {
+    private let stateManager: PlaybackStateManager
+
+    init(stateManager: PlaybackStateManager) {
+        self.stateManager = stateManager
+    }
+
+    func audioQueue(_: AudioQueue, didChangeCurrentTrack _: AudioTrack?, at _: Int?) {
+        // Facade manages state transitions directly via PlaybackController
+    }
+
+    func audioQueue(_: AudioQueue, didEncounterError error: AudioError) {
+        stateManager.handleEngineError(error)
+    }
+}
+
+extension AudioError {
+    static let engineNotReady = AudioError.engineInitializationFailed
+    static let invalidOperation = AudioError.playbackFailed
 }

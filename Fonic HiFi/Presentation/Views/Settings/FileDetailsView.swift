@@ -16,6 +16,8 @@ struct FileDetailsView: View {
     @State private var audioMetadata: AudioMetadata?
     @State private var isLoadingMetadata = false
 
+    private let logger = Log.logger(.presentation)
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -158,7 +160,7 @@ struct FileDetailsView: View {
         defer { isLoadingMetadata = false }
 
         do {
-            let asset = AVAsset(url: file.url)
+            let asset = AVURLAsset(url: file.url)
             let duration = try await asset.load(.duration)
 
             await MainActor.run {
@@ -172,7 +174,7 @@ struct FileDetailsView: View {
                 )
             }
         } catch {
-            print("Error loading audio metadata: \(error)")
+            logger.error("Failed to load audio metadata for \(file.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
             await MainActor.run {
                 audioMetadata = AudioMetadata(
                     duration: nil,
@@ -192,7 +194,7 @@ struct FileDetailsView: View {
         }
 
         Task {
-            await importService.importFiles(from: [file.url])
+            importService.importFiles(from: [file.url])
             await MainActor.run {
                 dismiss()
             }
@@ -203,8 +205,7 @@ struct FileDetailsView: View {
         let activityVC = UIActivityViewController(activityItems: [file.url], applicationActivities: nil)
 
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootViewController = windowScene.windows.first?.rootViewController
-        {
+           let rootViewController = windowScene.windows.first?.rootViewController {
             rootViewController.present(activityVC, animated: true)
         }
     }

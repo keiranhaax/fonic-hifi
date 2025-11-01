@@ -7,33 +7,45 @@
 
 @preconcurrency import AVFoundation
 import Foundation
+import OSLog
 
 /// Concrete implementation of FormatDetectionService using AVAsset
-@MainActor
-public final class AudioFormatDetectionManager: FormatDetectionService {
+public actor AudioFormatDetectionManager: FormatDetectionService {
     // MARK: - Properties
 
     /// Shared instance
     public static let shared = AudioFormatDetectionManager()
 
     /// Registered format detection adapters
-    private var adapters: [FormatDetectionAdapter] = []
-
-    /// Detection timeout in seconds
-    private let detectionTimeout: TimeInterval = 10.0
+    private var adapters: [FormatDetectionAdapter]
 
     /// File manager for file operations
     private let fileManager = FileManager.default
 
+    private let coordinator: FormatDetectionCoordinator
+    private let logger: Logger
+
     // MARK: - Initialization
 
-    public init() {
-        registerDefaultAdapters()
+    public init(
+        maxConcurrentDetections: Int = 4,
+        timeout: TimeInterval? = 10.0,
+        logger: Logger? = nil,
+    ) {
+        adapters = Self.defaultAdapters()
+        self.logger = logger ?? Log.logger(.audioDetection)
+        coordinator = FormatDetectionCoordinator(
+            maxConcurrentDetections: maxConcurrentDetections,
+            timeout: timeout,
+            logger: self.logger,
+        )
     }
 
     // MARK: - FormatDetectionService Implementation
 
     public func detectFormat(at url: URL) async throws -> AudioFileInfo {
+        try Task.checkCancellation()
+
         // Validate file exists and is accessible
         guard fileManager.fileExists(atPath: url.path) else {
             throw DetectionError.fileNotFound(url)
@@ -51,13 +63,18 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
             throw DetectionError.unknownFormat(url)
         }
 
-        // Check if we need a specialized adapter
-        if let adapter = findAdapter(for: format) {
-            return try await adapter.detectFormat(at: url)
-        }
+        let adapter = findAdapter(for: format)
+        let manager = self
 
-        // Use AVAsset for standard formats
-        return try await detectUsingAVAsset(url: url, format: format, fileSize: fileSize)
+        return try await coordinator.performDetection(for: url) {
+            try Task.checkCancellation()
+
+            if let adapter {
+                return try await adapter.detectFormat(at: url)
+            }
+
+            return try await manager.detectUsingAVAsset(url: url, format: format, fileSize: fileSize)
+        }
     }
 
     public func validateFile(at url: URL) async -> Bool {
@@ -172,9 +189,10 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
 
     // MARK: - Private Methods
 
-    private func registerDefaultAdapters() {
+    private static func defaultAdapters() -> [FormatDetectionAdapter] {
         // Register default adapters here when available, for example:
-        // registerAdapter(FLACDetectionAdapter())
+        // [FLACDetectionAdapter()]
+        []
     }
 
     private func findAdapter(for format: AudioFormat) -> FormatDetectionAdapter? {
@@ -182,6 +200,7 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
     }
 
     private func detectUsingAVAsset(url: URL, format: AudioFormat, fileSize: Int64) async throws -> AudioFileInfo {
+        try Task.checkCancellation()
         let asset = AVURLAsset(url: url)
 
         // Load required properties
@@ -209,6 +228,7 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
 
             // Calculate bitrate if possible
             let bitrate = try? await calculateBitrate(from: audioTrack, duration: duration, fileSize: fileSize)
+            let normalizedBitrate = bitrate.map { UInt64($0) }
 
             return AudioFileInfo(
                 url: url,
@@ -218,10 +238,11 @@ public final class AudioFormatDetectionManager: FormatDetectionService {
                 sampleRate: Double(sampleRate),
                 channels: UInt8(channels),
                 fileSize: UInt64(fileSize),
-                bitrate: bitrate != nil ? UInt64(bitrate!) : nil,
+                bitrate: normalizedBitrate,
             )
 
         } catch {
+            logger.error("avasset.load_failed url=\(url.lastPathComponent, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
             throw DetectionError.assetLoadingFailed(error)
         }
     }

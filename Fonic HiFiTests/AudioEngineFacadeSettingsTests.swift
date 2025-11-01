@@ -3,22 +3,8 @@ import XCTest
 
 @MainActor
 final class AudioEngineFacadeSettingsTests: XCTestCase {
-    private var defaults: UserDefaults!
-
-    override func setUp() {
-        super.setUp()
-        defaults = UserDefaults(suiteName: "AudioEngineFacadeSettingsTests")
-        defaults.removePersistentDomain(forName: "AudioEngineFacadeSettingsTests")
-    }
-
-    override func tearDown() {
-        defaults.removePersistentDomain(forName: "AudioEngineFacadeSettingsTests")
-        defaults = nil
-        super.tearDown()
-    }
-
     func testUpdatePlaybackRatePersistsAndUpdatesEngine() async {
-        let store = AudioPlaybackSettingsStore(defaults: defaults)
+        let store = AudioPlaybackSettingsStore(defaults: makeAudioEngineFacadeDefaults())
         let facade = AudioEngineFacade(
             sessionManager: AudioSessionManager(),
             formatDetectionManager: AudioFormatDetectionManager(),
@@ -35,12 +21,13 @@ final class AudioEngineFacadeSettingsTests: XCTestCase {
         await facade.updatePlaybackRate(1.25)
 
         XCTAssertEqual(facade.playbackRate, 1.25, accuracy: 0.0001)
-        await XCTAssertEqual(store.playbackRate(), 1.25, accuracy: 0.0001)
+        let storedPlaybackRate = await store.playbackRate()
+        XCTAssertEqual(storedPlaybackRate, 1.25, accuracy: 0.0001)
         XCTAssertEqual(engine.playbackRates.last, 1.25)
     }
 
     func testUpdateReplayGainAppliesToEngine() async {
-        let store = AudioPlaybackSettingsStore(defaults: defaults)
+        let store = AudioPlaybackSettingsStore(defaults: makeAudioEngineFacadeDefaults())
         let facade = AudioEngineFacade(
             sessionManager: AudioSessionManager(),
             formatDetectionManager: AudioFormatDetectionManager(),
@@ -62,12 +49,17 @@ final class AudioEngineFacadeSettingsTests: XCTestCase {
         await facade.updateReplayGainMode(.track)
 
         XCTAssertEqual(facade.replayGainMode, .track)
-        await XCTAssertEqual(store.replayGainMode(), .track)
-        XCTAssertEqual(engine.replayGains.last, -6.0, accuracy: 0.0001)
+        let storedReplayGainMode = await store.replayGainMode()
+        XCTAssertEqual(storedReplayGainMode, .track)
+        if let lastGain = engine.replayGains.last {
+            XCTAssertEqual(lastGain, -6.0 as Float, accuracy: 0.0001 as Float)
+        } else {
+            XCTFail("Expected replay gain value to be recorded")
+        }
     }
 
     func testRefreshDiagnosticsUpdatesStatus() async {
-        let store = AudioPlaybackSettingsStore(defaults: defaults)
+        let store = AudioPlaybackSettingsStore(defaults: makeAudioEngineFacadeDefaults())
         let facade = AudioEngineFacade(
             sessionManager: AudioSessionManager(),
             formatDetectionManager: AudioFormatDetectionManager(),
@@ -97,10 +89,7 @@ final class AudioEngineFacadeSettingsTests: XCTestCase {
     }
 
     func testPlayNextTriggersCrossfadeWithConfiguredParameters() async throws {
-        let defaults = UserDefaults(suiteName: "AudioEngineFacadeSettingsTests.crossfade")!
-        defaults.removePersistentDomain(forName: "AudioEngineFacadeSettingsTests.crossfade")
-
-        let store = AudioPlaybackSettingsStore(defaults: defaults)
+        let store = AudioPlaybackSettingsStore(defaults: makeAudioEngineFacadeDefaults("crossfade"))
         let queueManager = AudioQueueManager()
         let stateManager = PlaybackStateManager()
         let configuration = AudioEngineConfiguration(crossfadeDuration: 3.5, playbackRate: 1.15)
@@ -145,7 +134,7 @@ final class AudioEngineFacadeSettingsTests: XCTestCase {
     }
 
     func testReplayGainDefaultsToZeroWhenMetadataMissing() async {
-        let store = AudioPlaybackSettingsStore(defaults: defaults)
+        let store = AudioPlaybackSettingsStore(defaults: makeAudioEngineFacadeDefaults())
         let facade = AudioEngineFacade(
             sessionManager: AudioSessionManager(),
             formatDetectionManager: AudioFormatDetectionManager(),
@@ -165,7 +154,11 @@ final class AudioEngineFacadeSettingsTests: XCTestCase {
 
         await facade.updateReplayGainMode(.track)
 
-        XCTAssertEqual(engine.replayGains.last, 0, accuracy: 0.0001)
+        if let lastGain = engine.replayGains.last {
+            XCTAssertEqual(lastGain, 0 as Float, accuracy: 0.0001 as Float)
+        } else {
+            XCTFail("Expected replay gain value to be recorded")
+        }
     }
 }
 
@@ -205,4 +198,16 @@ private final class MockAudioEngineService: AudioEngineService {
     func applyReplayGain(_ gainDB: Float) async {
         replayGains.append(gainDB)
     }
+}
+
+private func makeAudioEngineFacadeDefaults(_ suffix: String = "shared") -> UserDefaults {
+    let name = "AudioEngineFacadeSettingsTests.\(suffix)"
+    if let defaults = UserDefaults(suiteName: name) {
+        defaults.removePersistentDomain(forName: name)
+        return defaults
+    }
+
+    let fallback = UserDefaults.standard
+    fallback.removePersistentDomain(forName: name)
+    return fallback
 }

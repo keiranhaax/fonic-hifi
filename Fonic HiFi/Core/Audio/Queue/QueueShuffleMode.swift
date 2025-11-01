@@ -110,8 +110,7 @@ public enum QueueShuffleMode: String, CaseIterable, Sendable {
 
         // If there's a current track, try to keep it first
         if let currentIndex,
-           let shuffledPosition = indices.firstIndex(of: currentIndex)
-        {
+           let shuffledPosition = indices.firstIndex(of: currentIndex) {
             indices.swapAt(0, shuffledPosition)
         }
 
@@ -142,12 +141,16 @@ public enum QueueShuffleMode: String, CaseIterable, Sendable {
                 )
             }
 
-            let nextIndex: Int = if !candidates.isEmpty {
+            let nextIndex: Int
+
+            if let candidate = candidates.randomElement() {
                 // Choose randomly from good candidates
-                candidates.randomElement()!
-            } else {
+                nextIndex = candidate
+            } else if let fallback = remaining.randomElement() {
                 // No good candidates, pick any remaining
-                remaining.randomElement()!
+                nextIndex = fallback
+            } else {
+                break
             }
 
             result.append(nextIndex)

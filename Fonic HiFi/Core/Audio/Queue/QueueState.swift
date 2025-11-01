@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 /// Immutable snapshot of the audio queue state
 public struct QueueState: Sendable, Equatable {
@@ -304,6 +305,7 @@ extension QueueState: Codable {
 // MARK: - Persistence
 
 public extension QueueState {
+    private static let logger = Log.logger(.audioQueueState)
     /// UserDefaults key for storing queue state
     private static let persistenceKey = "com.fonichifi.queue.state"
 
@@ -332,7 +334,9 @@ public extension QueueState {
                 return state
             }
         } catch {
-            print("Failed to decode queue state: \(error)")
+            logger.error(
+                "Failed to decode queue state: \(error.localizedDescription, privacy: .public)",
+            )
         }
 
         return nil
@@ -352,10 +356,8 @@ public extension QueueState {
         }
 
         // Adjust current index if needed
-        let validCurrentIndex: Int? = if let currentIndex,
-                                         let currentTrack,
-                                         let newIndex = validTracks.firstIndex(where: { $0.id == currentTrack.id })
-        {
+        let validCurrentIndex: Int? = if let currentTrack,
+                                         let newIndex = validTracks.firstIndex(where: { $0.id == currentTrack.id }) {
             newIndex
         } else {
             nil
@@ -368,13 +370,23 @@ public extension QueueState {
             nil
         }
 
+        let hasNext = { () -> Bool in
+            guard let index = validCurrentIndex else { return false }
+            return index < validTracks.count - 1
+        }()
+
+        let hasPrevious = { () -> Bool in
+            guard let index = validCurrentIndex else { return false }
+            return index > 0
+        }()
+
         return QueueState(
             tracks: validTracks,
             currentIndex: validCurrentIndex,
             shuffleMode: shuffleMode,
             repeatMode: repeatMode,
-            hasNext: validCurrentIndex != nil && validCurrentIndex! < validTracks.count - 1,
-            hasPrevious: validCurrentIndex != nil && validCurrentIndex! > 0,
+            hasNext: hasNext,
+            hasPrevious: hasPrevious,
             history: history.filter { track in
                 FileManager.default.fileExists(atPath: track.url.path)
             },

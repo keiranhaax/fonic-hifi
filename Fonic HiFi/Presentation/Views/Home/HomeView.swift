@@ -5,8 +5,8 @@
 //  iOS 26+ Home tab with data-driven sections
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @MainActor
 struct HomeView: View {
@@ -24,7 +24,7 @@ struct HomeView: View {
                 if isLoading {
                     ProgressView("Loading your music...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if recentlyPlayed.isEmpty && mostListened.isEmpty && favoriteAlbums.isEmpty {
+                } else if recentlyPlayed.isEmpty, mostListened.isEmpty, favoriteAlbums.isEmpty {
                     EmptyHomeView()
                 } else {
                     ScrollView {
@@ -67,12 +67,13 @@ struct HomeView: View {
 
     private func loadData() async {
         isLoading = true
-        defer { isLoading = false }
 
         // Phase 2+: Implement data loading from SwiftData
         // recentlyPlayed = await dataManager.getRecentlyPlayed(limit: 10)
         // mostListened = await dataManager.getMostListened(limit: 10)
         // favoriteAlbums = await dataManager.getFavoriteAlbums(limit: 10)
+
+        isLoading = false
     }
 }
 
@@ -180,7 +181,7 @@ private struct TrackCardView: View {
         }
         .frame(width: 250)
         .padding(8)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .glassSurface(style: .standard, cornerRadius: 12)
     }
 }
 

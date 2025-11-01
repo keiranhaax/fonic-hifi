@@ -7,11 +7,14 @@
 
 import Foundation
 import Observation
+import OSLog
 
 /// Main actor class that manages the audio playback queue
 @MainActor
 @Observable
-public final class AudioQueueManager: AudioQueue, Sendable {
+public final class AudioQueueManager: AudioQueue {
+    private let logger = Log.logger(.audioQueueManager)
+
     // MARK: - Published Properties
 
     /// All tracks in the queue
@@ -126,6 +129,9 @@ public final class AudioQueueManager: AudioQueue, Sendable {
 
         markNavigationStateDirty()
         notifyTracksChanged()
+        recordQueueMutation("enqueue", extra: [
+            "delta": "\(newTracks.count)"
+        ])
     }
 
     public func enqueueNext(tracks newTracks: [AudioTrack]) {
@@ -133,6 +139,10 @@ public final class AudioQueueManager: AudioQueue, Sendable {
 
         let insertIndex = currentIndex.map { $0 + 1 } ?? 0
         insert(tracks: newTracks, at: insertIndex)
+        recordQueueMutation("enqueueNext", extra: [
+            "delta": "\(newTracks.count)",
+            "index": "\(insertIndex)"
+        ])
     }
 
     public func enqueueLater(tracks newTracks: [AudioTrack]) {
@@ -175,6 +185,11 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         markNavigationStateDirty()
         notifyTracksChanged()
 
+        recordQueueMutation("remove", extra: [
+            "index": "\(index)",
+            "track": LogPrivacy.truncated(removedTrack.title, limit: 40)
+        ])
+
         return removedTrack
     }
 
@@ -214,6 +229,11 @@ public final class AudioQueueManager: AudioQueue, Sendable {
 
         markNavigationStateDirty()
         notifyTracksChanged()
+
+        recordQueueMutation("move", extra: [
+            "from": "\(fromIndex)",
+            "to": "\(toIndex)"
+        ])
     }
 
     public func clear() {
@@ -226,6 +246,8 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         markNavigationStateDirty()
         notifyTracksChanged()
         notifyCurrentTrackChanged()
+
+        recordQueueMutation("clear")
     }
 
     public func clearHistory() {
@@ -244,6 +266,13 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         }
 
         setCurrentIndex(index)
+        if let track = currentTrack {
+            recordQueueMutation("next", extra: [
+                "track": LogPrivacy.truncated(track.title, limit: 40)
+            ])
+        } else {
+            recordQueueMutation("next")
+        }
         return currentTrack
     }
 
@@ -252,6 +281,13 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         guard let index = previousIndex else { return nil }
 
         setCurrentIndex(index)
+        if let track = currentTrack {
+            recordQueueMutation("previous", extra: [
+                "track": LogPrivacy.truncated(track.title, limit: 40)
+            ])
+        } else {
+            recordQueueMutation("previous")
+        }
         return currentTrack
     }
 
@@ -297,6 +333,11 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         markNavigationStateDirty()
         notifyTracksChanged()
         notifyCurrentTrackChanged()
+
+        recordQueueMutation("replace", extra: [
+            "size": "\(newTracks.count)",
+            "startIndex": startIndex.map(String.init) ?? "nil"
+        ])
     }
 
     public func insert(tracks newTracks: [AudioTrack], at index: Int) {
@@ -321,32 +362,42 @@ public final class AudioQueueManager: AudioQueue, Sendable {
 
         markNavigationStateDirty()
         notifyTracksChanged()
+
+        recordQueueMutation("insert", extra: [
+            "delta": "\(newTracks.count)",
+            "index": "\(index)"
+        ])
     }
 
     public func shuffle() {
         shuffleMode = shuffleMode.isActive ? shuffleMode : .random
         updateShuffleSequence()
+        recordQueueMutation("shuffle", extra: [
+            "mode": shuffleMode.description
+        ])
     }
 
     public func restoreOrder() {
         guard shuffleMode.isActive else { return }
 
         // Preserve current track
-        let currentTrack = currentTrack
+        let preservedTrack = currentTrack
 
-        // Restore original order
-        tracks = originalOrder
+        // Restoring shuffle mode to off will invoke restoreOriginalOrder()
         shuffleMode = .off
-        shuffleSequence.removeAll()
 
-        // Find current track in restored order
-        if let track = currentTrack {
+        // Re-select the preserved track once original ordering is restored
+        if let track = preservedTrack {
             currentIndex = tracks.firstIndex { $0.id == track.id }
+        } else {
+            currentIndex = nil
         }
 
         markNavigationStateDirty()
         notifyTracksChanged()
         notifyCurrentTrackChanged()
+
+        recordQueueMutation("restoreOrder")
     }
 
     // MARK: - Private Methods
@@ -371,6 +422,8 @@ public final class AudioQueueManager: AudioQueue, Sendable {
             shuffleSequence.removeAll()
             return
         }
+
+        let preservedTrack = currentTrack
 
         // Generate cache key based on tracks and mode
         let cacheKey = "\(shuffleMode.rawValue)_\(tracks.count)_\(currentIndex?.description ?? "nil")"
@@ -403,9 +456,11 @@ public final class AudioQueueManager: AudioQueue, Sendable {
             }
             tracks = shuffledTracks
 
-            // Update current index to match shuffled position
-            if let currentTrack {
-                currentIndex = tracks.firstIndex { $0.id == currentTrack.id }
+            if let preservedTrack,
+               let preservedIndex = tracks.firstIndex(where: { $0.id == preservedTrack.id }) {
+                currentIndex = preservedIndex
+            } else {
+                currentIndex = tracks.isEmpty ? nil : 0
             }
         }
     }
@@ -420,6 +475,13 @@ public final class AudioQueueManager: AudioQueue, Sendable {
         if let track = currentTrack {
             currentIndex = tracks.firstIndex { $0.id == track.id }
         }
+    }
+
+    private func recordQueueMutation(_ action: String, extra: [String: String] = [:]) {
+        var metadata = extra
+        metadata["action"] = action
+        metadata["size"] = "\(tracks.count)"
+        Metrics.increment(.queueMutation, metadata: metadata)
     }
 
     private func calculateNextIndex() -> Int? {
@@ -523,7 +585,9 @@ public final class AudioQueueManager: AudioQueue, Sendable {
             let validatedState = state.validateForPersistence()
             try validatedState.save()
         } catch {
-            print("Failed to save queue state: \(error)")
+            logger.error(
+                "Failed to save queue state: \(error.localizedDescription, privacy: .public)",
+            )
         }
     }
 
@@ -549,8 +613,7 @@ public final class AudioQueueManager: AudioQueue, Sendable {
 
         // Restore shuffle sequence if present
         if let savedShuffleSequence = validatedState.shuffleSequence,
-           shuffleMode.isActive
-        {
+           shuffleMode.isActive {
             shuffleSequence = savedShuffleSequence
 
             // Apply shuffle sequence to tracks

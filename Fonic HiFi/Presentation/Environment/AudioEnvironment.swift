@@ -42,7 +42,7 @@ extension EnvironmentValues {
 
 /// Environment key for LibraryImportService dependency injection
 struct ImportServiceKey: EnvironmentKey {
-    nonisolated(unsafe) static let defaultValue: LibraryImportService? = nil
+    static let defaultValue: LibraryImportService? = nil
 }
 
 extension EnvironmentValues {
@@ -50,6 +50,21 @@ extension EnvironmentValues {
     var importService: LibraryImportService? {
         get { self[ImportServiceKey.self] }
         set { self[ImportServiceKey.self] = newValue }
+    }
+}
+
+// MARK: - Library Repository Environment
+
+/// Environment key for LibraryRepository dependency injection
+struct LibraryRepositoryKey: EnvironmentKey {
+    static let defaultValue: LibraryRepository? = nil
+}
+
+extension EnvironmentValues {
+    /// Access to the library repository through environment
+    var libraryRepository: LibraryRepository? {
+        get { self[LibraryRepositoryKey.self] }
+        set { self[LibraryRepositoryKey.self] = newValue }
     }
 }
 
@@ -61,8 +76,18 @@ extension View {
         environment(\.audioEngine, audioEngine)
     }
 
+    /// Injects an optional audio engine into the environment
+    func audioEngine(_ audioEngine: AudioEngineFacade?) -> some View {
+        environment(\.audioEngine, audioEngine)
+    }
+
     /// Injects the data manager into the environment
     func dataManager(_ dataManager: DataManager) -> some View {
+        environment(\.dataManager, dataManager)
+    }
+
+    /// Injects an optional data manager into the environment
+    func dataManager(_ dataManager: DataManager?) -> some View {
         environment(\.dataManager, dataManager)
     }
 
@@ -74,5 +99,10 @@ extension View {
     /// Injects an optional import service into the environment
     func importService(_ importService: LibraryImportService?) -> some View {
         environment(\.importService, importService)
+    }
+
+    /// Injects the library repository into the environment
+    func libraryRepository(_ repository: LibraryRepository?) -> some View {
+        environment(\.libraryRepository, repository)
     }
 }

@@ -37,30 +37,7 @@ struct LiquidGlassRail<Content: View>: View {
                     .glassEffectID("rail-content", in: namespace)
             }
             .padding(isExpanded ? 12 : 8)
-            .background(
-                RoundedRectangle(
-                    cornerRadius: isExpanded ? 20 : 16,
-                    style: .continuous,
-                )
-                .fill(style.material)
-                .overlay(
-                    RoundedRectangle(
-                        cornerRadius: isExpanded ? 20 : 16,
-                        style: .continuous,
-                    )
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                .white.opacity(0.3),
-                                .white.opacity(0.1),
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing,
-                        ),
-                        lineWidth: 1,
-                    ),
-                ),
-            )
+            .glassSurface(style: style, cornerRadius: isExpanded ? 20 : 16, interactive: true)
             .shadow(
                 color: .black.opacity(0.1),
                 radius: isExpanded ? 12 : 8,

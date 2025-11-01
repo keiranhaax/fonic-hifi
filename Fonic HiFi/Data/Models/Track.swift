@@ -34,6 +34,20 @@ public final class Track: TrackProtocol {
     /// Date the file was last modified
     public var dateModified: Date
 
+    // MARK: - Source Tracking
+
+    /// Original security-scoped bookmark for imported file
+    public var sourceURLBookmark: Data?
+
+    /// Original external URL string for duplicate detection and migrations
+    public var sourceURLString: String?
+
+    /// Normalized hash of the original source URL
+    public var sourceURLHash: String?
+
+    /// Hash of the original security-scoped bookmark for resilient duplicate detection
+    public var sourceBookmarkHash: String?
+
     // MARK: - Basic Metadata
 
     /// Track title
@@ -244,6 +258,10 @@ public final class Track: TrackProtocol {
         self.bitDepth = bitDepth
         self.channels = channels
         self.isLossless = isLossless
+
+        sourceURLBookmark = nil
+        sourceURLString = nil
+        sourceURLHash = nil
 
         // File attributes
         let resourceValues = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])

@@ -10,8 +10,27 @@
 		386B1C072DE975FD009FBF25 /* AudioKit in Frameworks */ = {isa = PBXBuildFile; productRef = 386B1C062DE975FD009FBF25 /* AudioKit */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		38D04D192DE571000047CB93 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 38D04CD52DE570D80047CB93 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 38D04CDC2DE570D80047CB93;
+			remoteInfo = "Fonic HiFi";
+		};
+		38D04E092DE571500047CB93 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 38D04CD52DE570D80047CB93 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 38D04CDC2DE570D80047CB93;
+			remoteInfo = "Fonic HiFi";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		38D04CDD2DE570D80047CB93 /* Fonic HiFi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Fonic HiFi.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		38D04D102DE571000047CB93 /* Fonic HiFiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Fonic HiFiTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		38D04E002DE571500047CB93 /* Fonic HiFiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Fonic HiFiUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -33,6 +52,16 @@
 			path = "Fonic HiFi";
 			sourceTree = "<group>";
 		};
+		38D04D182DE571000047CB93 /* Fonic HiFiTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Fonic HiFiTests";
+			sourceTree = "<group>";
+		};
+		38D04E012DE571500047CB93 /* Fonic HiFiUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Fonic HiFiUITests";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,6 +71,16 @@
 				386B1C072DE975FD009FBF25 /* AudioKit in Frameworks */,
 			);
 		};
+		38D04D112DE571000047CB93 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		38D04E032DE571500047CB93 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -49,6 +88,8 @@
 			isa = PBXGroup;
 			children = (
 				38D04CDF2DE570D80047CB93 /* Fonic HiFi */,
+				38D04D182DE571000047CB93 /* Fonic HiFiTests */,
+				38D04E012DE571500047CB93 /* Fonic HiFiUITests */,
 				38D04CDE2DE570D80047CB93 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -57,6 +98,8 @@
 			isa = PBXGroup;
 			children = (
 				38D04CDD2DE570D80047CB93 /* Fonic HiFi.app */,
+				38D04D102DE571000047CB93 /* Fonic HiFiTests.xctest */,
+				38D04E002DE571500047CB93 /* Fonic HiFiUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -85,6 +128,48 @@
 			productReference = 38D04CDD2DE570D80047CB93 /* Fonic HiFi.app */;
 			productType = "com.apple.product-type.application";
 		};
+		38D04D142DE571000047CB93 /* Fonic HiFiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38D04D152DE571000047CB93 /* Build configuration list for PBXNativeTarget "Fonic HiFiTests" */;
+			buildPhases = (
+				38D04D122DE571000047CB93 /* Sources */,
+				38D04D112DE571000047CB93 /* Frameworks */,
+				38D04D132DE571000047CB93 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				38D04D1A2DE571000047CB93 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				38D04D182DE571000047CB93 /* Fonic HiFiTests */,
+			);
+			name = "Fonic HiFiTests";
+			productName = "Fonic HiFiTests";
+			productReference = 38D04D102DE571000047CB93 /* Fonic HiFiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		38D04E052DE571500047CB93 /* Fonic HiFiUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38D04E062DE571500047CB93 /* Build configuration list for PBXNativeTarget "Fonic HiFiUITests" */;
+			buildPhases = (
+				38D04E022DE571500047CB93 /* Sources */,
+				38D04E032DE571500047CB93 /* Frameworks */,
+				38D04E042DE571500047CB93 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				38D04E0A2DE571500047CB93 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				38D04E012DE571500047CB93 /* Fonic HiFiUITests */,
+			);
+			name = "Fonic HiFiUITests";
+			productName = "Fonic HiFiUITests";
+			productReference = 38D04E002DE571500047CB93 /* Fonic HiFiUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -97,6 +182,14 @@
 				TargetAttributes = {
 					38D04CDC2DE570D80047CB93 = {
 						CreatedOnToolsVersion = 16.3;
+					};
+					38D04D142DE571000047CB93 = {
+						CreatedOnToolsVersion = 16.3;
+						TestTargetID = 38D04CDC2DE570D80047CB93;
+					};
+					38D04E052DE571500047CB93 = {
+						CreatedOnToolsVersion = 16.3;
+						TestTargetID = 38D04CDC2DE570D80047CB93;
 					};
 				};
 			};
@@ -118,12 +211,24 @@
 			projectRoot = "";
 			targets = (
 				38D04CDC2DE570D80047CB93 /* Fonic HiFi */,
+				38D04D142DE571000047CB93 /* Fonic HiFiTests */,
+				38D04E052DE571500047CB93 /* Fonic HiFiUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		38D04CDB2DE570D80047CB93 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		38D04D132DE571000047CB93 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		38D04E042DE571500047CB93 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -136,7 +241,30 @@
 			files = (
 			);
 		};
+		38D04D122DE571000047CB93 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		38D04E022DE571500047CB93 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		38D04D1A2DE571000047CB93 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 38D04CDC2DE570D80047CB93 /* Fonic HiFi */;
+			targetProxy = 38D04D192DE571000047CB93 /* PBXContainerItemProxy */;
+		};
+		38D04E0A2DE571500047CB93 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 38D04CDC2DE570D80047CB93 /* Fonic HiFi */;
+			targetProxy = 38D04E092DE571500047CB93 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		38D04D052DE570DA0047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFi" */ = {
@@ -358,6 +486,138 @@
 			};
 			name = Release;
 		};
+		38D04D162DE571000047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFiTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R29WA9QFUP;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleName = "Fonic HiFiTests";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ai.keiranlabs.Fonic-HiFiTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Fonic HiFi.app/Fonic HiFi";
+			};
+			name = Debug;
+		};
+		38D04D172DE571000047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFiTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R29WA9QFUP;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleName = "Fonic HiFiTests";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ai.keiranlabs.Fonic-HiFiTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Fonic HiFi.app/Fonic HiFi";
+			};
+			name = Release;
+		};
+		38D04E072DE571500047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFiUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R29WA9QFUP;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleName = "Fonic HiFiUITests";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ai.keiranlabs.Fonic-HiFiUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = "Fonic HiFi";
+			};
+			name = Debug;
+		};
+		38D04E082DE571500047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFiUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R29WA9QFUP;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleName = "Fonic HiFiUITests";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ai.keiranlabs.Fonic-HiFiUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = "Fonic HiFi";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -374,6 +634,22 @@
 			buildConfigurations = (
 				38D04D052DE570DA0047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFi" */,
 				38D04D062DE570DA0047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFi" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		38D04D152DE571000047CB93 /* Build configuration list for PBXNativeTarget "Fonic HiFiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38D04D162DE571000047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFiTests" */,
+				38D04D172DE571000047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFiTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		38D04E062DE571500047CB93 /* Build configuration list for PBXNativeTarget "Fonic HiFiUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38D04E072DE571500047CB93 /* Debug configuration for PBXNativeTarget "Fonic HiFiUITests" */,
+				38D04E082DE571500047CB93 /* Release configuration for PBXNativeTarget "Fonic HiFiUITests" */,
 			);
 			defaultConfigurationName = Release;
 		};

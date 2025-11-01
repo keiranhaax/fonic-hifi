@@ -94,8 +94,7 @@ public struct AudioSessionInterruption: Sendable, Equatable {
 
             // Extract interruption category if available
             if let reasonValue = userInfo[AVAudioSessionInterruptionReasonKey] as? UInt,
-               let reason = AVAudioSession.InterruptionReason(rawValue: reasonValue)
-            {
+               let reason = AVAudioSession.InterruptionReason(rawValue: reasonValue) {
                 category = InterruptionCategory.from(reason: reason)
                 context["reason"] = String(reason.rawValue)
             }
@@ -295,7 +294,7 @@ public extension AudioSessionInterruption {
 
     /// User-friendly description of the interruption
     var userDescription: String {
-        let _ = type.description
+        _ = type.description
         let categoryDesc = category?.explanation ?? "An interruption occurred"
 
         switch type {

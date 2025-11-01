@@ -13,6 +13,8 @@ struct DebugTrackRowView: View {
     let track: Track
     @Environment(\.audioEngine) private var audioService
 
+    private let logger = Log.logger(.diagnostics)
+
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
@@ -32,34 +34,38 @@ struct DebugTrackRowView: View {
     }
 
     private func debugPlayTrack() {
-        print("\n=== DEBUG TRACK TAP START ===")
-        print("1. Tap gesture triggered")
-        print("   isMainThread: \(Thread.isMainThread)")
-        print("   Queue: \(String(cString: __dispatch_queue_get_label(nil)))")
+        logger.debug("\n=== DEBUG TRACK TAP START ===")
+        logger.debug("1. Tap gesture triggered")
+        logger.debug("   isMainThread: \(Thread.isMainThread, privacy: .public)")
+        let initialQueuePointer = __dispatch_queue_get_label(nil)
+        let initialQueueLabel = String(cString: initialQueuePointer)
+        logger.debug("   Queue: \(initialQueueLabel)")
 
         Task { @MainActor in
-            print("\n2. Inside Task block")
-            print("   Queue: \(String(cString: __dispatch_queue_get_label(nil)))")
+            logger.debug("\n2. Inside Task block")
+            let taskQueuePointer = __dispatch_queue_get_label(nil)
+            let taskQueueLabel = String(cString: taskQueuePointer)
+            logger.debug("   Queue: \(taskQueueLabel)")
 
             // Verify precondition
             dispatchPrecondition(condition: .onQueue(.main))
-            print("3. Dispatch precondition passed - we are on main queue")
+            logger.debug("3. Dispatch precondition passed - we are on main queue")
 
             // Update app state
             guard let audioService else {
-                print("4. ❌ No audioService available")
+                logger.error("4. ❌ No audioService available")
                 return
             }
 
-            print("\n4. About to update audioService.currentTrack")
-            print("   Current track before: \(audioService.currentTrack?.title ?? "nil")")
+            logger.debug("\n4. About to update audioService.currentTrack")
+            let currentTrackBefore = audioService.currentTrack?.title ?? "nil"
+            logger.debug("   Current track before: \(currentTrackBefore)")
             audioService.setCurrentTrack(track)
-            print("   Current track after: \(audioService.currentTrack?.title ?? "nil")")
+            let currentTrackAfter = audioService.currentTrack?.title ?? "nil"
+            logger.debug("   Current track after: \(currentTrackAfter)")
 
             // Show Now Playing
-            print("\n5. About to set showingNowPlaying = true")
-            // print("   showingNowPlaying before: \(audioService.showingNowPlaying)") // Property moved to local view state
-
+            logger.debug("\n5. About to set showingNowPlaying = true")
             // Try different approaches to see which crashes
 
             // Approach 1: Direct set
@@ -73,18 +79,17 @@ struct DebugTrackRowView: View {
             //     audioService.showingNowPlaying = true
             // }
 
-            // print("   showingNowPlaying after: \(audioService.showingNowPlaying)") // Property moved to local view state
-
             // Play audio
-            print("\n6. About to call audioService.play")
+            logger.debug("\n6. About to call audioService.play")
             do {
                 try await audioService.play(track: track)
-                print("7. audioService.play completed successfully")
+                logger.debug("7. audioService.play completed successfully")
             } catch {
-                print("7. audioService.play failed: \(error)")
+                let errorDescription = error.localizedDescription
+                logger.error("7. audioService.play failed: \(errorDescription)")
             }
 
-            print("\n=== DEBUG TRACK TAP END ===\n")
+            logger.debug("\n=== DEBUG TRACK TAP END ===\n")
         }
     }
 }

@@ -13,6 +13,8 @@ struct DebugNowPlayingView: View {
     @EnvironmentObject private var audioService: AudioEngineFacade
     @State private var debugLog: [String] = []
 
+    private let logger = Log.logger(.diagnostics)
+
     var body: some View {
         VStack(spacing: 20) {
             Text("Debug Now Playing View")
@@ -61,7 +63,7 @@ struct DebugNowPlayingView: View {
     private func addLog(_ message: String) {
         let timestamp = Date().timeIntervalSince1970
         let logEntry = "\(String(format: "%.3f", timestamp)): \(message)"
-        print("[DEBUG NOW PLAYING] \(logEntry)")
+        logger.debug("[DebugNowPlaying] \(logEntry, privacy: .public)")
         debugLog.append(logEntry)
     }
 }

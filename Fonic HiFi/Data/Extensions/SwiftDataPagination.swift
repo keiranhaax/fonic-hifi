@@ -48,7 +48,7 @@ public struct PaginatedFetchDescriptor<T: PersistentModel> {
         countDescriptor.fetchOffset = nil
 
         // iOS 26 optimized count that doesn't load actual data
-        return try context.fetchCount(countDescriptor)
+        return try context.batchedFetchCount(countDescriptor)
     }
 }
 
@@ -58,16 +58,27 @@ public extension ModelContext {
     /// This is critical for preventing memory crashes with large libraries
     /// - Parameter descriptor: The fetch descriptor to count
     /// - Returns: Number of items matching the descriptor
-    func fetchCount(_ descriptor: FetchDescriptor<some PersistentModel>) throws -> Int {
-        // SwiftData in iOS 26 has optimized count that doesn't load objects
-        // This prevents the memory issue where .count loads entire dataset
-        var countDescriptor = descriptor
-        countDescriptor.fetchLimit = nil
-        countDescriptor.fetchOffset = nil
+    func batchedFetchCount(_ descriptor: FetchDescriptor<some PersistentModel>) throws -> Int {
+        var total = 0
+        var offset = 0
+        let batchSize = 512
+        var countingDescriptor = descriptor
 
-        // Perform the count query without loading objects
-        let items = try fetch(countDescriptor)
-        return items.count
+        while true {
+            countingDescriptor.fetchOffset = offset
+            countingDescriptor.fetchLimit = batchSize
+
+            let batch = try fetch(countingDescriptor)
+            total += batch.count
+
+            if batch.count < batchSize {
+                break
+            }
+
+            offset += batch.count
+        }
+
+        return total
     }
 }
 
@@ -100,28 +111,5 @@ public struct BatchProcessor<T: PersistentModel> {
             let batch = try context.fetch(pageDescriptor)
             try processor(batch)
         }
-    }
-}
-
-/// Statistics cache for aggregate calculations without loading all data
-public struct LibraryStatisticsCache {
-    public let duration: TimeInterval
-    public let fileSize: Int64
-    public let losslessCount: Int
-    public let hiResCount: Int
-    public let lastUpdated: Date
-
-    public init(
-        duration: TimeInterval = 0,
-        fileSize: Int64 = 0,
-        losslessCount: Int = 0,
-        hiResCount: Int = 0,
-        lastUpdated: Date = Date(),
-    ) {
-        self.duration = duration
-        self.fileSize = fileSize
-        self.losslessCount = losslessCount
-        self.hiResCount = hiResCount
-        self.lastUpdated = lastUpdated
     }
 }

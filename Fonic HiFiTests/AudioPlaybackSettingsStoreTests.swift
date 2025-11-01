@@ -2,21 +2,25 @@
 import XCTest
 
 final class AudioPlaybackSettingsStoreTests: XCTestCase {
-    private var defaults: UserDefaults!
+    private let suiteName = "AudioPlaybackSettingsStoreTests"
 
     override func setUp() {
         super.setUp()
-        defaults = UserDefaults(suiteName: "AudioPlaybackSettingsStoreTests")
-        defaults.removePersistentDomain(forName: "AudioPlaybackSettingsStoreTests")
+        UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
     }
 
     override func tearDown() {
-        defaults.removePersistentDomain(forName: "AudioPlaybackSettingsStoreTests")
-        defaults = nil
+        UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
         super.tearDown()
     }
 
     func testPersistedConfigurationMergesStoredValues() async {
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Unable to create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+
         let store = AudioPlaybackSettingsStore(defaults: defaults)
         await store.setCrossfadeDuration(4.5)
         await store.setReplayGainMode(.album)
@@ -30,6 +34,12 @@ final class AudioPlaybackSettingsStoreTests: XCTestCase {
     }
 
     func testDefaultsWhenNoValuesStored() async {
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Unable to create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+
         let store = AudioPlaybackSettingsStore(defaults: defaults)
         let merged = await store.configuration(merging: AudioEngineConfiguration.default)
 

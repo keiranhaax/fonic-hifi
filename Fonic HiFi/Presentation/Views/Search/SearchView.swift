@@ -19,6 +19,8 @@ struct SearchView: View {
     @State private var recentSearches: [RecentSearchData] = []
     @State private var showingRecentSearches = true
 
+    private let logger = Log.logger(.search)
+
     var body: some View {
         Group {
             if searchText.isEmpty, showingRecentSearches {
@@ -108,7 +110,7 @@ struct SearchView: View {
                 }
             }
         } catch {
-            print("Search failed: \(error)")
+            logger.error("Search failed: \(error.localizedDescription, privacy: .public)")
             await MainActor.run {
                 searchResults = SearchResults()
                 isSearching = false
@@ -136,7 +138,7 @@ struct SearchView: View {
         do {
             recentSearches = try await dataManager.getRecentSearches()
         } catch {
-            print("Failed to load recent searches: \(error)")
+            logger.error("Failed to load recent searches: \(error.localizedDescription, privacy: .public)")
             recentSearches = []
         }
     }

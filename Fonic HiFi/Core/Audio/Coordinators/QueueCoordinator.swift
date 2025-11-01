@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import os.log
+import OSLog
 
 /// Handles all queue-related operations
 @MainActor
@@ -15,21 +15,23 @@ public final class QueueCoordinator {
     // MARK: - Dependencies
 
     private let queueManager: AudioQueueManager
-    private let playbackCoordinator: PlaybackCoordinator
-    private weak var facade: AudioEngineFacade?
-
-    private let logger = Logger(subsystem: "com.fonichifi.audio", category: "QueueCoordinator")
+    private let stateManager: PlaybackStateManager
+    private let engineManager: AudioEngineManager
+    private let playbackController: PlaybackQueueHandling
+    private let logger = Log.logger(.audioQueueCoordinator)
 
     // MARK: - Initialization
 
     init(
         queueManager: AudioQueueManager,
-        playbackCoordinator: PlaybackCoordinator,
-        facade: AudioEngineFacade,
+        stateManager: PlaybackStateManager,
+        engineManager: AudioEngineManager,
+        playbackController: PlaybackQueueHandling,
     ) {
         self.queueManager = queueManager
-        self.playbackCoordinator = playbackCoordinator
-        self.facade = facade
+        self.stateManager = stateManager
+        self.engineManager = engineManager
+        self.playbackController = playbackController
     }
 
     // MARK: - Queue Navigation
@@ -38,15 +40,19 @@ public final class QueueCoordinator {
     public func playNext() async throws {
         guard let nextTrack = queueManager.next() else {
             logger.info("No next track available")
-            await playbackCoordinator.stop()
+            await playbackController.stop()
             return
         }
 
         queueManager.setCurrentTrack(nextTrack)
 
-        // Convert AudioTrack back to Track for engine compatibility
         let track = createTrackFromAudioTrack(nextTrack)
-        try await playbackCoordinator.play(track: track)
+        if engineManager.configuration.crossfadeDuration > 0,
+           stateManager.currentState.isPlaying {
+            try await playbackController.crossfade(to: nextTrack, displayTrack: track)
+        } else {
+            try await playbackController.play(track: track, queueEntry: nextTrack)
+        }
     }
 
     /// Play the previous track in the queue
@@ -58,9 +64,13 @@ public final class QueueCoordinator {
 
         queueManager.setCurrentTrack(previousTrack)
 
-        // Convert AudioTrack back to Track for engine compatibility
         let track = createTrackFromAudioTrack(previousTrack)
-        try await playbackCoordinator.play(track: track)
+        if engineManager.configuration.crossfadeDuration > 0,
+           stateManager.currentState.isPlaying {
+            try await playbackController.crossfade(to: previousTrack, displayTrack: track)
+        } else {
+            try await playbackController.play(track: track, queueEntry: previousTrack)
+        }
     }
 
     // MARK: - Queue Management
@@ -179,7 +189,7 @@ public final class QueueCoordinator {
     /// Helper method to create a Track from AudioTrack data
     /// This is a temporary solution for type conversion compatibility
     private func createTrackFromAudioTrack(_ audioTrack: AudioTrack) -> Track {
-        Track(
+        let track = Track(
             url: audioTrack.url,
             title: audioTrack.title,
             artist: audioTrack.artist,
@@ -187,5 +197,8 @@ public final class QueueCoordinator {
             audioFormat: audioTrack.audioFormat,
             duration: audioTrack.duration,
         )
+        track.replayGainTrack = audioTrack.replayGainTrack
+        track.replayGainAlbum = audioTrack.replayGainAlbum
+        return track
     }
 }

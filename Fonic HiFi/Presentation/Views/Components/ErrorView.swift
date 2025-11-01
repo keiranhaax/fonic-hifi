@@ -172,49 +172,41 @@ struct ErrorView: View {
         let localizedString = error.localizedDescription.lowercased()
 
         // Check for specific error types
-        if errorString.contains("network") || errorString.contains("connection") ||
-            localizedString.contains("network") || localizedString.contains("internet")
-        {
+        if containsKeyword(["network", "connection", "internet"], in: [errorString, localizedString]) {
             return .network
         }
 
-        if errorString.contains("file") || errorString.contains("url") ||
-            localizedString.contains("file") || localizedString.contains("cannot open")
-        {
+        if containsKeyword(["file", "url", "cannot open"], in: [errorString, localizedString]) {
             return .fileAccess
         }
 
-        if errorString.contains("audio") || errorString.contains("playback") ||
-            errorString.contains("engine") || localizedString.contains("audio")
-        {
+        if containsKeyword(["audio", "playback", "engine"], in: [errorString, localizedString]) {
             return .audio
         }
 
-        if errorString.contains("storage") || errorString.contains("disk") ||
-            localizedString.contains("storage") || localizedString.contains("space")
-        {
+        if containsKeyword(["storage", "disk", "space"], in: [errorString, localizedString]) {
             return .storage
         }
 
-        if errorString.contains("format") || errorString.contains("codec") ||
-            localizedString.contains("format") || localizedString.contains("unsupported")
-        {
+        if containsKeyword(["format", "codec", "unsupported"], in: [errorString, localizedString]) {
             return .format
         }
 
-        if errorString.contains("permission") || errorString.contains("denied") ||
-            localizedString.contains("permission") || localizedString.contains("not allowed")
-        {
+        if containsKeyword(["permission", "denied", "not allowed"], in: [errorString, localizedString]) {
             return .permission
         }
 
-        if errorString.contains("memory") || errorString.contains("ram") ||
-            localizedString.contains("memory")
-        {
+        if containsKeyword(["memory", "ram"], in: [errorString, localizedString]) {
             return .memory
         }
 
         return .general
+    }
+
+    private func containsKeyword(_ keywords: [String], in targets: [String]) -> Bool {
+        keywords.contains { keyword in
+            targets.contains { $0.contains(keyword) }
+        }
     }
 
     private func getUserFriendlyMessage() -> String? {
@@ -308,7 +300,7 @@ extension View {
             userInfo: [NSLocalizedDescriptionKey: "The Internet connection appears to be offline."],
         ),
         retryAction: {
-            print("Retry tapped")
+            Log.logger(.userInterface).info("Retry tapped - network error preview")
         },
     )
 }
@@ -321,7 +313,7 @@ extension View {
             userInfo: [NSLocalizedDescriptionKey: "The file could not be found."],
         ),
         retryAction: {
-            print("Retry tapped")
+            Log.logger(.userInterface).info("Retry tapped - file error preview")
         },
     )
 }
@@ -334,7 +326,7 @@ extension View {
             userInfo: [NSLocalizedDescriptionKey: "Audio engine initialization failed"],
         ),
         retryAction: {
-            print("Retry tapped")
+            Log.logger(.userInterface).info("Retry tapped - audio error preview")
         },
     )
 }

@@ -7,9 +7,26 @@
 
 import AVFoundation
 import Foundation
+import OSLog
 #if canImport(Mach)
     import Mach
 #endif
+
+private actor BufferUnderrunTracker {
+    private var count = 0
+
+    func increment() {
+        count += 1
+    }
+
+    func reset() {
+        count = 0
+    }
+
+    func value() -> Int {
+        count
+    }
+}
 
 /// AVAudioEngine-based implementation of AudioEngineService for standard audio formats
 @MainActor
@@ -40,6 +57,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Audio session manager
     private let sessionManager = AudioSessionManager.shared
 
+    private let logger = Log.logger(.audioEngine)
+
     /// Current configuration
     private var configuration: AudioEngineConfiguration = .init()
 
@@ -48,7 +67,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
     /// Performance metrics collector
     private var metricsStartTime: Date?
-    private var bufferUnderrunCount: Int = 0
+    private let bufferUnderruns = BufferUnderrunTracker()
 
     // MARK: - Initialization
 
@@ -96,7 +115,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     public var audioFormat: AudioFormat? {
         get async {
             guard let url = audioFile?.url else { return nil }
-            return AudioFormat.from(url: url)
+            return AudioFormat.from(url: url) ?? .unknown
         }
     }
 
@@ -115,6 +134,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     public func load(url: URL) async throws {
         // Stop any current playback
         await stop()
+        await bufferUnderruns.reset()
 
         do {
             // Create audio file
@@ -123,7 +143,9 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
                 throw AudioError.fileNotFound(url)
             }
 
-            print("=== AVAUDIOENGINE PREPARE DEBUG ===")
+            #if DEBUG
+                logger.debug("=== AVAUDIOENGINE PREPARE DEBUG ===")
+            #endif
 
             // Store total frames for duration calculation
             totalFrames = file.length
@@ -133,14 +155,16 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
                 try startEngine()
             }
 
-            let format = file.processingFormat
-            print("1. Attached player node")
-            print("2. Connected player to mixer with format: \(format)")
-            print("3. Sample rate: \(format.sampleRate)")
-            print("4. Channels: \(format.channelCount)")
-            print("5. Main mixer connected to output: \(engine.mainMixerNode.numberOfOutputs > 0)")
-            print("6. Engine prepared")
-            print("=== END PREPARE DEBUG ===")
+            #if DEBUG
+                let format = file.processingFormat
+                logger.debug("1. Attached player node")
+                logger.debug("2. Connected player to mixer with format: \(String(describing: format), privacy: .public)")
+                logger.debug("3. Sample rate: \(format.sampleRate, privacy: .public)")
+                logger.debug("4. Channels: \(format.channelCount, privacy: .public)")
+                logger.debug("5. Main mixer connected to output: \(self.engine.mainMixerNode.numberOfOutputs > 0, privacy: .public)")
+                logger.debug("6. Engine prepared")
+                logger.debug("=== END PREPARE DEBUG ===")
+            #endif
 
             playbackState = .idle
 
@@ -150,31 +174,37 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
 
     public func play() async throws {
-        assertMainThread()
-
         guard let file = audioFile else {
             throw AudioError.fileNotFound(URL(fileURLWithPath: ""))
         }
 
-        print("=== AVAUDIOENGINE PLAY DEBUG ===")
-        print("1. Engine running before start: \(engine.isRunning)")
+        #if DEBUG
+            logger.debug("=== AVAUDIOENGINE PLAY DEBUG ===")
+            logger.debug("1. Engine running before start: \(self.engine.isRunning, privacy: .public)")
+        #endif
 
         // Audio session is managed by AudioSessionManager, not here
 
         // Start playback
         if !engine.isRunning {
             try startEngine()
-            print("2. Engine started")
+            #if DEBUG
+                logger.debug("2. Engine started")
+            #endif
         }
 
-        print("3. Engine running after start: \(engine.isRunning)")
-        print("4. Player node playing state: \(playerNode.isPlaying)")
+        #if DEBUG
+            logger.debug("3. Engine running after start: \(self.engine.isRunning, privacy: .public)")
+            logger.debug("4. Player node playing state: \(self.playerNode.isPlaying, privacy: .public)")
+        #endif
 
         // Schedule file for playback
         // CRITICAL: AVAudioPlayerNode completion handlers run on background threads
         // per Apple documentation. We must explicitly dispatch to main actor.
-        playerNode.scheduleFile(file, at: nil) {
-            print("5. File playback completed")
+        playerNode.scheduleFile(file, at: nil) { [weak self] in
+            #if DEBUG
+                self?.logger.debug("5. File playback completed")
+            #endif
             // This closure runs on Core Audio's background thread
             // Use Task to dispatch to MainActor safely
             Task { @MainActor [weak self] in
@@ -183,31 +213,29 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         }
 
         playerNode.play()
-        print("6. Called playerNode.play()")
-        print("7. Player node playing after play: \(playerNode.isPlaying)")
-        print("8. Output volume: \(playerNode.volume)")
-        print("9. Engine output node volume: \(engine.mainMixerNode.outputVolume)")
-        print("=== END AVAUDIOENGINE DEBUG ===")
+        #if DEBUG
+            logger.debug("6. Called playerNode.play()")
+            logger.debug("7. Player node playing after play: \(self.playerNode.isPlaying, privacy: .public)")
+            logger.debug("8. Output volume: \(self.playerNode.volume, privacy: .public)")
+            logger.debug("9. Engine output node volume: \(self.engine.mainMixerNode.outputVolume, privacy: .public)")
+            logger.debug("=== END AVAUDIOENGINE DEBUG ===")
+        #endif
 
         playbackState = await .playing(currentTime: currentTime, duration: duration)
 
         // Progress timer is managed by AudioEngineFacade
         // Record metrics start time
         metricsStartTime = Date()
-        bufferUnderrunCount = 0
+        await bufferUnderruns.reset()
     }
 
     public func pause() async {
-        assertMainThread()
-
         playerNode.pause()
         playbackState = await .paused(currentTime: currentTime, duration: duration)
         // Progress timer is managed by AudioEngineFacade
     }
 
     public func stop() async {
-        assertMainThread()
-
         playerNode.stop()
         playbackState = .stopped
         // Progress timer is managed by AudioEngineFacade
@@ -215,11 +243,12 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         // Reset position
         audioFile = nil
         totalFrames = 0
+        await bufferUnderruns.reset()
 
         do {
             try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         } catch {
-            print("Failed to deactivate audio session: \(error)")
+            logger.error("Failed to deactivate audio session: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -302,7 +331,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         return AudioMetrics(
             cpuUsage: cpuUsage,
             memoryUsage: memoryUsage,
-            bufferUnderruns: bufferUnderrunCount,
+        bufferUnderruns: await bufferUnderruns.value(),
             decodingLatency: 0.001, // AVAudioEngine has very low latency
             bufferFillLevel: 1.0,
             droppedFrames: 0,
@@ -349,18 +378,23 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     private func setupMonitoring() {
         // Install tap on output for monitoring buffer underruns
         let format = engine.mainMixerNode.outputFormat(forBus: 0)
+        let tracker = bufferUnderruns
 
         engine.mainMixerNode.installTap(
             onBus: 0,
             bufferSize: 1024,
             format: format,
-        ) { [weak self] buffer, _ in
-            // Monitor for buffer underruns
-            // Audio tap handlers run on audio render thread, so dispatch to main actor for state updates
-            if buffer.frameLength == 0 {
-                Task { @MainActor [weak self] in
-                    self?.bufferUnderrunCount += 1
-                }
+            block: Self.makeMonitoringTap(tracker: tracker)
+        )
+    }
+
+    private nonisolated static func makeMonitoringTap(
+        tracker: BufferUnderrunTracker
+    ) -> AVAudioNodeTapBlock {
+        { buffer, _ in
+            guard buffer.frameLength == 0 else { return }
+            Task {
+                await tracker.increment()
             }
         }
     }
@@ -426,27 +460,10 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Handle playback completion synchronously on main thread
     /// This is called from Task { @MainActor in } to avoid RealtimeMessenger crashes
     private func handlePlaybackCompletionSync() {
-        assertMainThread()
-
         playbackState = .stopped
 
         // Call completion handler if it exists
         completionHandler?()
-    }
-
-    /// Assert that we're running on the main thread
-    /// Helps catch threading issues during development
-    private func assertMainThread(
-        file: StaticString = #file,
-        line: UInt = #line,
-        function: StaticString = #function,
-    ) {
-        #if DEBUG
-            assert(
-                Thread.isMainThread,
-                "\(function) must be called on the main thread. Called from \(file):\(line)",
-            )
-        #endif
     }
 
     deinit {

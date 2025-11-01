@@ -10,7 +10,7 @@ import Foundation
 
 /// Dependency injection container and configuration for playback state management
 @MainActor
-public final class PlaybackStateStore: Sendable {
+public final class PlaybackStateStore {
     // MARK: - Singleton Access
 
     public static let shared = PlaybackStateStore()
@@ -180,9 +180,9 @@ public enum PlaybackStateEvent: Sendable {
     public var currentState: PlaybackState {
         switch self {
         case let .stateChanged(change):
-            change.to
+            change.nextState
         case let .transitionOccurred(transition):
-            transition.to
+            transition.nextState
         }
     }
 

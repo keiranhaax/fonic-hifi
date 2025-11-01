@@ -8,6 +8,7 @@
 import Combine
 import Foundation
 import Observation
+import OSLog
 
 /// Observable state manager for tracking and broadcasting playback state changes
 @MainActor
@@ -50,6 +51,7 @@ public final class PlaybackStateManager {
     private var stateHistory: [PlaybackStateHistoryEntry] = []
     private let maxHistorySize: Int = 100
     private var transitionValidation: Bool = true
+    private let logger = Log.logger(.playback)
 
     // MARK: - Initialization
 
@@ -78,7 +80,12 @@ public final class PlaybackStateManager {
         // Validate transition if enabled
         if transitionValidation, !currentState.canTransition(to: newState) {
             if loggingEnabled {
-                print("PlaybackStateManager: Invalid transition from \(currentState) to \(newState)")
+                logger.warning(
+                    """
+                    PlaybackStateManager: Invalid transition from \(self.currentState, privacy: .public)
+                    to \(newState, privacy: .public)
+                    """,
+                )
             }
             return false
         }
@@ -113,7 +120,12 @@ public final class PlaybackStateManager {
         _transitionPublisher.send(transition)
 
         if loggingEnabled {
-            print("PlaybackStateManager: \(oldState) -> \(newState)")
+            logger.debug(
+                """
+                PlaybackStateManager: \(oldState, privacy: .public)
+                -> \(newState, privacy: .public)
+                """,
+            )
         }
 
         return true
@@ -175,7 +187,7 @@ public final class PlaybackStateManager {
     /// Check if the current state matches any of the provided states
     public func isInState(_ states: PlaybackState...) -> Bool {
         states.contains { state in
-            switch (currentState, state) {
+            switch (self.currentState, state) {
             case (.idle, .idle), (.stopped, .stopped):
                 true
             case (.loading, .loading), (.playing, .playing), (.paused, .paused):
@@ -287,8 +299,14 @@ public final class PlaybackStateManager {
 /// Represents a state change event
 public struct PlaybackStateChange: Sendable {
     public let from: PlaybackState
-    public let to: PlaybackState
+    public let nextState: PlaybackState
     public let timestamp: Date
+
+    public init(from: PlaybackState, to nextState: PlaybackState, timestamp: Date) {
+        self.from = from
+        self.nextState = nextState
+        self.timestamp = timestamp
+    }
 
     public var duration: TimeInterval {
         timestamp.timeIntervalSince1970
@@ -298,9 +316,16 @@ public struct PlaybackStateChange: Sendable {
 /// Represents a state transition event with validation info
 public struct PlaybackStateTransition: Sendable {
     public let from: PlaybackState
-    public let to: PlaybackState
+    public let nextState: PlaybackState
     public let timestamp: Date
     public let isValid: Bool
+
+    public init(from: PlaybackState, to nextState: PlaybackState, timestamp: Date, isValid: Bool) {
+        self.from = from
+        self.nextState = nextState
+        self.timestamp = timestamp
+        self.isValid = isValid
+    }
 
     public var isInvalid: Bool { !isValid }
 }

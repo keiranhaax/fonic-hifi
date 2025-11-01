@@ -14,6 +14,8 @@ struct AudioSettingsView: View {
     @AppStorage("audioBufferSize") private var audioBufferSize = 512.0
     @AppStorage("sampleRate") private var sampleRate = 44100.0
 
+    private let logger = Log.logger(.audio)
+
     var body: some View {
         NavigationStack {
             Form {
@@ -101,7 +103,7 @@ struct AudioSettingsView: View {
         // Test audio configuration
         Task {
             // This would test the current audio configuration
-            print("Testing audio configuration...")
+            logger.info("Testing audio configuration from settings view")
         }
     }
 

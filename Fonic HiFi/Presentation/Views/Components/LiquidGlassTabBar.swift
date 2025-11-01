@@ -40,26 +40,18 @@ struct LiquidGlassTabBar: View {
         }
         .frame(height: tabBarHeight)
         .frame(maxWidth: .infinity)
-        // Use ultraThinMaterial with 0.8 opacity as per Apple Music
-        .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .opacity(0.8)
-                .overlay(alignment: .top) {
-                    // Subtle top border gradient
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.1),
-                            Color.clear,
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing,
-                    )
-                    .frame(height: 0.5)
-                },
-        )
-        // iOS 26 optimizations
-        .clearGlassFix()
+        .glassSurface(style: .dynamic, tint: Color.white.opacity(0.3), cornerRadius: 0)
+        .overlay(alignment: .top) {
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.12),
+                    Color.clear,
+                ],
+                startPoint: .leading,
+                endPoint: .trailing,
+            )
+            .frame(height: 0.5)
+        }
         .preferredFrameRate(120) // ProMotion support
     }
 

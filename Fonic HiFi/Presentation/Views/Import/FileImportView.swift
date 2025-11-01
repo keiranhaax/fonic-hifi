@@ -17,6 +17,8 @@ struct FileImportView: View {
     @State private var showingFolderPicker = false
     @State private var selectedURLs: [URL] = []
 
+    private let logger = Log.logger(.importService)
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -46,7 +48,7 @@ struct FileImportView: View {
                     Button("Import") {
                         guard let importService else { return }
                         Task {
-                            await importService.importFiles(from: selectedURLs)
+                            importService.importFiles(from: selectedURLs)
                             dismiss()
                         }
                     }
@@ -75,7 +77,7 @@ struct FileImportView: View {
         case let .success(urls):
             selectedURLs.append(contentsOf: urls)
         case let .failure(error):
-            print("File selection error: \(error.localizedDescription)")
+            logger.error("File selection failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 

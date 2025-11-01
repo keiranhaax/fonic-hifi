@@ -21,6 +21,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **NEVER**: Use placeholder, mock, or fake data in code
 - **NEVER**: Leave commented out code or TODO/FIXME comments in files
 - **ALWAYS**: Use verification tags: [Verified-Apple], [Verified-Code], [Inference], [Unverified]
+- **ALWAYS**: Route all logging through `Log.logger(_:)` using the taxonomy in `Fonic HiFi/Utils/Logging/Log.swift`; add new categories only when the existing domains do not cover a scenario.[Verified-Code]
+- **NEVER**: Emit raw file paths or large user strings—use `LogPrivacy` helpers for filenames and truncation before logging or counting events.[Verified-Code]
+- **OPTIONAL**: Enable telemetry counters via `Metrics.enable(true)` when observing imports, engine switches, or queue mutations; leave metrics disabled in production builds unless explicitly requested.[Verified-Code]
 - **ALWAYS**: Use TodoWrite for complex tasks (3+ steps) to track progress
 
 See global `~/.claude/CLAUDE.md` for universal Swift/iOS development rules.
@@ -179,6 +182,13 @@ git revert COMMIT_SHA   # Revert specific commit
 10. Ask to commit changes after edits
 11. **NEVER** add backwards compatibility code
 12. **ALWAYS** use modern iOS 26 APIs directly
+
+### Observability Checklist [Verified-Code]
+
+1. Select an existing `LogCategory` (see `Utils/Logging/Log.swift`) or add a new entry within the matching domain namespace when necessary.
+2. Redact filesystem details with `LogPrivacy.filename(_:)` and clamp long metadata via `LogPrivacy.truncated(_:limit:)` before logging.
+3. Wrap optional counters with `Metrics.increment` only after calling `Metrics.enable(true)` (e.g., in debug builds or test harnesses).
+4. Record instrumentation decisions in ADRs or `docs/refactor/observability-walkthrough.md` so future contributors share the same taxonomy assumptions.
 
 ## Debugging Reference
 

@@ -91,10 +91,8 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         }
     }
 
-    deinit {
-        Task { [weak self] in
-            await self?.cleanup()
-        }
+    @MainActor deinit {
+        cleanup()
     }
 
     // MARK: - AudioEngineService Implementation
@@ -287,7 +285,7 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         }
     }
 
-    private func cleanup() async {
+    private func cleanup() {
         stopProgressPolling()
         engine.stop()
     }

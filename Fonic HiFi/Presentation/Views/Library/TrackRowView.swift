@@ -14,6 +14,8 @@ struct TrackRowView: View {
     @Environment(\.audioEngine) private var audioService
     @Environment(\.showingNowPlaying) private var showingNowPlaying
 
+    private let logger = Log.logger(.library)
+
     var body: some View {
         HStack(spacing: 12) {
             // Track number or playing indicator
@@ -67,16 +69,17 @@ struct TrackRowView: View {
     private func playTrack() {
         guard let audioService else { return }
 
-        print("=== TRACK ROW TAP - UI STATE ONLY ===")
-        print("Track to play: \(track.title)")
+        logger.info("Track row tapped for \(track.title, privacy: .public)")
 
         // Only update UI state - let NowPlayingView handle audio playback
         audioService.setCurrentTrack(track)
         showingNowPlaying.wrappedValue = true
 
-        print("currentTrack set: \(audioService.currentTrack != nil)")
-        print("showingNowPlaying: \(showingNowPlaying.wrappedValue)")
-        print("UI state updated - Now Playing view will handle audio playback")
+        let isCurrentTrackSet = audioService.currentTrack != nil
+        let nowPlayingVisible = showingNowPlaying.wrappedValue
+
+        logger.debug("Now playing state updated. Current track set: \(isCurrentTrackSet, privacy: .public)")
+        logger.debug("Now playing visibility: \(nowPlayingVisible, privacy: .public)")
     }
 }
 

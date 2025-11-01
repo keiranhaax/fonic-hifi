@@ -127,7 +127,9 @@ struct AudioContextAccessibilityModifier: ViewModifier {
             let totalSeconds = Int(duration) % 60
             let percentage = Int(progress * 100)
 
-            description += "Progress: \(currentMinutes):\(String(format: "%02d", currentSeconds)) of \(totalMinutes):\(String(format: "%02d", totalSeconds)). \(percentage) percent complete."
+            let currentPosition = "\(currentMinutes):\(String(format: "%02d", currentSeconds))"
+            let totalPosition = "\(totalMinutes):\(String(format: "%02d", totalSeconds))"
+            description += "Progress: \(currentPosition) of \(totalPosition). \(percentage) percent complete."
         }
 
         return description
@@ -380,7 +382,8 @@ struct SearchAccessibility: ViewModifier {
             .accessibilityValue(searchText.isEmpty ? "Empty" : searchText)
             .onChange(of: searchText) { _, _ in
                 // Announce search results
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(500))
                     AccessibilityNotification.Announcement(searchResultsDescription)
                         .post()
                 }
@@ -411,7 +414,7 @@ struct AccessibilityEnhancements_Previews: PreviewProvider {
         VStack(spacing: 20) {
             // Enhanced button example
             Button("Play") {
-                print("Play tapped")
+                Log.logger(.userInterface).info("Preview play button tapped")
             }
             .enhancedAccessibility(
                 label: "Play button",

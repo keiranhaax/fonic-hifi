@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os.log
+import OSLog
 
 /// LRU cache for track data with actor isolation
 public actor TrackCache {
@@ -51,7 +51,7 @@ public actor TrackCache {
 
     private var cache: [UUID: CacheEntry]
     private let maxSize: Int
-    private let logger = Logger(subsystem: "com.fonichifi.cache", category: "TrackCache")
+    private let logger = Log.logger(.cacheTrack)
 
     // LRU tracking
     private var accessOrder: [UUID]

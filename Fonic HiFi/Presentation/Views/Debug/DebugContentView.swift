@@ -18,6 +18,8 @@ struct DebugContentView: View {
     @State private var showingFullScreen = false
     @State private var showingOverlay = false
 
+    private let logger = Log.logger(.diagnostics)
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -136,7 +138,7 @@ struct DebugContentView: View {
     private func addLog(_ message: String) {
         let timestamp = Date().timeIntervalSince1970
         let log = "\(String(format: "%.3f", timestamp)): \(message)"
-        print("[DEBUG CONTENT] \(log)")
+        logger.debug("[DebugContent] \(log, privacy: .public)")
         debugLogs.append(log)
     }
 }

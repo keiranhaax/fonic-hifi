@@ -296,6 +296,20 @@ public struct AudioSessionSummary: Sendable {
         self.sampleCount = sampleCount
         self.performanceScore = performanceScore
     }
+
+    public static var empty: AudioSessionSummary {
+        AudioSessionSummary(
+            sessionStart: Date(),
+            duration: 0,
+            averageMetrics: .empty,
+            peakMetrics: .empty,
+            totalAlerts: 0,
+            alertsByType: [:],
+            healthRating: .excellent,
+            sampleCount: 0,
+            performanceScore: 1.0
+        )
+    }
 }
 
 /// Performance improvement recommendations

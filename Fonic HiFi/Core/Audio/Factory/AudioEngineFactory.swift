@@ -6,7 +6,20 @@
 //
 
 import Foundation
-import os.log
+import OSLog
+
+@MainActor
+public protocol AudioEngineFactoring {
+    func selectEngineType(
+        for format: AudioFormat,
+        configuration: AudioEngineConfiguration,
+    ) -> AudioEngineType
+
+    func makeEngine(
+        for format: AudioFormat,
+        configuration: AudioEngineConfiguration,
+    ) async throws -> AudioEngineService
+}
 
 /// Factory for creating appropriate audio engine instances based on format and configuration
 @MainActor
@@ -14,10 +27,10 @@ public final class AudioEngineFactory {
     // MARK: - Properties
 
     /// Logger for diagnostics
-    private static let logger = Logger(subsystem: "com.fonicHiFi", category: "AudioEngineFactory")
+    private static let logger = Log.logger(.audioEngineFactory)
 
     /// Format detection service
-    private let formatDetector: FormatDetectionService
+    private let formatDetector: any FormatDetectionService
 
     /// Registered engine types and their availability
     private var availableEngines: [AudioEngineType: Bool] = [
@@ -27,7 +40,7 @@ public final class AudioEngineFactory {
 
     // MARK: - Initialization
 
-    public init(formatDetector: FormatDetectionService = AudioFormatDetectionManager.shared) {
+    public init(formatDetector: any FormatDetectionService = AudioFormatDetectionManager.shared) {
         self.formatDetector = formatDetector
     }
 
@@ -215,6 +228,8 @@ public final class AudioEngineFactory {
         )
     }
 }
+
+extension AudioEngineFactory: AudioEngineFactoring {}
 
 // MARK: - Diagnostics
 

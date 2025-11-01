@@ -124,7 +124,7 @@ public actor ImportSession: ImportSessionProtocol {
 
     private var items: [ImportItem] = []
     private var progressTracker = Progress(totalUnitCount: 0)
-    private let logger = Logger(subsystem: "com.fonichifi.data", category: "ImportSession")
+    private let logger = Log.logger(.dataImportSession)
 
     // Track successful operations for rollback
     private var copiedFiles: [URL] = []
@@ -132,7 +132,8 @@ public actor ImportSession: ImportSessionProtocol {
 
     // Dependencies
     private let trackDataActor: TrackDataActor
-    private let metadataExtractor: MetadataExtractionService
+    private let metadataExtractor: any MetadataExtracting
+    private let fileManager: FileManager
 
     /// App container directory for storing copied music files
     private let musicContainerURL: URL
@@ -141,18 +142,32 @@ public actor ImportSession: ImportSessionProtocol {
 
     public init(
         trackDataActor: TrackDataActor,
-        metadataExtractor: MetadataExtractionService,
+        metadataExtractor: any MetadataExtracting,
+        musicContainerURL: URL? = nil
     ) {
         self.trackDataActor = trackDataActor
         self.metadataExtractor = metadataExtractor
+        self.fileManager = FileManager()
 
         // Setup music container URL
-        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        musicContainerURL = documentsURL.appendingPathComponent("Music", isDirectory: true)
+        if let musicContainerURL {
+            self.musicContainerURL = musicContainerURL
+        } else if let documentsURL = self.fileManager.urls(for: .documentDirectory, in: .userDomainMask).first {
+            self.musicContainerURL = documentsURL.appendingPathComponent("Music", isDirectory: true)
+        } else {
+            let fallback = self.fileManager.temporaryDirectory.appendingPathComponent("Music", isDirectory: true)
+            self.logger.error(
+                """
+                Documents directory unavailable; using temporary directory fallback at:
+                \(fallback.path, privacy: .public)
+                """
+            )
+            self.musicContainerURL = fallback
+        }
 
         // Ensure directory exists
-        try? FileManager.default.createDirectory(
-            at: musicContainerURL,
+        try? self.fileManager.createDirectory(
+            at: self.musicContainerURL,
             withIntermediateDirectories: true,
             attributes: nil,
         )
@@ -162,13 +177,13 @@ public actor ImportSession: ImportSessionProtocol {
 
     /// Add an item to the import session
     public func addItem(_ url: URL) async throws {
-        logger.info("Adding item to import session: \(url.lastPathComponent)")
+        self.logger.info("Adding item to import session: \(url.lastPathComponent)")
 
         // Generate destination URL
-        let destinationURL = generateUniqueDestinationURL(for: url)
+        let destinationURL = self.generateUniqueDestinationURL(for: url)
 
         // Extract metadata first
-        let metadata = try await metadataExtractor.extractTrackMetadata(from: url)
+        let metadata = try await self.metadataExtractor.extractTrackMetadata(from: url)
 
         let item = ImportItem(
             sourceURL: url,
@@ -177,41 +192,41 @@ public actor ImportSession: ImportSessionProtocol {
             status: .pending,
         )
 
-        items.append(item)
-        progressTracker.totalUnitCount = Int64(items.count)
+        self.items.append(item)
+        self.progressTracker.totalUnitCount = Int64(self.items.count)
 
-        logger.debug("Item added to session. Total items: \(self.items.count)")
+        self.logger.debug("Item added to session. Total items: \(self.items.count)")
     }
 
     /// Commit the import transaction
     public func commit() async throws {
-        logger.info("Committing import session with \(self.items.count) items")
+        self.logger.info("Committing import session with \(self.items.count) items")
 
-        for index in items.indices {
-            items[index].status = .extractingMetadata
+        for index in self.items.indices {
+            self.items[index].status = .extractingMetadata
 
             do {
                 // Already have metadata from addItem
 
                 // Copy file
-                items[index].status = .copying
-                try await copyFile(from: items[index].sourceURL, to: items[index].destinationURL)
-                copiedFiles.append(items[index].destinationURL)
+                self.items[index].status = .copying
+                try await self.copyFile(from: self.items[index].sourceURL, to: self.items[index].destinationURL)
+                self.copiedFiles.append(self.items[index].destinationURL)
 
                 // Save to database
-                items[index].status = .savingToDatabase
-                let trackId = try await trackDataActor.createTrack(from: items[index].metadata)
-                savedTrackIds.append(trackId)
+                self.items[index].status = .savingToDatabase
+                let trackId = try await self.trackDataActor.createTrack(from: self.items[index].metadata)
+                self.savedTrackIds.append(trackId)
 
                 // Mark complete
-                items[index].status = .complete
-                progressTracker.completedUnitCount = Int64(index + 1)
+                self.items[index].status = .complete
+                self.progressTracker.completedUnitCount = Int64(index + 1)
 
-                logger.debug("Successfully imported: \(self.items[index].sourceURL.lastPathComponent)")
+                self.logger.debug("Successfully imported: \(self.items[index].sourceURL.lastPathComponent)")
 
             } catch {
-                items[index].status = .failed(ImportError.databaseSaveFailed(error))
-                logger.error("Failed to import item: \(error.localizedDescription)")
+                self.items[index].status = .failed(ImportError.databaseSaveFailed(error))
+                self.logger.error("Failed to import item: \(error.localizedDescription)")
 
                 // Rollback on failure
                 await rollback()
@@ -219,55 +234,55 @@ public actor ImportSession: ImportSessionProtocol {
             }
         }
 
-        logger.info("Import session committed successfully")
+        self.logger.info("Import session committed successfully")
 
         // Clear session after successful commit
-        items.removeAll()
-        copiedFiles.removeAll()
-        savedTrackIds.removeAll()
-        progressTracker = Progress(totalUnitCount: 0)
+        self.items.removeAll()
+        self.copiedFiles.removeAll()
+        self.savedTrackIds.removeAll()
+        self.progressTracker = Progress(totalUnitCount: 0)
     }
 
     /// Rollback the import transaction
     public func rollback() async {
-        logger.warning("Rolling back import session")
+        self.logger.warning("Rolling back import session")
 
         // Delete saved tracks from database
-        for trackId in savedTrackIds {
+        for trackId in self.savedTrackIds {
             do {
-                try await trackDataActor.deleteTrack(trackId)
-                logger.debug("Rolled back track")
+                try await self.trackDataActor.deleteTrack(trackId)
+                self.logger.debug("Rolled back track")
             } catch {
-                logger.error("Failed to rollback track: \(error.localizedDescription)")
+                self.logger.error("Failed to rollback track: \(error.localizedDescription)")
             }
         }
 
         // Delete copied files
-        for fileURL in copiedFiles {
+        for fileURL in self.copiedFiles {
             do {
-                if FileManager.default.fileExists(atPath: fileURL.path) {
-                    try FileManager.default.removeItem(at: fileURL)
-                    logger.debug("Deleted copied file: \(fileURL.lastPathComponent)")
+                if self.fileManager.fileExists(atPath: fileURL.path) {
+                    try self.fileManager.removeItem(at: fileURL)
+                    self.logger.debug("Deleted copied file: \(fileURL.lastPathComponent)")
                 }
             } catch {
-                logger.error("Failed to delete file \(fileURL.lastPathComponent): \(error.localizedDescription)")
+                self.logger.error("Failed to delete file \(fileURL.lastPathComponent): \(error.localizedDescription)")
             }
         }
 
         // Clear session
-        items.removeAll()
-        copiedFiles.removeAll()
-        savedTrackIds.removeAll()
-        progressTracker = Progress(totalUnitCount: 0)
+        self.items.removeAll()
+        self.copiedFiles.removeAll()
+        self.savedTrackIds.removeAll()
+        self.progressTracker = Progress(totalUnitCount: 0)
 
-        logger.info("Import session rolled back")
+        self.logger.info("Import session rolled back")
     }
 
     /// Get current progress
     public func getProgress() -> (completed: Int, total: Int, currentItem: String?) {
-        let completed = Int(progressTracker.completedUnitCount)
-        let total = items.count
-        let currentItem = items.first(where: {
+        let completed = Int(self.progressTracker.completedUnitCount)
+        let total = self.items.count
+        let currentItem = self.items.first(where: {
             if case .extractingMetadata = $0.status { return true }
             if case .copying = $0.status { return true }
             if case .savingToDatabase = $0.status { return true }
@@ -289,20 +304,20 @@ public actor ImportSession: ImportSessionProtocol {
             }
         }
 
-        try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+        try self.fileManager.copyItem(at: sourceURL, to: destinationURL)
     }
 
     /// Generate a unique destination URL, handling duplicate file names
     private func generateUniqueDestinationURL(for sourceURL: URL) -> URL {
         let fileName = sourceURL.deletingPathExtension().lastPathComponent
         let fileExtension = sourceURL.pathExtension
-        var destinationURL = musicContainerURL.appendingPathComponent("\(fileName).\(fileExtension)")
+        var destinationURL = self.musicContainerURL.appendingPathComponent("\(fileName).\(fileExtension)")
 
         // Handle duplicates by appending a number
         var counter = 1
-        while FileManager.default.fileExists(atPath: destinationURL.path) {
+        while self.fileManager.fileExists(atPath: destinationURL.path) {
             let uniqueFileName = "\(fileName) (\(counter)).\(fileExtension)"
-            destinationURL = musicContainerURL.appendingPathComponent(uniqueFileName)
+            destinationURL = self.musicContainerURL.appendingPathComponent(uniqueFileName)
             counter += 1
         }
 
@@ -318,29 +333,29 @@ public actor ImportSession: ImportSessionProtocol {
 
     /// Begin a new import transaction
     public func beginTransaction() async throws {
-        guard !transactionStarted else {
+        guard !self.transactionStarted else {
             throw ImportSessionError.transactionAlreadyStarted
         }
 
-        transactionStarted = true
-        items.removeAll()
-        copiedFiles.removeAll()
-        savedTrackIds.removeAll()
-        fileIdMap.removeAll()
-        sessionErrors.removeAll()
-        currentPhase = .idle
-        progressTracker = Progress(totalUnitCount: 0)
+        self.transactionStarted = true
+        self.items.removeAll()
+        self.copiedFiles.removeAll()
+        self.savedTrackIds.removeAll()
+        self.fileIdMap.removeAll()
+        self.sessionErrors.removeAll()
+        self.currentPhase = .idle
+        self.progressTracker = Progress(totalUnitCount: 0)
 
-        logger.info("Import transaction started")
+        self.logger.info("Import transaction started")
     }
 
     /// Add a single file to the import session
     public func addFile(_ url: URL) async throws -> UUID {
-        guard transactionStarted else {
+        guard self.transactionStarted else {
             throw ImportSessionError.transactionNotStarted
         }
 
-        guard FileManager.default.fileExists(atPath: url.path) else {
+        guard self.fileManager.fileExists(atPath: url.path) else {
             throw ImportSessionError.fileNotFound(url)
         }
 
@@ -349,8 +364,8 @@ public actor ImportSession: ImportSessionProtocol {
 
         // Generate and track ID for this item
         let id = UUID()
-        if let lastItem = items.last {
-            fileIdMap[id] = lastItem
+        if let lastItem = self.items.last {
+            self.fileIdMap[id] = lastItem
         }
 
         return id
@@ -358,7 +373,7 @@ public actor ImportSession: ImportSessionProtocol {
 
     /// Add multiple files to the import session
     public func addFiles(_ urls: [URL]) async throws -> [UUID] {
-        guard transactionStarted else {
+        guard self.transactionStarted else {
             throw ImportSessionError.transactionNotStarted
         }
 
@@ -372,29 +387,28 @@ public actor ImportSession: ImportSessionProtocol {
 
     /// Remove a file from the import session
     public func removeFile(_ id: UUID) async throws {
-        guard transactionStarted else {
+        guard self.transactionStarted else {
             throw ImportSessionError.transactionNotStarted
         }
 
-        if let item = fileIdMap[id],
-           let index = items.firstIndex(where: { $0.sourceURL == item.sourceURL })
-        {
-            items.remove(at: index)
-            fileIdMap.removeValue(forKey: id)
-            progressTracker.totalUnitCount = Int64(items.count)
+        if let item = self.fileIdMap[id],
+           let index = self.items.firstIndex(where: { $0.sourceURL == item.sourceURL }) {
+            self.items.remove(at: index)
+            self.fileIdMap.removeValue(forKey: id)
+            self.progressTracker.totalUnitCount = Int64(self.items.count)
         }
     }
 
     /// Get current import progress
     public var progress: ImportProgress {
         get async {
-            let (completed, total, currentFile) = getProgress()
+            let (completed, total, currentFile) = self.getProgress()
             return ImportProgress(
                 totalFiles: total,
                 processedFiles: completed,
                 currentFile: currentFile,
-                phase: currentPhase,
-                errors: sessionErrors,
+                phase: self.currentPhase,
+                errors: self.sessionErrors,
             )
         }
     }
@@ -423,12 +437,12 @@ public actor ImportSession: ImportSessionProtocol {
         var issues: [ImportValidationIssue] = []
 
         // Check file exists
-        guard FileManager.default.fileExists(atPath: url.path) else {
+        guard self.fileManager.fileExists(atPath: url.path) else {
             throw ImportSessionError.fileNotFound(url)
         }
 
         // Check file size
-        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let attributes = try self.fileManager.attributesOfItem(atPath: url.path)
         if let fileSize = attributes[.size] as? Int64 {
             if fileSize > 500_000_000 { // 500MB limit
                 issues.append(ImportValidationIssue.fileTooLarge(size: fileSize))
@@ -439,14 +453,14 @@ public actor ImportSession: ImportSessionProtocol {
         let isDuplicate = await checkDuplicate(url)
         if isDuplicate {
             // Try to find existing track ID
-            if await (try? trackDataActor.trackExists(for: url)) != nil {
+            if await (try? self.trackDataActor.trackExists(for: url)) != nil {
                 issues.append(ImportValidationIssue.duplicateFile(existingId: UUID()))
             }
         }
 
         // Try to extract metadata to validate format
         do {
-            let _ = try await metadataExtractor.extractTrackMetadata(from: url)
+            _ = try await self.metadataExtractor.extractTrackMetadata(from: url)
             let format = AudioFormat.from(url: url)
 
             return ValidationResult(
@@ -467,7 +481,7 @@ public actor ImportSession: ImportSessionProtocol {
     /// Check if a file is a duplicate
     public func checkDuplicate(_ url: URL) async -> Bool {
         do {
-            let existingTrack = try await trackDataActor.trackExists(for: url)
+            let existingTrack = try await self.trackDataActor.trackExists(for: url)
             return existingTrack != nil
         } catch {
             return false

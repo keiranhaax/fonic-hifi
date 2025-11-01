@@ -8,7 +8,7 @@
 
 import Combine
 import Foundation
-import os.log
+import OSLog
 
 /// Handles state synchronization and notifications across the audio system
 @MainActor
@@ -18,12 +18,13 @@ public final class StateCoordinator {
     private let stateManager: PlaybackStateManager
     private let queueManager: AudioQueueManager
     private let sessionManager: AudioSessionManager
+    private let uiStateStore: AudioUIState
     private weak var facade: AudioEngineFacade?
 
     // MARK: - State Publishing
 
     private var cancellables = Set<AnyCancellable>()
-    private let logger = Logger(subsystem: "com.fonichifi.audio", category: "StateCoordinator")
+    private let logger = Log.logger(.audioStateCoordinator)
 
     // MARK: - Initialization
 
@@ -31,11 +32,13 @@ public final class StateCoordinator {
         stateManager: PlaybackStateManager,
         queueManager: AudioQueueManager,
         sessionManager: AudioSessionManager,
+        uiStateStore: AudioUIState,
         facade: AudioEngineFacade,
     ) {
         self.stateManager = stateManager
         self.queueManager = queueManager
         self.sessionManager = sessionManager
+        self.uiStateStore = uiStateStore
         self.facade = facade
 
         setupStateObservation()
@@ -80,26 +83,18 @@ public final class StateCoordinator {
 
     /// Update the current track and show mini player
     public func setCurrentTrack(_ track: Track?) {
-        guard let facade else { return }
-
-        // Store the Track object directly
-        facade.currentTrack = track
-
-        // Always keep mini player visible (Apple Music style)
-        // It shows placeholder content when track is nil
-        facade.showMiniPlayer = true
+        uiStateStore.currentTrack = track
+        uiStateStore.showMiniPlayer = true
     }
 
     /// Handle playback state changes and update UI accordingly
     public func handlePlaybackStateChange(_ change: PlaybackStateChange) {
-        guard let facade else { return }
-
         // Always keep mini player visible (Apple Music style)
         // Don't hide it based on state - it shows placeholder when idle
-        facade.showMiniPlayer = true
+        uiStateStore.showMiniPlayer = true
 
         // Log state transitions for debugging
-        logger.debug("State transition: \(change.from) → \(change.to)")
+        logger.debug("State transition: \(change.from) → \(change.nextState)")
 
         // Notify observers of state changes (handled automatically by @Observable)
     }
@@ -110,10 +105,7 @@ public final class StateCoordinator {
     private func setupServiceIntegrations() {
         logger.debug("Setting up service integrations...")
 
-        // 1. Queue manager delegate for state updates
-        queueManager.delegate = QueueToStateBridge(stateManager: stateManager)
-
-        // 2. Session delegate for interruption handling
+        // Session delegate for interruption handling
         sessionManager.delegate = facade
 
         logger.debug("Service integrations complete")
@@ -129,13 +121,11 @@ public final class StateCoordinator {
             }
             .store(in: &cancellables)
 
-        // Queue state changes are handled through the delegate pattern
-        // (QueueToStateBridge) and @Observable automatic tracking.
-        // No additional Combine observation needed for AudioQueueManager.
+        // Queue state changes are captured through AudioQueueManager's observation.
+        // No additional Combine observation needed here.
     }
 
-    // Queue state changes are handled through the delegate pattern
-    // via QueueToStateBridge which was set up in setupServiceIntegrations()
+    // Queue state changes are observed via AudioQueueManager when needed.
 
     // MARK: - Session Interruptions
 
@@ -198,26 +188,5 @@ public final class StateCoordinator {
         default:
             logger.debug("Unhandled remote command: \(command)")
         }
-    }
-}
-
-// MARK: - Supporting Types
-
-/// Bridge to connect queue changes to state updates
-class QueueToStateBridge: AudioQueueDelegate {
-    private let stateManager: PlaybackStateManager
-
-    init(stateManager: PlaybackStateManager) {
-        self.stateManager = stateManager
-    }
-
-    func audioQueue(_: AudioQueue, didChangeCurrentTrack _: AudioTrack?, at _: Int?) {
-        // Queue changed, but we don't automatically change state here
-        // The facade will handle this through explicit play commands
-    }
-
-    func audioQueue(_: AudioQueue, didEncounterError error: AudioError) {
-        // Forward queue errors to state manager
-        stateManager.handleEngineError(error)
     }
 }
