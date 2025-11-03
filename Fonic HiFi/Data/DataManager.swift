@@ -171,6 +171,7 @@ private struct TrackExportData: Codable {
 /// Data manager errors
 public enum DataManagerError: LocalizedError {
     case initializationFailed(Error)
+    case modelValidationFailed(String, Error)
     case fetchFailed(Error)
     case searchFailed(Error)
     case cleanupFailed(Error)
@@ -181,6 +182,8 @@ public enum DataManagerError: LocalizedError {
         switch self {
         case let .initializationFailed(error):
             "Failed to initialize data manager: \(error.localizedDescription)"
+        case let .modelValidationFailed(modelName, error):
+            "Model '\(modelName)' validation failed: \(error.localizedDescription)"
         case let .fetchFailed(error):
             "Failed to fetch data: \(error.localizedDescription)"
         case let .searchFailed(error):

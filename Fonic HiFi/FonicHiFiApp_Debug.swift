@@ -67,10 +67,9 @@ private extension FonicHiFiApp_Debug {
 
         let schema = Schema(SchemaV2.models)
         let inMemoryReadOnly = ModelConfiguration(
-            schema: schema,
             isStoredInMemoryOnly: true,
             allowsSave: false,
-            cloudKitDatabase: .none,
+            cloudKitDatabase: .none
         )
 
         if let container = try? DataManager.buildContainer(
@@ -112,10 +111,9 @@ private extension FonicHiFiApp_Debug {
         )
         try? FileManager.default.createDirectory(at: emergencyDirectory, withIntermediateDirectories: true)
         let diskConfiguration = ModelConfiguration(
-            schema: schema,
             url: emergencyDirectory,
             allowsSave: false,
-            cloudKitDatabase: .none,
+            cloudKitDatabase: .none
         )
 
         if let container = try? ModelContainer(
