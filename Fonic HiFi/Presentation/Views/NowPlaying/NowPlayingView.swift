@@ -63,27 +63,27 @@ struct NowPlayingView: View {
     // Constants - Adaptive sizing based on accessibility settings
     private let dismissThreshold: CGFloat = 150
     private let playAccentColor = Color(red: 0.0, green: 0.94, blue: 0.52)
-    
+
     // Adaptive spacing computed properties - Fixed button hierarchy
     private var adaptiveHorizontalPadding: CGFloat {
         sizeCategory.isAccessibilityCategory ? 16 : 24
     }
-    
+
     private var adaptiveVerticalSpacing: CGFloat {
         sizeCategory.isAccessibilityCategory ? 40 : 32
     }
-    
+
     // Fixed: Proper button size hierarchy following Apple Music standards
     private var smallControlSize: CGFloat {
-        sizeCategory.isAccessibilityCategory ? 40 : 32  // shuffle, repeat
+        sizeCategory.isAccessibilityCategory ? 40 : 32 // shuffle, repeat
     }
-    
+
     private var mediumControlSize: CGFloat {
-        sizeCategory.isAccessibilityCategory ? 48 : 40  // prev/next
+        sizeCategory.isAccessibilityCategory ? 48 : 40 // prev/next
     }
-    
+
     private var primaryControlSize: CGFloat {
-        sizeCategory.isAccessibilityCategory ? 56 : 48  // play/pause
+        sizeCategory.isAccessibilityCategory ? 56 : 48 // play/pause
     }
 
     var body: some View {
@@ -118,7 +118,7 @@ struct NowPlayingView: View {
                             Color.black.opacity(0.8),
                         ],
                         startPoint: .top,
-                        endPoint: .bottom,
+                        endPoint: .bottom
                     )
                     .ignoresSafeArea(edges: [.horizontal, .bottom])
                     .clearGlassFix() // iOS 26 Beta 6 fix
@@ -211,8 +211,8 @@ struct NowPlayingView: View {
                 dismiss()
             } label: {
                 Image(systemName: "chevron.down")
-                    .font(.system(size: sizeCategory.isAccessibilityCategory ? 24 : 20, 
-                                weight: .semibold, design: .rounded))
+                    .font(.system(size: sizeCategory.isAccessibilityCategory ? 24 : 20,
+                                  weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
                     .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -285,12 +285,12 @@ struct NowPlayingView: View {
         .glassTransition(isActive: isPlayingParticles)
         .enhancedAccessibility(
             label: "Album artwork",
-            hint: "Current track album artwork",
+            hint: "Current track album artwork"
         )
         .preferredFrameRate(
             BatteryOptimizedGlassUtilities.optimalFrameRate(
-                for: isPlayingParticles ? .interactive : .decorative,
-            ),
+                for: isPlayingParticles ? .interactive : .decorative
+            )
         )
         .onTapGesture {
             guard let track = audioService?.currentTrack else { return }
@@ -349,7 +349,7 @@ struct NowPlayingView: View {
                     .minimumScaleFactor(0.8)
                     .enhancedAccessibility(
                         label: "Track title",
-                        value: audioService?.currentTrack?.title ?? "Not Playing",
+                        value: audioService?.currentTrack?.title ?? "Not Playing"
                     )
 
                 Text(audioService?.currentTrack?.artist ?? "No Artist")
@@ -361,7 +361,7 @@ struct NowPlayingView: View {
                     .minimumScaleFactor(0.8)
                     .enhancedAccessibility(
                         label: "Artist name",
-                        value: audioService?.currentTrack?.artist ?? "No Artist",
+                        value: audioService?.currentTrack?.artist ?? "No Artist"
                     )
 
                 if let album = audioService?.currentTrack?.album {
@@ -374,7 +374,7 @@ struct NowPlayingView: View {
                         .minimumScaleFactor(0.8)
                         .enhancedAccessibility(
                             label: "Album name",
-                            value: album,
+                            value: album
                         )
                 }
             }
@@ -388,7 +388,7 @@ struct NowPlayingView: View {
             trackTitle: audioService?.currentTrack?.title,
             artist: audioService?.currentTrack?.artist,
             progress: audioService?.playbackProgress,
-            duration: audioService?.duration,
+            duration: audioService?.duration
         )
     }
 
@@ -399,7 +399,7 @@ struct NowPlayingView: View {
                     get: { sliderProgress },
                     set: { newValue in
                         sliderProgress = newValue
-                    },
+                    }
                 ),
                 in: 0 ... 1,
                 onEditingChanged: { editing in
@@ -417,7 +417,7 @@ struct NowPlayingView: View {
                             logger.error("Seek failed: \(error.localizedDescription, privacy: .public)")
                         }
                     }
-                },
+                }
             )
             .tint(.white)
             .frame(height: sizeCategory.isAccessibilityCategory ? 40 : 32) // Larger touch target for accessibility
@@ -432,7 +432,7 @@ struct NowPlayingView: View {
             .modifier(ProgressControlAccessibility(
                 progress: sliderProgress,
                 duration: audioService?.duration ?? 0,
-                isUserInteracting: isUserDragging,
+                isUserInteracting: isUserDragging
             ))
 
             // Fixed: Time labels with proper spacing and Dynamic Type
@@ -445,7 +445,7 @@ struct NowPlayingView: View {
                     .minimumScaleFactor(0.8)
                     .enhancedAccessibility(
                         label: "Current time",
-                        value: formatTime(audioService?.currentTime ?? 0),
+                        value: formatTime(audioService?.currentTime ?? 0)
                     )
 
                 Spacer()
@@ -458,7 +458,7 @@ struct NowPlayingView: View {
                     .minimumScaleFactor(0.8)
                     .enhancedAccessibility(
                         label: "Total duration",
-                        value: formatTime(audioService?.duration ?? 0),
+                        value: formatTime(audioService?.duration ?? 0)
                     )
             }
         }
@@ -503,8 +503,8 @@ struct NowPlayingView: View {
                         .fill(playAccentColor)
                         .shadow(color: playAccentColor.opacity(0.3), radius: 8, x: 0, y: 2)
                     Image(systemName: audioService?.isPlaying == true ? "pause.fill" : "play.fill")
-                        .font(.system(size: sizeCategory.isAccessibilityCategory ? 20 : 24, 
-                                    weight: .bold, design: .rounded))
+                        .font(.system(size: sizeCategory.isAccessibilityCategory ? 20 : 24,
+                                      weight: .bold, design: .rounded))
                         .foregroundStyle(Color.black.opacity(0.85))
                 }
                 .frame(width: primaryControlSize, height: primaryControlSize)
@@ -561,24 +561,24 @@ struct NowPlayingView: View {
         accessibilityEnabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
-        let buttonSize = size ?? smallControlSize  // Default to small size
+        let buttonSize = size ?? smallControlSize // Default to small size
         // Fixed: Icon sizes proportional to button sizes with proper hierarchy
         let iconSize = fontSize ?? {
             if buttonSize <= smallControlSize {
-                return sizeCategory.isAccessibilityCategory ? 14 : 12  // Small buttons get small icons
+                return sizeCategory.isAccessibilityCategory ? 14 : 12 // Small buttons get small icons
             } else if buttonSize <= mediumControlSize {
-                return sizeCategory.isAccessibilityCategory ? 16 : 18  // Medium buttons get medium icons
+                return sizeCategory.isAccessibilityCategory ? 16 : 18 // Medium buttons get medium icons
             } else {
-                return sizeCategory.isAccessibilityCategory ? 20 : 24  // Large buttons get large icons
+                return sizeCategory.isAccessibilityCategory ? 20 : 24 // Large buttons get large icons
             }
         }()
-        
+
         return Button(action: action) {
             ZStack {
                 Circle()
                     .fill(Color.white.opacity(isActive ? 0.24 : 0.12))
                 Image(systemName: systemName)
-                    .font(.system(size: iconSize, weight: .medium, design: .rounded))  // Reduced font weight
+                    .font(.system(size: iconSize, weight: .medium, design: .rounded)) // Reduced font weight
                     .foregroundStyle(.white.opacity(isActive ? 1.0 : 0.85))
                     .scaledToFit()
             }
@@ -867,33 +867,33 @@ private struct TrackDetailItem: Identifiable {
 
 /*
  ## Key Fixes Applied:
- 
+
  ✅ **Safe Area Handling**
  - Added GeometryReader for proper safe area calculations
  - Dynamic top padding: `max(12, geometry.safeAreaInsets.top + 8)`
  - Dynamic bottom padding: `max(40, geometry.safeAreaInsets.bottom + 20)`
  - Fixed drag handle positioning with proper safe area consideration
- 
+
  ✅ **Dynamic Type Support**
  - Added @Environment(\.sizeCategory) for Dynamic Type detection
  - Adaptive sizing: `sizeCategory.isAccessibilityCategory ? largerValue : standardValue`
  - .scaledToFit() and .minimumScaleFactor() for text scaling
  - Larger touch targets (40pt vs 32pt) for accessibility categories
- 
+
  ✅ **Adaptive Spacing & Layout**
  - Computed properties for responsive spacing based on accessibility settings
  - GeometryReader-based responsive button spacing in playback controls
  - LazyVStack for performance with large accessibility text
  - .scrollContentBackground(.hidden) for proper iOS 16+ background handling
- 
+
  ✅ **Text Spacing & Alignment**
  - Removed hardcoded negative padding (.padding(.top, -2))
  - Proper VStack spacing with accessibility-aware values
  - .multilineTextAlignment(.center) for better accessibility
  - Line limit increases (1→2) for accessibility categories
- 
+
  ## Testing on Different Device Sizes:
- 
+
  ### iPhone Testing:
  ```swift
  #Preview("iPhone 15 Pro") {
@@ -902,14 +902,14 @@ private struct TrackDetailItem: Identifiable {
          .previewDevice("iPhone 15 Pro")
          .previewDisplayName("Standard iPhone")
  }
- 
+
  #Preview("iPhone 15 Pro Max") {
      @Previewable @Namespace var namespace
      NowPlayingView(animationNamespace: namespace)
          .previewDevice("iPhone 15 Pro Max")
  }
  ```
- 
+
  ### Accessibility Testing:
  ```swift
  #Preview("Large Text") {
@@ -917,14 +917,14 @@ private struct TrackDetailItem: Identifiable {
      NowPlayingView(animationNamespace: namespace)
          .environment(\.sizeCategory, .accessibilityExtraExtraExtraLarge)
  }
- 
+
  #Preview("Reduce Motion") {
-     @Previewable @Namespace var namespace  
+     @Previewable @Namespace var namespace
      NowPlayingView(animationNamespace: namespace)
          .environment(\.accessibilityReduceMotion, true)
  }
  ```
- 
+
  ### Dark Mode Testing:
  ```swift
  #Preview("Dark Mode") {
@@ -933,61 +933,61 @@ private struct TrackDetailItem: Identifiable {
          .preferredColorScheme(.dark)
  }
  ```
- 
+
  ## iOS 26-Specific Updates:
- 
+
  ### Deprecated APIs to Watch:
  - `.ignoresSafeArea()` → `.ignoresSafeArea(edges:)` (more specific)
  - `.padding(.top, 8)` → `.safeAreaPadding(.top, 8)` for safe area-relative padding
  - Manual VStack spacing → Adaptive spacing based on @Environment(\.sizeCategory)
- 
+
  ### New iOS 26 APIs Utilized:
  - `.scrollContentBackground(.hidden)` for proper background control
  - Enhanced `.containerRelativeFrame` with minimum size constraints
  - `.glassPerformanceProfiled()` for Liquid Glass performance monitoring
  - `.adaptiveGlassPerformance()` for battery-optimized glass effects
- 
+
  ## Debug View Hierarchy in Xcode:
- 
+
  ### Visual Debugging:
  1. Run on device/simulator
  2. Pause execution in Xcode
  3. Click "Debug View Hierarchy" button (📱 icon)
  4. Inspect layers, especially:
     - Safe area constraints
-    - Glass effect boundaries  
+    - Glass effect boundaries
     - Text truncation/scaling
     - Button touch targets
- 
+
  ### UIViewRepresentable Wrapper (if needed):
  ```swift
  struct DebugViewWrapper<Content: View>: UIViewRepresentable {
      let content: Content
-     
+
      func makeUIView(context: Context) -> UIView {
          let hostingController = UIHostingController(rootView: content)
          hostingController.view.backgroundColor = .clear
          return hostingController.view
      }
-     
+
      func updateUIView(_ uiView: UIView, context: Context) {}
  }
- 
+
  // Usage for specific problematic views:
  DebugViewWrapper(content: trackInfoView)
  ```
- 
+
  ### Accessibility Inspector:
  - Enable in Xcode: Developer Tools → Accessibility Inspector
  - Test with real accessibility settings enabled on device
  - Verify VoiceOver navigation paths
  - Check contrast ratios with Liquid Glass backgrounds
- 
+
  ## Performance Monitoring:
- 
+
  The `.glassPerformanceProfiled()` modifiers help identify performance bottlenecks:
  - Watch for excessive glass effect rendering
  - Monitor frame rates during animations
  - Check memory usage with large artwork images
  - Use `.adaptiveGlassPerformance()` to automatically optimize based on device capabilities
-*/
+ */

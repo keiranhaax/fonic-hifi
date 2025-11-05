@@ -51,7 +51,7 @@ public extension DataManager {
         } catch {
             Self.initLogger.error("Failed to initialize DataManager: \(error)")
             Self.initLogger.error("Error details: \(String(reflecting: error))")
-            
+
             // Try emergency fallback
             Self.initLogger.info("Attempting emergency fallback DataManager")
             if let fallback = try? Self.ensureFallbackDataManager() {
@@ -60,7 +60,7 @@ public extension DataManager {
                 self.init(container: fallback.container, isFallback: true, importRecoveryState: fallback.importRecoveryState)
                 return
             }
-            
+
             throw DataManagerError.initializationFailed(error)
         }
     }
@@ -71,7 +71,7 @@ extension DataManager {
     static func buildContainer(
         schema: Schema,
         configuration: ModelConfiguration,
-        logger: Logger,
+        logger: Logger
     ) throws -> ModelContainer {
         // First attempt: Try creating container normally
         do {
@@ -99,11 +99,11 @@ extension DataManager {
             } catch {
                 logger.critical("Failed to create fallback ModelContainer with migration plan: \(error)")
                 logger.critical("Fallback error details: \(String(reflecting: error))")
-                
+
                 // Third attempt: Try individual model validation
                 logger.info("Running model container debugging...")
                 debugModelContainer()
-                
+
                 // Fourth attempt: Try with minimal configuration
                 do {
                     logger.info("Attempting minimal container configuration")
@@ -138,9 +138,9 @@ public extension DataManager {
             Artist.self,
             Album.self,
             Playlist.self,
-            RecentSearch.self
+            RecentSearch.self,
         ]
-        
+
         let schema = Schema(modelTypes)
         let modelConfiguration = ModelConfiguration(
             isStoredInMemoryOnly: true,
@@ -151,7 +151,7 @@ public extension DataManager {
         if let container = try? buildContainer(
             schema: schema,
             configuration: modelConfiguration,
-            logger: initLogger,
+            logger: initLogger
         ) {
             return container
         }
@@ -165,7 +165,7 @@ public extension DataManager {
 
         if let container = try? ModelContainer(
             for: schema,
-            configurations: [readOnlyConfiguration],
+            configurations: [readOnlyConfiguration]
         ) {
             return container
         }
@@ -176,7 +176,7 @@ public extension DataManager {
 
     static func makePreviewDataManager() -> DataManager? {
         initLogger.info("Creating preview DataManager")
-        
+
         if let fallback = makeFallbackDataManager() {
             initLogger.info("Using fallback DataManager for preview")
             return fallback
@@ -190,25 +190,25 @@ public extension DataManager {
             return nil
         }
     }
-    
+
     /// Test creating a container with minimal models to identify which one is problematic
     static func debugModelContainer() {
         initLogger.info("Starting model container debugging")
-        
+
         let modelTypes: [(String, any PersistentModel.Type)] = [
             ("Track", Track.self),
             ("Artist", Artist.self),
             ("Album", Album.self),
             ("Playlist", Playlist.self),
-            ("RecentSearch", RecentSearch.self)
+            ("RecentSearch", RecentSearch.self),
         ]
-        
+
         for (name, modelType) in modelTypes {
             do {
                 initLogger.info("Testing individual model: \(name)")
                 let container = try ModelContainer(for: modelType)
                 initLogger.info("✓ \(name) model container created successfully")
-                
+
                 // Test creating a context
                 let context = ModelContext(container)
                 initLogger.info("✓ \(name) model context created successfully")
@@ -216,17 +216,17 @@ public extension DataManager {
                 initLogger.error("✗ \(name) model failed: \(error)")
             }
         }
-        
+
         // Test combinations
         initLogger.info("Testing model combinations...")
-        
+
         do {
             let container = try ModelContainer(for: Track.self, Artist.self)
             initLogger.info("✓ Track + Artist combination works")
         } catch {
             initLogger.error("✗ Track + Artist combination failed: \(error)")
         }
-        
+
         do {
             let container = try ModelContainer(for: Track.self, Album.self)
             initLogger.info("✓ Track + Album combination works")
@@ -242,11 +242,11 @@ public extension DataManager {
 
         let trackDataActor = TrackDataActor(modelContainer: container)
         let metadataExtractor = MetadataExtractionService(
-            formatDetectionService: AudioFormatDetectionManager(),
+            formatDetectionService: AudioFormatDetectionManager()
         )
         return LibraryImportService(
             trackDataActor: trackDataActor,
-            metadataExtractor: metadataExtractor,
+            metadataExtractor: metadataExtractor
         )
     }
 
@@ -256,9 +256,9 @@ public extension DataManager {
             Artist.self,
             Album.self,
             Playlist.self,
-            RecentSearch.self
+            RecentSearch.self,
         ]
-        
+
         let schema = Schema(modelTypes)
         let configuration = ModelConfiguration(
             isStoredInMemoryOnly: true,
@@ -270,7 +270,7 @@ public extension DataManager {
             let container = try buildContainer(
                 schema: schema,
                 configuration: configuration,
-                logger: initLogger,
+                logger: initLogger
             )
             return makeFallbackManager(container: container, mode: .ephemeralStorage)
         } catch {
@@ -293,9 +293,9 @@ public extension DataManager {
             Artist.self,
             Album.self,
             Playlist.self,
-            RecentSearch.self
+            RecentSearch.self,
         ]
-        
+
         let schema = Schema(modelTypes)
         let inMemoryConfiguration = ModelConfiguration(
             isStoredInMemoryOnly: true,
@@ -306,14 +306,14 @@ public extension DataManager {
         if let container = try? buildContainer(
             schema: schema,
             configuration: inMemoryConfiguration,
-            logger: initLogger,
+            logger: initLogger
         ) {
             return makeFallbackManager(container: container, mode: .readOnly)
         }
 
         if let container = try? ModelContainer(
             for: schema,
-            configurations: [inMemoryConfiguration],
+            configurations: [inMemoryConfiguration]
         ) {
             return makeFallbackManager(container: container, mode: .readOnly)
         }
@@ -331,12 +331,12 @@ public extension DataManager {
 private extension DataManager {
     static func makeFallbackManager(
         container: ModelContainer,
-        mode: ImportRecoveryMode,
+        mode: ImportRecoveryMode
     ) -> DataManager {
         DataManager(
             container: container,
             isFallback: true,
-            importRecoveryState: recoveryState(for: mode),
+            importRecoveryState: recoveryState(for: mode)
         )
     }
 
@@ -349,7 +349,7 @@ private extension DataManager {
                 message: "Fonic HiFi is using an in-memory library because the persistent store " +
                     "is unavailable.",
                 guidance: "Keep the app open to preserve playback queues. Restart once storage access " +
-                    "is restored to resume full functionality.",
+                    "is restored to resume full functionality."
             )
         case .readOnly:
             ImportRecoveryState(
@@ -358,7 +358,7 @@ private extension DataManager {
                 message: "Fonic HiFi switched to a read-only library because persistent storage " +
                     "could not be initialized.",
                 guidance: "You can browse your existing library but changes cannot be saved. Restart " +
-                    "the app after freeing storage or resolving migration issues.",
+                    "the app after freeing storage or resolving migration issues."
             )
         }
     }

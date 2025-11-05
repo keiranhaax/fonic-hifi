@@ -143,12 +143,12 @@ final class AudioQueueManagerTests: XCTestCase {
         XCTAssertEqual(
             queue.currentIndex,
             1,
-            "currentIndex=\(String(describing: queue.currentIndex)); restored=\(restoredIDs) expected=\(tracks.map(\._id))",
+            "currentIndex=\(String(describing: queue.currentIndex)); restored=\(restoredIDs) expected=\(tracks.map(\._id))"
         )
         XCTAssertEqual(
             queue.currentTrack?.id,
             tracks[1].id,
-            "currentIndex=\(String(describing: queue.currentIndex)); restored=\(restoredIDs)",
+            "currentIndex=\(String(describing: queue.currentIndex)); restored=\(restoredIDs)"
         )
         XCTAssertFalse(queue.shuffleMode.isActive)
         XCTAssertNil(queue.queueState.shuffleSequence)
@@ -180,7 +180,7 @@ final class AudioQueueManagerTests: XCTestCase {
 
         queue.clear()
         XCTAssertEqual(delegate.updatedTracksCount, 3)
-        XCTAssertNil((delegate.currentTrackChanges.last ?? nil)?.id)
+        XCTAssertNil(delegate.currentTrackChanges.last?.id)
 
         // Switch to passive delegate to execute default extension methods
         let passiveDelegate = PassiveQueueDelegate()
