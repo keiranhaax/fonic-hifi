@@ -60,7 +60,6 @@ public final class Album {
     public var primaryGenre: String?
 
     /// All genres associated with this album
-    @Attribute(.transformable(by: NSSecureUnarchiveFromDataTransformer.self))
     public var genres: [String]
 
     /// Album producer(s)
@@ -139,7 +138,6 @@ public final class Album {
     public var lastPlayed: Date?
 
     /// User-defined tags
-    @Attribute(.transformable(by: NSSecureUnarchiveFromDataTransformer.self))
     public var userTags: [String]
 
     /// Date added to library

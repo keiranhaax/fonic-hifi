@@ -68,11 +68,9 @@ public final class Playlist {
     public var isFavorite: Bool
 
     /// Track IDs in order (for static playlists)
-    @Attribute(.transformable(by: "UUIDArrayTransformer"))
     public var trackIds: [UUID]
 
     /// User-defined tags
-    @Attribute(.transformable(by: NSSecureUnarchiveFromDataTransformer.self))
     public var userTags: [String]
 
     // MARK: - Relationships
