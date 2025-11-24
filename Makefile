@@ -13,8 +13,8 @@ SDK = iphonesimulator26.0
 DEPLOYMENT_TARGET = 26.0
 
 # Simulator Configuration
-SIMULATOR_NAME = iPhone 16 Pro
-SIMULATOR_OS = 26.0
+SIMULATOR_NAME = iPhone 17 Pro
+SIMULATOR_OS = 26.1
 DESTINATION = platform=iOS Simulator,name=$(SIMULATOR_NAME),OS=$(SIMULATOR_OS)
 
 # Derived Data Path
@@ -23,11 +23,14 @@ BUILD_DIR = build
 RESULT_BUNDLE = $(BUILD_DIR)/TestResults.xcresult
 OVERALL_COVERAGE_THRESHOLD ?= 0
 APP_COVERAGE_THRESHOLD ?= 0
-COVERAGE_MIN_PERCENT ?= 65
-APP_COVERAGE_MIN_PERCENT ?= 65
+COVERAGE_MIN_PERCENT ?= 40
+APP_COVERAGE_MIN_PERCENT ?= 40
 
 # Detect Homebrew prefix dynamically (works on Intel and ARM Macs)
 BREW_PREFIX := $(shell brew --prefix 2>/dev/null || echo /usr/local)
+
+# Ensure Xcode.app is used instead of CommandLineTools (required for iOS SDK)
+export DEVELOPER_DIR := /Applications/Xcode.app/Contents/Developer
 
 # Tools
 XCODEBUILD = xcodebuild

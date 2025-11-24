@@ -43,7 +43,31 @@ See global `~/.claude/CLAUDE.md` for universal Swift/iOS development rules.
 - Liquid Glass: Use native iOS 26 `.glassEffect()` APIs directly
 - ALWAYS: Assume iOS 26 features are available
 
-See global CLAUDE.md for iOS 26 Liquid Glass APIs and Swift 6.2 features.
+
+## iOS 26 Verification Protocol
+
+**Use the iOS 26 Research Assistant skill** (@.claude/skills/ios26-research/SKILL.md) to verify all iOS 26 claims.
+
+**Required before stating iOS 26 facts:**
+1. Search Apple documentation using MCP tools (apple-rag-mcp, sosumi)
+2. Tag all iOS 26 information with verification status
+3. Cite source URLs from Apple documentation
+4. Use [Searched-Not-Found] when documentation unavailable
+
+**Verification Tags for iOS 26:**
+- **[Verified-Apple-iOS26]** - Found in official Apple iOS 26 documentation
+- **[Verified-WWDC25]** - Found in WWDC 2025 session content
+- **[Searched-Not-Found]** - Searched but not found in Apple docs
+- **[Inference-Only]** - Based on pre-January 2025 knowledge (low confidence)
+
+**Priority topics requiring verification:**
+- Liquid Glass APIs (`.glassEffect()`, `GlassEffectContainer`, tinting, interactivity)
+- SwiftUI iOS 26 improvements (navigation, sheets, transitions, morphing)
+- SwiftData iOS 26 enhancements (actor patterns, query performance)
+- AVAudioEngine iOS 26 changes
+- Swift 6.2 + iOS 26 concurrency patterns
+
+See skill documentation for complete multi-tier search strategy and examples.
 
 ## Architecture Overview [Verified-Code]
 
@@ -305,4 +329,3 @@ struct MyView: View { ... }
 
 - @STATUS.md - Current project state and progress
 - @docs/COMMANDS.md - Build patterns and best practices (run `make help` for all commands)
-- @~/.claude/CLAUDE.md - Universal Swift/iOS development standards

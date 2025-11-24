@@ -180,7 +180,12 @@ final class AudioQueueManagerTests: XCTestCase {
 
         queue.clear()
         XCTAssertEqual(delegate.updatedTracksCount, 3)
-        XCTAssertNil(delegate.currentTrackChanges.last?.id)
+        // Verify that the last track change was to nil (track cleared)
+        if let lastEntry = delegate.currentTrackChanges.last {
+            XCTAssertNil(lastEntry, "Expected cleared track to be nil")
+        } else {
+            XCTFail("Expected currentTrackChanges to have entries")
+        }
 
         // Switch to passive delegate to execute default extension methods
         let passiveDelegate = PassiveQueueDelegate()

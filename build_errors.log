@@ -27,114 +27,350 @@ Git & AI Tools (Optional):
   [OK] llm
 
 Dependency check complete
-Building Fonic HiFi (Debug)...
+Verifying lint before build...
+Running SwiftLint...
+Linting Swift files in current working directory
+Linting 'QueueCoordinator.swift' (1/223)
+Linting 'StateCoordinator.swift' (2/223)
+Linting 'TrackCache.swift' (3/223)
+Linting 'PlaybackStateManager.swift' (4/223)
+Linting 'PlaybackStateStore.swift' (5/223)
+Linting 'PlaybackState.swift' (6/223)
+Linting 'AudioKitEngineAdapter.swift' (7/223)
+Linting 'AVAudioEngineAdapter.swift' (8/223)
+Linting 'AudioAlertManager.swift' (9/223)
+Linting 'AVAudioEngineConfig.swift' (10/223)
+Linting 'AudioMonitorRuntime.swift' (11/223)
+Linting 'AudioSessionAnalytics.swift' (12/223)
+Linting 'SystemMetricsCollector.swift' (13/223)
+Linting 'AudioPerformanceAdvisor.swift' (14/223)
+Linting 'BitPerfectValidator.swift' (15/223)
+Linting 'PlaybackDiagnosticFormatters.swift' (16/223)
+Linting 'PlaybackDiagnosticsCore.swift' (17/223)
+Linting 'PlaybackDiagnosticModels.swift' (18/223)
+Linting 'PlaybackDiagnosticUtilities.swift' (19/223)
+Linting 'PlaybackDiagnosticAnalyzers.swift' (20/223)
+Linting 'AudioMonitoringReportBuilder.swift' (21/223)
+Linting 'AudioMonitoringTypes.swift' (22/223)
+Linting 'AudioMonitoringService.swift' (23/223)
+Linting 'BitPerfectDeviceManager.swift' (24/223)
+Linting 'BitPerfectValidatorService.swift' (25/223)
+Linting 'BitPerfectRecommendationEngine.swift' (26/223)
+Linting 'AudioMonitorDiagnosticsBuilder.swift' (27/223)
+Linting 'DACCompatibilityInfo.swift' (28/223)
+Linting 'AudioMetricsScheduler.swift' (29/223)
+Linting 'PerformanceMonitor.swift' (30/223)
+Linting 'DiagnosticsStatus.swift' (31/223)
+Linting 'AudioMonitorReporter.swift' (32/223)
+Linting 'BitPerfectValidationEngine.swift' (33/223)
+Linting 'AudioMonitorEngineHooks.swift' (34/223)
+Linting 'BitPerfectProcessingAnalyzer.swift' (35/223)
+Linting 'AudioMonitorMetricsCollector.swift' (36/223)
+Linting 'EngineMetricsCollector.swift' (37/223)
+Linting 'AudioMonitorInsights.swift' (39/223)
+Linting 'AudioMonitor.swift' (40/223)
+Linting 'BitPerfectValidationResult.swift' (38/223)
+Linting 'AudioQueueManager.swift' (41/223)
+Linting 'AudioQueue.swift' (43/223)
+Linting 'QueueState.swift' (44/223)
+Linting 'AudioPerformanceProfiler.swift' (42/223)
+Linting 'QueueShuffleMode.swift' (45/223)
+Linting 'QueueRepeatMode.swift' (46/223)
+Linting 'AudioEngineFacade.swift' (47/223)
+Linting 'ProgressTimerManager.swift' (48/223)
+Linting 'AudioPlaybackSettingsStore.swift' (49/223)
+Linting 'PlaybackController.swift' (50/223)
+Linting 'AudioUIState.swift' (51/223)
+Linting 'AudioEngineManager.swift' (53/223)
+Linting 'AudioEngineFactory.swift' (52/223)
+Linting 'UIImage+ColorExtraction.swift' (54/223)
+Linting 'AudioEngineType.swift' (56/223)
+Linting 'NowPlayingInfo+Extensions.swift' (55/223)
+Linting 'AudioFormatDetectionManager.swift' (57/223)
+Linting 'FormatDetectionService.swift' (58/223)
+Linting 'AsyncSemaphore.swift' (59/223)
+Linting 'TrackProtocol.swift' (60/223)
+Linting 'FormatDetectionCoordinator.swift' (61/223)
+Linting 'AudioSessionManager.swift' (62/223)
+Linting 'AudioSessionService.swift' (63/223)
+Linting 'AudioDevice.swift' (64/223)
+Linting 'AudioEngineConfiguration.swift' (65/223)
+Linting 'AudioSessionInterruption.swift' (66/223)
+Linting 'AudioError.swift' (67/223)
+Linting 'AudioMetrics.swift' (68/223)
+Linting 'BitPerfectFailureReason.swift' (69/223)
+Linting 'AudioFileInfo.swift' (70/223)
+Linting 'AudioEngineService.swift' (71/223)
+Linting 'FonicHiFiApp_Debug.swift' (72/223)
+Linting 'ContentView_Safe.swift' (73/223)
+Linting 'AudioFormat.swift' (74/223)
+Linting 'TimedCacheEntry.swift' (75/223)
+Linting 'MainActorHelpers.swift' (76/223)
+Linting 'Metrics.swift' (77/223)
+Linting 'DataManager+Recent.swift' (78/223)
+Linting 'LogPrivacy.swift' (79/223)
+Linting 'DataManager.swift' (80/223)
+Linting 'Log.swift' (81/223)
+Linting 'DataManager+LibraryMetrics.swift' (82/223)
+Linting 'SwiftDataLibraryRepository.swift' (83/223)
+Linting 'PaginatedFetch.swift' (84/223)
+Linting 'Track.swift' (86/223)
+Linting 'RecentSearch.swift' (85/223)
+Linting 'AudioFormatType.swift' (87/223)
+Linting 'Album.swift' (88/223)
+Linting 'Playlist.swift' (89/223)
+Linting 'Artist.swift' (90/223)
+Linting 'SwiftDataPagination.swift' (91/223)
+Linting 'Data+Hashing.swift' (92/223)
+Linting 'URL+SourceIdentifier.swift' (93/223)
+Linting 'DataManager+Search.swift' (94/223)
+Linting 'DataManager+Initialization.swift' (95/223)
+Linting 'TrackDataActor.swift' (96/223)
+Linting 'FileImportProcessor.swift' (97/223)
+Linting 'DataManager+Maintenance.swift' (98/223)
+Linting 'RecentSearchesActor.swift' (99/223)
+Linting 'RecentSearchMigrationPlan.swift' (100/223)
+Linting 'MetadataExtractionService.swift' (101/223)
+Linting 'LibraryImportService.swift' (102/223)
+Linting 'ImportMetrics.swift' (104/223)
+Linting 'LibraryStatisticsAggregator.swift' (105/223)
+Linting 'ImportSession.swift' (106/223)
+Linting 'SearchCache.swift' (103/223)
+Linting 'LibraryEntities.swift' (107/223)
+Linting 'LibraryUseCases.swift' (108/223)
+Linting 'LibraryViewModel.swift' (109/223)
+Linting 'LibraryRepository.swift' (110/223)
+Linting 'ContentView.swift' (111/223)
+Linting 'LibraryFilter.swift' (112/223)
+Linting 'AudioEnvironment.swift' (113/223)
+Linting 'FileDetailsView.swift' (114/223)
+Linting 'NowPlayingEnvironment.swift' (115/223)
+Linting 'SettingsView.swift' (116/223)
+Linting 'AudioSettingsView.swift' (117/223)
+Linting 'FileRowView.swift' (118/223)
+Linting 'AppSettingsView.swift' (119/223)
+Linting 'FileManagerView.swift' (120/223)
+Linting 'DiagnosticsDetailView.swift' (121/223)
+Linting 'HomeView.swift' (122/223)
+Linting 'NowPlayingView.swift' (123/223)
+Linting 'TrackRowView.swift' (124/223)
+Linting 'ArtistListView.swift' (125/223)
+Linting 'TrackListView.swift' (126/223)
+Linting 'LibraryView.swift' (127/223)
+Linting 'PlaylistListView.swift' (128/223)
+Linting 'AlbumGridView.swift' (129/223)
+Linting 'SearchPlaylistResultsView.swift' (130/223)
+Linting 'SearchView.swift' (131/223)
+Linting 'SearchResults.swift' (132/223)
+Linting 'RecoveryComponents.swift' (133/223)
+Linting 'BottomSearchBar.swift' (134/223)
+Linting 'GlassModifiers.swift' (135/223)
+Linting 'AirPlayRouteButton.swift' (136/223)
+Linting 'AccessibilityEnhancements.swift' (137/223)
+Linting 'LiquidGlassRail.swift' (138/223)
+Linting 'GlassShowcase.swift' (139/223)
+Linting 'GlassControls.swift' (140/223)
+Linting 'LiquidGlassTabBar.swift' (141/223)
+Linting 'LiquidGlassMiniPlayer.swift' (142/223)
+Linting 'MiniPlayerView.swift' (143/223)
+Linting 'ErrorView.swift' (144/223)
+Linting 'PreviewData.swift' (145/223)
+Linting 'iOS26_Features_Documentation.swift' (146/223)
+Linting 'FileImportView.swift' (147/223)
+Linting 'ImportProgressView.swift' (148/223)
+Linting 'LiquidGlassExamples.swift' (149/223)
+Linting 'DebugContentView.swift' (150/223)
+Linting 'DebugNowPlayingView.swift' (151/223)
+Linting 'MinimalCrashTest.swift' (152/223)
+Linting 'DebugTrackRowView.swift' (153/223)
+Linting 'FonicHiFiApp.swift' (154/223)
+Linting 'MaterialVsGlassComparisonView.swift' (155/223)
+Linting 'LogPrivacyTests.swift' (156/223)
+Linting 'ImportMetricsTests.swift' (157/223)
+Linting 'SearchCacheTests.swift' (158/223)
+Linting 'TimedCacheEntryTests.swift' (159/223)
+Linting 'BitPerfectValidatorTests.swift' (160/223)
+Linting 'AudioFormatTypeTests.swift' (161/223)
+Linting 'FileImportProcessorTests.swift' (162/223)
+Linting 'TrackCacheTests.swift' (163/223)
+Linting 'AudioMonitoringReportBuilderTests.swift' (164/223)
+Linting 'MetricsTests.swift' (165/223)
+Linting 'PlaybackStateStoreTests.swift' (166/223)
+Linting 'QueueRepeatModeTests.swift' (167/223)
+Linting 'AudioMetricsTests.swift' (168/223)
+Linting 'AudioPerformanceProfilerTests.swift' (169/223)
+Linting 'AudioEngineFactoryTests.swift' (170/223)
+Linting 'AudioFileInfoTests.swift' (171/223)
+Linting 'AudioMonitorInsightsTests.swift' (172/223)
+Linting 'MetadataExtractionServiceTests.swift' (173/223)
+Linting 'AudioAlertManagerTests.swift' (174/223)
+Linting 'LibraryViewModelTests.swift' (175/223)
+Linting 'QueueStateTests.swift' (176/223)
+Linting 'DataManagerRecentTests.swift' (177/223)
+Linting 'QueueShuffleModeTests.swift' (178/223)
+Linting 'MigrationPlanTests.swift' (179/223)
+Linting 'AudioErrorTests.swift' (180/223)
+Linting 'AudioQueueManagerTests.swift' (181/223)
+Linting 'ImportSessionTests.swift' (182/223)
+Linting 'AudioMonitorTests.swift' (183/223)
+Linting 'TrackDataActorTests.swift' (184/223)
+Linting 'AudioPerformanceAdvisorTests.swift' (185/223)
+Linting 'LibraryFilterTests.swift' (186/223)
+Linting 'FormatDetectionServiceConcurrencyTests.swift' (187/223)
+Linting 'AudioDeviceTests.swift' (188/223)
+Linting 'AudioSessionServiceTests.swift' (189/223)
+Linting 'DataManagerPaginationTests.swift' (190/223)
+Linting 'LibraryStatisticsCacheTests.swift' (191/223)
+Linting 'ImportPipelineTests.swift' (192/223)
+Linting 'ImportTestFixtures.swift' (193/223)
+Linting 'LibraryStatisticsPerformanceTests.swift' (194/223)
+Linting 'AudioTestUtilities.swift' (195/223)
+Linting 'SearchResultsTests.swift' (196/223)
+Linting 'UserDefaults+Sendable.swift' (197/223)
+Linting 'AudioMetricsSchedulerTests.swift' (198/223)
+Linting 'SwiftDataPaginationTests.swift' (199/223)
+Linting 'AudioKitEngineAdapterTests.swift' (200/223)
+Linting 'BitPerfectCollaboratorsTests.swift' (201/223)
+Linting 'SearchCacheStatisticsTests.swift' (202/223)
+Linting 'GlassUtilitiesTests.swift' (203/223)
+Linting 'QueueCoordinatorTests.swift' (204/223)
+Linting 'PlaybackDiagnosticsTests.swift' (205/223)
+Linting 'AudioSessionInterruptionTests.swift' (206/223)
+Linting 'AudioEngineFacadeSettingsTests.swift' (207/223)
+Linting 'AudioEngineTypeTests.swift' (208/223)
+Linting 'MainActorHelpersTests.swift' (209/223)
+Linting 'LogCategoryTests.swift' (210/223)
+Linting 'ImportPlaybackIntegrationTests.swift' (212/223)
+Linting 'AudioEngineManagerTests.swift' (211/223)
+Linting 'RecentSearchesActorTests.swift' (213/223)
+Linting 'AudioMonitorRuntimeTests.swift' (214/223)
+Linting 'AudioMonitoringCollectorsTests.swift' (215/223)
+Linting 'ImportValidationScenarioTests.swift' (216/223)
+Linting 'AVAudioEngineAdapterTests.swift' (217/223)
+Linting 'AudioMonitorMetricsCollectorTests.swift' (218/223)
+Linting 'AudioPlaybackSettingsStoreTests.swift' (219/223)
+Linting 'BitPerfectFailureReasonTests.swift' (220/223)
+Linting 'AVAudioEngineConfigTests.swift' (221/223)
+Linting 'AudioMonitorEngineHooksTests.swift' (222/223)
+Linting 'LibraryImportServiceTests.swift' (223/223)
+Done linting! Found 0 violations, 0 serious in 223 files.
+Linting complete
+Verifying tests before build...
+Checking dependencies...
+
+Critical (Required):
+  [OK] xcodebuild
+
+Build & Formatting:
+  [OK] xcbeautify
+  [OK] swiftlint
+  [OK] swiftformat
+
+Search & Navigation (Optional):
+  [OK] ripgrep (rg)
+  [OK] fd
+  [OK] fzf
+  [OK] bat
+  [OK] eza
+
+Analysis & Monitoring (Optional):
+  [OK] tokei
+  [OK] watchman
+  [OK] hyperfine
+  [OK] jq
+
+Git & AI Tools (Optional):
+  [OK] gh
+  [OK] mods
+  [OK] llm
+
+Dependency check complete
+Running Swift test suite...
 
 ----- xcbeautify -----
-Version: 2.30.1
+Version: 3.1.0
 ----------------------
 
 [36;1mResolving Package Graph[0m
 [32;1mResolved source packages[0m
 [36;1mAudioKit[0m - [1mhttps://github.com/AudioKit/AudioKit.git[0m @ [32m5.6.5[0m
-[36;1mnote: [0mUsing codesigning identity override: 
 [36;1mnote: [0mBuilding targets in dependency order
-[36;1mnote: [0mTarget dependency graph (4 targets)
+[36;1mnote: [0mTarget dependency graph (6 targets)
 [[36mAudioKit_AudioKit[0m] [1mProcessing[0m empty-AudioKit_AudioKit.plist
+[[36mFonic HiFiUITests[0m] [1mCopy[0m arm64-apple-ios-simulator.abi.json -> Fonic_HiFiUITests.abi.json
 [[36mFonic HiFi[0m] [1mCopy[0m AudioKit_AudioKit.bundle -> AudioKit_AudioKit.bundle
+[[36mFonic HiFiUITests[0m] [1mCopy[0m arm64-apple-ios-simulator.swiftsourceinfo -> Fonic_HiFiUITests.swiftsourceinfo
 [[36mFonic HiFi[0m] [1mProcessing[0m Info.plist
-[[36mFonic HiFi[0m] [1mCompiling[0m TrackCache.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackCoordinator.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m QueueCoordinator.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m StateCoordinator.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioMonitor.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioMonitoringService.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidationResult.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidator.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m BitPerfectValidatorService.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m DACCompatibilityInfo.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m FileImportView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m ImportProgressView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AlbumGridView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m ArtistListView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m LibraryView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m PlaylistListView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m TrackListView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m TrackRowView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m DiagnosticsDetailView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassMiniPlayer.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineType.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioDevice.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackStateStore.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioQueue.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioQueueManager.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m QueueRepeatMode.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m QueueShuffleMode.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m QueueState.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormatDetectionManager.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionManager.swift
-❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Environment/AudioEnvironment.swift:45:16: [31mstatic property 'defaultValue' is not concurrency-safe because non-'Sendable' type 'LibraryImportService?' may have shared mutable state[0m
-    static let defaultValue: LibraryImportService? = nil
-[36m               ^[0m
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioSessionService.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m FormatDetectionService.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingInfo+Extensions.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearchesActor.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m TrackDataActor.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m SwiftDataPagination.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearchMigrationPlan.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m Album.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m Artist.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioFormatType.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m FileRowView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m SettingsView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m Log.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m MainActorHelpers.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m ContentView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m ContentView_Safe.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m FonicHiFiApp_Debug.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m GeneratedAssetSymbols.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m iOS26_Features_Documentation.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassDesignSystem.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassExamples.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassRail.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m LiquidGlassTabBar.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m PerformanceOptimizedContainer.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m DebugContentView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m DebugNowPlayingView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m DebugTrackRowView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m MinimalCrashTest.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m DiagnosticsStatus.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m PerformanceMonitor.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m PlaybackDiagnostics.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineFacade.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioPlaybackSettingsStore.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m ProgressTimerManager.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioKitEngineAdapter.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AVAudioEngineAdapter.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AVAudioEngineConfig.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioEngineFactory.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m MiniPlayerView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m NowPlayingView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m PreviewData.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m SearchPlaylistResultsView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m SearchResults.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m SearchView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AppSettingsView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m AudioSettingsView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m FileDetailsView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m FileManagerView.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m Playlist.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m RecentSearch.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m Track.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m SwiftDataLibraryRepository.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m ImportMetrics.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m ImportSession.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m LibraryImportService.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m MetadataExtractionService.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m SearchCache.swift
-[[36mFonic HiFi[0m] [1mCompiling[0m DataManager.swift
-❌ Build failed with exit code 65
-First 5 errors:
-/Users/keiran/Documents/Fonic-HiFi/Fonic HiFi/Presentation/Environment/AudioEnvironment.swift:45:16: error: static property 'defaultValue' is not concurrency-safe because non-'Sendable' type 'LibraryImportService?' may have shared mutable state
-make[1]: *** [build] Error 65
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioMonitorRuntimeTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioMonitorTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioPerformanceAdvisorTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioPerformanceProfilerTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioPlaybackSettingsStoreTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioEngineFacadeSettingsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioEngineFactoryTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioEngineManagerTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioEngineTypeTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioErrorTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioFileInfoTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioFormatTypeTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioKitEngineAdapterTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioMetricsSchedulerTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioMetricsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m BitPerfectCollaboratorsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m BitPerfectFailureReasonTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m BitPerfectValidatorTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m DataManagerPaginationTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m DataManagerRecentTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m FileImportProcessorTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m FormatDetectionServiceConcurrencyTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m GlassUtilitiesTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m ImportMetricsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m ImportPipelineTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m LibraryStatisticsCacheTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m LibraryStatisticsPerformanceTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m LibraryViewModelTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m LogCategoryTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m LogPrivacyTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m RecentSearchesActorTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m SearchCacheStatisticsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m SearchCacheTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m SearchResultsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m MainActorHelpersTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m MetadataExtractionServiceTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m MetricsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m MigrationPlanTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m PlaybackDiagnosticsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m PlaybackStateStoreTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m QueueCoordinatorTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m QueueRepeatModeTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m QueueShuffleModeTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m QueueStateTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioQueueManagerTests.swift
+❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFiTests/AudioQueueManagerTests.swift:183:57: [31mreferencing instance method 'id' on 'Optional' requires that 'AudioTrack' (aka 'LegacyTrack') conform to 'View'[0m
+        XCTAssertNil(delegate.currentTrackChanges.last?.id)
+[36m                                                        ^[0m
+❌ /Users/keiran/Documents/Fonic-HiFi/Fonic HiFiTests/AudioQueueManagerTests.swift:183:57: [31mgeneric parameter 'ID' could not be inferred[0m
+        XCTAssertNil(delegate.currentTrackChanges.last?.id)
+[36m                                                        ^[0m
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioSessionInterruptionTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioSessionServiceTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AVAudioEngineAdapterTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AVAudioEngineConfigTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioTestUtilities.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m ImportTestFixtures.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m UserDefaults+Sendable.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioAlertManagerTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioDeviceTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m ImportPlaybackIntegrationTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m ImportSessionTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m ImportValidationScenarioTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m LibraryFilterTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m LibraryImportServiceTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioMonitorEngineHooksTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioMonitoringCollectorsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioMonitoringReportBuilderTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioMonitorInsightsTests.swift
+[[36mFonic HiFiTests[0m] [1mCompiling[0m AudioMonitorMetricsCollectorTests.swift
+❌ Tests failed with exit code 65
+make[2]: *** [test] Error 65
+make[1]: *** [build] Error 2
