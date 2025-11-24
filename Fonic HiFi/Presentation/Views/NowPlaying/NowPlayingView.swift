@@ -86,6 +86,19 @@ struct NowPlayingView: View {
         sizeCategory.isAccessibilityCategory ? 56 : 48 // play/pause
     }
 
+    // Compact layout for no-scroll design
+    private func compactArtworkSize(for geometry: GeometryProxy) -> CGFloat {
+        let screenHeight = geometry.size.height
+        // 160pt on SE (667pt), 180pt on standard (844pt), 200pt on Max (932pt)
+        // Increased +20pt per tier after removing glass padding from track info/progress
+        let base: CGFloat = screenHeight < 700 ? 160 : (screenHeight < 900 ? 180 : 200)
+        return sizeCategory.isAccessibilityCategory ? max(140, base - 20) : base
+    }
+
+    private var compactSpacing: CGFloat {
+        sizeCategory.isAccessibilityCategory ? 12 : 8
+    }
+
     var body: some View {
         Group {
             if let audioService {
@@ -136,42 +149,54 @@ struct NowPlayingView: View {
                         }
                         .frame(maxWidth: .infinity)
 
-                        Spacer(minLength: 8)
+                        Spacer(minLength: 4)
 
-                        // Fixed: Header with proper safe area consideration
+                        // Compact header
                         headerBar
                             .padding(.horizontal, adaptiveHorizontalPadding)
                             .glassPerformanceProfiled("HeaderBar")
 
-                        Spacer(minLength: 12)
+                        Spacer(minLength: 6)
 
-                        // Fixed: Main content with proper spacing and safe area handling
-                        ScrollView(.vertical, showsIndicators: false) {
-                            LazyVStack(spacing: adaptiveVerticalSpacing) {
-                                // Album artwork with responsive sizing
-                                albumArtworkView
+                        // Compact fixed layout for standard size categories (no scrolling)
+                        // Accessibility fallback uses ScrollView for XXXLarge+ text
+                        if sizeCategory >= .accessibilityExtraExtraExtraLarge {
+                            // Keep ScrollView for extreme accessibility sizes
+                            ScrollView(.vertical, showsIndicators: false) {
+                                LazyVStack(spacing: adaptiveVerticalSpacing) {
+                                    albumArtworkView(size: compactArtworkSize(for: geometry))
+                                        .glassPerformanceProfiled("AlbumArtwork")
+                                    trackInfoView
+                                        .glassPerformanceProfiled("TrackInfo")
+                                    progressView
+                                        .glassPerformanceProfiled("ProgressBar")
+                                    playbackControlsView
+                                        .glassPerformanceProfiled("PlaybackControls")
+                                    volumeView
+                                        .glassPerformanceProfiled("VolumeControl")
+                                }
+                                .padding(.horizontal, adaptiveHorizontalPadding)
+                                .padding(.bottom, max(40, geometry.safeAreaInsets.bottom + 20))
+                            }
+                            .scrollContentBackground(.hidden)
+                        } else {
+                            // Fixed compact layout - no scrolling required
+                            VStack(spacing: compactSpacing) {
+                                albumArtworkView(size: compactArtworkSize(for: geometry))
                                     .glassPerformanceProfiled("AlbumArtwork")
 
-                                // Track info with proper text spacing
-                                trackInfoView
-                                    .glassPerformanceProfiled("TrackInfo")
+                                compactTrackInfoView
+                                    .glassPerformanceProfiled("CompactTrackInfo")
 
-                                // Progress bar with fluid glass effect
-                                progressView
-                                    .glassPerformanceProfiled("ProgressBar")
+                                compactProgressView
+                                    .glassPerformanceProfiled("CompactProgress")
 
-                                // Fixed: Playback controls with proper spacing
-                                playbackControlsView
-                                    .glassPerformanceProfiled("PlaybackControls")
-
-                                // Volume slider with adaptive padding
-                                volumeView
-                                    .glassPerformanceProfiled("VolumeControl")
+                                unifiedControlsView
+                                    .glassPerformanceProfiled("UnifiedControls")
                             }
                             .padding(.horizontal, adaptiveHorizontalPadding)
-                            .padding(.bottom, max(40, geometry.safeAreaInsets.bottom + 20)) // Dynamic bottom padding
+                            .padding(.bottom, max(16, geometry.safeAreaInsets.bottom + 4))
                         }
-                        .scrollContentBackground(.hidden) // iOS 16+ proper background handling
                     }
                 }
             }
@@ -187,7 +212,7 @@ struct NowPlayingView: View {
     }
 
     private func performInitialSetup() async {
-        guard let audioService else { return }
+        guard audioService != nil else { return }
 
         // Extract dominant color for UI aesthetics
         extractDominantColor()
@@ -228,6 +253,7 @@ struct NowPlayingView: View {
                 .foregroundStyle(.white)
                 .scaledToFit() // Dynamic Type support
                 .minimumScaleFactor(0.7)
+                .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
 
             Spacer()
 
@@ -235,14 +261,15 @@ struct NowPlayingView: View {
                 .frame(width: 44, height: 44)
                 .tint(.white)
         }
-        .padding(.vertical, sizeCategory.isAccessibilityCategory ? 16 : 12)
-        .padding(.horizontal, 20)
-        .a11yAwareGlass(style: .thick, tint: dominantColor.opacity(0.2), cornerRadius: 18)
+        .padding(.vertical, sizeCategory.isAccessibilityCategory ? 8 : 4)
+        .padding(.horizontal, 16)
+        // Glass removed for lighter visual weight - text shadows provide contrast
         .glassEffectID("headerBar", in: animationNamespace)
         .shadow(color: .black.opacity(0.35), radius: 6, x: 0, y: 2)
     }
 
-    private var albumArtworkView: some View {
+    @ViewBuilder
+    private func albumArtworkView(size: CGFloat) -> some View {
         ZStack {
             // Display actual artwork if available
             if let artworkData = audioService?.currentTrack?.artwork,
@@ -250,33 +277,24 @@ struct NowPlayingView: View {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    // Fixed: Responsive sizing with proper constraints
-                    .containerRelativeFrame(.horizontal) { length, _ in
-                        let maxSize = sizeCategory.isAccessibilityCategory ? min(length - 40, 280) : min(length - 80, 320)
-                        return max(200, maxSize) // Minimum size for accessibility
-                    }
-                    .aspectRatio(1, contentMode: .fit)
+                    // Compact sizing for no-scroll layout
+                    .frame(width: size, height: size)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .glassEffect(.regular.tint(dominantColor.opacity(0.8)))
-                    .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                    .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
             } else {
-                // Fixed: Fallback placeholder with consistent sizing
+                // Fallback placeholder with compact sizing
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color.gray.opacity(0.3))
-                        // Fixed: Consistent responsive sizing
-                        .containerRelativeFrame(.horizontal) { length, _ in
-                            let maxSize = sizeCategory.isAccessibilityCategory ? min(length - 40, 280) : min(length - 80, 320)
-                            return max(200, maxSize) // Minimum size for accessibility
-                        }
-                        .aspectRatio(1, contentMode: .fit)
+                        // Compact sizing for no-scroll layout
+                        .frame(width: size, height: size)
                         .glassEffect(.regular.tint(dominantColor.opacity(0.8)))
-                        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                        .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
 
                     Image(systemName: "music.note")
-                        .font(.system(size: sizeCategory.isAccessibilityCategory ? 60 : 80))
+                        .font(.system(size: size * 0.35))
                         .foregroundColor(.white.opacity(0.5))
-                        .scaledToFit() // Dynamic Type support
                 }
             }
         }
@@ -390,6 +408,65 @@ struct NowPlayingView: View {
             progress: audioService?.playbackProgress,
             duration: audioService?.duration
         )
+    }
+
+    // MARK: - Compact Track Info (for no-scroll layout)
+
+    private var compactTrackInfoView: some View {
+        HStack(alignment: .center, spacing: 12) {
+            // Text on left
+            VStack(alignment: .leading, spacing: 2) {
+                Text(audioService?.currentTrack?.title ?? "Not Playing")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 1)
+
+                Text(audioService?.currentTrack?.artist ?? "No Artist")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+            }
+
+            Spacer()
+
+            // Buttons on right (horizontal)
+            HStack(spacing: 8) {
+                Button {
+                    isFavorite.toggle()
+                    logger.debug("Favorite toggled: \(isFavorite, privacy: .public)")
+                } label: {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(.white.opacity(isFavorite ? 0.2 : 0.12)))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
+
+                Button {
+                    guard let track = audioService?.currentTrack else { return }
+                    trackDetailItem = TrackDetailItem(track: track)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(.white.opacity(0.12)))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Show track options")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4) // Reduced from 12pt - saves ~16pt
+        // Glass removed for lighter visual weight - text shadows provide contrast
+        .glassEffectID("compactTrackInfo", in: animationNamespace)
     }
 
     private var progressView: some View {
@@ -649,6 +726,177 @@ struct NowPlayingView: View {
         .padding(sizeCategory.isAccessibilityCategory ? 24 : 20)
         .frame(maxWidth: .infinity)
         .a11yAwareGlass(style: .thick, tint: dominantColor.opacity(0.18), cornerRadius: 20)
+    }
+
+    // MARK: - Compact Progress View (for no-scroll layout)
+
+    private var compactProgressView: some View {
+        VStack(spacing: 6) {
+            Slider(
+                value: Binding(
+                    get: { sliderProgress },
+                    set: { newValue in
+                        sliderProgress = newValue
+                    }
+                ),
+                in: 0 ... 1,
+                onEditingChanged: { editing in
+                    isUserDragging = editing
+                    guard !editing,
+                          let audioService,
+                          audioService.duration > 0 else { return }
+
+                    let targetTime = sliderProgress * audioService.duration
+                    Task {
+                        do {
+                            try await audioService.seek(to: targetTime)
+                            logger.debug("Seek committed at \(targetTime, privacy: .public)s")
+                        } catch {
+                            logger.error("Seek failed: \(error.localizedDescription, privacy: .public)")
+                        }
+                    }
+                }
+            )
+            .tint(.white)
+            .frame(height: 28)
+
+            HStack {
+                Text(formatTime(audioService?.currentTime ?? 0))
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.7))
+                    .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
+                Spacer()
+                Text(formatTime(audioService?.duration ?? 0))
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.7))
+                    .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
+            }
+        }
+        .padding(.horizontal, 16) // Match track info
+        .padding(.vertical, 0) // Removed vertical padding - saves ~16pt
+        // Glass removed for lighter visual weight - text shadows provide contrast
+    }
+
+    // MARK: - Unified Controls + Volume (for no-scroll layout)
+
+    private var unifiedControlsView: some View {
+        VStack(spacing: 8) {
+            // Transport row
+            HStack(spacing: 0) {
+                // Shuffle button
+                Button(action: toggleShuffle) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(isShuffleEnabled ? 0.24 : 0.12))
+                        Image(systemName: "shuffle")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(isShuffleEnabled ? 1.0 : 0.85))
+                    }
+                    .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isShuffleEnabled ? "Shuffle on" : "Shuffle off")
+
+                Spacer()
+
+                // Previous button
+                Button(action: playPrevious) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.12))
+                        Image(systemName: "backward.fill")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Previous track")
+
+                Spacer()
+
+                // Play/pause (keep at 48pt - primary action)
+                Button { togglePlayPause() } label: {
+                    ZStack {
+                        Circle()
+                            .fill(playAccentColor)
+                            .shadow(color: playAccentColor.opacity(0.3), radius: 6, x: 0, y: 2)
+                        Image(systemName: audioService?.isPlaying == true ? "pause.fill" : "play.fill")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.black.opacity(0.85))
+                    }
+                    .frame(width: 48, height: 48)
+                }
+                .buttonStyle(.plain)
+                .glassEffectID("compactPlayPause", in: animationNamespace)
+                .accessibilityLabel(audioService?.isPlaying == true ? "Pause" : "Play")
+
+                Spacer()
+
+                // Next button
+                Button(action: playNext) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.12))
+                        Image(systemName: "forward.fill")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Next track")
+
+                Spacer()
+
+                // Repeat button
+                Button(action: cycleRepeatMode) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(repeatMode != .none ? 0.24 : 0.12))
+                        Image(systemName: repeatModeIcon)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(repeatMode != .none ? 1.0 : 0.85))
+                    }
+                    .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(repeatMode == .none ? "Repeat off" : (repeatMode == .one ? "Repeat one" : "Repeat all"))
+            }
+            .frame(height: 48)
+
+            // Volume row (compact)
+            HStack(spacing: 8) {
+                Image(systemName: "speaker.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                Slider(
+                    value: Binding(
+                        get: { volume },
+                        set: { newValue in
+                            volumeStorage = Double(newValue)
+                            Task {
+                                guard let audioService else { return }
+                                await audioService.setVolume(Float(newValue))
+                            }
+                        }
+                    ),
+                    in: 0 ... 1
+                )
+                .tint(.white)
+
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(height: 20)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .a11yAwareGlass(style: .thick, tint: dominantColor.opacity(0.4), cornerRadius: 16)
     }
 
     // MARK: - Gestures
