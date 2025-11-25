@@ -31,7 +31,7 @@ See global `~/.claude/CLAUDE.md` for universal Swift/iOS development rules.
 ## Project Status
 
 **Current**: @STATUS.md
-**Commands**: Run `make help` for all commands, @docs/COMMANDS.md for build patterns
+**Commands**: Run `make help` for all build/test patterns; compiler behavior and security notes below.
 
 ## iOS 26 Modern API Requirements
 
@@ -124,19 +124,6 @@ PlaybackStateManager (Single source of truth)
 4. State change → Published to all observers
 5. UI updates via @Published properties
 
-## Essential Commands
-
-**Quick Reference:**
-```bash
-make build              # Build app (Debug)
-make lint               # Check code quality (ALWAYS after code changes)
-make format             # Auto-format code
-make search PATTERN='x' # Fast code search
-make find-audio         # Find all audio-related code
-```
-
-**Full Command Reference**: Run `make help` or see @docs/COMMANDS.md for build patterns
-
 ## Required Development Tools
 
 **Essential (via Homebrew):**
@@ -214,15 +201,12 @@ git revert COMMIT_SHA   # Revert specific commit
 3. Wrap optional counters with `Metrics.increment` only after calling `Metrics.enable(true)` (e.g., in debug builds or test harnesses).
 4. Record instrumentation decisions in ADRs or `docs/refactor/observability-walkthrough.md` so future contributors share the same taxonomy assumptions.
 
-## Debugging Reference
+## Command & Build Notes [Verified-Code]
 
-**Quick Debug Commands:**
-```bash
-make find-audio                      # Find audio-related code
-make search PATTERN='AudioEngine'    # Search for patterns
-make logs-stream                     # Stream live logs
-make memory-leaks                    # Check for leaks
-```
+- Use `make help` as the single source of truth for build/test/debug commands; avoid direct `xcodebuild`/`xctrace`/profilers.
+- Compiler builds from the working tree (including staged changes). A successful build can include staged-but-uncommitted code—commit or document staged work before relying on results.
+- Fast checks: `make build-check` for exit-code-only, `make build-verify` + `make error-report` for full failure context.
+- Makefile security hardening (Oct 2025): PID regex validation and bounded durations, mktemp + trap cleanup, bundle ID matching for processes, fail-fast error handling, crash log sorting + atos validation, and `CODEX_ALLOW_UPLOAD=1` gate for AI uploads.
 
 ## Critical Implementation Patterns
 
@@ -328,4 +312,4 @@ struct MyView: View { ... }
 ## References
 
 - @STATUS.md - Current project state and progress
-- @docs/COMMANDS.md - Build patterns and best practices (run `make help` for all commands)
+- Makefile (`make help`) - Command catalog; see Command & Build Notes above

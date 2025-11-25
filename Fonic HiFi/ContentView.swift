@@ -52,12 +52,14 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewBottomAccessory {
-            if let audioService, !showingNowPlaying {
+            if let audioService {
                 LiquidGlassMiniPlayer(
                     namespace: miniPlayerNamespace,
-                    showingNowPlaying: $showingNowPlaying,
+                    showingNowPlaying: $showingNowPlaying
                 )
                 .environment(\.audioEngine, audioService)
+                .opacity(showingNowPlaying ? 0 : 1)
+                .allowsHitTesting(!showingNowPlaying)
             }
         }
         .sheet(isPresented: $showingNowPlaying) {

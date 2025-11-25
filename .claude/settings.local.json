@@ -13,7 +13,20 @@
       "mcp__code-index__search_code_advanced",
       "mcp__code-index__set_project_path",
       "mcp__code-index__find_files",
-      "mcp__filesystem__directory_tree"
+      "mcp__filesystem__directory_tree",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__read_text_file",
+      "mcp__apple-rag-mcp__search",
+      "mcp__apple-rag-mcp__fetch",
+      "mcp__filesystem__read_multiple_files",
+      "Bash(bash:*)",
+      "Bash(brew tap:*)",
+      "Bash(brew install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(pipx install:*)",
+      "Bash(pipx ensurepath:*)",
+      "Bash(python3:*)",
+      "Bash(~/.local/bin/idb:*)"
     ],
     "deny": [],
     "ask": []

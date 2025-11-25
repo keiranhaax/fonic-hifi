@@ -51,13 +51,13 @@ make format        # SwiftFormat auto-formatting
 make open          # Launch project in Xcode
 ```
 
-**Complete command reference**: Run `make help` or see [docs/COMMANDS.md](docs/COMMANDS.md)
+**Complete command reference**: Run `make help` or see `CLAUDE.md` (Command & Build Notes section)
 
 ## Testing Status
 
 ✅ **Swift Testing & XCTest suites are active.**
 
-- Run `make lint` and `make test` after code changes (see `docs/COMMANDS.md` for variants).
+- Run `make lint` and `make test` after code changes (see `CLAUDE.md` Command & Build Notes for variants).
 - Tests live in `Fonic HiFiTests/` (145+ cases covering audio engines, diagnostics, data, and UI models).
 - Follow Swift Testing (`@Test`) for async/unit coverage and XCTest for integration; name files `<Module><Feature>Tests.swift`.
 - Review `docs/testing/` for coverage expectations and recent reports.
@@ -117,7 +117,6 @@ Use `make pr-create` for GitHub CLI pull request creation.
 ## Comprehensive Documentation
 
 For detailed guidance, see:
-- ** @CLAUDE.md** - Claude Code-specific instructions (364 lines)
-- **docs/COMMANDS.md** - Build command reference and workflow patterns
+- **@CLAUDE.md** - Claude Code-specific instructions (with Command & Build Notes)
 - **docs/DEBUGGING.md** - Audio debugging patterns and AVAudioSession best practices
-- ** @STATUS.md** - Current session state, branch recovery status, staged changes
+- **@STATUS.md** - Current session state, branch recovery status, staged changes
