@@ -46,6 +46,8 @@ struct LibraryView: View {
 
     @StateObject private var viewModel: LibraryViewModel
     @Environment(\.importService) private var importService
+    @Environment(\.audioEngine) private var audioEngine
+    @Environment(\.showingNowPlaying) private var showingNowPlaying
 
     @State private var selectedTab = LibraryTab.tracks
     @State private var searchText = ""
@@ -191,14 +193,16 @@ struct LibraryView: View {
     private var tracksSection: some View {
         List {
             ForEach(Array(viewModel.tracks.enumerated()), id: \.element.id) { index, track in
-                TrackEntityRow(track: track)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedTrack = track
-                    }
-                    .onAppear {
-                        loadNextPage(for: .tracks, index: index)
-                    }
+                TrackEntityRow(track: track) {
+                    selectedTrack = track
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    playTrack(track)
+                }
+                .onAppear {
+                    loadNextPage(for: .tracks, index: index)
+                }
             }
 
             if viewModel.isLoadingSection == .tracks {
@@ -327,6 +331,13 @@ struct LibraryView: View {
         }
     }
 
+    private func playTrack(_ track: TrackEntity) {
+        guard let audioEngine else { return }
+        let playableTrack = track.asTrackRepresentation()
+        audioEngine.setCurrentTrack(playableTrack)
+        showingNowPlaying.wrappedValue = true
+    }
+
     private func scheduleSearchRefresh(for text: String) {
         searchTask?.cancel()
         let tab = selectedTab
@@ -345,25 +356,39 @@ struct LibraryView: View {
 
 private struct TrackEntityRow: View {
     let track: TrackEntity
+    let onInfoTapped: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(track.title)
-                .font(.headline)
-                .lineLimit(2)
+        HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(track.title)
+                    .font(.headline)
+                    .lineLimit(2)
 
-            Text("\(track.artist) • \(track.album)")
-                .font(.subheadline)
+                Text("\(track.artist) • \(track.album)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                HStack(spacing: 12) {
+                    Label(track.qualityDescription, systemImage: "waveform")
+                    Label(track.formattedDuration, systemImage: "clock")
+                    Label(track.formattedFileSize, systemImage: "internaldrive")
+                }
+                .font(.caption)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-            HStack(spacing: 12) {
-                Label(track.qualityDescription, systemImage: "waveform")
-                Label(track.formattedDuration, systemImage: "clock")
-                Label(track.formattedFileSize, systemImage: "internaldrive")
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Button {
+                onInfoTapped()
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.vertical, 6)
     }
