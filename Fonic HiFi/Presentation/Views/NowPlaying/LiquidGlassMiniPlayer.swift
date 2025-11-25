@@ -15,6 +15,7 @@ struct LiquidGlassMiniPlayer: View {
 
     let namespace: Namespace.ID
     @Binding var showingNowPlaying: Bool
+    @State private var dominantColor: Color?
 
     // Constants for compact design
     private let compactHeight: CGFloat = 74
@@ -23,10 +24,20 @@ struct LiquidGlassMiniPlayer: View {
     var body: some View {
         compactPlayerContent
             .frame(height: compactHeight)
-            .a11yAwareGlass(style: .thick, cornerRadius: cornerRadius)
+            .glassSurface(
+                style: dominantColor != nil ? .dynamic : .ultraThin,
+                tint: dominantColor?.opacity(0.35),
+                cornerRadius: cornerRadius
+            )
             .clearGlassFix()
             .matchedTransitionSource(id: "miniplayer", in: namespace)
             .onTapGesture { expandWithHaptics() }
+            .onChange(of: audioService?.currentTrack?.id) { _, _ in
+                extractDominantColor()
+            }
+            .onAppear {
+                extractDominantColor()
+            }
     }
 
     // MARK: - Compact Content
@@ -105,6 +116,37 @@ struct LiquidGlassMiniPlayer: View {
         .disabled(audioService?.currentTrack == nil)
         .opacity(audioService?.currentTrack == nil ? 0.4 : 1.0)
         .accessibilityLabel("Next Track")
+    }
+
+    // MARK: - Dominant Color
+
+    private func extractDominantColor() {
+        guard let track = audioService?.currentTrack else {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                dominantColor = nil
+            }
+            return
+        }
+
+        guard let artworkData = track.artwork else {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                dominantColor = nil
+            }
+            return
+        }
+
+        let trackID = track.id
+        let colorTask = Task.detached(priority: .utility) {
+            UIImage(data: artworkData)?.fastAverageColor
+        }
+
+        Task { @MainActor in
+            let extractedColor = await colorTask.value
+            guard audioService?.currentTrack?.id == trackID else { return }
+            withAnimation(.easeInOut(duration: 0.3)) {
+                dominantColor = extractedColor
+            }
+        }
     }
 
     // MARK: - Actions
