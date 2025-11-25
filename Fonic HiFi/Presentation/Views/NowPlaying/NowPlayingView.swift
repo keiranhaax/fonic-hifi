@@ -26,13 +26,16 @@ struct NowPlayingView: View {
 
     // UI State (moved from AppState to local state)
     @State private var showingQueue = false
-    @State private var dominantColor: Color = .accentColor
     @State private var trackDetailItem: TrackDetailItem?
     @State private var isFavorite = false
 
-    // Color extraction state
-    @State private var colorCache: [UUID: Color] = [:]
-    @State private var isExtractingColor = false
+    // Shared color service for consistent colors during transitions
+    @ObservedObject private var colorService = DominantColorService.shared
+
+    /// Dominant color from shared service
+    private var dominantColor: Color {
+        colorService.dominantColor
+    }
 
     // UI Preferences (now using @AppStorage for persistence)
     @AppStorage("volume") private var volumeStorage: Double = 1.0
@@ -212,13 +215,13 @@ struct NowPlayingView: View {
     private func performInitialSetup() async {
         guard audioService != nil else { return }
 
-        // Extract dominant color for UI aesthetics
-        extractDominantColor()
+        // Extract dominant color for UI aesthetics via shared service
+        await colorService.extractColor(for: audioService?.currentTrack)
 
         // ✅ This view is a passive observer of playback state
         // Playback is initiated from:
         // - LibraryView (when user taps a track row)
-        // - MiniPlayerView (when user taps play button)
+        // - LiquidGlassMiniPlayer (when user taps play button)
         // - Remote commands (Control Center, AirPods, lock screen)
         //
         // NowPlayingView ONLY observes and displays the current playback state.
@@ -268,51 +271,27 @@ struct NowPlayingView: View {
 
     @ViewBuilder
     private func albumArtworkView(size: CGFloat) -> some View {
-        ZStack {
-            // Display actual artwork if available
-            if let artworkData = audioService?.currentTrack?.artwork,
-               let uiImage = UIImage(data: artworkData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    // Compact sizing for no-scroll layout
-                    .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .glassEffect(.regular.tint(dominantColor.opacity(0.8)))
-                    .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
-            } else {
-                // Fallback placeholder with compact sizing
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.3))
-                        // Compact sizing for no-scroll layout
-                        .frame(width: size, height: size)
-                        .glassEffect(.regular.tint(dominantColor.opacity(0.8)))
-                        .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
-
-                    Image(systemName: "music.note")
-                        .font(.system(size: size * 0.35))
-                        .foregroundColor(.white.opacity(0.5))
-                }
-            }
-        }
-        .glassEffectID("artwork", in: animationNamespace)
-        .playingParticles(isPlaying: isPlayingParticles, particleCount: 15)
-        .glassTransition(isActive: isPlayingParticles)
-        .enhancedAccessibility(
-            label: "Album artwork",
-            hint: "Current track album artwork"
-        )
-        .preferredFrameRate(
-            BatteryOptimizedGlassUtilities.optimalFrameRate(
-                for: isPlayingParticles ? .interactive : .decorative
+        // Use shared MorphableArtwork for smooth transition morphing
+        MorphableArtwork(size: size, namespace: animationNamespace)
+            .glassEffect(.regular.tint(dominantColor.opacity(0.8)))
+            .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
+            .glassEffectID("artwork", in: animationNamespace)
+            .playingParticles(isPlaying: isPlayingParticles, particleCount: 15)
+            .glassTransition(isActive: isPlayingParticles)
+            .enhancedAccessibility(
+                label: "Album artwork",
+                hint: "Current track album artwork"
             )
-        )
-        .onTapGesture {
-            guard let track = audioService?.currentTrack else { return }
-            // Present detailed metadata sheet for the active track
-            trackDetailItem = TrackDetailItem(track: track)
-        }
+            .preferredFrameRate(
+                BatteryOptimizedGlassUtilities.optimalFrameRate(
+                    for: isPlayingParticles ? .interactive : .decorative
+                )
+            )
+            .onTapGesture {
+                guard let track = audioService?.currentTrack else { return }
+                // Present detailed metadata sheet for the active track
+                trackDetailItem = TrackDetailItem(track: track)
+            }
     }
 
     private var trackInfoView: some View {
@@ -914,81 +893,6 @@ struct NowPlayingView: View {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%d:%02d", minutes, seconds)
-    }
-
-    private func extractDominantColor() {
-        Task { @MainActor in
-            await extractDominantColorAsync()
-        }
-    }
-
-    private func extractDominantColorAsync() async {
-        guard let track = audioService?.currentTrack else {
-            await MainActor.run {
-                dominantColor = .accentColor
-            }
-            return
-        }
-
-        // Check cache first
-        if let cached = colorCache[track.id] {
-            await MainActor.run {
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    dominantColor = cached
-                }
-            }
-            return
-        }
-
-        // Guard concurrent extractions
-        guard !isExtractingColor else { return }
-
-        await MainActor.run {
-            isExtractingColor = true
-        }
-
-        defer {
-            Task { @MainActor in
-                isExtractingColor = false
-            }
-        }
-
-        // Extract color from artwork (if available)
-        guard let artworkData = track.artwork else {
-            await MainActor.run {
-                dominantColor = .accentColor
-            }
-            return
-        }
-
-        // Perform extraction on background thread (rebuild UIImage inside detached task)
-        let extractedColor = await Task.detached {
-            guard let uiImage = UIImage(data: artworkData) else {
-                return Color.accentColor
-            }
-            return uiImage.fastAverageColor ?? .accentColor
-        }.value
-
-        // Cache result
-        colorCache[track.id] = extractedColor
-        maintainColorCache()
-
-        // Update UI with animation
-        await MainActor.run {
-            withAnimation(.easeInOut(duration: 0.5)) {
-                dominantColor = extractedColor
-            }
-        }
-    }
-
-    /// Limits cache to 50 entries
-    private func maintainColorCache() {
-        let maxCacheSize = 50
-        guard colorCache.count > maxCacheSize else { return }
-
-        let overflow = colorCache.count - maxCacheSize
-        let keysToRemove = Array(colorCache.keys.prefix(overflow))
-        keysToRemove.forEach { colorCache.removeValue(forKey: $0) }
     }
 
     // MARK: - Actions

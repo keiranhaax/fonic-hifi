@@ -65,8 +65,11 @@ struct ContentView_Safe: View {
         // Mini player at bottom when track is playing but Now Playing is not shown
         .safeAreaInset(edge: .bottom) {
             if let audioService, audioService.currentTrack != nil, !showingNowPlaying {
-                MiniPlayerView()
-                    .audioEngine(audioService)
+                LiquidGlassMiniPlayer(
+                    namespace: animationNamespace,
+                    showingNowPlaying: $showingNowPlaying
+                )
+                .environment(\.audioEngine, audioService)
             }
         }
     }

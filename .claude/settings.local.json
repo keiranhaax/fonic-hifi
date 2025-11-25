@@ -26,7 +26,10 @@
       "Bash(pipx install:*)",
       "Bash(pipx ensurepath:*)",
       "Bash(python3:*)",
-      "Bash(~/.local/bin/idb:*)"
+      "Bash(~/.local/bin/idb:*)",
+      "Bash(make build-check:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(make test:*)"
     ],
     "deny": [],
     "ask": []

@@ -12,14 +12,19 @@ import SwiftUI
 @MainActor
 struct LiquidGlassMiniPlayer: View {
     @Environment(\.audioEngine) private var audioService
+    @ObservedObject private var colorService = DominantColorService.shared
 
     let namespace: Namespace.ID
     @Binding var showingNowPlaying: Bool
-    @State private var dominantColor: Color?
 
     // Constants for compact design
     private let compactHeight: CGFloat = 74
     private let cornerRadius: CGFloat = 16
+
+    /// Use shared color service for consistent colors during transitions
+    private var dominantColor: Color? {
+        colorService.dominantColor == .accentColor ? nil : colorService.dominantColor
+    }
 
     var body: some View {
         compactPlayerContent
@@ -32,11 +37,8 @@ struct LiquidGlassMiniPlayer: View {
             .clearGlassFix()
             .matchedTransitionSource(id: "miniplayer", in: namespace)
             .onTapGesture { expandWithHaptics() }
-            .onChange(of: audioService?.currentTrack?.id) { _, _ in
-                extractDominantColor()
-            }
-            .onAppear {
-                extractDominantColor()
+            .task(id: audioService?.currentTrack?.id) {
+                await colorService.extractColor(for: audioService?.currentTrack)
             }
     }
 
@@ -44,7 +46,7 @@ struct LiquidGlassMiniPlayer: View {
 
     private var compactPlayerContent: some View {
         HStack(spacing: 12) {
-            albumArtwork(size: 48)
+            MorphableArtwork(size: 48, namespace: namespace)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(audioService?.currentTrack?.title ?? "Not Playing")
@@ -73,24 +75,7 @@ struct LiquidGlassMiniPlayer: View {
         .padding(.vertical, 13)
     }
 
-    // MARK: - Shared Components
-
-    private func albumArtwork(size: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: 8)
-            .fill(
-                LinearGradient(
-                    colors: [Color.gray.opacity(0.4), Color.gray.opacity(0.2)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing,
-                ),
-            )
-            .frame(width: size, height: size)
-            .overlay(
-                Image(systemName: "music.note")
-                    .font(.system(size: size * 0.4))
-                    .foregroundStyle(.white.opacity(0.6)),
-            )
-    }
+    // MARK: - Controls
 
     private var playPauseButton: some View {
         Button(action: togglePlayPause) {
@@ -116,37 +101,6 @@ struct LiquidGlassMiniPlayer: View {
         .disabled(audioService?.currentTrack == nil)
         .opacity(audioService?.currentTrack == nil ? 0.4 : 1.0)
         .accessibilityLabel("Next Track")
-    }
-
-    // MARK: - Dominant Color
-
-    private func extractDominantColor() {
-        guard let track = audioService?.currentTrack else {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                dominantColor = nil
-            }
-            return
-        }
-
-        guard let artworkData = track.artwork else {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                dominantColor = nil
-            }
-            return
-        }
-
-        let trackID = track.id
-        let colorTask = Task.detached(priority: .utility) {
-            UIImage(data: artworkData)?.fastAverageColor
-        }
-
-        Task { @MainActor in
-            let extractedColor = await colorTask.value
-            guard audioService?.currentTrack?.id == trackID else { return }
-            withAnimation(.easeInOut(duration: 0.3)) {
-                dominantColor = extractedColor
-            }
-        }
     }
 
     // MARK: - Actions
