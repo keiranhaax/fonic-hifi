@@ -24,10 +24,6 @@ struct NowPlayingView: View {
     // Animation namespace from parent
     let animationNamespace: Namespace.ID
 
-    // Drag gesture state
-    @GestureState private var dragOffset: CGFloat = 0
-    @State private var isDragging = false
-
     // UI State (moved from AppState to local state)
     @State private var showingQueue = false
     @State private var dominantColor: Color = .accentColor
@@ -61,7 +57,6 @@ struct NowPlayingView: View {
     @State private var isPlayingParticles = false
 
     // Constants - Adaptive sizing based on accessibility settings
-    private let dismissThreshold: CGFloat = 150
     private let playAccentColor = Color(red: 0.0, green: 0.94, blue: 0.52)
 
     // Adaptive spacing computed properties - Fixed button hierarchy
@@ -162,18 +157,8 @@ struct NowPlayingView: View {
                     .glassPerformanceProfiled("NowPlayingBackground")
 
                     VStack(spacing: 0) {
-                        // Fixed: Proper drag handle positioning with safe area
-                        VStack(spacing: 0) {
-                            Capsule()
-                                .fill(Color.white.opacity(0.5))
-                                .frame(width: 36, height: 5)
-                                .padding(.top, max(12, geometry.safeAreaInsets.top + 8)) // Dynamic safe area padding
-                                .glassEffect(.clear)
-                                .glassPerformanceProfiled("DragHandle")
-                        }
-                        .frame(maxWidth: .infinity)
-
-                        Color.clear.frame(height: 4)
+                        // Top safe area padding (system drag indicator handles the visual)
+                        Color.clear.frame(height: max(12, geometry.safeAreaInsets.top + 8))
 
                         // Compact header
                         headerBar
@@ -231,10 +216,6 @@ struct NowPlayingView: View {
                 }
             }
         }
-        .offset(y: max(0, dragOffset))
-        .scaleEffect(isDragging ? 0.95 : 1.0)
-        .animation(reduceMotion ? .none : .interactiveSpring(response: 0.4, dampingFraction: 0.8), value: isDragging)
-        .gesture(dismissGesture)
         .adaptiveGlassPerformance()
         .task {
             await performInitialSetup()
@@ -927,41 +908,6 @@ struct NowPlayingView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .a11yAwareGlass(style: .thick, tint: dominantColor.opacity(0.4), cornerRadius: 16)
-    }
-
-    // MARK: - Gestures
-
-    private var dismissGesture: some Gesture {
-        DragGesture()
-            .updating($dragOffset) { value, state, _ in
-                if value.translation.height > 0 {
-                    state = value.translation.height
-                }
-            }
-            .onChanged { _ in
-                // Gesture callbacks may run on background thread
-                Task { @MainActor in
-                    isDragging = true
-                }
-            }
-            .onEnded { value in
-                // Gesture callbacks may run on background thread
-                Task { @MainActor in
-                    isDragging = false
-
-                    let shouldDismiss = value.translation.height > dismissThreshold ||
-                        (value.translation.height > 50 && value.predictedEndTranslation.height > 200)
-
-                    if shouldDismiss {
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-
-                        withAnimation(.interactiveSpring(response: 0.6, dampingFraction: 0.8)) {
-                            dismiss()
-                        }
-                    }
-                }
-            }
     }
 
     // MARK: - Helpers

@@ -7,7 +7,13 @@
       "mcp__firecrawl__firecrawl_scrape",
       "mcp__filesystem__write_file",
       "Bash(make lint:*)",
-      "Bash(make build:*)"
+      "Bash(make build:*)",
+      "Bash(find:*)",
+      "Bash(swift build:*)",
+      "mcp__code-index__search_code_advanced",
+      "mcp__code-index__set_project_path",
+      "mcp__code-index__find_files",
+      "mcp__filesystem__directory_tree"
     ],
     "deny": [],
     "ask": []
