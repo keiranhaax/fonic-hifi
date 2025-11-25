@@ -149,14 +149,14 @@ struct NowPlayingView: View {
                         }
                         .frame(maxWidth: .infinity)
 
-                        Spacer(minLength: 4)
+                        Color.clear.frame(height: 4)
 
                         // Compact header
                         headerBar
                             .padding(.horizontal, adaptiveHorizontalPadding)
                             .glassPerformanceProfiled("HeaderBar")
 
-                        Spacer(minLength: 6)
+                        Color.clear.frame(height: 6)
 
                         // Compact fixed layout for standard size categories (no scrolling)
                         // Accessibility fallback uses ScrollView for XXXLarge+ text
@@ -197,6 +197,10 @@ struct NowPlayingView: View {
                             .padding(.horizontal, adaptiveHorizontalPadding)
                             .padding(.bottom, max(16, geometry.safeAreaInsets.bottom + 4))
                         }
+
+                        // Absorbs extra space in full-screen (.large detent)
+                        // Keeps content anchored to top in both branches
+                        Spacer()
                     }
                 }
             }
