@@ -86,13 +86,37 @@ struct NowPlayingView: View {
         sizeCategory.isAccessibilityCategory ? 56 : 48 // play/pause
     }
 
-    // Compact layout for no-scroll design
+    // Adaptive artwork sizing based on available container space
     private func compactArtworkSize(for geometry: GeometryProxy) -> CGFloat {
-        let screenHeight = geometry.size.height
-        // 160pt on SE (667pt), 180pt on standard (844pt), 200pt on Max (932pt)
-        // Increased +20pt per tier after removing glass padding from track info/progress
-        let base: CGFloat = screenHeight < 700 ? 160 : (screenHeight < 900 ? 180 : 200)
-        return sizeCategory.isAccessibilityCategory ? max(140, base - 20) : base
+        let containerHeight = geometry.size.height
+        let safeAreaTop = geometry.safeAreaInsets.top
+        let safeAreaBottom = geometry.safeAreaInsets.bottom
+
+        // Measure fixed overhead from other components:
+        // - Drag handle area: ~25pt (capsule + padding)
+        // - Fixed gaps: 10pt (4pt + 6pt)
+        // - Header: ~52pt (44pt + padding)
+        // - Track info: ~50pt
+        // - Progress: ~50pt
+        // - Controls: ~110pt (including glass padding)
+        // - Bottom padding: ~20pt
+        // Total: ~317pt + safe areas
+        let fixedOverhead: CGFloat = 317 + safeAreaTop + safeAreaBottom
+
+        // Available space for artwork
+        let availableForArtwork = containerHeight - fixedOverhead
+
+        // Clamp artwork size:
+        // - Minimum 140pt (SE in medium detent must not overflow)
+        // - Maximum 340pt (don't let it get absurdly large)
+        let artworkSize = max(140, min(availableForArtwork, 340))
+
+        // Reduce for accessibility to make room for larger text
+        if sizeCategory.isAccessibilityCategory {
+            return max(120, artworkSize - 40)
+        }
+
+        return artworkSize
     }
 
     private var compactSpacing: CGFloat {
@@ -196,11 +220,13 @@ struct NowPlayingView: View {
                             }
                             .padding(.horizontal, adaptiveHorizontalPadding)
                             .padding(.bottom, max(16, geometry.safeAreaInsets.bottom + 4))
+                            .layoutPriority(1) // Ensure content gets space before Spacer
                         }
 
-                        // Absorbs extra space in full-screen (.large detent)
-                        // Keeps content anchored to top in both branches
-                        Spacer()
+                        // Small flexible space to handle calculation variance
+                        // Max 32pt prevents large gaps while allowing minor adjustments
+                        Spacer(minLength: 0)
+                            .frame(maxHeight: 32)
                     }
                 }
             }
