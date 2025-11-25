@@ -120,8 +120,8 @@ struct NowPlayingView: View {
 
     var body: some View {
         Group {
-            if let audioService {
-                nowPlayingContent(audioService: audioService)
+            if audioService != nil {
+                nowPlayingContent
             } else {
                 EmptyView()
             }
@@ -136,87 +136,74 @@ struct NowPlayingView: View {
         }
     }
 
+    // MARK: - Drag Indicator (matching Apple Music sample)
+
+    private var dragIndicator: some View {
+        Capsule()
+            .fill(.primary.secondary)
+            .frame(width: 35, height: 3)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+    }
+
     @ViewBuilder
-    private func nowPlayingContent(audioService _: AudioEngineFacade) -> some View {
-        // Fixed: Use GeometryReader for proper safe area handling
+    private var nowPlayingContent: some View {
+        // Restructured to match Apple Music sample pattern:
+        // ScrollView + safeAreaInset with .navigationTransition INSIDE
         GeometryReader { geometry in
-            GlassEffectContainer(spacing: 0) {
-                ZStack {
-                    // Background gradient with proper safe area handling
-                    LinearGradient(
-                        colors: [
-                            dominantColor.opacity(0.6),
-                            dominantColor.opacity(0.3),
-                            Color.black.opacity(0.8),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea(edges: [.horizontal, .bottom])
-                    .clearGlassFix() // iOS 26 Beta 6 fix
-                    .glassPerformanceProfiled("NowPlayingBackground")
+            ScrollView {
+                // Empty content - all UI is in safeAreaInset for morph animation
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                // Morphable header content - this is what animates from mini player
+                VStack(spacing: 0) {
+                    dragIndicator
 
-                    VStack(spacing: 0) {
-                        // Top safe area padding (system drag indicator handles the visual)
-                        Color.clear.frame(height: max(12, geometry.safeAreaInsets.top + 8))
+                    headerBar
+                        .padding(.horizontal, adaptiveHorizontalPadding)
 
-                        // Compact header
-                        headerBar
-                            .padding(.horizontal, adaptiveHorizontalPadding)
-                            .glassPerformanceProfiled("HeaderBar")
+                    Color.clear.frame(height: 6)
 
-                        Color.clear.frame(height: 6)
-
-                        // Compact fixed layout for standard size categories (no scrolling)
-                        // Accessibility fallback uses ScrollView for XXXLarge+ text
-                        if sizeCategory >= .accessibilityExtraExtraExtraLarge {
-                            // Keep ScrollView for extreme accessibility sizes
-                            ScrollView(.vertical, showsIndicators: false) {
-                                LazyVStack(spacing: adaptiveVerticalSpacing) {
-                                    albumArtworkView(size: compactArtworkSize(for: geometry))
-                                        .glassPerformanceProfiled("AlbumArtwork")
-                                    trackInfoView
-                                        .glassPerformanceProfiled("TrackInfo")
-                                    progressView
-                                        .glassPerformanceProfiled("ProgressBar")
-                                    playbackControlsView
-                                        .glassPerformanceProfiled("PlaybackControls")
-                                    volumeView
-                                        .glassPerformanceProfiled("VolumeControl")
-                                }
-                                .padding(.horizontal, adaptiveHorizontalPadding)
-                                .padding(.bottom, max(40, geometry.safeAreaInsets.bottom + 20))
-                            }
-                            .scrollContentBackground(.hidden)
-                        } else {
-                            // Fixed compact layout - no scrolling required
-                            VStack(spacing: compactSpacing) {
-                                albumArtworkView(size: compactArtworkSize(for: geometry))
-                                    .glassPerformanceProfiled("AlbumArtwork")
-
-                                compactTrackInfoView
-                                    .glassPerformanceProfiled("CompactTrackInfo")
-
-                                compactProgressView
-                                    .glassPerformanceProfiled("CompactProgress")
-
-                                unifiedControlsView
-                                    .glassPerformanceProfiled("UnifiedControls")
-                            }
-                            .padding(.horizontal, adaptiveHorizontalPadding)
-                            .padding(.bottom, max(16, geometry.safeAreaInsets.bottom + 4))
-                            .layoutPriority(1) // Ensure content gets space before Spacer
+                    // Compact fixed layout for standard size categories
+                    if sizeCategory >= .accessibilityExtraExtraExtraLarge {
+                        // Accessibility: larger text needs more space
+                        VStack(spacing: adaptiveVerticalSpacing) {
+                            albumArtworkView(size: compactArtworkSize(for: geometry))
+                            trackInfoView
+                            progressView
+                            playbackControlsView
+                            volumeView
                         }
-
-                        // Small flexible space to handle calculation variance
-                        // Max 32pt prevents large gaps while allowing minor adjustments
-                        Spacer(minLength: 0)
-                            .frame(maxHeight: 32)
+                        .padding(.horizontal, adaptiveHorizontalPadding)
+                        .padding(.bottom, max(40, geometry.safeAreaInsets.bottom + 20))
+                    } else {
+                        // Standard compact layout
+                        VStack(spacing: compactSpacing) {
+                            albumArtworkView(size: compactArtworkSize(for: geometry))
+                            compactTrackInfoView
+                            compactProgressView
+                            unifiedControlsView
+                        }
+                        .padding(.horizontal, adaptiveHorizontalPadding)
+                        .padding(.bottom, max(16, geometry.safeAreaInsets.bottom + 4))
                     }
                 }
+                .navigationTransition(.zoom(sourceID: "miniplayer", in: animationNamespace))
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                LinearGradient(
+                    colors: [
+                        dominantColor.opacity(0.6),
+                        dominantColor.opacity(0.3),
+                        Color.black.opacity(0.8),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
         }
-        .adaptiveGlassPerformance()
         .task {
             await performInitialSetup()
         }
