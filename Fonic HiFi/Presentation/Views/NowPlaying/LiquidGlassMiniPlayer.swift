@@ -12,14 +12,9 @@ import SwiftUI
 @MainActor
 struct LiquidGlassMiniPlayer: View {
     @Environment(\.audioEngine) private var audioService
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let namespace: Namespace.ID
     @Binding var showingNowPlaying: Bool
-
-    // Animation state for interactions
-    @State private var isPressed = false
 
     // Constants for compact design
     private let compactHeight: CGFloat = 74
@@ -30,33 +25,8 @@ struct LiquidGlassMiniPlayer: View {
             .frame(height: compactHeight)
             .a11yAwareGlass(style: .thick, cornerRadius: cornerRadius)
             .clearGlassFix()
-            .adaptiveGlass(cornerRadius: cornerRadius)
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.1), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom,
-                        ),
-                        lineWidth: 0.5,
-                    ),
-            )
-            .shadow(color: .black.opacity(0.15), radius: 16, x: 0, y: -3)
-            .scaleEffect(isPressed ? 0.98 : 1.0)
             .matchedTransitionSource(id: "miniplayer", in: namespace)
-            .animation(.liquidBouncy, value: isPressed)
             .onTapGesture { expandWithHaptics() }
-            .onLongPressGesture(
-                minimumDuration: 0,
-                maximumDistance: .infinity,
-                pressing: { pressing in
-                    withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = pressing
-                    }
-                },
-                perform: {},
-            )
     }
 
     // MARK: - Compact Content

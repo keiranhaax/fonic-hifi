@@ -16,7 +16,6 @@ struct ContentView: View {
 
     @Namespace private var miniPlayerNamespace
     @State private var showingNowPlaying = false
-    @State private var selectedDetent: PresentationDetent = .medium
     @State private var searchText = ""
 
     var body: some View {
@@ -62,17 +61,10 @@ struct ContentView: View {
                 .allowsHitTesting(!showingNowPlaying)
             }
         }
-        .sheet(isPresented: $showingNowPlaying) {
+        .fullScreenCover(isPresented: $showingNowPlaying) {
             NowPlayingView(animationNamespace: miniPlayerNamespace)
                 .navigationTransition(.zoom(sourceID: "miniplayer", in: miniPlayerNamespace))
                 .environment(\.audioEngine, audioService)
-                .presentationDetents([
-                    .medium,
-                    .large,
-                ], selection: $selectedDetent)
-                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(20)
         }
     }
 }
