@@ -71,15 +71,16 @@ struct TrackRowView: View {
 
         logger.info("Track row tapped for \(track.title, privacy: .public)")
 
-        // Only update UI state - let NowPlayingView handle audio playback
         audioService.setCurrentTrack(track)
         showingNowPlaying.wrappedValue = true
-
-        let isCurrentTrackSet = audioService.currentTrack != nil
-        let nowPlayingVisible = showingNowPlaying.wrappedValue
-
-        logger.debug("Now playing state updated. Current track set: \(isCurrentTrackSet, privacy: .public)")
-        logger.debug("Now playing visibility: \(nowPlayingVisible, privacy: .public)")
+        Task {
+            do {
+                try await audioService.play(track: track)
+                logger.debug("Playback started for \(track.title, privacy: .public)")
+            } catch {
+                logger.error("Failed to play track: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 }
 

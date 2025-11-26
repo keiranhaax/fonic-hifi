@@ -336,6 +336,13 @@ struct LibraryView: View {
         let playableTrack = track.asTrackRepresentation()
         audioEngine.setCurrentTrack(playableTrack)
         showingNowPlaying.wrappedValue = true
+        Task {
+            do {
+                try await audioEngine.play(track: playableTrack)
+            } catch {
+                Log.logger(.library).error("Failed to play track: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     private func scheduleSearchRefresh(for text: String) {

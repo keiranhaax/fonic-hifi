@@ -36,7 +36,8 @@
       "Bash(xcrun simctl io:*)",
       "Bash(idb ui tap:*)",
       "Bash(identify:*)",
-      "Bash(sips:*)"
+      "Bash(sips:*)",
+      "mcp__filesystem__search_files"
     ],
     "deny": [],
     "ask": []
