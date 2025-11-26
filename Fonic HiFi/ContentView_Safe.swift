@@ -52,15 +52,19 @@ struct ContentView_Safe: View {
             }
         }
         .preferredColorScheme(.dark) // Dark mode by default
-        // Use sheet presentation instead of overlay
-        .sheet(isPresented: $showingNowPlaying) {
-            if let audioService {
-                NowPlayingView(animationNamespace: animationNamespace)
-                    .audioEngine(audioService)
-                    .interactiveDismissDisabled(false)
-            } else {
-                Text("Audio engine unavailable.")
-            }
+        // Use fullScreenCover with inline content for zoom transition
+        .fullScreenCover(isPresented: $showingNowPlaying) {
+            ScrollView {}
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    NowPlayingContent(
+                        namespace: animationNamespace,
+                        dismiss: { showingNowPlaying = false }
+                    )
+                    .environment(\.audioEngine, audioService)
+                    .navigationTransition(.zoom(sourceID: "miniplayer", in: animationNamespace))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.background)
         }
         // Mini player at bottom when track is playing but Now Playing is not shown
         .safeAreaInset(edge: .bottom) {

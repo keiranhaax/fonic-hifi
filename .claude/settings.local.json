@@ -30,7 +30,13 @@
       "Bash(make build-check:*)",
       "Bash(xcodebuild:*)",
       "Bash(make test:*)",
-      "mcp__filesystem__list_directory_with_sizes"
+      "mcp__filesystem__list_directory_with_sizes",
+      "Bash(xcrun simctl list:*)",
+      "Bash(xcrun simctl io booted screenshot:*)",
+      "Bash(xcrun simctl io:*)",
+      "Bash(idb ui tap:*)",
+      "Bash(identify:*)",
+      "Bash(sips:*)"
     ],
     "deny": [],
     "ask": []

@@ -62,9 +62,17 @@ struct ContentView: View {
             }
         }
         .fullScreenCover(isPresented: $showingNowPlaying) {
-            // .navigationTransition is now INSIDE NowPlayingView (on safeAreaInset content)
-            NowPlayingView(animationNamespace: miniPlayerNamespace)
-                .environment(\.audioEngine, audioService)
+            ScrollView {}
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    NowPlayingContent(
+                        namespace: miniPlayerNamespace,
+                        dismiss: { showingNowPlaying = false }
+                    )
+                    .environment(\.audioEngine, audioService)
+                    .navigationTransition(.zoom(sourceID: "miniplayer", in: miniPlayerNamespace))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.background)
         }
     }
 }

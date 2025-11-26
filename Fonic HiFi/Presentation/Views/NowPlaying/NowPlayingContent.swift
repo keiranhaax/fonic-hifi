@@ -1,21 +1,22 @@
 //
-//  NowPlayingView.swift
+//  NowPlayingContent.swift
 //  Fonic HiFi
 //
-//  Simplified iOS 26+ Now Playing view matching Apple Music's clean approach
+//  Simplified iOS 26+ Now Playing content matching Apple Music's clean approach.
+//  Used directly inside fullScreenCover's safeAreaInset for proper zoom transition.
 //
 
 import OSLog
 import SwiftUI
 
 @MainActor
-struct NowPlayingView: View {
+struct NowPlayingContent: View {
     private let logger = Log.logger(.nowPlaying)
     @Environment(\.audioEngine) private var audioService: AudioEngineFacade?
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.sizeCategory) private var sizeCategory
 
-    let animationNamespace: Namespace.ID
+    let namespace: Namespace.ID
+    let dismiss: () -> Void
 
     // UI State
     @State private var showingQueue = false
@@ -52,77 +53,44 @@ struct NowPlayingView: View {
     private let playAccentColor = Color(red: 0.0, green: 0.94, blue: 0.52)
 
     var body: some View {
-        Group {
-            if audioService != nil {
-                nowPlayingContent
-            } else {
-                EmptyView()
+        VStack(spacing: 0) {
+            dragIndicator
+
+            headerBar
+                .padding(.horizontal, 24)
+
+            Color.clear.frame(height: 6)
+
+            VStack(spacing: 16) {
+                albumArtworkView
+                trackInfoView
+                progressView
+                playbackControlsView
+                volumeView
             }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 16)
+        }
+        .background(
+            LinearGradient(
+                colors: [
+                    dominantColor.opacity(0.6),
+                    dominantColor.opacity(0.3),
+                    Color.black.opacity(0.8),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
+        .task {
+            await colorService.extractColor(for: audioService?.currentTrack)
         }
         .sheet(item: $trackDetailItem) { item in
             NavigationStack {
                 TrackDetailView(track: item.track)
             }
         }
-    }
-
-    // MARK: - Main Content
-
-    @ViewBuilder
-    private var nowPlayingContent: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                // Empty - content in safeAreaInset for morph animation
-            }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                VStack(spacing: 0) {
-                    dragIndicator
-
-                    headerBar
-                        .padding(.horizontal, 24)
-
-                    Color.clear.frame(height: 6)
-
-                    VStack(spacing: 16) {
-                        albumArtworkView(size: artworkSize(for: geometry))
-                        trackInfoView
-                        progressView
-                        playbackControlsView
-                        volumeView
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, max(16, geometry.safeAreaInsets.bottom + 4))
-                }
-                .navigationTransition(.zoom(sourceID: "miniplayer", in: animationNamespace))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                LinearGradient(
-                    colors: [
-                        dominantColor.opacity(0.6),
-                        dominantColor.opacity(0.3),
-                        Color.black.opacity(0.8),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
-        }
-        .task {
-            await colorService.extractColor(for: audioService?.currentTrack)
-        }
-    }
-
-    // MARK: - Layout Helpers
-
-    private func artworkSize(for geometry: GeometryProxy) -> CGFloat {
-        let containerHeight = geometry.size.height
-        let safeAreaTop = geometry.safeAreaInsets.top
-        let safeAreaBottom = geometry.safeAreaInsets.bottom
-        let fixedOverhead: CGFloat = 317 + safeAreaTop + safeAreaBottom
-        let availableForArtwork = containerHeight - fixedOverhead
-        return max(140, min(availableForArtwork, 340))
     }
 
     // MARK: - Drag Indicator
@@ -139,9 +107,7 @@ struct NowPlayingView: View {
 
     private var headerBar: some View {
         HStack(spacing: 16) {
-            Button {
-                dismiss()
-            } label: {
+            Button(action: dismiss) {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
@@ -169,9 +135,8 @@ struct NowPlayingView: View {
 
     // MARK: - Album Artwork
 
-    @ViewBuilder
-    private func albumArtworkView(size: CGFloat) -> some View {
-        MorphableArtwork(size: size, namespace: animationNamespace)
+    private var albumArtworkView: some View {
+        MorphableArtwork(size: 280, namespace: namespace)
             .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
             .onTapGesture {
                 guard let track = audioService?.currentTrack else { return }
@@ -477,6 +442,6 @@ private struct TrackDetailItem: Identifiable {
 
 #Preview {
     @Previewable @Namespace var namespace
-    NowPlayingView(animationNamespace: namespace)
+    NowPlayingContent(namespace: namespace, dismiss: {})
         .audioEngine(AudioEngineFacade())
 }
