@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-/// Shared artwork view that morphs between mini (48px) and expanded (280px+) sizes.
+/// Shared artwork view that morphs between mini (30pt) and expanded (280pt+) sizes.
 /// Uses `matchedGeometryEffect` to enable smooth interpolation during zoom transitions.
 @MainActor
 struct MorphableArtwork: View {
@@ -16,9 +16,9 @@ struct MorphableArtwork: View {
     let namespace: Namespace.ID
     @Environment(\.audioEngine) private var audioService
 
-    /// Corner radius scales proportionally: 8pt for small, 16pt for large
+    /// Corner radius scales proportionally (size / 4), matching Apple Music's approach
     private var cornerRadius: CGFloat {
-        size > 100 ? 16 : 8
+        size / 4
     }
 
     var body: some View {
@@ -64,7 +64,7 @@ struct MorphableArtwork: View {
     @Previewable @Namespace var namespace
     @Previewable @State var audioService = AudioEngineFacade()
 
-    MorphableArtwork(size: 48, namespace: namespace)
+    MorphableArtwork(size: 30, namespace: namespace)
         .environment(\.audioEngine, audioService)
         .padding()
         .background(Color.black)

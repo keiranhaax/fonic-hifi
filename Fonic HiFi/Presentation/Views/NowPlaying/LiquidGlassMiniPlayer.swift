@@ -2,77 +2,56 @@
 //  LiquidGlassMiniPlayer.swift
 //  Fonic HiFi
 //
-//  iOS 26+ Simplified Liquid Glass Mini Player matching Apple Music's clean approach
+//  Simplified mini player matching Apple Music's clean approach
 //
 
 import SwiftUI
 
-/// iOS 26+ Simplified Liquid Glass Mini Player
-/// Compact-only design with matched transition support for morphing
+/// Simplified Mini Player matching Apple Music's design
+/// Compact layout with artwork, title/artist, and playback controls
 @MainActor
 struct LiquidGlassMiniPlayer: View {
     @Environment(\.audioEngine) private var audioService
-    @ObservedObject private var colorService = DominantColorService.shared
 
     let namespace: Namespace.ID
     @Binding var showingNowPlaying: Bool
 
-    // Constants for compact design
-    private let compactHeight: CGFloat = 74
-    private let cornerRadius: CGFloat = 16
-
-    /// Use shared color service for consistent colors during transitions
-    private var dominantColor: Color? {
-        colorService.dominantColor == .accentColor ? nil : colorService.dominantColor
-    }
-
     var body: some View {
-        compactPlayerContent
-            .frame(height: compactHeight)
-            .glassSurface(
-                style: dominantColor != nil ? .dynamic : .ultraThin,
-                tint: dominantColor?.opacity(0.35),
-                cornerRadius: cornerRadius
-            )
-            .clearGlassFix()
-            .matchedTransitionSource(id: "miniplayer", in: namespace)
-            .onTapGesture { expandWithHaptics() }
-            .task(id: audioService?.currentTrack?.id) {
-                await colorService.extractColor(for: audioService?.currentTrack)
-            }
+        HStack(spacing: 15) {
+            playerInfo
+
+            Spacer(minLength: 0)
+
+            playPauseButton
+                .padding(.trailing, 10)
+
+            nextButton
+        }
+        .foregroundStyle(Color.primary)
+        .padding(.horizontal, 15)
+        .matchedTransitionSource(id: "miniplayer", in: namespace)
+        .onTapGesture {
+            expandWithHaptics()
+        }
     }
 
-    // MARK: - Compact Content
+    // MARK: - Player Info
 
-    private var compactPlayerContent: some View {
+    private var playerInfo: some View {
         HStack(spacing: 12) {
-            MorphableArtwork(size: 48, namespace: namespace)
+            MorphableArtwork(size: 30, namespace: namespace)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(audioService?.currentTrack?.title ?? "Not Playing")
-                    .font(.body)
-                    .fontWeight(.medium)
+                    .font(.callout)
                     .lineLimit(1)
-                    .foregroundColor(.primary)
 
                 Text(audioService?.currentTrack?.artist ?? "No Artist")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.caption2)
+                    .foregroundStyle(.gray)
                     .lineLimit(1)
             }
-
-            Spacer()
-
-            HStack(spacing: 16) {
-                playPauseButton
-                    .frame(minWidth: 44, minHeight: 44)
-
-                nextButton
-                    .frame(minWidth: 44, minHeight: 44)
-            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
     }
 
     // MARK: - Controls
@@ -80,11 +59,9 @@ struct LiquidGlassMiniPlayer: View {
     private var playPauseButton: some View {
         Button(action: togglePlayPause) {
             Image(systemName: audioService?.isPlaying == true ? "pause.fill" : "play.fill")
-                .font(.title3)
-                .foregroundStyle(.primary)
-                .frame(width: 32, height: 32)
+                .contentShape(.rect)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
         .disabled(audioService?.currentTrack == nil)
         .opacity(audioService?.currentTrack == nil ? 0.4 : 1.0)
         .accessibilityLabel(audioService?.isPlaying == true ? "Pause" : "Play")
@@ -93,11 +70,9 @@ struct LiquidGlassMiniPlayer: View {
     private var nextButton: some View {
         Button(action: playNext) {
             Image(systemName: "forward.fill")
-                .font(.body)
-                .foregroundStyle(.primary)
-                .frame(width: 32, height: 32)
+                .contentShape(.rect)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
         .disabled(audioService?.currentTrack == nil)
         .opacity(audioService?.currentTrack == nil ? 0.4 : 1.0)
         .accessibilityLabel("Next Track")
@@ -146,17 +121,11 @@ struct LiquidGlassMiniPlayer: View {
         Spacer()
         LiquidGlassMiniPlayer(
             namespace: namespace,
-            showingNowPlaying: $showingNowPlaying,
+            showingNowPlaying: $showingNowPlaying
         )
         .environment(\.audioEngine, audioService)
         .padding()
     }
-    .background(
-        LinearGradient(
-            colors: [.black, .blue.opacity(0.3), .purple.opacity(0.2)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing,
-        ),
-    )
+    .background(Color.black)
     .preferredColorScheme(.dark)
 }

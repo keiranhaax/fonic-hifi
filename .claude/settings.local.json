@@ -29,7 +29,8 @@
       "Bash(~/.local/bin/idb:*)",
       "Bash(make build-check:*)",
       "Bash(xcodebuild:*)",
-      "Bash(make test:*)"
+      "Bash(make test:*)",
+      "mcp__filesystem__list_directory_with_sizes"
     ],
     "deny": [],
     "ask": []
