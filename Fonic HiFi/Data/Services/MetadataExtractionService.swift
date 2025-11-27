@@ -12,7 +12,14 @@ import OSLog
 /// Service for extracting metadata from audio files into Sendable data structures
 public protocol MetadataExtracting: Sendable {
     func extractTrackMetadata(from url: URL) async throws -> TrackMetadata
-    func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata]
+    func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata]
+}
+
+extension MetadataExtracting {
+    /// Extract metadata with default concurrency based on CPU cores
+    func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata] {
+        try await extractMetadata(from: urls, maxConcurrentTasks: max(4, ProcessInfo.processInfo.activeProcessorCount))
+    }
 }
 
 /// Service for extracting metadata from audio files into Sendable data structures
@@ -100,15 +107,26 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
         return trackMetadata
     }
 
-    /// Extract metadata from multiple files concurrently
-    /// - Parameter urls: Array of file URLs
+    /// Extract metadata from multiple files with bounded concurrency
+    /// - Parameters:
+    ///   - urls: Array of file URLs
+    ///   - maxConcurrentTasks: Maximum concurrent extractions (scales with CPU cores)
     /// - Returns: Array of TrackMetadata
-    public func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata] {
+    public func extractMetadata(
+        from urls: [URL],
+        maxConcurrentTasks: Int = max(4, ProcessInfo.processInfo.activeProcessorCount)
+    ) async throws -> [TrackMetadata] {
         try await withThrowingTaskGroup(of: TrackMetadata?.self) { group in
             var trackMetadata: [TrackMetadata] = []
+            var iterator = urls.makeIterator()
+            var inFlight = 0
+            let concurrency = max(1, maxConcurrentTasks)
 
-            for url in urls {
-                group.addTask {
+            // Launch initial batch
+            for _ in 0..<concurrency {
+                guard let url = iterator.next() else { break }
+                inFlight += 1
+                group.addTask { [self] in
                     do {
                         return try await self.extractTrackMetadata(from: url)
                     } catch {
@@ -125,9 +143,31 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
                 }
             }
 
+            // Process results and launch more as slots free up
             for try await metadata in group {
+                inFlight -= 1
                 if let metadata {
                     trackMetadata.append(metadata)
+                }
+
+                // Launch next task if available
+                if let url = iterator.next() {
+                    inFlight += 1
+                    group.addTask { [self] in
+                        do {
+                            return try await self.extractTrackMetadata(from: url)
+                        } catch {
+                            let filename = url.lastPathComponent
+                            let details = error.localizedDescription
+                            self.logger.error(
+                                """
+                                Failed to extract metadata from \(filename, privacy: .public):
+                                \(details, privacy: .public)
+                                """
+                            )
+                            return nil
+                        }
+                    }
                 }
             }
 
@@ -257,7 +297,8 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
         for item in metadata {
             if item.commonKey == .commonKeyArtwork,
                let data = item.dataValue {
-                return data
+                // Compress before returning (thread-safe CoreGraphics)
+                return ArtworkCompressor.compress(data)
             }
         }
 

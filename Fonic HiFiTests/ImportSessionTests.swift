@@ -165,7 +165,7 @@ private struct StubMetadataExtractor: MetadataExtracting {
         )
     }
 
-    func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata] {
+    func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
         try await urls.asyncMap { try await extractTrackMetadata(from: $0) }
     }
 }

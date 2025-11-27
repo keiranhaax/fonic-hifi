@@ -159,7 +159,7 @@ struct TestMetadataExtractor: MetadataExtracting {
         )
     }
 
-    func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata] {
+    func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
         try await urls.asyncMap { try await extractTrackMetadata(from: $0) }
     }
 }
@@ -172,7 +172,7 @@ struct SlowMetadataExtractor: MetadataExtracting {
         return try await TestMetadataExtractor().extractTrackMetadata(from: url)
     }
 
-    func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata] {
+    func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
         try await urls.asyncMap { try await extractTrackMetadata(from: $0) }
     }
 }

@@ -169,6 +169,15 @@ actor FileImportProcessor {
                 var nextProgressLog = startTime
                 let concurrency = max(1, maxConcurrentTasks)
 
+                // Load hash cache for batch duplicate detection (1 query instead of N)
+                var hashCache: SourceHashCache
+                do {
+                    hashCache = try await trackActor.loadSourceHashCache()
+                } catch {
+                    log.warning("Failed to load hash cache, falling back to per-file checks: \(error.localizedDescription)")
+                    hashCache = SourceHashCache()
+                }
+
                 var completed = 0
                 var successes = 0
                 var failures = 0
@@ -186,8 +195,27 @@ actor FileImportProcessor {
                             maxInFlight = inFlight
                         }
 
+                        // Capture current cache state for this task
+                        let currentCache = hashCache
+
                         group.addTask {
                             let taskStart = Date()
+
+                            // Fast in-memory duplicate check first
+                            let urlHash = nextFile.originalURL.librarySourceHash()
+                            let bookmarkHash = nextFile.securityScopedBookmark?.sha256Hex()
+                            let urlString = nextFile.originalURL.absoluteString
+
+                            if currentCache.contains(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString) {
+                                log.notice("Duplicate import skipped (cache hit): \(nextFile.originalURL.lastPathComponent, privacy: .public)")
+                                return ProcessedFileResult(
+                                    file: nextFile,
+                                    identifier: nil,
+                                    error: ProcessedFileError(message: "Duplicate file already exists"),
+                                    duration: Date().timeIntervalSince(taskStart)
+                                )
+                            }
+
                             do {
                                 let identifier = try await Self.importFile(
                                     nextFile,
@@ -237,6 +265,11 @@ actor FileImportProcessor {
 
                         if result.succeeded {
                             successes += 1
+                            // Update cache after successful import to prevent re-importing same file
+                            let urlHash = result.file.originalURL.librarySourceHash()
+                            let bookmarkHash = result.file.securityScopedBookmark?.sha256Hex()
+                            let urlString = result.file.originalURL.absoluteString
+                            hashCache.addEntry(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString)
                         } else {
                             failures += 1
                         }

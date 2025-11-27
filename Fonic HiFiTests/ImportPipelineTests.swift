@@ -348,7 +348,7 @@ private final class MockMetadataExtractor: MetadataExtracting {
         }
     }
 
-    func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata] {
+    func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
         try await withThrowingTaskGroup(of: TrackMetadata.self) { group in
             for url in urls {
                 group.addTask { try await self.extractTrackMetadata(from: url) }
@@ -393,7 +393,7 @@ private actor StubMetadataExtractor: MetadataExtracting {
         try behavior(url)
     }
 
-    func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata] {
+    func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
         try urls.map { try behavior($0) }
     }
 }

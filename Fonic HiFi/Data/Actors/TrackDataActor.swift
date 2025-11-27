@@ -196,6 +196,53 @@ public actor TrackDataActor {
         }
     }
 
+    /// Load all known source hashes for batch duplicate detection
+    /// - Returns: SourceHashCache containing all known identifiers
+    public func loadSourceHashCache() async throws -> SourceHashCache {
+        logger.info("Loading source hash cache for duplicate detection")
+
+        var urlHashes = Set<String>()
+        var bookmarkHashes = Set<String>()
+        var urlStrings = Set<String>()
+
+        // Fetch full Track models in batches (SwiftData doesn't support field projection)
+        let batchSize = 500
+        var offset = 0
+
+        while true {
+            var descriptor = FetchDescriptor<Track>()
+            descriptor.fetchOffset = offset
+            descriptor.fetchLimit = batchSize
+
+            let tracks = try modelContext.fetch(descriptor)
+            if tracks.isEmpty { break }
+
+            // Extract only the fields we need
+            for track in tracks {
+                if let hash = track.sourceURLHash {
+                    urlHashes.insert(hash)
+                }
+                if let hash = track.sourceBookmarkHash {
+                    bookmarkHashes.insert(hash)
+                }
+                if let str = track.sourceURLString {
+                    urlStrings.insert(str)
+                }
+            }
+
+            if tracks.count < batchSize { break }
+            offset += tracks.count
+        }
+
+        logger.info("Loaded \(urlHashes.count) URL hashes, \(bookmarkHashes.count) bookmark hashes")
+
+        return SourceHashCache(
+            urlHashes: urlHashes,
+            bookmarkHashes: bookmarkHashes,
+            urlStrings: urlStrings
+        )
+    }
+
     /// Get track metadata by persistent identifier
     /// - Parameter id: PersistentIdentifier of the track
     /// - Returns: TrackMetadata if found
@@ -337,6 +384,35 @@ public actor TrackDataActor {
 }
 
 // MARK: - Supporting Types
+
+/// Cache of known source identifiers for fast duplicate detection
+/// Sendable because it crosses actor boundary when returned from TrackDataActor
+/// Task-confined within FileImportProcessor - no locks needed
+public struct SourceHashCache: Sendable {
+    private(set) var urlHashes: Set<String>
+    private(set) var bookmarkHashes: Set<String>
+    private(set) var urlStrings: Set<String>
+
+    public init(urlHashes: Set<String> = [], bookmarkHashes: Set<String> = [], urlStrings: Set<String> = []) {
+        self.urlHashes = urlHashes
+        self.bookmarkHashes = bookmarkHashes
+        self.urlStrings = urlStrings
+    }
+
+    public func contains(urlHash: String?, bookmarkHash: String?, urlString: String?) -> Bool {
+        if let hash = urlHash, urlHashes.contains(hash) { return true }
+        if let hash = bookmarkHash, bookmarkHashes.contains(hash) { return true }
+        if let str = urlString, urlStrings.contains(str) { return true }
+        return false
+    }
+
+    /// Add new hashes after successful import (prevents duplicates within same batch)
+    public mutating func addEntry(urlHash: String?, bookmarkHash: String?, urlString: String?) {
+        if let hash = urlHash { urlHashes.insert(hash) }
+        if let hash = bookmarkHash { bookmarkHashes.insert(hash) }
+        if let str = urlString { urlStrings.insert(str) }
+    }
+}
 
 /// Sendable metadata struct for track information
 public struct TrackMetadata: Sendable {
