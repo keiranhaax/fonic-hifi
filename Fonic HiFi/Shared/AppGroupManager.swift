@@ -28,6 +28,7 @@ public final class AppGroupManager: ObservableObject {
     private let logger = Log.logger(.widgetData)
     private var lastPlaybackState: WidgetPlaybackState?
     private var lastTrackInfo: WidgetTrackInfo?
+    private var lastUpNextIds: [UUID] = []
 
     // MARK: - Initialization
 
@@ -84,7 +85,8 @@ public final class AppGroupManager: ObservableObject {
             lastTrackInfo = track
             logger.debug("Track info synced: \(track.title, privacy: .public)")
         } else {
-            // Clear track info
+            // Skip if already cleared
+            guard lastTrackInfo != nil else { return }
             defaults?.removeObject(forKey: WidgetConstants.Keys.trackInfo)
             lastTrackInfo = nil
             logger.debug("Track info cleared")
@@ -94,13 +96,19 @@ public final class AppGroupManager: ObservableObject {
     }
 
     /// Update up-next tracks in App Group
+    /// Only writes if track IDs have changed
     public func updateUpNextTracks(_ tracks: [WidgetTrackInfo]) {
         guard isAvailable else { return }
 
         // Limit to 5 tracks for widget display
         let limited = Array(tracks.prefix(5))
-        limited.saveAsUpNext()
+        let newIds = limited.map(\.id)
 
+        // Skip if same tracks
+        guard newIds != lastUpNextIds else { return }
+        lastUpNextIds = newIds
+
+        limited.saveAsUpNext()
         logger.debug("Up-next tracks synced: \(limited.count) tracks")
     }
 

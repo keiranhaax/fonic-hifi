@@ -7,7 +7,6 @@
 
 import Combine
 import Foundation
-import Observation
 import OSLog
 
 /// Coordinates data synchronization between the main app and widget extension
@@ -69,23 +68,28 @@ public final class WidgetDataCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Observe queue manager using withObservationTracking
-        // AudioQueueManager uses @Observable macro
-        observationTask = Task { [weak self] in
+        // Poll queue manager with change detection
+        // 500ms interval with trackId/trackCount comparison to reduce CPU
+        observationTask = Task { @MainActor [weak self] in
+            var lastTrackId: UUID?
+            var lastTrackCount: Int = -1  // -1 ensures initial sync fires
+
             while !Task.isCancelled {
                 guard let self else { return }
 
-                let currentState = withObservationTracking {
-                    self.queueManager.queueState
-                } onChange: {
-                    // This closure is called when tracked properties change
+                let state = queueManager.queueState
+                let currentId = state.currentTrack?.id
+                let currentCount = state.tracks.count
+
+                // Only process when meaningful fields change
+                if currentId != lastTrackId || currentCount != lastTrackCount {
+                    lastTrackId = currentId
+                    lastTrackCount = currentCount
+                    handleQueueStateChange(state)
                 }
 
-                // Process the queue state change
-                await self.handleQueueStateChange(currentState)
-
-                // Wait for next change
-                try? await Task.sleep(for: .milliseconds(100))
+                // 500ms is 5x slower than 100ms - reduces CPU waste
+                try? await Task.sleep(for: .milliseconds(500))
             }
         }
     }

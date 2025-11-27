@@ -22,6 +22,7 @@ public final class AudioEngineManager {
     private(set) var currentEngine: AudioEngineService?
     private(set) var currentEngineType: AudioEngineType?
     private(set) var currentFormat: AudioFormat?
+    private var pendingEngineSwitch: Bool = false
 
     public private(set) var configuration: AudioEngineConfiguration
 
@@ -47,6 +48,13 @@ public final class AudioEngineManager {
     /// - Throws: `AudioError` if no suitable engine can be prepared.
     @discardableResult
     public func ensureEngine(for info: AudioFileInfo) async throws -> AudioEngineService {
+        // Check for deferred preference change
+        if pendingEngineSwitch {
+            logger.info("Applying deferred engine switch")
+            await cleanupCurrentEngine()
+            pendingEngineSwitch = false
+        }
+
         let requiredType = engineFactory.selectEngineType(
             for: info.format,
             configuration: configuration,
@@ -102,6 +110,13 @@ public final class AudioEngineManager {
         currentEngineType = nil
         currentFormat = nil
         logger.debug("Invalidated cached engine reference")
+    }
+
+    /// Signal that the engine should be recreated on next ensureEngine() call.
+    /// Use when changing engine preference during active playback.
+    public func setPendingEngineSwitch() {
+        pendingEngineSwitch = true
+        logger.debug("Pending engine switch flagged for next track load")
     }
 
     // MARK: - Helpers

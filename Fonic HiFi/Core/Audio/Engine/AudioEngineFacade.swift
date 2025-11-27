@@ -102,6 +102,8 @@ public final class AudioEngineFacade: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let logger = Log.logger(.audioEngineFacade)
     private var isInitialized = false
+    private var lastHandledPreference: String?
+    private var preferenceObserver: NSKeyValueObservation?
 
     // MARK: - Initialization
 
@@ -397,27 +399,40 @@ public final class AudioEngineFacade: ObservableObject {
     }
 
     private func setupPreferenceMonitoring() {
-        NotificationCenter.default
-            .publisher(for: UserDefaults.didChangeNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    await self?.handlePreferenceChange()
-                }
+        // Use KVO on SPECIFIC key - does NOT fire for volume, shuffle, repeat, etc.
+        preferenceObserver = UserDefaults.standard.observe(
+            \.preferredAudioEngine,
+            options: [.new, .old]
+        ) { [weak self] _, change in
+            // Skip if value unchanged (redundant notification)
+            guard change.oldValue != change.newValue else { return }
+
+            Task { @MainActor [weak self] in
+                await self?.handlePreferenceChange()
             }
-            .store(in: &cancellables)
+        }
     }
 
     private func handlePreferenceChange() async {
         let preferred = UserDefaults.standard.string(forKey: "preferredAudioEngine") ?? "AVAudioEngine"
+
+        // De-dup: skip if we already handled this preference value
+        guard preferred != lastHandledPreference else { return }
+        lastHandledPreference = preferred
+
         let current = engineManager.currentEngineType?.rawValue ?? "None"
 
+        // No change needed if preference matches current engine
         guard preferred != current else { return }
+
         logger.info("Audio engine preference changed from \(current) to \(preferred)")
 
-        if !stateManager.currentState.isIdle {
-            logger.debug("Engine will be recreated on next playback to honour preference change")
+        if stateManager.currentState.isIdle {
+            // Idle: safe to invalidate immediately
             engineManager.invalidateCurrentEngine()
+        } else {
+            // PLAYING/PAUSED: defer to next track load via manager flag
+            engineManager.setPendingEngineSwitch()
         }
     }
 
