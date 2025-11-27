@@ -367,6 +367,20 @@ struct NowPlayingContent: View {
     // MARK: - Actions
 
     private func togglePlayPause() {
+        // Diagnostic logging for debugging controls issue
+        if let audioService {
+            let serviceID = String(describing: ObjectIdentifier(audioService))
+            logger.debug("""
+                togglePlayPause called
+                - audioService ID: \(serviceID, privacy: .public)
+                - isReady: \(audioService.isReady)
+                - isPlaying: \(audioService.isPlaying)
+                - currentTrack: \(audioService.currentTrack != nil ? "present" : "nil")
+                """)
+        } else {
+            logger.error("togglePlayPause: audioService is NIL")
+        }
+
         Task { @MainActor in
             guard let audioService else { return }
             do {

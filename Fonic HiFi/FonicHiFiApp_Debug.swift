@@ -173,11 +173,13 @@ private extension FonicHiFiApp_Debug {
                 .modelContainer(context.dataManager.container)
                 .environmentObject(context.dataManager.importService)
                 .environmentObject(context.audioEngine)
+                .artworkService(context.artworkService)
         } else {
             ContentView()
                 .modelContainer(context.dataManager.container)
                 .environmentObject(context.dataManager.importService)
                 .environmentObject(context.audioEngine)
+                .artworkService(context.artworkService)
         }
     }
 }
@@ -188,6 +190,7 @@ private final class DebugAppDependencies: ObservableObject {
         let dataManager: DataManager
         let playbackStateManager: PlaybackStateManager
         let audioEngine: AudioEngineFacade
+        let artworkService: ArtworkService
     }
 
     enum Status {
@@ -201,10 +204,12 @@ private final class DebugAppDependencies: ObservableObject {
         if let manager = DebugAppDependencies.bootstrapDataManager(logger: logger) {
             let playbackStateManager = PlaybackStateManager()
             let audioEngine = AudioEngineFacade(stateManager: playbackStateManager)
+            let artworkService = ArtworkService(container: manager.container)
             status = .ready(ReadyContext(
                 dataManager: manager,
                 playbackStateManager: playbackStateManager,
                 audioEngine: audioEngine,
+                artworkService: artworkService,
             ))
         } else {
             status = .failure("Unable to construct any DataManager fallback. Restart Fonic HiFi once storage access is restored.")

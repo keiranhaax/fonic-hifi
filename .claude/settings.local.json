@@ -37,7 +37,14 @@
       "Bash(idb ui tap:*)",
       "Bash(identify:*)",
       "Bash(sips:*)",
-      "mcp__filesystem__search_files"
+      "mcp__filesystem__search_files",
+      "Skill(superpowers:systematic-debugging)",
+      "Bash(git log:*)",
+      "Bash(make run:*)",
+      "mcp__firecrawl__firecrawl_search",
+      "Bash(xcbeautify:*)",
+      "Bash(echo:*)",
+      "mcp__filesystem__create_directory"
     ],
     "deny": [],
     "ask": []

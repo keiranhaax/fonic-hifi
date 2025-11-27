@@ -116,14 +116,7 @@ private struct AlbumCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(.tint.opacity(0.15))
-                .frame(width: 160, height: 160)
-                .overlay {
-                    Image(systemName: "music.note")
-                        .font(.title)
-                        .foregroundStyle(.tint)
-                }
+            LazyArtworkView(album: album, size: 160, cornerRadius: 8)
 
             Text(album.title)
                 .font(.callout.bold())
@@ -158,13 +151,7 @@ private struct TrackCardView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(.tint.opacity(0.15))
-                .frame(width: 50, height: 50)
-                .overlay {
-                    Image(systemName: "music.note")
-                        .foregroundStyle(.tint)
-                }
+            LazyArtworkView(track: track, size: 50, cornerRadius: 6)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.title)

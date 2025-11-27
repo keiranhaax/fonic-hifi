@@ -205,14 +205,7 @@ private struct AlbumRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Album artwork placeholder
-            RoundedRectangle(cornerRadius: 8)
-                .fill(.tint.opacity(0.15))
-                .frame(width: 50, height: 50)
-                .overlay {
-                    Image(systemName: "music.note")
-                        .foregroundStyle(.tint)
-                }
+            LazyArtworkView(album: album, size: 50, cornerRadius: 8)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(album.title)

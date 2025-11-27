@@ -102,7 +102,7 @@ public extension TrackEntity {
         return "Lossy"
     }
 
-    func asTrackRepresentation() -> Track {
+    func asTrackRepresentation(artwork: Data? = nil) -> Track {
         let track = Track(
             url: fileURL,
             title: title,
@@ -123,6 +123,7 @@ public extension TrackEntity {
         track.bitrate = bitrate
         track.albumArtist = albumArtist
         track.isFavorite = false
+        track.artwork = artwork
         return track
     }
 

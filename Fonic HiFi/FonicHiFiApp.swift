@@ -16,6 +16,9 @@ struct FonicHiFiApp: App {
     private let dataManager: DataManager?
     private let audioService: AudioEngineFacade
     private let importService: LibraryImportService?
+    private let artworkService: ArtworkService?
+    private let widgetCoordinator: WidgetDataCoordinator?
+    private let liveActivityManager: LiveActivityManager?
 
     @State private var launchError: LaunchError?
     @State private var showInitializationError: Bool
@@ -45,6 +48,9 @@ struct FonicHiFiApp: App {
         dataManager = resolution.dataManager
         audioService = resolution.audioService
         importService = resolution.importService
+        artworkService = resolution.artworkService
+        widgetCoordinator = resolution.widgetCoordinator
+        liveActivityManager = resolution.liveActivityManager
         fallbackError = resolution.fallbackError
 
         var launchError = resolution.launchError
@@ -102,6 +108,7 @@ struct FonicHiFiApp: App {
             .dataManager(dataManager)
             .libraryRepository(dataManager.makeLibraryRepository())
             .importService(importService)
+            .artworkService(artworkService)
             .modelContext(dataManager.mainContext)
             .task {
                 await initializeApp()
@@ -155,6 +162,13 @@ struct FonicHiFiApp: App {
             // Initialize audio service with proper error handling
             try await audioService.initialize()
             logger.info("Audio service initialized successfully")
+
+            // Configure intent dependency provider for widget/Live Activity intents
+            IntentDependencyProvider.shared.configure(
+                audioEngine: audioService,
+                widgetCoordinator: widgetCoordinator
+            )
+            logger.info("IntentDependencyProvider configured")
 
             // Perform any other startup tasks
             await performStartupTasks()
@@ -225,6 +239,9 @@ private extension FonicHiFiApp {
         let dataManager: DataManager?
         let audioService: AudioEngineFacade
         let importService: LibraryImportService?
+        let artworkService: ArtworkService?
+        let widgetCoordinator: WidgetDataCoordinator?
+        let liveActivityManager: LiveActivityManager?
         let launchError: LaunchError?
         let showInitializationError: Bool
         let usingFallback: Bool
@@ -235,6 +252,9 @@ private extension FonicHiFiApp {
         let dataManager: DataManager?
         let audioService: AudioEngineFacade
         let importService: LibraryImportService?
+        let artworkService: ArtworkService?
+        let widgetCoordinator: WidgetDataCoordinator?
+        let liveActivityManager: LiveActivityManager?
         let recoveryError: DataManagerError?
     }
 
@@ -249,6 +269,9 @@ private extension FonicHiFiApp {
                 dataManager: previewServices.dataManager,
                 audioService: previewServices.audioService,
                 importService: previewServices.importService,
+                artworkService: previewServices.artworkService,
+                widgetCoordinator: previewServices.widgetCoordinator,
+                liveActivityManager: previewServices.liveActivityManager,
                 launchError: nil,
                 showInitializationError: false,
                 usingFallback: previewServices.dataManager?.isFallback ?? false,
@@ -262,6 +285,9 @@ private extension FonicHiFiApp {
                 dataManager: services.dataManager,
                 audioService: services.audioService,
                 importService: services.importService,
+                artworkService: services.artworkService,
+                widgetCoordinator: services.widgetCoordinator,
+                liveActivityManager: services.liveActivityManager,
                 launchError: nil,
                 showInitializationError: false,
                 usingFallback: false,
@@ -277,6 +303,9 @@ private extension FonicHiFiApp {
                 dataManager: fallback.dataManager,
                 audioService: fallback.audioService,
                 importService: fallback.importService,
+                artworkService: fallback.artworkService,
+                widgetCoordinator: fallback.widgetCoordinator,
+                liveActivityManager: fallback.liveActivityManager,
                 launchError: LaunchError(message: error.localizedDescription),
                 showInitializationError: true,
                 usingFallback: fallback.dataManager != nil,
@@ -291,18 +320,33 @@ private extension FonicHiFiApp {
         let dataManager = try DataManager()
         let playbackStateManager = PlaybackStateManager()
         let audioMonitor = AudioMonitor(performanceMonitor: performanceMonitor)
+        let queueManager = AudioQueueManager()
         let audioService = AudioEngineFacade(
             stateManager: playbackStateManager,
+            queueManager: queueManager,
             monitor: audioMonitor,
         )
         let importService = LibraryImportService(
             trackDataActor: dataManager.trackDataActor,
             metadataExtractor: dataManager.metadataExtractor,
         )
+        let artworkService = ArtworkService(container: dataManager.container)
+        let widgetCoordinator = WidgetDataCoordinator(
+            stateManager: playbackStateManager,
+            queueManager: queueManager,
+            artworkService: artworkService,
+        )
+        let liveActivityManager = LiveActivityManager(
+            stateManager: playbackStateManager,
+            queueManager: queueManager
+        )
         return AppServices(
             dataManager: dataManager,
             audioService: audioService,
             importService: importService,
+            artworkService: artworkService,
+            widgetCoordinator: widgetCoordinator,
+            liveActivityManager: liveActivityManager,
             recoveryError: nil,
         )
     }
@@ -317,19 +361,34 @@ private extension FonicHiFiApp {
 
         let playbackStateManager = PlaybackStateManager()
         let audioMonitor = AudioMonitor(performanceMonitor: performanceMonitor)
+        let queueManager = AudioQueueManager()
         let audioService = AudioEngineFacade(
             stateManager: playbackStateManager,
+            queueManager: queueManager,
             monitor: audioMonitor
         )
         let importService = LibraryImportService(
             trackDataActor: dataManager.trackDataActor,
             metadataExtractor: dataManager.metadataExtractor
         )
+        let artworkService = ArtworkService(container: dataManager.container)
+        let widgetCoordinator = WidgetDataCoordinator(
+            stateManager: playbackStateManager,
+            queueManager: queueManager,
+            artworkService: artworkService
+        )
+        let liveActivityManager = LiveActivityManager(
+            stateManager: playbackStateManager,
+            queueManager: queueManager
+        )
 
         return AppServices(
             dataManager: dataManager,
             audioService: audioService,
             importService: importService,
+            artworkService: artworkService,
+            widgetCoordinator: widgetCoordinator,
+            liveActivityManager: liveActivityManager,
             recoveryError: nil
         )
     }
@@ -340,8 +399,10 @@ private extension FonicHiFiApp {
     ) -> AppServices {
         let playbackStateManager = PlaybackStateManager()
         let audioMonitor = AudioMonitor(performanceMonitor: performanceMonitor)
+        let queueManager = AudioQueueManager()
         let audioService = AudioEngineFacade(
             stateManager: playbackStateManager,
+            queueManager: queueManager,
             monitor: audioMonitor,
         )
 
@@ -351,10 +412,23 @@ private extension FonicHiFiApp {
                 trackDataActor: fallbackManager.trackDataActor,
                 metadataExtractor: fallbackManager.metadataExtractor,
             )
+            let artworkService = ArtworkService(container: fallbackManager.container)
+            let widgetCoordinator = WidgetDataCoordinator(
+                stateManager: playbackStateManager,
+                queueManager: queueManager,
+                artworkService: artworkService,
+            )
+            let liveActivityManager = LiveActivityManager(
+                stateManager: playbackStateManager,
+                queueManager: queueManager
+            )
             return AppServices(
                 dataManager: fallbackManager,
                 audioService: audioService,
                 importService: importService,
+                artworkService: artworkService,
+                widgetCoordinator: widgetCoordinator,
+                liveActivityManager: liveActivityManager,
                 recoveryError: nil,
             )
         }
@@ -365,10 +439,23 @@ private extension FonicHiFiApp {
                 trackDataActor: resilientManager.trackDataActor,
                 metadataExtractor: resilientManager.metadataExtractor,
             )
+            let artworkService = ArtworkService(container: resilientManager.container)
+            let widgetCoordinator = WidgetDataCoordinator(
+                stateManager: playbackStateManager,
+                queueManager: queueManager,
+                artworkService: artworkService,
+            )
+            let liveActivityManager = LiveActivityManager(
+                stateManager: playbackStateManager,
+                queueManager: queueManager
+            )
             return AppServices(
                 dataManager: resilientManager,
                 audioService: audioService,
                 importService: importService,
+                artworkService: artworkService,
+                widgetCoordinator: widgetCoordinator,
+                liveActivityManager: liveActivityManager,
                 recoveryError: nil,
             )
         } catch {
@@ -377,6 +464,9 @@ private extension FonicHiFiApp {
                 dataManager: nil,
                 audioService: audioService,
                 importService: nil,
+                artworkService: nil,
+                widgetCoordinator: nil,
+                liveActivityManager: nil,
                 recoveryError: dataManagerError,
             )
         }

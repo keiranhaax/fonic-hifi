@@ -68,6 +68,21 @@ extension EnvironmentValues {
     }
 }
 
+// MARK: - Artwork Service Environment
+
+/// Environment key for ArtworkService dependency injection
+struct ArtworkServiceKey: EnvironmentKey {
+    static let defaultValue: ArtworkService? = nil
+}
+
+extension EnvironmentValues {
+    /// Access to the artwork service through environment
+    var artworkService: ArtworkService? {
+        get { self[ArtworkServiceKey.self] }
+        set { self[ArtworkServiceKey.self] = newValue }
+    }
+}
+
 // MARK: - Convenience Extensions
 
 extension View {
@@ -104,5 +119,15 @@ extension View {
     /// Injects the library repository into the environment
     func libraryRepository(_ repository: LibraryRepository?) -> some View {
         environment(\.libraryRepository, repository)
+    }
+
+    /// Injects the artwork service into the environment
+    func artworkService(_ service: ArtworkService) -> some View {
+        environment(\.artworkService, service)
+    }
+
+    /// Injects an optional artwork service into the environment
+    func artworkService(_ service: ArtworkService?) -> some View {
+        environment(\.artworkService, service)
     }
 }

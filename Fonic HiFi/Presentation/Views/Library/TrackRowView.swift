@@ -67,18 +67,32 @@ struct TrackRowView: View {
 
     @MainActor
     private func playTrack() {
-        guard let audioService else { return }
+        guard let audioService else {
+            logger.error("playTrack: audioService is nil")
+            return
+        }
 
-        logger.info("Track row tapped for \(track.title, privacy: .public)")
+        // Diagnostic logging for debugging controls issue
+        let serviceID = String(describing: ObjectIdentifier(audioService))
+        logger.info("""
+            Track tapped: \(track.title, privacy: .public)
+            - audioService ID: \(serviceID, privacy: .public)
+            - isReady: \(audioService.isReady)
+            - isPlaying: \(audioService.isPlaying)
+            """)
 
         audioService.setCurrentTrack(track)
         showingNowPlaying.wrappedValue = true
+
         Task {
             do {
                 try await audioService.play(track: track)
-                logger.debug("Playback started for \(track.title, privacy: .public)")
+                logger.info("play(track:) succeeded for \(track.title, privacy: .public)")
             } catch {
-                logger.error("Failed to play track: \(error.localizedDescription, privacy: .public)")
+                logger.error("play(track:) FAILED: \(error.localizedDescription, privacy: .public)")
+                // Clear broken state so user isn't left in non-functional UI
+                audioService.setCurrentTrack(nil)
+                showingNowPlaying.wrappedValue = false
             }
         }
     }

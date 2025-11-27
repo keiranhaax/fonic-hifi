@@ -48,6 +48,7 @@ struct LibraryView: View {
     @Environment(\.importService) private var importService
     @Environment(\.audioEngine) private var audioEngine
     @Environment(\.showingNowPlaying) private var showingNowPlaying
+    @Environment(\.artworkService) private var artworkService
 
     @State private var selectedTab = LibraryTab.tracks
     @State private var searchText = ""
@@ -333,10 +334,11 @@ struct LibraryView: View {
 
     private func playTrack(_ track: TrackEntity) {
         guard let audioEngine else { return }
-        let playableTrack = track.asTrackRepresentation()
-        audioEngine.setCurrentTrack(playableTrack)
-        showingNowPlaying.wrappedValue = true
         Task {
+            let artwork = await artworkService?.artwork(for: track.id)
+            let playableTrack = track.asTrackRepresentation(artwork: artwork)
+            audioEngine.setCurrentTrack(playableTrack)
+            showingNowPlaying.wrappedValue = true
             do {
                 try await audioEngine.play(track: playableTrack)
             } catch {
@@ -366,7 +368,9 @@ private struct TrackEntityRow: View {
     let onInfoTapped: () -> Void
 
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            LazyArtworkView(trackId: track.id, size: 56, cornerRadius: 8)
+
             VStack(alignment: .leading, spacing: 6) {
                 Text(track.title)
                     .font(.headline)
@@ -406,15 +410,17 @@ private struct AlbumEntityTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.3))
-                .aspectRatio(1, contentMode: .fit)
-                .overlay(
-                    Image(systemName: "square.stack")
-                        .font(.system(size: 34))
-                        .foregroundStyle(.secondary)
+            GeometryReader { geometry in
+                LazyArtworkView(
+                    albumTitle: album.title,
+                    albumArtist: album.albumArtist,
+                    size: geometry.size.width,
+                    cornerRadius: 12,
+                    placeholderIcon: "square.stack"
                 )
                 .shadow(radius: 4)
+            }
+            .aspectRatio(1, contentMode: .fit)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(album.title)
@@ -530,15 +536,12 @@ private struct TrackEntityDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.3))
-                        .aspectRatio(1, contentMode: .fit)
-                        .overlay(
-                            Image(systemName: "music.note")
-                                .font(.system(size: 60))
-                                .foregroundStyle(.secondary)
-                        )
-                        .padding(.horizontal, 40)
+                    HStack {
+                        Spacer()
+                        LazyArtworkView(trackId: track.id, size: 200, cornerRadius: 12)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 40)
 
                     detailSection(title: "Info") {
                         LibraryDetailRow(label: "Title", value: track.title)
@@ -598,15 +601,14 @@ private struct AlbumEntityDetailView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 160, height: 160)
-                    .overlay(
-                        Image(systemName: "square.stack")
-                            .font(.system(size: 50))
-                            .foregroundStyle(.secondary)
-                    )
-                    .padding(.top, 40)
+                LazyArtworkView(
+                    albumTitle: album.title,
+                    albumArtist: album.albumArtist,
+                    size: 160,
+                    cornerRadius: 12,
+                    placeholderIcon: "square.stack"
+                )
+                .padding(.top, 40)
 
                 VStack(spacing: 12) {
                     Text(album.title)
