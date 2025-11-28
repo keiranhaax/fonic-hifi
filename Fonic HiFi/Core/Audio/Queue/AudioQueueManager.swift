@@ -311,11 +311,14 @@ public final class AudioQueueManager: AudioQueue {
             return setCurrentIndex(nil)
         }
 
-        guard let index = tracks.firstIndex(where: { $0.id == track.id }) else {
-            return false
+        // If track exists in queue, select it
+        if let index = tracks.firstIndex(where: { $0.id == track.id }) {
+            return setCurrentIndex(index)
         }
 
-        return setCurrentIndex(index)
+        // Track not in queue - append it and select
+        enqueue(track: track)
+        return setCurrentIndex(tracks.count - 1)
     }
 
     // MARK: - Queue Manipulation

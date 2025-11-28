@@ -323,6 +323,43 @@ final class AudioQueueManagerTests: XCTestCase {
         let issues = queue.validateState()
         XCTAssertTrue(issues.isEmpty)
     }
+
+    func testSetCurrentTrackAppendsIfTrackNotInQueue() {
+        let queue = AudioQueueManager()
+        let existingTrack = makeTrack(title: "Existing")
+        let newTrack = makeTrack(title: "New Track")
+
+        // Setup: queue has one track
+        queue.enqueue(tracks: [existingTrack])
+        XCTAssertTrue(queue.setCurrentIndex(0))
+        XCTAssertEqual(queue.tracks.count, 1)
+
+        // Act: set current to track NOT in queue
+        let result = queue.setCurrentTrack(newTrack)
+
+        // Assert: track was appended and selected
+        XCTAssertTrue(result, "setCurrentTrack should succeed for missing track")
+        XCTAssertEqual(queue.tracks.count, 2, "Track should be appended")
+        XCTAssertEqual(queue.currentTrack?.id, newTrack.id)
+        XCTAssertEqual(queue.currentIndex, 1, "Should select appended track")
+    }
+
+    func testSetCurrentTrackSelectsExistingTrack() {
+        let queue = AudioQueueManager()
+        let tracks = [makeTrack(title: "A"), makeTrack(title: "B")]
+
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(0))
+
+        // Act: set current to track already in queue
+        let result = queue.setCurrentTrack(tracks[1])
+
+        // Assert: existing track selected, queue unchanged
+        XCTAssertTrue(result)
+        XCTAssertEqual(queue.currentTrack?.id, tracks[1].id)
+        XCTAssertEqual(queue.tracks.count, 2, "Queue should be unchanged")
+        XCTAssertEqual(queue.currentIndex, 1)
+    }
 }
 
 // MARK: - Helpers
