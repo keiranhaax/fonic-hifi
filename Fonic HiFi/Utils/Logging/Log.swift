@@ -72,10 +72,9 @@ enum LogCategory: String, CaseIterable {
     case metricsEngine = "metrics.engine"
     case metricsQueue = "metrics.queue"
 
-    // Widget & Live Activity
+    // Widget
     case widget = "widget.core"
     case widgetData = "widget.data"
-    case widgetLiveActivity = "widget.liveActivity"
 }
 
 enum Log {

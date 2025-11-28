@@ -23,7 +23,6 @@ public enum WidgetConstants {
     /// Widget kinds for identification
     public enum WidgetKind {
         public static let nowPlaying = "NowPlayingWidget"
-        public static let liveActivity = "NowPlayingLiveActivity"
     }
 
     /// Artwork cache configuration

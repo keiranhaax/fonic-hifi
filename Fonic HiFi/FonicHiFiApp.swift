@@ -18,7 +18,6 @@ struct FonicHiFiApp: App {
     private let importService: LibraryImportService?
     private let artworkService: ArtworkService?
     private let widgetCoordinator: WidgetDataCoordinator?
-    private let liveActivityManager: LiveActivityManager?
 
     @State private var launchError: LaunchError?
     @State private var showInitializationError: Bool
@@ -50,7 +49,6 @@ struct FonicHiFiApp: App {
         importService = resolution.importService
         artworkService = resolution.artworkService
         widgetCoordinator = resolution.widgetCoordinator
-        liveActivityManager = resolution.liveActivityManager
         fallbackError = resolution.fallbackError
 
         var launchError = resolution.launchError
@@ -241,7 +239,6 @@ private extension FonicHiFiApp {
         let importService: LibraryImportService?
         let artworkService: ArtworkService?
         let widgetCoordinator: WidgetDataCoordinator?
-        let liveActivityManager: LiveActivityManager?
         let launchError: LaunchError?
         let showInitializationError: Bool
         let usingFallback: Bool
@@ -254,7 +251,6 @@ private extension FonicHiFiApp {
         let importService: LibraryImportService?
         let artworkService: ArtworkService?
         let widgetCoordinator: WidgetDataCoordinator?
-        let liveActivityManager: LiveActivityManager?
         let recoveryError: DataManagerError?
     }
 
@@ -271,7 +267,6 @@ private extension FonicHiFiApp {
                 importService: previewServices.importService,
                 artworkService: previewServices.artworkService,
                 widgetCoordinator: previewServices.widgetCoordinator,
-                liveActivityManager: previewServices.liveActivityManager,
                 launchError: nil,
                 showInitializationError: false,
                 usingFallback: previewServices.dataManager?.isFallback ?? false,
@@ -287,7 +282,6 @@ private extension FonicHiFiApp {
                 importService: services.importService,
                 artworkService: services.artworkService,
                 widgetCoordinator: services.widgetCoordinator,
-                liveActivityManager: services.liveActivityManager,
                 launchError: nil,
                 showInitializationError: false,
                 usingFallback: false,
@@ -305,7 +299,6 @@ private extension FonicHiFiApp {
                 importService: fallback.importService,
                 artworkService: fallback.artworkService,
                 widgetCoordinator: fallback.widgetCoordinator,
-                liveActivityManager: fallback.liveActivityManager,
                 launchError: LaunchError(message: error.localizedDescription),
                 showInitializationError: true,
                 usingFallback: fallback.dataManager != nil,
@@ -336,17 +329,12 @@ private extension FonicHiFiApp {
             queueManager: queueManager,
             artworkService: artworkService,
         )
-        let liveActivityManager = LiveActivityManager(
-            stateManager: playbackStateManager,
-            queueManager: queueManager
-        )
         return AppServices(
             dataManager: dataManager,
             audioService: audioService,
             importService: importService,
             artworkService: artworkService,
             widgetCoordinator: widgetCoordinator,
-            liveActivityManager: liveActivityManager,
             recoveryError: nil,
         )
     }
@@ -377,10 +365,6 @@ private extension FonicHiFiApp {
             queueManager: queueManager,
             artworkService: artworkService
         )
-        let liveActivityManager = LiveActivityManager(
-            stateManager: playbackStateManager,
-            queueManager: queueManager
-        )
 
         return AppServices(
             dataManager: dataManager,
@@ -388,7 +372,6 @@ private extension FonicHiFiApp {
             importService: importService,
             artworkService: artworkService,
             widgetCoordinator: widgetCoordinator,
-            liveActivityManager: liveActivityManager,
             recoveryError: nil
         )
     }
@@ -418,17 +401,12 @@ private extension FonicHiFiApp {
                 queueManager: queueManager,
                 artworkService: artworkService,
             )
-            let liveActivityManager = LiveActivityManager(
-                stateManager: playbackStateManager,
-                queueManager: queueManager
-            )
             return AppServices(
                 dataManager: fallbackManager,
                 audioService: audioService,
                 importService: importService,
                 artworkService: artworkService,
                 widgetCoordinator: widgetCoordinator,
-                liveActivityManager: liveActivityManager,
                 recoveryError: nil,
             )
         }
@@ -445,17 +423,12 @@ private extension FonicHiFiApp {
                 queueManager: queueManager,
                 artworkService: artworkService,
             )
-            let liveActivityManager = LiveActivityManager(
-                stateManager: playbackStateManager,
-                queueManager: queueManager
-            )
             return AppServices(
                 dataManager: resilientManager,
                 audioService: audioService,
                 importService: importService,
                 artworkService: artworkService,
                 widgetCoordinator: widgetCoordinator,
-                liveActivityManager: liveActivityManager,
                 recoveryError: nil,
             )
         } catch {
@@ -466,7 +439,6 @@ private extension FonicHiFiApp {
                 importService: nil,
                 artworkService: nil,
                 widgetCoordinator: nil,
-                liveActivityManager: nil,
                 recoveryError: dataManagerError,
             )
         }

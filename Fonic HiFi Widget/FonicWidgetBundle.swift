@@ -13,8 +13,5 @@ struct FonicWidgetBundle: WidgetBundle {
     var body: some Widget {
         // Home Screen and Lock Screen widgets
         NowPlayingWidget()
-
-        // Live Activity (Dynamic Island + Lock Screen banner)
-        NowPlayingActivityConfiguration()
     }
 }
