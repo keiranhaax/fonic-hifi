@@ -1,6 +1,6 @@
 # Project Status
 
-**Last Updated**: 2025-11-24 (Project cleanup & coverage target adjustment)
+**Last Updated**: 2025-11-27 (Widget ecosystem & Apple Music UI patterns)
 
 **Branch**: `main`
 **Build**: ✅ `make lint` (2025-11-24 – 0 violations)  •  ✅ `make test` (2025-11-24 – 277 tests, 0 failures)  •  ✅ `make coverage-check` (target lowered to 40%)
@@ -31,6 +31,13 @@
 **UI Layer:**
 - ✅ iOS 26 Liquid Glass - `.glassEffect()` APIs (commit 38b63ea)
 - ✅ LiquidGlassDesignSystem - Unified design tokens
+- ✅ Apple Music UI patterns - MorphableArtwork, zoom transitions (commit 2015368)
+
+**Widget System:**
+- ✅ LiveActivityManager - Core/LiveActivity/LiveActivityManager.swift:13
+- ✅ NowPlayingAttributes - Core/LiveActivity/NowPlayingAttributes.swift:17
+- ✅ Widget Extension - Fonic HiFi Widget/ (Small, Medium, Large, Lock Screen)
+- ✅ Dynamic Island - NowPlayingActivityConfiguration.swift
 
 **Non-Existent References (Do NOT reference):**
 - ❌ Core/Audio/Decoders/ - DOES NOT EXIST

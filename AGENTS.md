@@ -40,10 +40,12 @@ Test targets: `Fonic HiFiTests/` (active Swift Testing & XCTest suites) and `Fon
 - `PlaybackStateManager`: Single source of truth for playback state
 - Immutable state snapshots published to observers
 
+**Widget System:** Live Activities and WidgetKit integration (see CLAUDE.md for details)
+
 ## Essential Build Commands
 
 ```bash
-make build         # Build for iPhone 16 Pro simulator (iOS 26.0)
+make build         # Build for iPhone 17 Pro simulator (iOS 26.1)
 make run           # Build and run in simulator
 make clean         # Reset derived data
 make lint          # SwiftLint code quality checks (ALWAYS run after changes)
@@ -58,7 +60,7 @@ make open          # Launch project in Xcode
 ✅ **Swift Testing & XCTest suites are active.**
 
 - Run `make lint` and `make test` after code changes (see `CLAUDE.md` Command & Build Notes for variants).
-- Tests live in `Fonic HiFiTests/` (145+ cases covering audio engines, diagnostics, data, and UI models).
+- Tests live in `Fonic HiFiTests/` (277 tests across 60+ files covering audio engines, diagnostics, data, and UI models).
 - Follow Swift Testing (`@Test`) for async/unit coverage and XCTest for integration; name files `<Module><Feature>Tests.swift`.
 - Review `docs/testing/` for coverage expectations and recent reports.
 
@@ -103,7 +105,7 @@ Use `make pr-create` for GitHub CLI pull request creation.
 - Review `Fonic_HiFi.entitlements` when adding capabilities
 - App ships without network permissions (privacy-first design)
 - Keep sample libraries local, avoid embedding licensed audio in git
-- Verify new background modes or file-access rights with manual regression on iPhone 16 Pro simulator
+- Verify new background modes or file-access rights with manual regression on iPhone 17 Pro simulator
 
 ## Project Status & AI Tools
 

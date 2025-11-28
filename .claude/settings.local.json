@@ -44,7 +44,15 @@
       "mcp__firecrawl__firecrawl_search",
       "Bash(xcbeautify:*)",
       "Bash(echo:*)",
-      "mcp__filesystem__create_directory"
+      "mcp__filesystem__create_directory",
+      "mcp__exa__get_code_context_exa",
+      "Skill(frontend-design)",
+      "Skill(superpowers:executing-plans)",
+      "Skill(superpowers:finishing-a-development-branch)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(example-skills:frontend-design)"
     ],
     "deny": [],
     "ask": []

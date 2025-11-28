@@ -77,6 +77,12 @@ See skill documentation for complete multi-tier search strategy and examples.
 AudioEngineFacade (Main coordinator) - AudioEngineFacade.swift:20
 ├── AVAudioEngineAdapter (Core/Audio/Engines/AVAudioEngineAdapter.swift)
 └── AudioKitEngineAdapter (Core/Audio/Engines/AudioKitEngineAdapter.swift)
+
+Widget System:
+├── LiveActivityManager.swift:13 (@MainActor lifecycle)
+├── NowPlayingAttributes.swift:17 (ActivityAttributes)
+├── Fonic HiFi Widget/NowPlayingActivityConfiguration.swift
+└── Fonic HiFi Widget/NowPlayingTimelineProvider.swift:12
 ```
 
 **Engine Selection** (AudioEngineFactory.swift):
@@ -123,6 +129,35 @@ PlaybackStateManager (Single source of truth)
 3. AudioEngine → PlaybackStateManager update
 4. State change → Published to all observers
 5. UI updates via @Published properties
+
+### Widget & Live Activity Architecture [Verified-Code]
+
+```
+Widget Ecosystem
+├── Home Screen Widgets (WidgetKit)
+│   ├── SmallWidgetView, MediumWidgetView, LargeWidgetView
+│   └── StandBy mode detection via showsWidgetContainerBackground
+├── Lock Screen Accessories
+│   └── accessoryCircular, accessoryRectangular, accessoryInline
+└── Live Activities (Dynamic Island + Lock Screen Banner)
+    ├── LiveActivityManager.swift:13 (@MainActor lifecycle)
+    ├── NowPlayingAttributes.swift:17 (4KB limit enforcement)
+    └── NowPlayingActivityConfiguration.swift
+```
+
+**Live Activity Sparse Update Strategy:**
+- Updates ONLY on play/pause/seek/track change (NOT every second)
+- Uses `playbackRate` (1.0 playing, 0.0 paused) for system interpolation
+- Artwork: 100x100 JPEG thumbnail (~3KB max)
+- Timeline refresh: 60s playing, 300s paused
+
+### Apple Music UI Patterns [Verified-Code]
+
+The NowPlaying UI follows Apple Music's zoom transition pattern:
+- `MorphableArtwork.swift` - Artwork morphing with `.matchedGeometryEffect()`
+- `LiquidGlassMiniPlayer.swift` - Mini player with glass effect
+- Native iOS 26 `.glassEffect()` without custom drag gestures
+- Unified color service for artwork-based theming
 
 ## Required Development Tools
 
@@ -188,7 +223,7 @@ git revert COMMIT_SHA   # Revert specific commit
 5. Run `make lint` to check code quality
 6. Run `make format` to ensure consistent style
 7. Run `make build` to verify compilation
-8. Run `make run` to test in iPhone 16 Pro simulator (iOS 26.0)
+8. Run `make run` to test in iPhone 17 Pro simulator (iOS 26.1)
 9. Update STATUS.md if session spans multiple days
 10. Ask to commit changes after edits
 11. **NEVER** add backwards compatibility code
@@ -207,6 +242,26 @@ git revert COMMIT_SHA   # Revert specific commit
 - Compiler builds from the working tree (including staged changes). A successful build can include staged-but-uncommitted code—commit or document staged work before relying on results.
 - Fast checks: `make build-check` for exit-code-only, `make build-verify` + `make error-report` for full failure context.
 - Makefile security hardening (Oct 2025): PID regex validation and bounded durations, mktemp + trap cleanup, bundle ID matching for processes, fail-fast error handling, crash log sorting + atos validation, and `CODEX_ALLOW_UPLOAD=1` gate for AI uploads.
+
+**Advanced Commands:**
+- Profiling: `make profile-cpu`, `make profile-memory`, `make profile-audio`
+- Crash diagnostics: `make crash-logs`, `make crash-latest`, `make crash-symbolicate`
+- App monitoring: `make run-verify`, `make app-status`, `make monitor-app`
+- Logging: `make logs-stream`, `make logs-filter SUBSYSTEM=...`, `make logs-errors`
+- Benchmarking: `make benchmark-build`, `make benchmark-test`
+- AI integration: `make codex-explain FILE=...` (requires CODEX_ALLOW_UPLOAD=1)
+
+## Test Organization [Verified-Code]
+
+**60+ test files organized by domain** (Fonic HiFiTests/):
+- Audio Engine: AVAudioEngineAdapterTests, AudioKitEngineAdapterTests, AudioEngineFactoryTests
+- Diagnostics: AudioMonitorTests, BitPerfectValidatorTests, PlaybackDiagnosticsTests (14 files)
+- Data Layer: TrackDataActorTests, FileImportProcessorTests, LibraryImportServiceTests
+- Queue/Playback: QueueCoordinatorTests, AudioQueueManagerTests
+- UI: LibraryViewModelTests, GlassUtilitiesTests
+
+**Coverage**: 46.54% overall, 34.17% app (target: 40%)
+**Run**: `make test` | `make coverage` | `make coverage-check`
 
 ## Critical Implementation Patterns
 
