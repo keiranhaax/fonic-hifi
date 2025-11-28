@@ -94,6 +94,11 @@ public final class PlaybackStateManager {
         let oldState = currentState
         previousState = oldState
 
+        // Skip if state unchanged (prevents spam from frequent time updates)
+        guard oldState != newState else {
+            return true
+        }
+
         // Update current state
         currentState = newState
         lastStateChange = timestamp
