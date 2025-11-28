@@ -202,6 +202,51 @@ public enum PlaybackState: Sendable, Equatable, CustomStringConvertible {
     }
 }
 
+// MARK: - Custom Equatable
+
+extension PlaybackState {
+    /// Time tolerance for equality comparison (100ms)
+    /// Only applied to moving time values, not duration metadata
+    private static let timeTolerance: TimeInterval = 0.1
+
+    public static func == (lhs: PlaybackState, rhs: PlaybackState) -> Bool {
+        switch (lhs, rhs) {
+        case (.idle, .idle), (.stopped, .stopped):
+            return true
+
+        case let (.loading(p1), .loading(p2)):
+            return abs(p1 - p2) < 0.01
+
+        case let (.playing(t1, d1), .playing(t2, d2)):
+            // Tolerance on currentTime (moving), exact on duration (metadata)
+            return abs(t1 - t2) < timeTolerance && d1 == d2
+
+        case let (.paused(t1, d1), .paused(t2, d2)):
+            // Tolerance on currentTime (moving), exact on duration (metadata)
+            return abs(t1 - t2) < timeTolerance && d1 == d2
+
+        case let (.buffering(p1, t1), .buffering(p2, t2)):
+            return abs(p1 - p2) < 0.01 && abs(t1 - t2) < timeTolerance
+
+        case let (.seeking(target1, t1), .seeking(target2, t2)):
+            return abs(target1 - target2) < timeTolerance && abs(t1 - t2) < timeTolerance
+
+        case let (.error(e1, t1), .error(e2, t2)):
+            // AudioError is Equatable - compare directly
+            let timesEqual: Bool
+            switch (t1, t2) {
+            case (nil, nil): timesEqual = true
+            case let (a?, b?): timesEqual = abs(a - b) < timeTolerance
+            default: timesEqual = false
+            }
+            return e1 == e2 && timesEqual
+
+        default:
+            return false
+        }
+    }
+}
+
 // MARK: - State Transitions
 
 public extension PlaybackState {
