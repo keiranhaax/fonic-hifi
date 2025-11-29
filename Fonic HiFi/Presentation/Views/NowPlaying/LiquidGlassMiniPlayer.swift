@@ -14,7 +14,6 @@ struct LiquidGlassMiniPlayer: View {
     @Environment(\.audioEngine) private var audioService
 
     let namespace: Namespace.ID
-    @Binding var showingNowPlaying: Bool
 
     var body: some View {
         HStack(spacing: 15) {
@@ -29,10 +28,6 @@ struct LiquidGlassMiniPlayer: View {
         }
         .foregroundStyle(Color.primary)
         .padding(.horizontal, 15)
-        .matchedTransitionSource(id: "miniplayer", in: namespace)
-        .onTapGesture {
-            expandWithHaptics()
-        }
     }
 
     // MARK: - Player Info
@@ -101,13 +96,6 @@ struct LiquidGlassMiniPlayer: View {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred(intensity: 0.8)
     }
-
-    private func expandWithHaptics() {
-        showingNowPlaying = true
-
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred(intensity: 0.9)
-    }
 }
 
 // MARK: - Preview
@@ -115,16 +103,12 @@ struct LiquidGlassMiniPlayer: View {
 #Preview {
     @Previewable @Namespace var namespace
     @Previewable @State var audioService = AudioEngineFacade()
-    @Previewable @State var showingNowPlaying = false
 
     VStack {
         Spacer()
-        LiquidGlassMiniPlayer(
-            namespace: namespace,
-            showingNowPlaying: $showingNowPlaying
-        )
-        .environment(\.audioEngine, audioService)
-        .padding()
+        LiquidGlassMiniPlayer(namespace: namespace)
+            .environment(\.audioEngine, audioService)
+            .padding()
     }
     .background(Color.black)
     .preferredColorScheme(.dark)

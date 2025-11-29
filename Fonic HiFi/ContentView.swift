@@ -52,13 +52,14 @@ struct ContentView: View {
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewBottomAccessory {
             if let audioService {
-                LiquidGlassMiniPlayer(
-                    namespace: miniPlayerNamespace,
-                    showingNowPlaying: $showingNowPlaying
-                )
-                .environment(\.audioEngine, audioService)
-                .opacity(showingNowPlaying ? 0 : 1)
-                .allowsHitTesting(!showingNowPlaying)
+                LiquidGlassMiniPlayer(namespace: miniPlayerNamespace)
+                    .environment(\.audioEngine, audioService)
+                    .matchedTransitionSource(id: "miniplayer", in: miniPlayerNamespace)
+                    .onTapGesture {
+                        showingNowPlaying = true
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred(intensity: 0.9)
+                    }
             }
         }
         .fullScreenCover(isPresented: $showingNowPlaying) {
