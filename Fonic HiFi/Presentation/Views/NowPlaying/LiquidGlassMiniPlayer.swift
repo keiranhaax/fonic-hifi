@@ -26,6 +26,7 @@ struct LiquidGlassMiniPlayer: View {
 
             nextButton
         }
+        .contentShape(.rect)
         .foregroundStyle(Color.primary)
         .padding(.horizontal, 15)
     }
