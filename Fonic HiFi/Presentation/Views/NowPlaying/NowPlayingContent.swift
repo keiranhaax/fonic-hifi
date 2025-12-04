@@ -49,6 +49,9 @@ struct NowPlayingContent: View {
     @State private var sliderProgress: Double = 0.0
     @State private var isUserDragging: Bool = false
 
+    // Dynamic artwork sizing
+    @State private var artworkSize: CGFloat = 280
+
     // Accent color for play button
     private let playAccentColor = Color(red: 0.0, green: 0.94, blue: 0.52)
 
@@ -61,15 +64,40 @@ struct NowPlayingContent: View {
 
             Color.clear.frame(height: 6)
 
-            VStack(spacing: 16) {
+            VStack(spacing: 0) {
                 albumArtworkView
+
+                Spacer()
+                    .frame(minHeight: 24, maxHeight: 40)
+
                 trackInfoView
+
+                Spacer()
+                    .frame(minHeight: 16, maxHeight: 32)
+
                 progressView
+
+                Spacer()
+                    .frame(minHeight: 20, maxHeight: 36)
+
                 playbackControlsView
+
+                Spacer()
+                    .frame(minHeight: 24, maxHeight: 48)
+
                 volumeView
+
+                Spacer()
+                    .frame(minHeight: 20, maxHeight: 60)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                // 24pt padding each side, max 400pt
+                min(proxy.size.width - 48, 400)
+            } action: { newSize in
+                artworkSize = newSize
+            }
         }
         .background(
             LinearGradient(
@@ -136,7 +164,7 @@ struct NowPlayingContent: View {
     // MARK: - Album Artwork
 
     private var albumArtworkView: some View {
-        MorphableArtwork(size: 280, namespace: namespace)
+        MorphableArtwork(size: artworkSize, namespace: namespace)
             .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
             .onTapGesture {
                 guard let track = audioService?.currentTrack else { return }
@@ -199,12 +227,8 @@ struct NowPlayingContent: View {
 
     private var progressView: some View {
         VStack(spacing: 6) {
-            Slider(
-                value: Binding(
-                    get: { sliderProgress },
-                    set: { sliderProgress = $0 }
-                ),
-                in: 0 ... 1,
+            CustomProgressSlider(
+                progress: $sliderProgress,
                 onEditingChanged: { editing in
                     isUserDragging = editing
                     guard !editing,
@@ -222,7 +246,6 @@ struct NowPlayingContent: View {
                     }
                 }
             )
-            .tint(.white)
             .onAppear {
                 sliderProgress = audioService?.playbackProgress ?? 0.0
             }
@@ -234,14 +257,14 @@ struct NowPlayingContent: View {
 
             HStack {
                 Text(formatTime(audioService?.currentTime ?? 0))
-                    .font(.caption2)
+                    .font(.footnote)
                     .monospacedDigit()
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.8))
                 Spacer()
                 Text(formatTime(audioService?.duration ?? 0))
-                    .font(.caption2)
+                    .font(.footnote)
                     .monospacedDigit()
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.8))
             }
         }
         .padding(.horizontal, 16)
@@ -254,9 +277,10 @@ struct NowPlayingContent: View {
             // Shuffle
             Button(action: toggleShuffle) {
                 Image(systemName: "shuffle")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(.white.opacity(isShuffleEnabled ? 1.0 : 0.6))
-                    .contentShape(.rect)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isShuffleEnabled ? "Shuffle on" : "Shuffle off")
@@ -266,9 +290,10 @@ struct NowPlayingContent: View {
             // Previous
             Button(action: playPrevious) {
                 Image(systemName: "backward.fill")
-                    .font(.system(size: 24, weight: .medium))
+                    .font(.system(size: 28, weight: .medium))
                     .foregroundStyle(.white)
-                    .contentShape(.rect)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Previous track")
@@ -295,9 +320,10 @@ struct NowPlayingContent: View {
             // Next
             Button(action: playNext) {
                 Image(systemName: "forward.fill")
-                    .font(.system(size: 24, weight: .medium))
+                    .font(.system(size: 28, weight: .medium))
                     .foregroundStyle(.white)
-                    .contentShape(.rect)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Next track")
@@ -307,9 +333,10 @@ struct NowPlayingContent: View {
             // Repeat
             Button(action: cycleRepeatMode) {
                 Image(systemName: repeatModeIcon)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(.white.opacity(repeatMode != .none ? 1.0 : 0.6))
-                    .contentShape(.rect)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(repeatMode == .none ? "Repeat off" : (repeatMode == .one ? "Repeat one" : "Repeat all"))
