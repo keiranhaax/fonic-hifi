@@ -13,8 +13,7 @@ struct FileImportView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.importService) private var importService
 
-    @State private var showingDocumentPicker = false
-    @State private var showingFolderPicker = false
+    @State private var showingFilePicker = false
     @State private var selectedURLs: [URL] = []
 
     private let logger = Log.logger(.importService)
@@ -23,15 +22,11 @@ struct FileImportView: View {
         NavigationStack {
             VStack(spacing: 20) {
                 if selectedURLs.isEmpty {
-                    EmptyImportView(
-                        showingDocumentPicker: $showingDocumentPicker,
-                        showingFolderPicker: $showingFolderPicker,
-                    )
+                    EmptyImportView(showingFilePicker: $showingFilePicker)
                 } else {
                     SelectedFilesView(
                         selectedURLs: $selectedURLs,
-                        showingDocumentPicker: $showingDocumentPicker,
-                        showingFolderPicker: $showingFolderPicker,
+                        showingFilePicker: $showingFilePicker
                     )
                 }
             }
@@ -56,16 +51,9 @@ struct FileImportView: View {
                 }
             }
             .fileImporter(
-                isPresented: $showingDocumentPicker,
-                allowedContentTypes: supportedAudioTypes,
-                allowsMultipleSelection: true,
-            ) { result in
-                handleFileSelection(result)
-            }
-            .fileImporter(
-                isPresented: $showingFolderPicker,
+                isPresented: $showingFilePicker,
                 allowedContentTypes: supportedAudioTypes + [.folder],
-                allowsMultipleSelection: true,
+                allowsMultipleSelection: true
             ) { result in
                 handleFileSelection(result)
             }
@@ -102,8 +90,7 @@ struct FileImportView: View {
 
 /// Empty state view when no files are selected
 struct EmptyImportView: View {
-    @Binding var showingDocumentPicker: Bool
-    @Binding var showingFolderPicker: Bool
+    @Binding var showingFilePicker: Bool
 
     var body: some View {
         VStack(spacing: 40) {
@@ -116,28 +103,19 @@ struct EmptyImportView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("Select audio files or browse folders to import into your library")
+                Text("Select audio files or folders to import into your library")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }
 
-            VStack(spacing: 12) {
-                Button(action: { showingDocumentPicker = true }) {
-                    Label("Select Audio Files", systemImage: "doc.badge.plus")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-
-                Button(action: { showingFolderPicker = true }) {
-                    Label("Browse & Select Files", systemImage: "folder.badge.plus")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
+            Button(action: { showingFilePicker = true }) {
+                Label("Add Files & Folders", systemImage: "folder.badge.plus")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .padding(.horizontal, 40)
         }
         .padding()
@@ -147,8 +125,7 @@ struct EmptyImportView: View {
 /// View showing selected files before import
 struct SelectedFilesView: View {
     @Binding var selectedURLs: [URL]
-    @Binding var showingDocumentPicker: Bool
-    @Binding var showingFolderPicker: Bool
+    @Binding var showingFilePicker: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -157,17 +134,10 @@ struct SelectedFilesView: View {
                 Text("\(selectedURLs.count) items selected")
                     .font(.headline)
 
-                HStack(spacing: 12) {
-                    Button("Add More Files") {
-                        showingDocumentPicker = true
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Browse More") {
-                        showingFolderPicker = true
-                    }
-                    .buttonStyle(.bordered)
+                Button("Add More") {
+                    showingFilePicker = true
                 }
+                .buttonStyle(.bordered)
             }
             .padding()
 
