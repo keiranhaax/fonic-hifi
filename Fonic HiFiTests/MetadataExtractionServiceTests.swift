@@ -115,4 +115,75 @@ final class MetadataExtractionServiceTests: XCTestCase {
             XCTFail("Unexpected error type: \(error)")
         }
     }
+
+    // MARK: - Replay Gain Parsing Tests
+
+    func testParseReplayGainValueWithNegativeDB() {
+        let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
+
+        let result = service.parseReplayGainValue("-6.5 dB")
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result!, -6.5, accuracy: 0.01)
+    }
+
+    func testParseReplayGainValueWithPositiveDB() {
+        let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
+
+        let result = service.parseReplayGainValue("+3.2 dB")
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result!, 3.2, accuracy: 0.01)
+    }
+
+    func testParseReplayGainValueWithoutSign() {
+        let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
+
+        let result = service.parseReplayGainValue("2.0 dB")
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result!, 2.0, accuracy: 0.01)
+    }
+
+    func testParseReplayGainValueCaseInsensitive() {
+        let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
+
+        let result = service.parseReplayGainValue("-4.0 DB")
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result!, -4.0, accuracy: 0.01)
+    }
+
+    func testParseReplayGainValueWithExtraWhitespace() {
+        let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
+
+        let result = service.parseReplayGainValue("  -1.5   dB  ")
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result!, -1.5, accuracy: 0.01)
+    }
+
+    func testParseReplayGainValueReturnsNilForInvalid() {
+        let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
+
+        let result = service.parseReplayGainValue("invalid")
+
+        XCTAssertNil(result)
+    }
+
+    func testParseReplayGainValueReturnsNilForNilInput() {
+        let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
+
+        let result = service.parseReplayGainValue(nil)
+
+        XCTAssertNil(result)
+    }
+
+    func testParseReplayGainValueReturnsNilForEmptyString() {
+        let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
+
+        let result = service.parseReplayGainValue("")
+
+        XCTAssertNil(result)
+    }
 }

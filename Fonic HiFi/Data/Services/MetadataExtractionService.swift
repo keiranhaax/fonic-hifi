@@ -79,6 +79,9 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
         // Parse metadata items
         let metadataValues = parseMetadata(metadata: commonMetadata)
 
+        // Extract replay gain from all metadata (includes ID3v2 TXXX frames)
+        let replayGain = extractReplayGain(from: metadata)
+
         // Create TrackMetadata with extracted information
         let trackMetadata = try await TrackMetadata(
             url: url,
@@ -102,6 +105,8 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
             artwork: extractArtwork(from: asset),
             lyrics: metadataValues.lyrics,
             comment: metadataValues.comment,
+            replayGainTrack: replayGain.track,
+            replayGainAlbum: replayGain.album,
         )
 
         return trackMetadata
@@ -341,6 +346,58 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
         guard data.count >= 4 else { return nil }
         let discCount = data.withUnsafeBytes { $0.load(fromByteOffset: 0, as: UInt16.self) }
         return discCount > 0 ? Int(discCount.bigEndian) : nil
+    }
+
+    /// Parses replay gain value from tag string (e.g., "-6.5 dB" -> -6.5)
+    public func parseReplayGainValue(_ string: String?) -> Float? {
+        guard let string = string else { return nil }
+
+        // Remove "dB" suffix and whitespace
+        let cleaned = string
+            .replacingOccurrences(of: "dB", with: "", options: .caseInsensitive)
+            .trimmingCharacters(in: .whitespaces)
+
+        return Float(cleaned)
+    }
+
+    /// Extract replay gain tags from all metadata (ID3v2 TXXX, Vorbis comments, etc.)
+    private func extractReplayGain(from metadata: [AVMetadataItem]) -> (track: Float?, album: Float?) {
+        var trackGain: Float?
+        var albumGain: Float?
+
+        for item in metadata {
+            // Check for ID3v2 TXXX frames and Vorbis comments
+            if let key = item.key as? String {
+                let keyLower = key.lowercased()
+
+                if keyLower.contains("replaygain_track_gain") {
+                    if let value = item.value as? String {
+                        trackGain = parseReplayGainValue(value)
+                    }
+                } else if keyLower.contains("replaygain_album_gain") {
+                    if let value = item.value as? String {
+                        albumGain = parseReplayGainValue(value)
+                    }
+                }
+            }
+
+            // Check string value of key for identifiers
+            if let identifier = item.identifier?.rawValue {
+                let identifierLower = identifier.lowercased()
+
+                if identifierLower.contains("replaygain_track_gain") {
+                    if let value = item.value as? String {
+                        trackGain = parseReplayGainValue(value)
+                    }
+                } else if identifierLower.contains("replaygain_album_gain") {
+                    if let value = item.value as? String {
+                        albumGain = parseReplayGainValue(value)
+                    }
+                }
+            }
+        }
+
+        return (trackGain, albumGain)
     }
 }
 

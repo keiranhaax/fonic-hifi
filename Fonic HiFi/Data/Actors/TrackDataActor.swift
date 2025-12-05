@@ -441,6 +441,8 @@ public struct TrackMetadata: Sendable {
     public let sourceBookmark: Data?
     public let sourceURLHash: String?
     public let sourceBookmarkHash: String?
+    public let replayGainTrack: Float?
+    public let replayGainAlbum: Float?
 
     public init(
         url: URL,
@@ -468,6 +470,8 @@ public struct TrackMetadata: Sendable {
         sourceBookmark: Data? = nil,
         sourceURLHash: String? = nil,
         sourceBookmarkHash: String? = nil,
+        replayGainTrack: Float? = nil,
+        replayGainAlbum: Float? = nil,
     ) {
         self.url = url
         self.title = title
@@ -494,6 +498,8 @@ public struct TrackMetadata: Sendable {
         self.sourceBookmark = sourceBookmark
         self.sourceURLHash = sourceURLHash
         self.sourceBookmarkHash = sourceBookmarkHash
+        self.replayGainTrack = replayGainTrack
+        self.replayGainAlbum = replayGainAlbum
     }
 }
 
@@ -533,6 +539,8 @@ public extension TrackMetadata {
             sourceBookmark: sourceBookmark,
             sourceURLHash: resolvedURLHash,
             sourceBookmarkHash: resolvedBookmarkHash,
+            replayGainTrack: replayGainTrack,
+            replayGainAlbum: replayGainAlbum,
         )
     }
 }
