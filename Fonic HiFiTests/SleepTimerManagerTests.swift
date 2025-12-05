@@ -32,4 +32,22 @@ final class SleepTimerManagerTests: XCTestCase {
 
         manager.stop()
     }
+
+    func testTimerTriggersOnComplete() async throws {
+        let manager = SleepTimerManager()
+        var didComplete = false
+
+        manager.onComplete = {
+            didComplete = true
+        }
+
+        manager.start(seconds: 1)
+
+        // Wait for timer to complete
+        try await Task.sleep(for: .milliseconds(1500))
+
+        XCTAssertTrue(didComplete, "onComplete should have been called")
+        XCTAssertFalse(manager.isActive)
+        XCTAssertEqual(manager.remainingSeconds, 0)
+    }
 }

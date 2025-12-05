@@ -11,6 +11,9 @@ public final class SleepTimerManager: ObservableObject {
     @Published public private(set) var isActive: Bool = false
     @Published public private(set) var remainingSeconds: Int = 0
 
+    /// Callback triggered when timer completes. Wire to AudioEngineFacade.pause().
+    public var onComplete: (() -> Void)?
+
     // MARK: - Private
 
     private let logger = Log.logger(.audio)
@@ -60,5 +63,6 @@ public final class SleepTimerManager: ObservableObject {
     private func timerComplete() {
         logger.info("Sleep timer complete")
         isActive = false
+        onComplete?()
     }
 }
