@@ -52,7 +52,15 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Skill(superpowers:writing-plans)",
-      "Skill(example-skills:frontend-design)"
+      "Skill(example-skills:frontend-design)",
+      "Bash(git restore:*)",
+      "Bash(git show:*)",
+      "Bash(git merge-base:*)",
+      "Bash(xargs cat:*)",
+      "Bash(done)",
+      "Bash(make coverage-check:*)",
+      "mcp__code-index__get_file_summary",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
@@ -128,5 +136,5 @@
       }
     ]
   },
-  "outputStyle": "default"
+  "outputStyle": "Senior iOS Developer"
 }
