@@ -32,6 +32,18 @@ public final class SleepTimerManager: ObservableObject {
         remainingSeconds = seconds
         isActive = true
         logger.debug("Sleep timer started: \(seconds)s")
+
+        timerTask = Task { @MainActor [weak self] in
+            while let self, self.isActive, self.remainingSeconds > 0 {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { break }
+                self.remainingSeconds -= 1
+            }
+
+            if let self, self.remainingSeconds == 0 {
+                self.timerComplete()
+            }
+        }
     }
 
     /// Stop and reset the timer.
@@ -41,5 +53,12 @@ public final class SleepTimerManager: ObservableObject {
         isActive = false
         remainingSeconds = 0
         logger.debug("Sleep timer stopped")
+    }
+
+    // MARK: - Private
+
+    private func timerComplete() {
+        logger.info("Sleep timer complete")
+        isActive = false
     }
 }

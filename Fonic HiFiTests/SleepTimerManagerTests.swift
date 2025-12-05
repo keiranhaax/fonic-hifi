@@ -16,4 +16,20 @@ final class SleepTimerManagerTests: XCTestCase {
         XCTAssertTrue(manager.isActive)
         XCTAssertEqual(manager.remainingSeconds, 60)
     }
+
+    func testTimerCountsDown() async throws {
+        let manager = SleepTimerManager()
+
+        manager.start(seconds: 3)
+
+        // Wait 1.5 seconds
+        try await Task.sleep(for: .milliseconds(1500))
+
+        // Should have counted down by ~1-2 seconds
+        XCTAssertTrue(manager.isActive)
+        XCTAssertLessThanOrEqual(manager.remainingSeconds, 2)
+        XCTAssertGreaterThanOrEqual(manager.remainingSeconds, 1)
+
+        manager.stop()
+    }
 }
