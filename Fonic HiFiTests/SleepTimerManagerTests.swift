@@ -50,4 +50,27 @@ final class SleepTimerManagerTests: XCTestCase {
         XCTAssertFalse(manager.isActive)
         XCTAssertEqual(manager.remainingSeconds, 0)
     }
+
+    func testFadeOutCallsVolumeCallback() async throws {
+        let manager = SleepTimerManager()
+        var volumeChanges: [Float] = []
+
+        manager.onVolumeChange = { volume in
+            volumeChanges.append(volume)
+        }
+        manager.fadeOutDuration = 2  // 2 second fade
+
+        manager.start(seconds: 3, currentVolume: 1.0)
+
+        // Wait for fade-out to begin (starts at 2 seconds remaining)
+        try await Task.sleep(for: .milliseconds(2500))
+
+        // Should have at least one volume change
+        XCTAssertFalse(volumeChanges.isEmpty, "Should have volume changes during fade")
+        if let lastVolume = volumeChanges.last {
+            XCTAssertLessThan(lastVolume, 1.0, "Volume should decrease during fade")
+        }
+
+        manager.stop()
+    }
 }
