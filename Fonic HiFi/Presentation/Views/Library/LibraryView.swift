@@ -49,6 +49,7 @@ struct LibraryView: View {
     @Environment(\.audioEngine) private var audioEngine
     @Environment(\.showingNowPlaying) private var showingNowPlaying
     @Environment(\.artworkService) private var artworkService
+    @Environment(\.themePalette) private var theme
 
     @State private var selectedTab = LibraryTab.tracks
     @State private var searchText = ""

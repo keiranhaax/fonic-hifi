@@ -13,17 +13,22 @@ struct TrackRowView: View {
     let track: Track
     @Environment(\.audioEngine) private var audioService
     @Environment(\.showingNowPlaying) private var showingNowPlaying
+    @Environment(\.themePalette) private var theme
 
     private let logger = Log.logger(.library)
+
+    private var isCurrentlyPlaying: Bool {
+        audioService?.currentTrack?.id == track.id
+    }
 
     var body: some View {
         HStack(spacing: 12) {
             // Track number or playing indicator
             ZStack {
-                if audioService?.currentTrack?.id == track.id, audioService?.isPlaying == true {
+                if isCurrentlyPlaying, audioService?.isPlaying == true {
                     Image(systemName: "speaker.wave.2.fill")
                         .font(.caption)
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(theme.accent)
                 } else {
                     Text("\(track.trackNumber ?? 0)")
                         .font(.caption)
@@ -53,6 +58,7 @@ struct TrackRowView: View {
                 .monospacedDigit()
         }
         .contentShape(Rectangle())
+        .background(isCurrentlyPlaying ? theme.subtle : Color.clear)
         .onTapGesture {
             playTrack()
         }
