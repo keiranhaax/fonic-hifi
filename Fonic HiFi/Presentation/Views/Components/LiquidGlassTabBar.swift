@@ -18,6 +18,7 @@ struct LiquidGlassTabBar: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.themePalette) private var theme
 
     // Constants for Apple Music styling
     private let tabBarHeight: CGFloat = 49
@@ -40,7 +41,7 @@ struct LiquidGlassTabBar: View {
         }
         .frame(height: tabBarHeight)
         .frame(maxWidth: .infinity)
-        .glassSurface(style: .dynamic, tint: Color.white.opacity(0.3), cornerRadius: 0)
+        .glassSurface(style: .dynamic, tint: theme.glassTint, cornerRadius: 0)
         .overlay(alignment: .top) {
             LinearGradient(
                 colors: [
