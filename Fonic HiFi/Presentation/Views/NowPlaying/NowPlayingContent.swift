@@ -14,6 +14,7 @@ struct NowPlayingContent: View {
     private let logger = Log.logger(.nowPlaying)
     @Environment(\.audioEngine) private var audioService: AudioEngineFacade?
     @Environment(\.sizeCategory) private var sizeCategory
+    @Environment(\.themePalette) private var theme
 
     let namespace: Namespace.ID
     let dismiss: () -> Void
@@ -29,10 +30,6 @@ struct NowPlayingContent: View {
 
     // Shared color service for gradient
     @ObservedObject private var colorService = DominantColorService.shared
-
-    private var dominantColor: Color {
-        colorService.dominantColor
-    }
 
     // Persistence
     @AppStorage("volume") private var volumeStorage: Double = 1.0
@@ -55,9 +52,6 @@ struct NowPlayingContent: View {
 
     // Dynamic artwork sizing
     @State private var artworkSize: CGFloat = 280
-
-    // Accent color for play button
-    private let playAccentColor = Color(red: 0.0, green: 0.94, blue: 0.52)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -106,8 +100,8 @@ struct NowPlayingContent: View {
         .background(
             LinearGradient(
                 colors: [
-                    dominantColor.opacity(0.6),
-                    dominantColor.opacity(0.3),
+                    theme.dominant.opacity(0.6),
+                    theme.dominant.opacity(0.3),
                     Color.black.opacity(0.8),
                 ],
                 startPoint: .top,
@@ -343,8 +337,8 @@ struct NowPlayingContent: View {
             Button(action: togglePlayPause) {
                 ZStack {
                     Circle()
-                        .fill(playAccentColor)
-                        .shadow(color: playAccentColor.opacity(0.3), radius: 6, x: 0, y: 2)
+                        .fill(theme.accent)
+                        .shadow(color: theme.accent.opacity(0.3), radius: 6, x: 0, y: 2)
                     Image(systemName: audioService?.isPlaying == true ? "pause.fill" : "play.fill")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.black.opacity(0.85))
@@ -405,7 +399,7 @@ struct NowPlayingContent: View {
                 ),
                 in: 0 ... 1
             )
-            .tint(.white)
+            .tint(theme.accent)
 
             Image(systemName: "speaker.wave.3.fill")
                 .font(.caption)
