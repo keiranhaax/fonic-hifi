@@ -133,16 +133,34 @@ struct SettingsView: View {
                 // MARK: - Advanced
 
                 Section("Advanced") {
-                    Button("Export Settings") {
+                    Button {
                         exportSettings()
+                    } label: {
+                        SettingsRow(
+                            icon: "square.and.arrow.up",
+                            iconColor: .blue,
+                            title: "Export Settings"
+                        )
                     }
 
-                    Button("Import Settings") {
+                    Button {
                         importSettings()
+                    } label: {
+                        SettingsRow(
+                            icon: "square.and.arrow.down",
+                            iconColor: .blue,
+                            title: "Import Settings"
+                        )
                     }
 
-                    Button("Reset All Settings", role: .destructive) {
+                    Button(role: .destructive) {
                         resetSettings()
+                    } label: {
+                        SettingsRow(
+                            icon: "arrow.counterclockwise",
+                            iconColor: .red,
+                            title: "Reset All Settings"
+                        )
                     }
                 }
             }
