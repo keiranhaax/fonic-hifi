@@ -2,21 +2,24 @@
 //  DominantColorService.swift
 //  Fonic HiFi
 //
-//  Centralized color extraction service shared between mini player and NowPlayingView.
-//  Ensures consistent colors during transitions and prevents duplicate extraction work.
+//  Centralized color extraction service that provides ThemePalette
+//  for full-app artwork-reactive theming.
 //
 
 import SwiftUI
 
-/// Centralized service for extracting and caching dominant colors from album artwork.
-/// Shared between mini player and expanded NowPlayingView to ensure color consistency.
+/// Centralized service for extracting dominant colors and generating theme palettes.
+/// Shared across the app to ensure color consistency during transitions.
 @MainActor
 final class DominantColorService: ObservableObject {
     /// Shared singleton instance
     static let shared = DominantColorService()
 
-    /// Current dominant color extracted from the active track's artwork
-    @Published private(set) var dominantColor: Color = .accentColor
+    /// Current theme palette derived from the active track's artwork
+    @Published private(set) var palette: ThemePalette = .neutral
+
+    /// Current dominant color (for backward compatibility)
+    var dominantColor: Color { palette.dominant }
 
     /// Track ID of the currently extracted color (for cache validation)
     @Published private(set) var currentTrackID: UUID?
@@ -27,18 +30,65 @@ final class DominantColorService: ObservableObject {
     private var isExtractingColor = false
     private let maxCacheSize = 50
 
+    /// Current color scheme for palette adaptation
+    private var currentColorScheme: ColorScheme = .dark
+
+    /// Whether artwork theming is enabled
+    private var themingEnabled: Bool = true
+
+    /// Whether theming is enabled for light mode specifically
+    private var lightModeThemingEnabled: Bool = true
+
+    /// The raw dominant color before palette derivation
+    private var rawDominantColor: Color = .accentColor
+
+    /// Animation duration for palette transitions
+    private let transitionDuration: Double = 2.5
+
     // MARK: - Initialization
 
-    private init() {}
+    private init() {
+        rebuildPalette()
+    }
 
     // MARK: - Public API
+
+    /// Update the current color scheme (call from views observing colorScheme)
+    func updateColorScheme(_ colorScheme: ColorScheme) {
+        guard colorScheme != currentColorScheme else { return }
+        currentColorScheme = colorScheme
+        withAnimation(.easeInOut(duration: transitionDuration)) {
+            rebuildPalette()
+        }
+    }
+
+    /// Update whether theming is globally enabled
+    func updateThemingEnabled(_ enabled: Bool) {
+        guard enabled != themingEnabled else { return }
+        themingEnabled = enabled
+        withAnimation(.easeInOut(duration: transitionDuration)) {
+            rebuildPalette()
+        }
+    }
+
+    /// Update whether theming is enabled for light mode
+    func updateLightModeThemingEnabled(_ enabled: Bool) {
+        guard enabled != lightModeThemingEnabled else { return }
+        lightModeThemingEnabled = enabled
+        withAnimation(.easeInOut(duration: transitionDuration)) {
+            rebuildPalette()
+        }
+    }
 
     /// Extract dominant color for the given track.
     /// Uses cache if available, otherwise extracts asynchronously.
     func extractColor(for track: Track?) async {
         guard let track else {
-            dominantColor = .accentColor
+            rawDominantColor = .accentColor
             currentTrackID = nil
+            withAnimation(.easeInOut(duration: transitionDuration)) {
+                rebuildPalette()
+            }
             return
         }
 
@@ -47,9 +97,10 @@ final class DominantColorService: ObservableObject {
 
         // Check cache first
         if let cached = colorCache[track.id] {
-            withAnimation(.easeInOut(duration: 0.5)) {
-                dominantColor = cached
-                currentTrackID = track.id
+            rawDominantColor = cached
+            currentTrackID = track.id
+            withAnimation(.easeInOut(duration: transitionDuration)) {
+                rebuildPalette()
             }
             return
         }
@@ -61,8 +112,11 @@ final class DominantColorService: ObservableObject {
 
         // No artwork - use default
         guard let artworkData = track.artwork else {
-            dominantColor = .accentColor
+            rawDominantColor = .accentColor
             currentTrackID = track.id
+            withAnimation(.easeInOut(duration: transitionDuration)) {
+                rebuildPalette()
+            }
             return
         }
 
@@ -76,9 +130,10 @@ final class DominantColorService: ObservableObject {
         maintainCacheSize()
 
         // Apply with animation
-        withAnimation(.easeInOut(duration: 0.5)) {
-            dominantColor = extractedColor
-            currentTrackID = track.id
+        rawDominantColor = extractedColor
+        currentTrackID = track.id
+        withAnimation(.easeInOut(duration: transitionDuration)) {
+            rebuildPalette()
         }
     }
 
@@ -86,10 +141,29 @@ final class DominantColorService: ObservableObject {
     func reset() {
         colorCache.removeAll()
         currentTrackID = nil
-        dominantColor = .accentColor
+        rawDominantColor = .accentColor
+        rebuildPalette()
     }
 
     // MARK: - Private Helpers
+
+    private func rebuildPalette() {
+        // Check if theming should be active
+        let shouldApplyTheming: Bool = {
+            guard themingEnabled else { return false }
+            guard currentTrackID != nil else { return false }
+            if currentColorScheme == .light && !lightModeThemingEnabled {
+                return false
+            }
+            return true
+        }()
+
+        if shouldApplyTheming {
+            palette = ThemePalette(dominant: rawDominantColor, colorScheme: currentColorScheme)
+        } else {
+            palette = ThemePalette.neutral(for: currentColorScheme)
+        }
+    }
 
     private func maintainCacheSize() {
         guard colorCache.count > maxCacheSize else { return }
