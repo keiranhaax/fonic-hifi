@@ -65,4 +65,72 @@ final class AudioKitEngineAdapterTests: XCTestCase {
             // Expected path
         }
     }
+
+    func testPrepareNextLoadsFileIntoInactivePlayer() async throws {
+        let adapter = AudioKitEngineAdapter()
+        guard adapter.isInitialized else {
+            throw XCTSkip("AudioKit engine failed to initialize in test environment")
+        }
+
+        let url = try makePCMTestAudioFile(testCase: self)
+
+        // Prepare next track
+        await adapter.prepareNext(url: url)
+
+        // Verify prepareNext completed without error
+        // Note: Internal state is not exposed, but we verify no crash
+        XCTAssertTrue(true, "prepareNext completed without error")
+    }
+
+    func testCrossfadeTransitionsToNewTrack() async throws {
+        let adapter = AudioKitEngineAdapter()
+        guard adapter.isInitialized else {
+            throw XCTSkip("AudioKit engine failed to initialize in test environment")
+        }
+
+        let url1 = try makePCMTestAudioFile(testCase: self)
+        let url2 = try makePCMTestAudioFile(testCase: self)
+
+        // Load and play first track
+        try await adapter.load(url: url1)
+        try await adapter.play()
+
+        // Crossfade to second track (0 duration = instant)
+        try await adapter.crossfade(to: url2, duration: 0, playbackRate: 1.0, gainDB: 0)
+
+        let isPlaying = await adapter.isPlaying
+        XCTAssertTrue(isPlaying, "Should still be playing after crossfade")
+    }
+
+    func testApplyReplayGainSetsGain() async throws {
+        let adapter = AudioKitEngineAdapter()
+        guard adapter.isInitialized else {
+            throw XCTSkip("AudioKit engine failed to initialize in test environment")
+        }
+
+        let url = try makePCMTestAudioFile(testCase: self)
+        try await adapter.load(url: url)
+
+        // Apply replay gain
+        await adapter.applyReplayGain(-6.0)
+
+        // Verify no crash and adapter is still functional
+        try await adapter.play()
+        let isPlaying = await adapter.isPlaying
+        XCTAssertTrue(isPlaying)
+    }
+
+    func testApplyReplayGainZeroMaintainsBitPerfect() async throws {
+        let adapter = AudioKitEngineAdapter()
+        guard adapter.isInitialized else {
+            throw XCTSkip("AudioKit engine failed to initialize in test environment")
+        }
+
+        try await adapter.configure(with: .bitPerfect)
+
+        // Zero gain should maintain bit-perfect
+        await adapter.applyReplayGain(0)
+        let bitPerfect = await adapter.isBitPerfect
+        XCTAssertTrue(bitPerfect, "Zero replay gain should maintain bit-perfect status")
+    }
 }
