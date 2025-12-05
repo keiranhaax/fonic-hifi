@@ -15,6 +15,8 @@ struct SettingsView: View {
     @AppStorage("showNowPlayingAnimation") private var animationEnabled = true
     @AppStorage("enableHapticFeedback") private var hapticsEnabled = true
     @AppStorage("showFileExtensions") private var showExtensions = true
+    @AppStorage("artworkThemingEnabled") private var artworkThemingEnabled = true
+    @AppStorage("artworkThemingLightMode") private var artworkThemingLightMode = true
 
     private let logger = Log.logger(.presentation)
 
@@ -69,6 +71,24 @@ struct SettingsView: View {
                             iconColor: .gray,
                             title: "Haptic Feedback"
                         )
+                    }
+
+                    Toggle(isOn: $artworkThemingEnabled) {
+                        SettingsRow(
+                            icon: "paintpalette.fill",
+                            iconColor: .orange,
+                            title: "Artwork Theming"
+                        )
+                    }
+
+                    if artworkThemingEnabled {
+                        Toggle(isOn: $artworkThemingLightMode) {
+                            SettingsRow(
+                                icon: "sun.max.fill",
+                                iconColor: .yellow,
+                                title: "Theme in Light Mode"
+                            )
+                        }
                     }
                 }
 
@@ -193,6 +213,8 @@ struct SettingsView: View {
         animationEnabled = true
         hapticsEnabled = true
         showExtensions = true
+        artworkThemingEnabled = true
+        artworkThemingLightMode = true
         logger.info("Reset all settings to defaults")
     }
 }
