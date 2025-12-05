@@ -1,9 +1,9 @@
 # Project Status
 
-**Last Updated**: 2025-11-27 (Widget ecosystem & Apple Music UI patterns)
+**Last Updated**: 2025-12-05 (Artwork theming implementation)
 
 **Branch**: `main`
-**Build**: ✅ `make lint` (2025-11-24 – 0 violations)  •  ✅ `make test` (2025-11-24 – 277 tests, 0 failures)  •  ✅ `make coverage-check` (target lowered to 40%)
+**Build**: ✅ `make lint` (2025-11-24 – 0 violations)  •  ✅ `make test` (2025-12-05 – 311 tests, 0 failures)  •  ✅ `make coverage-check` (target lowered to 40%)
 
 **Archive**: Historical milestones and recovery notes moved to `STATUS-ARCHIVE.md`.
 
@@ -38,6 +38,12 @@
 - ✅ NowPlayingAttributes - Core/LiveActivity/NowPlayingAttributes.swift:17
 - ✅ Widget Extension - Fonic HiFi Widget/ (Small, Medium, Large, Lock Screen)
 - ✅ Dynamic Island - NowPlayingActivityConfiguration.swift
+
+**Theming:**
+- ✅ ThemePalette - Core/Services/ThemePalette.swift
+- ✅ ThemePaletteEnvironment - Presentation/Environment/ThemePaletteEnvironment.swift
+- ✅ DominantColorService expanded for full-app artwork-reactive theming
+- ✅ Settings toggles for Artwork Theming and Light Mode theming
 
 **Non-Existent References (Do NOT reference):**
 - ❌ Core/Audio/Decoders/ - DOES NOT EXIST
