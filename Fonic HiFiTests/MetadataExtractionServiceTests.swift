@@ -118,49 +118,44 @@ final class MetadataExtractionServiceTests: XCTestCase {
 
     // MARK: - Replay Gain Parsing Tests
 
-    func testParseReplayGainValueWithNegativeDB() {
+    func testParseReplayGainValueWithNegativeDB() throws {
         let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
 
-        let result = service.parseReplayGainValue("-6.5 dB")
+        let result = try XCTUnwrap(service.parseReplayGainValue("-6.5 dB"))
 
-        XCTAssertNotNil(result)
-        XCTAssertEqual(result!, -6.5, accuracy: 0.01)
+        XCTAssertEqual(result, -6.5, accuracy: 0.01)
     }
 
-    func testParseReplayGainValueWithPositiveDB() {
+    func testParseReplayGainValueWithPositiveDB() throws {
         let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
 
-        let result = service.parseReplayGainValue("+3.2 dB")
+        let result = try XCTUnwrap(service.parseReplayGainValue("+3.2 dB"))
 
-        XCTAssertNotNil(result)
-        XCTAssertEqual(result!, 3.2, accuracy: 0.01)
+        XCTAssertEqual(result, 3.2, accuracy: 0.01)
     }
 
-    func testParseReplayGainValueWithoutSign() {
+    func testParseReplayGainValueWithoutSign() throws {
         let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
 
-        let result = service.parseReplayGainValue("2.0 dB")
+        let result = try XCTUnwrap(service.parseReplayGainValue("2.0 dB"))
 
-        XCTAssertNotNil(result)
-        XCTAssertEqual(result!, 2.0, accuracy: 0.01)
+        XCTAssertEqual(result, 2.0, accuracy: 0.01)
     }
 
-    func testParseReplayGainValueCaseInsensitive() {
+    func testParseReplayGainValueCaseInsensitive() throws {
         let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
 
-        let result = service.parseReplayGainValue("-4.0 DB")
+        let result = try XCTUnwrap(service.parseReplayGainValue("-4.0 DB"))
 
-        XCTAssertNotNil(result)
-        XCTAssertEqual(result!, -4.0, accuracy: 0.01)
+        XCTAssertEqual(result, -4.0, accuracy: 0.01)
     }
 
-    func testParseReplayGainValueWithExtraWhitespace() {
+    func testParseReplayGainValueWithExtraWhitespace() throws {
         let service = MetadataExtractionService(formatDetectionService: StubFormatDetectionService())
 
-        let result = service.parseReplayGainValue("  -1.5   dB  ")
+        let result = try XCTUnwrap(service.parseReplayGainValue("  -1.5   dB  "))
 
-        XCTAssertNotNil(result)
-        XCTAssertEqual(result!, -1.5, accuracy: 0.01)
+        XCTAssertEqual(result, -1.5, accuracy: 0.01)
     }
 
     func testParseReplayGainValueReturnsNilForInvalid() {
