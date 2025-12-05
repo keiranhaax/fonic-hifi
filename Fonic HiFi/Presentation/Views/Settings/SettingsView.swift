@@ -18,6 +18,8 @@ struct SettingsView: View {
     @AppStorage("artworkThemingEnabled") private var artworkThemingEnabled = true
     @AppStorage("artworkThemingLightMode") private var artworkThemingLightMode = true
 
+    @Environment(\.themePalette) private var theme
+
     private let logger = Log.logger(.presentation)
 
     var body: some View {
@@ -184,6 +186,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            .tint(theme.accent)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
         }
