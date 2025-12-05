@@ -71,44 +71,37 @@ public final class LibraryImportService: ObservableObject {
 
     /// Import files from selected URLs (handles security-scoped resources)
     public func importFiles(from urls: [URL]) {
-        Task(priority: .userInitiated) { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
 
-            let alreadyImporting = await MainActor.run { self.isImporting }
-            guard !alreadyImporting else {
-                self.logger.warning("Import already in progress")
+            guard !isImporting else {
+                logger.warning("Import already in progress")
                 return
             }
 
-            await MainActor.run {
-                self.importProgress = 0.0
-                self.filesProcessed = 0
-                self.totalFiles = 0
-                self.importErrors.removeAll()
-                self.recentlyImported.removeAll()
-                self.isImporting = true
-                self.statusMessage = "Scanning for audio files..."
-            }
+            importProgress = 0.0
+            filesProcessed = 0
+            totalFiles = 0
+            importErrors.removeAll()
+            recentlyImported.removeAll()
+            isImporting = true
+            statusMessage = "Scanning for audio files..."
 
-            let task = Task(priority: .userInitiated) { [weak self] in
+            let task = Task(priority: .userInitiated) { @MainActor [weak self] in
                 guard let self else { return }
-                self.logger.info("Starting import of \(urls.count) URLs")
+                logger.info("Starting import of \(urls.count) URLs")
                 Metrics.increment(.importsDiscovered, by: urls.count, metadata: [
                     "phase": "requested"
                 ])
-                await self.executeImportPipeline(urls: urls)
+                await executeImportPipeline(urls: urls)
             }
 
-            await MainActor.run {
-                self.importTask?.cancel()
-                self.importTask = task
-            }
+            importTask?.cancel()
+            importTask = task
 
             await task.value
 
-            await MainActor.run {
-                self.importTask = nil
-            }
+            importTask = nil
         }
     }
 
@@ -344,8 +337,6 @@ public final class LibraryImportService: ObservableObject {
 }
 
 // MARK: - Supporting Types
-
-extension LibraryImportService: @unchecked Sendable {}
 
 /// Track import transaction for rollback support
 private final class ImportTransaction {
