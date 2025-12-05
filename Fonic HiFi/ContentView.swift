@@ -13,6 +13,11 @@ struct ContentView: View {
     @Environment(\.importService) private var importService
     @Environment(\.audioEngine) private var audioService
     @Environment(\.libraryRepository) private var libraryRepository
+    @Environment(\.colorScheme) private var colorScheme
+
+    @ObservedObject private var colorService = DominantColorService.shared
+    @AppStorage("artworkThemingEnabled") private var artworkThemingEnabled = true
+    @AppStorage("artworkThemingLightMode") private var artworkThemingLightMode = true
 
     @Namespace private var miniPlayerNamespace
     @State private var showingNowPlaying = false
@@ -74,6 +79,21 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(.background)
+        }
+        .environment(\.themePalette, colorService.palette)
+        .onChange(of: colorScheme) { _, newScheme in
+            colorService.updateColorScheme(newScheme)
+        }
+        .onChange(of: artworkThemingEnabled) { _, enabled in
+            colorService.updateThemingEnabled(enabled)
+        }
+        .onChange(of: artworkThemingLightMode) { _, enabled in
+            colorService.updateLightModeThemingEnabled(enabled)
+        }
+        .onAppear {
+            colorService.updateColorScheme(colorScheme)
+            colorService.updateThemingEnabled(artworkThemingEnabled)
+            colorService.updateLightModeThemingEnabled(artworkThemingLightMode)
         }
     }
 }
