@@ -13,6 +13,9 @@ struct AudioSettingsView: View {
     @AppStorage("enableBitPerfectPlayback") private var enableBitPerfectPlayback = false
     @AppStorage("audioBufferSize") private var audioBufferSize = 512.0
     @AppStorage("sampleRate") private var sampleRate = 44100.0
+    @AppStorage("enableGaplessPlayback") private var enableGaplessPlayback = true
+    @AppStorage("crossfadeDuration") private var crossfadeDuration: Double = 0.0
+    @AppStorage("replayGainMode") private var replayGainMode: String = "off"
 
     private let logger = Log.logger(.audio)
 
@@ -82,6 +85,30 @@ struct AudioSettingsView: View {
                 }
 
                 Section {
+                    Toggle("Gapless Playback", isOn: $enableGaplessPlayback)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Crossfade")
+                            Spacer()
+                            Text(crossfadeDuration == 0 ? "Off" : "\(Int(crossfadeDuration))s")
+                                .foregroundStyle(.secondary)
+                        }
+                        Slider(value: $crossfadeDuration, in: 0...12, step: 1)
+                    }
+
+                    Picker("Replay Gain", selection: $replayGainMode) {
+                        Text("Off").tag("off")
+                        Text("Track").tag("track")
+                        Text("Album").tag("album")
+                    }
+                } header: {
+                    Text("Playback Features")
+                } footer: {
+                    Text("Gapless eliminates silence between tracks. Crossfade smoothly transitions between tracks. Replay Gain normalizes volume across your library.")
+                }
+
+                Section {
                     Button("Test Audio Configuration") {
                         testAudioConfiguration()
                     }
@@ -112,6 +139,9 @@ struct AudioSettingsView: View {
         enableBitPerfectPlayback = false
         audioBufferSize = 512.0
         sampleRate = 44100.0
+        enableGaplessPlayback = true
+        crossfadeDuration = 0.0
+        replayGainMode = "off"
     }
 }
 
