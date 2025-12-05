@@ -4,98 +4,12 @@
 //
 //  Created by Assistant on 12/22/24.
 //
+//  Supporting views for Settings (About, Privacy Policy, Terms of Service)
+//
 
 import SwiftUI
 
-struct AppSettingsView: View {
-    @AppStorage("darkModeEnabled") private var darkModeEnabled = true
-    @AppStorage("showNowPlayingAnimation") private var showNowPlayingAnimation = true
-    @AppStorage("autoImportFromPhotos") private var autoImportFromPhotos = false
-    @AppStorage("enableHapticFeedback") private var enableHapticFeedback = true
-    @AppStorage("showFileExtensions") private var showFileExtensions = true
-
-    private let logger = Log.logger(.presentation)
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Toggle("Dark Mode", isOn: $darkModeEnabled)
-                    Toggle("Now Playing Animation", isOn: $showNowPlayingAnimation)
-                    Toggle("Haptic Feedback", isOn: $enableHapticFeedback)
-                } header: {
-                    Text("Interface")
-                } footer: {
-                    Text("Customize the app's appearance and behavior.")
-                }
-
-                Section {
-                    Toggle("Auto-import from Photos", isOn: $autoImportFromPhotos)
-                    Toggle("Show File Extensions", isOn: $showFileExtensions)
-                } header: {
-                    Text("File Management")
-                } footer: {
-                    Text("Configure how files are handled and displayed.")
-                }
-
-                Section {
-                    NavigationLink("About Fonic HiFi") {
-                        AboutView()
-                    }
-
-                    NavigationLink("Privacy Policy") {
-                        PrivacyPolicyView()
-                    }
-
-                    NavigationLink("Terms of Service") {
-                        TermsOfServiceView()
-                    }
-                } header: {
-                    Text("Information")
-                }
-
-                Section {
-                    Button("Export Settings") {
-                        exportSettings()
-                    }
-
-                    Button("Import Settings") {
-                        importSettings()
-                    }
-
-                    Button("Reset All Settings") {
-                        resetAllSettings()
-                    }
-                    .foregroundColor(.red)
-                } header: {
-                    Text("Settings Management")
-                }
-            }
-            .navigationTitle("App Settings")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-
-    private func exportSettings() {
-        // Export settings functionality
-        logger.info("Exporting settings from AppSettingsView")
-    }
-
-    private func importSettings() {
-        // Import settings functionality
-        logger.info("Importing settings from AppSettingsView")
-    }
-
-    private func resetAllSettings() {
-        darkModeEnabled = true
-        showNowPlayingAnimation = true
-        autoImportFromPhotos = false
-        enableHapticFeedback = true
-        showFileExtensions = true
-    }
-}
-
-// MARK: - Supporting Views
+// MARK: - About View
 
 struct AboutView: View {
     var body: some View {
@@ -104,15 +18,15 @@ struct AboutView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "music.note")
                         .font(.system(size: 60))
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
 
                     Text("Fonic HiFi")
                         .font(.largeTitle)
                         .fontWeight(.bold)
 
-                    Text("Version 1.0.0")
+                    Text(appVersionString)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
@@ -140,7 +54,15 @@ struct AboutView: View {
         .navigationTitle("About")
         .navigationBarTitleDisplayMode(.inline)
     }
+
+    private var appVersionString: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "Version \(version) (\(build))"
+    }
 }
+
+// MARK: - Feature Row
 
 struct FeatureRow: View {
     let title: String
@@ -149,7 +71,7 @@ struct FeatureRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
                 .font(.body)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -159,11 +81,13 @@ struct FeatureRow: View {
 
                 Text(description)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
     }
 }
+
+// MARK: - Privacy Policy View
 
 struct PrivacyPolicyView: View {
     var body: some View {
@@ -205,6 +129,8 @@ struct PrivacyPolicyView: View {
     }
 }
 
+// MARK: - Terms of Service View
+
 struct TermsOfServiceView: View {
     var body: some View {
         ScrollView {
@@ -226,7 +152,6 @@ struct TermsOfServiceView: View {
                     """
                 )
                 .font(.body)
-                .font(.body)
 
                 Text("Liability")
                     .font(.headline)
@@ -246,6 +171,22 @@ struct TermsOfServiceView: View {
     }
 }
 
-#Preview {
-    AppSettingsView()
+// MARK: - Previews
+
+#Preview("About") {
+    NavigationStack {
+        AboutView()
+    }
+}
+
+#Preview("Privacy Policy") {
+    NavigationStack {
+        PrivacyPolicyView()
+    }
+}
+
+#Preview("Terms of Service") {
+    NavigationStack {
+        TermsOfServiceView()
+    }
 }

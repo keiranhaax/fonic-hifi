@@ -8,126 +8,206 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(\.dataManager) private var dataManager
-    @Environment(\.importService) private var importService
-    @State private var selectedTab = 0
+    // MARK: - AppStorage (inline toggles)
+
+    @AppStorage("enableBitPerfectPlayback") private var bitPerfectEnabled = false
+    @AppStorage("darkModeEnabled") private var darkModeEnabled = true
+    @AppStorage("showNowPlayingAnimation") private var animationEnabled = true
+    @AppStorage("enableHapticFeedback") private var hapticsEnabled = true
+    @AppStorage("showFileExtensions") private var showExtensions = true
+
+    private let logger = Log.logger(.presentation)
 
     var body: some View {
         NavigationStack {
             List {
-                // File Manager Section
-                Section {
-                    NavigationLink(destination: FileManagerView()) {
-                        HStack {
-                            Image(systemName: "folder.fill")
-                                .foregroundColor(.blue)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("File Manager")
-                                    .font(.headline)
-                                Text("Browse and manage your audio files")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 4)
+                // MARK: - Playback
+
+                Section("Playback") {
+                    NavigationLink {
+                        AudioSettingsView()
+                    } label: {
+                        SettingsRow(
+                            icon: "speaker.wave.3.fill",
+                            iconColor: .orange,
+                            title: "Audio Engine",
+                            subtitle: "Quality, engine, buffer settings"
+                        )
                     }
-                } header: {
-                    Text("Storage")
+
+                    Toggle(isOn: $bitPerfectEnabled) {
+                        SettingsRow(
+                            icon: "waveform",
+                            iconColor: .blue,
+                            title: "Bit-Perfect Mode"
+                        )
+                    }
                 }
 
-                // Import Section
-                Section {
-                    NavigationLink(destination: FileImportView()) {
-                        HStack {
-                            Image(systemName: "square.and.arrow.down.fill")
-                                .foregroundColor(.green)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Import Files")
-                                    .font(.headline)
-                                Text("Add new music to your library")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 4)
+                // MARK: - Appearance
+
+                Section("Appearance") {
+                    Toggle(isOn: $darkModeEnabled) {
+                        SettingsRow(
+                            icon: "moon.fill",
+                            iconColor: .purple,
+                            title: "Dark Mode"
+                        )
                     }
-                } header: {
-                    Text("Library")
+
+                    Toggle(isOn: $animationEnabled) {
+                        SettingsRow(
+                            icon: "waveform.circle.fill",
+                            iconColor: .pink,
+                            title: "Now Playing Animation"
+                        )
+                    }
+
+                    Toggle(isOn: $hapticsEnabled) {
+                        SettingsRow(
+                            icon: "hand.tap.fill",
+                            iconColor: .gray,
+                            title: "Haptic Feedback"
+                        )
+                    }
                 }
 
-                // Audio Settings Section
-                Section {
-                    NavigationLink(destination: AudioSettingsView()) {
-                        HStack {
-                            Image(systemName: "speaker.wave.3.fill")
-                                .foregroundColor(.orange)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Audio Settings")
-                                    .font(.headline)
-                                Text("Configure audio quality and output")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 4)
+                // MARK: - Storage
+
+                Section("Storage") {
+                    NavigationLink {
+                        FileManagerView()
+                    } label: {
+                        SettingsRow(
+                            icon: "folder.fill",
+                            iconColor: .blue,
+                            title: "File Manager",
+                            subtitle: "Browse and manage imported files"
+                        )
                     }
-                } header: {
-                    Text("Playback")
+
+                    Toggle(isOn: $showExtensions) {
+                        SettingsRow(
+                            icon: "doc.text.fill",
+                            iconColor: .gray,
+                            title: "Show File Extensions"
+                        )
+                    }
                 }
 
-                // App Settings Section
-                Section {
-                    NavigationLink(destination: AppSettingsView()) {
-                        HStack {
-                            Image(systemName: "gearshape.fill")
-                                .foregroundColor(.gray)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("App Settings")
-                                    .font(.headline)
-                                Text("General app preferences")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 4)
+                // MARK: - About
+
+                Section("About") {
+                    NavigationLink {
+                        AboutView()
+                    } label: {
+                        SettingsRow(
+                            icon: "info.circle.fill",
+                            iconColor: .blue,
+                            title: "About Fonic HiFi",
+                            subtitle: appVersionString
+                        )
                     }
-                } header: {
-                    Text("General")
+
+                    NavigationLink {
+                        PrivacyPolicyView()
+                    } label: {
+                        SettingsRow(
+                            icon: "hand.raised.fill",
+                            iconColor: .green,
+                            title: "Privacy Policy"
+                        )
+                    }
+
+                    NavigationLink {
+                        TermsOfServiceView()
+                    } label: {
+                        SettingsRow(
+                            icon: "doc.text.fill",
+                            iconColor: .gray,
+                            title: "Terms of Service"
+                        )
+                    }
+                }
+
+                // MARK: - Advanced
+
+                Section("Advanced") {
+                    Button("Export Settings") {
+                        exportSettings()
+                    }
+
+                    Button("Import Settings") {
+                        importSettings()
+                    }
+
+                    Button("Reset All Settings", role: .destructive) {
+                        resetSettings()
+                    }
                 }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
         }
     }
+
+    // MARK: - Computed Properties
+
+    private var appVersionString: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "Version \(version) (\(build))"
+    }
+
+    // MARK: - Actions
+
+    private func exportSettings() {
+        logger.info("Exporting settings")
+    }
+
+    private func importSettings() {
+        logger.info("Importing settings")
+    }
+
+    private func resetSettings() {
+        bitPerfectEnabled = false
+        darkModeEnabled = true
+        animationEnabled = true
+        hapticsEnabled = true
+        showExtensions = true
+        logger.info("Reset all settings to defaults")
+    }
 }
 
-#Preview {
-    if let previewDataManager = DataManager.makePreviewDataManager(),
-       let importService = DataManager.makePreviewImportService() {
-        SettingsView()
-            .dataManager(previewDataManager)
-            .importService(importService)
-    } else {
-        Text("Preview unavailable")
+// MARK: - Settings Row Component
+
+struct SettingsRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    var subtitle: String?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(iconColor)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
+}
+
+// MARK: - Preview
+
+#Preview {
+    SettingsView()
 }
