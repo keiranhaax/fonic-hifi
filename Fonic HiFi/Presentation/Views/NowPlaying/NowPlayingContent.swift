@@ -119,6 +119,9 @@ struct NowPlayingContent: View {
                 TrackDetailView(track: item.track)
             }
         }
+        .accessibilityAction(.escape) {
+            dismiss()
+        }
     }
 
     // MARK: - Drag Indicator
@@ -135,15 +138,8 @@ struct NowPlayingContent: View {
 
     private var headerBar: some View {
         HStack(spacing: 16) {
-            Button(action: dismiss) {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close Now Playing")
+            Color.clear
+                .frame(width: 44, height: 44)
 
             Spacer()
 
