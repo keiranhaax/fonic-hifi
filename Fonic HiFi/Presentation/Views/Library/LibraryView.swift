@@ -84,7 +84,7 @@ struct LibraryView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                     if shouldShowEmptyState {
-                        EmptyLibraryView(showingImportView: $showingImportView)
+                        EmptyLibraryView()
                     }
                 }
             }
@@ -756,8 +756,6 @@ private struct LibraryDetailRow: View {
 
 /// Empty library state
 struct EmptyLibraryView: View {
-    @Binding var showingImportView: Bool
-
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "music.note")
@@ -771,11 +769,6 @@ struct EmptyLibraryView: View {
             Text("Import music to get started")
                 .font(.body)
                 .foregroundStyle(.secondary)
-
-            Button("Import Music") {
-                showingImportView = true
-            }
-            .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
