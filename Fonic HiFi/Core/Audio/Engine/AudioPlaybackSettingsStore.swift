@@ -10,6 +10,7 @@ public actor AudioPlaybackSettingsStore {
         static let crossfadeDuration = "audio.crossfadeDuration"
         static let replayGainMode = "audio.replayGainMode"
         static let playbackRate = "audio.playbackRate"
+        static let enableGapless = "enableGaplessPlayback"
     }
 
     private let defaults: DefaultsBox
@@ -33,6 +34,9 @@ public actor AudioPlaybackSettingsStore {
         if let storedRate = defaults.value.object(forKey: Keys.playbackRate) as? Double {
             config = config.with(playbackRate: storedRate)
         }
+
+        // Apply gapless setting (defaults to true if not explicitly set)
+        config = config.with(enableGapless: isGaplessEnabled())
 
         return config
     }
@@ -63,5 +67,17 @@ public actor AudioPlaybackSettingsStore {
 
     public func playbackRate() -> Double {
         defaults.value.object(forKey: Keys.playbackRate) as? Double ?? AudioEngineConfiguration.default.playbackRate
+    }
+
+    public func setGaplessEnabled(_ enabled: Bool) {
+        defaults.value.set(enabled, forKey: Keys.enableGapless)
+    }
+
+    public func isGaplessEnabled() -> Bool {
+        // Check if key exists, default to true if not set
+        if defaults.value.object(forKey: Keys.enableGapless) == nil {
+            return true
+        }
+        return defaults.value.bool(forKey: Keys.enableGapless)
     }
 }

@@ -171,6 +171,24 @@ public struct AudioEngineConfiguration: Sendable {
             playbackRate: playbackRate,
         )
     }
+
+    /// Create a copy with modified gapless playback setting
+    public func with(enableGapless: Bool) -> AudioEngineConfiguration {
+        AudioEngineConfiguration(
+            bufferSize: bufferSize,
+            sampleRate: sampleRate,
+            bitDepth: bitDepth,
+            enableBitPerfect: enableBitPerfect,
+            enableGapless: enableGapless,
+            performanceMode: performanceMode,
+            maxBufferMemoryMB: maxBufferMemoryMB,
+            enableHardwareAcceleration: enableHardwareAcceleration,
+            fadeDuration: fadeDuration,
+            crossfadeDuration: crossfadeDuration,
+            replayGainMode: replayGainMode,
+            playbackRate: playbackRate,
+        )
+    }
 }
 
 /// Replay gain configuration options
