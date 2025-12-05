@@ -22,6 +22,10 @@ struct NowPlayingContent: View {
     @State private var showingQueue = false
     @State private var trackDetailItem: TrackDetailItem?
     @State private var isFavorite = false
+    @State private var showSleepTimerSheet = false
+
+    // Sleep Timer
+    @StateObject private var sleepTimerManager = SleepTimerManager()
 
     // Shared color service for gradient
     @ObservedObject private var colorService = DominantColorService.shared
@@ -119,6 +123,23 @@ struct NowPlayingContent: View {
                 TrackDetailView(track: item.track)
             }
         }
+        .sheet(isPresented: $showSleepTimerSheet) {
+            SleepTimerSheet(timerManager: sleepTimerManager)
+                .presentationDetents([.medium])
+        }
+        .onAppear {
+            // Wire sleep timer to audio engine
+            sleepTimerManager.onComplete = { [weak audioService] in
+                Task { @MainActor in
+                    await audioService?.pause()
+                }
+            }
+            sleepTimerManager.onVolumeChange = { [weak audioService] volume in
+                Task { @MainActor in
+                    await audioService?.setVolume(volume)
+                }
+            }
+        }
         .accessibilityAction(.escape) {
             dismiss()
         }
@@ -138,8 +159,30 @@ struct NowPlayingContent: View {
 
     private var headerBar: some View {
         HStack(spacing: 16) {
-            Color.clear
+            // Sleep timer button
+            Button {
+                showSleepTimerSheet = true
+            } label: {
+                ZStack {
+                    Image(systemName: sleepTimerManager.isActive ? "moon.zzz.fill" : "moon.zzz")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(sleepTimerManager.isActive ? .orange : .white)
+
+                    // Badge showing remaining time
+                    if sleepTimerManager.isActive {
+                        Text(formatTimerBadge(sleepTimerManager.remainingSeconds))
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(.orange, in: Capsule())
+                            .offset(x: 12, y: -10)
+                    }
+                }
                 .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(sleepTimerManager.isActive ? "Sleep timer active" : "Set sleep timer")
 
             Spacer()
 
@@ -385,6 +428,15 @@ struct NowPlayingContent: View {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    private func formatTimerBadge(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        if minutes >= 60 {
+            return "\(minutes / 60)h"
+        } else {
+            return "\(minutes)m"
+        }
     }
 
     // MARK: - Actions
