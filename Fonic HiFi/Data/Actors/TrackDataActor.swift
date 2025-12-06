@@ -310,6 +310,66 @@ public actor TrackDataActor {
         }
     }
 
+    /// Get recently played tracks sorted by last played date
+    /// - Parameter limit: Maximum number of tracks to return
+    /// - Returns: Array of Tracks sorted by lastPlayed descending
+    public func getRecentlyPlayed(limit: Int) throws -> [Track] {
+        var descriptor = FetchDescriptor<Track>(
+            predicate: #Predicate<Track> { track in
+                track.lastPlayed != nil
+            },
+            sortBy: [SortDescriptor(\Track.lastPlayed, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            return try modelContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to fetch recently played tracks: \(error.localizedDescription)")
+            throw TrackDataError.fetchFailed(error)
+        }
+    }
+
+    /// Get most listened tracks sorted by play count
+    /// - Parameter limit: Maximum number of tracks to return
+    /// - Returns: Array of Tracks sorted by playCount descending
+    public func getMostListened(limit: Int) throws -> [Track] {
+        var descriptor = FetchDescriptor<Track>(
+            predicate: #Predicate<Track> { track in
+                track.playCount > 0
+            },
+            sortBy: [SortDescriptor(\Track.playCount, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            return try modelContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to fetch most listened tracks: \(error.localizedDescription)")
+            throw TrackDataError.fetchFailed(error)
+        }
+    }
+
+    /// Get favorite albums sorted by date added
+    /// - Parameter limit: Maximum number of albums to return
+    /// - Returns: Array of Albums that are marked as favorite
+    public func getFavoriteAlbums(limit: Int) throws -> [Album] {
+        var descriptor = FetchDescriptor<Album>(
+            predicate: #Predicate<Album> { album in
+                album.isFavorite == true
+            },
+            sortBy: [SortDescriptor(\Album.dateAdded, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            return try modelContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to fetch favorite albums: \(error.localizedDescription)")
+            throw TrackDataError.fetchFailed(error)
+        }
+    }
+
     /// Remove tracks that have missing files
     /// - Returns: Number of tracks removed
     public func cleanupMissingFiles() throws -> Int {

@@ -56,4 +56,38 @@ public extension DataManager {
             throw DataManagerError.fetchFailed(error)
         }
     }
+
+    func getMostListenedTracks(limit: Int = 50) async throws -> [Track] {
+        var descriptor = FetchDescriptor<Track>(
+            predicate: #Predicate<Track> { track in
+                track.playCount > 0
+            },
+            sortBy: [SortDescriptor(\.playCount, order: .reverse)],
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            return try mainContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to get most listened tracks: \(error.localizedDescription)")
+            throw DataManagerError.fetchFailed(error)
+        }
+    }
+
+    func getFavoriteAlbums(limit: Int = 50) async throws -> [Album] {
+        var descriptor = FetchDescriptor<Album>(
+            predicate: #Predicate<Album> { album in
+                album.isFavorite == true
+            },
+            sortBy: [SortDescriptor(\.dateAdded, order: .reverse)],
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            return try mainContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to get favorite albums: \(error.localizedDescription)")
+            throw DataManagerError.fetchFailed(error)
+        }
+    }
 }

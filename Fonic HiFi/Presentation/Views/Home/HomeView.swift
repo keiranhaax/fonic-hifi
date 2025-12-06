@@ -68,10 +68,18 @@ struct HomeView: View {
     private func loadData() async {
         isLoading = true
 
-        // Phase 2+: Implement data loading from SwiftData
-        // recentlyPlayed = await dataManager.getRecentlyPlayed(limit: 10)
-        // mostListened = await dataManager.getMostListened(limit: 10)
-        // favoriteAlbums = await dataManager.getFavoriteAlbums(limit: 10)
+        guard let dataManager else {
+            isLoading = false
+            return
+        }
+
+        do {
+            recentlyPlayed = try await dataManager.getRecentlyPlayedTracks(limit: 10)
+            mostListened = try await dataManager.getMostListenedTracks(limit: 10)
+            favoriteAlbums = try await dataManager.getFavoriteAlbums(limit: 10)
+        } catch {
+            // Silently handle errors - home screen shows empty state gracefully
+        }
 
         isLoading = false
     }
