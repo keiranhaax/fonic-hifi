@@ -33,6 +33,9 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     private var inactiveFile: AVAudioFile?
     private var pendingNextURL: URL?
 
+    /// Completion handler for when playback finishes
+    private var completionHandler: (() -> Void)?
+
     @Published public private(set) var _isPlaying = false
     @Published public private(set) var _currentTime: TimeInterval = 0
     @Published public private(set) var _duration: TimeInterval = 0
@@ -326,7 +329,15 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         if _currentTime >= _duration {
             _isPlaying = false
             stopProgressPolling()
+            completionHandler?()
         }
+    }
+
+    // MARK: - Completion Handler
+
+    /// Set a completion handler for when playback finishes
+    public func setCompletionHandler(_ handler: @escaping () -> Void) {
+        completionHandler = handler
     }
 
     private func cleanup() {

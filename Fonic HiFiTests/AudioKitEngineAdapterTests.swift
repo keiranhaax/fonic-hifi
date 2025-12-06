@@ -133,4 +133,20 @@ final class AudioKitEngineAdapterTests: XCTestCase {
         let bitPerfect = await adapter.isBitPerfect
         XCTAssertTrue(bitPerfect, "Zero replay gain should maintain bit-perfect status")
     }
+
+    func testSetCompletionHandlerStoresHandler() async throws {
+        let adapter = AudioKitEngineAdapter()
+        guard adapter.isInitialized else {
+            throw XCTSkip("AudioKit engine failed to initialize in test environment")
+        }
+
+        var handlerCalled = false
+        adapter.setCompletionHandler {
+            handlerCalled = true
+        }
+
+        // Verify the handler can be set without error
+        // Note: Actual completion testing requires playback to finish
+        XCTAssertFalse(handlerCalled, "Handler should not be called just by setting it")
+    }
 }
