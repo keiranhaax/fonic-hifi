@@ -64,6 +64,9 @@ public final class AudioEngineFacade: ObservableObject {
     @Published public private(set) var showMiniPlayer: Bool = false
     @Published public private(set) var diagnosticsStatus: DiagnosticsStatus = .empty
 
+    /// Pending seek position from restored queue state (used on first play after launch)
+    private var pendingSeekPosition: TimeInterval?
+
     // MARK: - Components
 
     private let progressTimer = ProgressTimerManager()
@@ -216,6 +219,13 @@ public final class AudioEngineFacade: ObservableObject {
                 if let restoredTrack = queueManager.currentTrack {
                     uiStateStore.currentTrack = createTrackFromAudioTrack(restoredTrack)
                     uiStateStore.showMiniPlayer = true
+
+                    // Capture saved playback position for resume on first play
+                    let savedPosition = queueManager.queueState.lastPlaybackPosition
+                    if savedPosition > 0 {
+                        pendingSeekPosition = savedPosition
+                        logger.info("Restored playback position: \(savedPosition)s")
+                    }
                 }
             }
 
@@ -251,6 +261,13 @@ public final class AudioEngineFacade: ObservableObject {
         guard isReady else { throw AudioError.engineInitializationFailed(reason: "Engine not ready") }
         logger.info("Playing track: \(track.title, privacy: .public)")
         try await playbackController.play(track: track)
+
+        // Apply pending seek position from restored state (first play after launch)
+        if let seekPosition = pendingSeekPosition {
+            pendingSeekPosition = nil
+            logger.info("Seeking to restored position: \(seekPosition)s")
+            try await playbackController.seek(to: seekPosition)
+        }
     }
 
     public func resume() async throws {
