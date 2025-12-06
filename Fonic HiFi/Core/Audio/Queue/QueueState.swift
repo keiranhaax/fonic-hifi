@@ -42,6 +42,9 @@ public struct QueueState: Sendable, Equatable {
     /// Timestamp when this state was created
     public let timestamp: Date
 
+    /// Last playback position in seconds (for resume functionality)
+    public let lastPlaybackPosition: TimeInterval
+
     // MARK: - Computed Properties
 
     /// Whether the queue is empty
@@ -112,6 +115,7 @@ public struct QueueState: Sendable, Equatable {
         history: [AudioTrack] = [],
         shuffleSequence: [Int]? = nil,
         timestamp: Date = Date(),
+        lastPlaybackPosition: TimeInterval = 0,
     ) {
         self.tracks = tracks
         self.currentIndex = currentIndex
@@ -125,6 +129,7 @@ public struct QueueState: Sendable, Equatable {
         self.history = history
         self.shuffleSequence = shuffleSequence
         self.timestamp = timestamp
+        self.lastPlaybackPosition = lastPlaybackPosition
     }
 
     // MARK: - Track Access
@@ -246,7 +251,8 @@ public struct QueueState: Sendable, Equatable {
             lhs.hasNext == rhs.hasNext &&
             lhs.hasPrevious == rhs.hasPrevious &&
             lhs.history.map(\.id) == rhs.history.map(\.id) &&
-            lhs.shuffleSequence == rhs.shuffleSequence
+            lhs.shuffleSequence == rhs.shuffleSequence &&
+            abs(lhs.lastPlaybackPosition - rhs.lastPlaybackPosition) < 0.001
     }
 }
 
@@ -263,6 +269,7 @@ extension QueueState: Codable {
         case history
         case shuffleSequence
         case timestamp
+        case lastPlaybackPosition
     }
 
     public init(from decoder: Decoder) throws {
@@ -280,6 +287,7 @@ extension QueueState: Codable {
         history = try container.decode([AudioTrack].self, forKey: .history)
         shuffleSequence = try container.decodeIfPresent([Int].self, forKey: .shuffleSequence)
         timestamp = try container.decode(Date.self, forKey: .timestamp)
+        lastPlaybackPosition = try container.decodeIfPresent(TimeInterval.self, forKey: .lastPlaybackPosition) ?? 0
 
         // Compute current track
         currentTrack = currentIndex.flatMap { index in
@@ -299,6 +307,7 @@ extension QueueState: Codable {
         try container.encode(history, forKey: .history)
         try container.encodeIfPresent(shuffleSequence, forKey: .shuffleSequence)
         try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(lastPlaybackPosition, forKey: .lastPlaybackPosition)
     }
 }
 

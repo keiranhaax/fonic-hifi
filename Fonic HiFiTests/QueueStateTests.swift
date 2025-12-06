@@ -152,6 +152,47 @@ final class QueueStateTests: XCTestCase {
         XCTAssertTrue(description.contains("current:"))
     }
 
+    func testLastPlaybackPositionPersistsAndRestores() throws {
+        // Given
+        let tracks = makeTracks(titles: ["Test Track"])
+        let state = QueueState(
+            tracks: tracks,
+            currentIndex: 0,
+            shuffleMode: .off,
+            repeatMode: .none,
+            hasNext: false,
+            hasPrevious: false,
+            history: [],
+            shuffleSequence: nil,
+            lastPlaybackPosition: 42.5
+        )
+
+        // When
+        try state.save()
+        let restored = try XCTUnwrap(QueueState.load())
+
+        // Then
+        XCTAssertEqual(restored.lastPlaybackPosition, 42.5, accuracy: 0.001)
+
+        // Cleanup
+        QueueState.clear()
+    }
+
+    func testLastPlaybackPositionDefaultsToZero() {
+        let state = QueueState(
+            tracks: [],
+            currentIndex: nil,
+            shuffleMode: .off,
+            repeatMode: .none,
+            hasNext: false,
+            hasPrevious: false,
+            history: [],
+            shuffleSequence: nil
+        )
+
+        XCTAssertEqual(state.lastPlaybackPosition, 0)
+    }
+
     // MARK: - Helpers
 
     private func makeTracks(titles: [String]) -> [AudioTrack] {
