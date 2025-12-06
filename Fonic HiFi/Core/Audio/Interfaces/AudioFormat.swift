@@ -101,7 +101,11 @@ public enum AudioFormat: String, CaseIterable, Sendable, Codable {
     /// - Returns: AudioFormat if recognized, nil otherwise
     public static func from(url: URL) -> AudioFormat? {
         let ext = url.pathExtension.lowercased()
-        return AudioFormat(rawValue: ext)
+        switch ext {
+        case "m4a": return .alac  // M4A container -> ALAC (matches AudioFormatType)
+        case "aif": return .aiff  // Common alternate extension
+        default: return AudioFormat(rawValue: ext)
+        }
     }
 
     /// All supported file extensions
