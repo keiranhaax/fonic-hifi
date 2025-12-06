@@ -24,6 +24,7 @@ struct NowPlayingContent: View {
     @State private var trackDetailItem: TrackDetailItem?
     @State private var isFavorite = false
     @State private var showSleepTimerSheet = false
+    @State private var playbackSpeed: Double = 1.0
 
     // Sleep Timer
     @StateObject private var sleepTimerManager = SleepTimerManager()
@@ -152,7 +153,7 @@ struct NowPlayingContent: View {
     // MARK: - Header Bar
 
     private var headerBar: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
             // Sleep timer button
             Button {
                 showSleepTimerSheet = true
@@ -178,6 +179,9 @@ struct NowPlayingContent: View {
             .buttonStyle(.plain)
             .accessibilityLabel(sleepTimerManager.isActive ? "Sleep timer active" : "Set sleep timer")
 
+            // Playback speed button
+            playbackSpeedMenu
+
             Spacer()
 
             Text("Now Playing")
@@ -192,6 +196,48 @@ struct NowPlayingContent: View {
                 .tint(.white)
         }
         .padding(.vertical, 4)
+    }
+
+    private var playbackSpeedMenu: some View {
+        Menu {
+            ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { speed in
+                Button {
+                    playbackSpeed = speed
+                    Task {
+                        await audioService?.updatePlaybackRate(speed)
+                    }
+                } label: {
+                    HStack {
+                        Text(formatSpeed(speed))
+                        if playbackSpeed == speed {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 2) {
+                Image(systemName: "speedometer")
+                    .font(.system(size: 14, weight: .medium))
+                if playbackSpeed != 1.0 {
+                    Text(formatSpeed(playbackSpeed))
+                        .font(.system(size: 10, weight: .semibold))
+                }
+            }
+            .foregroundStyle(playbackSpeed != 1.0 ? .orange : .white)
+            .frame(width: 44, height: 44)
+        }
+        .accessibilityLabel("Playback speed: \(formatSpeed(playbackSpeed))")
+    }
+
+    private func formatSpeed(_ speed: Double) -> String {
+        if speed == 1.0 {
+            return "1×"
+        } else if speed.truncatingRemainder(dividingBy: 1.0) == 0 {
+            return "\(Int(speed))×"
+        } else {
+            return String(format: "%.2g×", speed)
+        }
     }
 
     // MARK: - Album Artwork
