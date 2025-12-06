@@ -60,7 +60,9 @@
       "Bash(done)",
       "Bash(make coverage-check:*)",
       "mcp__code-index__get_file_summary",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Skill(improve-prompt)"
     ],
     "deny": [],
     "ask": []

@@ -1,124 +1,419 @@
-# Repository Guidelines for AI Coding Agents
+## Project Overview
 
-## Project Context
-
-Fonic HiFi is a high-fidelity iOS 26.0+ audiophile music player with bit-perfect playback.
+**Fonic HiFi** - High-fidelity iOS 26 audiophile music player built with Swift 6.2, SwiftUI, AVAudioEngine, and AudioKit. Focus: bit-perfect playback, format versatility, privacy-first design.
 
 **Key Technologies:**
-- **Platform**: iOS 26.0 minimum (NO backwards compatibility), Swift 6.2, Xcode 26
-- **Audio**: AVAudioEngine + AudioKit dual-engine facade pattern
-- **Concurrency**: Swift 6 strict concurrency with actor isolation
+- **Platform**: iOS 26.0 (minimum), Swift 6.2, Xcode 26
+- **Audio**: AVAudioEngine, AudioKit, multi-engine facade pattern
+- **Concurrency**: Swift 6 strict concurrency, @MainActor boundaries
 - **Data**: SwiftData with actor-based persistence (TrackDataActor)
 - **UI**: SwiftUI with custom Liquid Glass effects
 
-## Project Structure
+## Critical Project Rules
 
-`Fonic HiFi/` contains the main SwiftUI target with these modules:
-- **Core/Audio/** - Engine facade, AVAudioEngine/AudioKit adapters, playback state
-- **Data/** - SwiftData persistence actors, format models, service boundaries
-- **Domain/** - Repository pattern, use cases, business entities
-- **Presentation/** - ViewModels, views, environment values
-- **Utils/** - Shared helpers and extensions
-- **Assets.xcassets** - Design system and visual assets
+- **MANDATORY**: Use `make` commands for ALL build, test, profile, and debug operations
+- **MANDATORY**: Verify iOS/Swift claims via apple-rag/sosumi BEFORE stating as facts
+- **NEVER**: Run xcodebuild, instruments, xctrace, or profiling tools directly
+- **NEVER**: Use placeholder, mock, or fake data in code
+- **NEVER**: Leave commented out code or TODO/FIXME comments in files
+- **ALWAYS**: Use verification tags: [Verified-Apple], [Verified-Code], [Inference], [Unverified]
+- **ALWAYS**: Route all logging through `Log.logger(_:)` using the taxonomy in `Fonic HiFi/Utils/Logging/Log.swift`; add new categories only when the existing domains do not cover a scenario.[Verified-Code]
+- **NEVER**: Emit raw file paths or large user strings—use `LogPrivacy` helpers for filenames and truncation before logging or counting events.[Verified-Code]
+- **OPTIONAL**: Enable telemetry counters via `Metrics.enable(true)` when observing imports, engine switches, or queue mutations; leave metrics disabled in production builds unless explicitly requested.[Verified-Code]
+- **ALWAYS**: Use TodoWrite for complex tasks (3+ steps) to track progress
 
-Test targets: `Fonic HiFiTests/` (active Swift Testing & XCTest suites) and `Fonic HiFiUITests/` (UI automation scaffolding). Large reference documents live in `Files/`.
+See global `~/.claude/CLAUDE.md` for universal Swift/iOS development rules.
 
-## Architecture Overview
+## Project Status
 
-**Audio Engine Facade Pattern:**
-- `AudioEngineFacade` coordinates AVAudioEngine and AudioKit adapters
-- Format detection determines optimal engine per track
-- Bit-perfect playback maintained when possible
+**Current**: @STATUS.md
+**Commands**: Run `make help` for all build/test patterns; compiler behavior and security notes below.
 
-**Concurrency Model (Swift 6.2):**
-- `@MainActor`: All UI components, ViewModels, AudioEngineFacade
-- `TrackDataActor`: SwiftData operations, file I/O isolation (Data/Actors/TrackDataActor.swift:13)
-- Cross-actor types MUST conform to `Sendable`
-- Audio callbacks dispatch to MainActor via `Task { @MainActor in ... }`
+## iOS 26 Modern API Requirements
 
-**State Management:**
-- `PlaybackStateManager`: Single source of truth for playback state
-- Immutable state snapshots published to observers
+**This is an iOS 26-only project - NO backwards compatibility:**
+- Target: iOS 26.0 minimum - NO fallbacks to older iOS versions
+- APIs: Use ONLY modern iOS 26 APIs - no compatibility wrappers
+- NO @available checks: Remove all `@available(iOS 26, *)` attributes
+- NO if #available: Remove all `if #available(iOS 26, *)` branches
+- Liquid Glass: Use native iOS 26 `.glassEffect()` APIs directly
+- ALWAYS: Assume iOS 26 features are available
 
-**Widget System:** Live Activities and WidgetKit integration (see CLAUDE.md for details)
 
-## Essential Build Commands
+## iOS 26 Verification Protocol
 
-```bash
-make build         # Build for iPhone 17 Pro simulator (iOS 26.1)
-make run           # Build and run in simulator
-make clean         # Reset derived data
-make lint          # SwiftLint code quality checks (ALWAYS run after changes)
-make format        # SwiftFormat auto-formatting
-make open          # Launch project in Xcode
+**Use the iOS 26 Research Assistant skill** (@.claude/skills/ios26-research/SKILL.md) to verify all iOS 26 claims.
+
+**Required before stating iOS 26 facts:**
+1. Search Apple documentation using MCP tools (apple-rag-mcp, sosumi)
+2. Tag all iOS 26 information with verification status
+3. Cite source URLs from Apple documentation
+4. Use [Searched-Not-Found] when documentation unavailable
+
+**Verification Tags for iOS 26:**
+- **[Verified-Apple-iOS26]** - Found in official Apple iOS 26 documentation
+- **[Verified-WWDC25]** - Found in WWDC 2025 session content
+- **[Searched-Not-Found]** - Searched but not found in Apple docs
+- **[Inference-Only]** - Based on pre-January 2025 knowledge (low confidence)
+
+**Priority topics requiring verification:**
+- Liquid Glass APIs (`.glassEffect()`, `GlassEffectContainer`, tinting, interactivity)
+- SwiftUI iOS 26 improvements (navigation, sheets, transitions, morphing)
+- SwiftData iOS 26 enhancements (actor patterns, query performance)
+- AVAudioEngine iOS 26 changes
+- Swift 6.2 + iOS 26 concurrency patterns
+
+See skill documentation for complete multi-tier search strategy and examples.
+
+## Architecture Overview [Verified-Code]
+
+### Audio Engine Facade Pattern
+
+```
+AudioEngineFacade (Main coordinator) - AudioEngineFacade.swift:20
+├── AVAudioEngineAdapter (Core/Audio/Engines/AVAudioEngineAdapter.swift)
+└── AudioKitEngineAdapter (Core/Audio/Engines/AudioKitEngineAdapter.swift)
+
+Widget Extension (Fonic HiFi Widget/):
+├── FonicWidgetBundle.swift (Entry point)
+├── NowPlayingWidget.swift (Widget configuration)
+├── NowPlayingTimelineProvider.swift (Timeline updates)
+├── NowPlayingEntry.swift (Data model)
+├── WidgetArtworkLoader.swift (Async artwork loading)
+└── Views/ (SmallWidgetView, MediumWidgetView, LargeWidgetView)
 ```
 
-**Complete command reference**: Run `make help` or see `CLAUDE.md` (Command & Build Notes section)
+**Engine Selection** (AudioEngineFactory.swift):
+- Detects format via AudioFormatDetectionManager
+- Selects optimal engine based on format capabilities
+- Falls back gracefully if primary engine fails
+- Maintains bit-perfect playback when possible
 
-## Testing Status
+### Concurrency Model (Swift 6.2) [Verified-Apple]
 
-✅ **Swift Testing & XCTest suites are active.**
+**Actor Isolation Boundaries:**
+- `@MainActor`: All UI components, ViewModels, AudioEngineFacade
+- `TrackDataActor`: SwiftData operations, file I/O (TrackDataActor.swift:13)
+- `AudioSessionManager`: Session management (no actor needed)
 
-- Run `make lint` and `make test` after code changes (see `CLAUDE.md` Command & Build Notes for variants).
-- Tests live in `Fonic HiFiTests/` (277 tests across 60+ files covering audio engines, diagnostics, data, and UI models).
-- Follow Swift Testing (`@Test`) for async/unit coverage and XCTest for integration; name files `<Module><Feature>Tests.swift`.
-- Review `docs/testing/` for coverage expectations and recent reports.
+**Critical Threading Rules:**
+1. Audio callbacks MUST dispatch to MainActor for UI updates
+2. SwiftData operations MUST go through TrackDataActor
+3. Use `Task { @MainActor in ... }` for audio → UI communication
+4. All cross-actor types MUST conform to Sendable
 
-## Coding Standards
+**Pattern** (AVAudioEngineAdapter.swift:184):
+```swift
+// Audio callback on background thread
+Task { @MainActor [weak self] in
+    self?.handlePlaybackCompletionSync()
+}
+```
 
-**Swift 6.2 with strict concurrency:**
-- Two-space indentation, `// MARK:` section boundaries
-- Prefer `final` classes, explicit access control
-- `@MainActor` annotations for all UI-facing types
-- Pure models MUST conform to `Sendable`
-- File names match primary type (`PlaybackStateManager.swift`)
-- Descriptive verb-form method names (`prepareEngine`, `handleRouteChange`)
-- Multiline doc comments for public APIs
-- `.swiftlint.yml` defines lint/style expectations—consult it before proposing new conventions or overrides.
+**Concurrency Anti-Patterns** (see ADR 004):
+```swift
+// ❌ NEVER: @unchecked Sendable on @MainActor classes
+@MainActor final class Service {}
+extension Service: @unchecked Sendable {} // Bypasses safety!
 
-### Observability & Logging
+// ❌ NEVER: Unnecessary actor hops
+Task { await MainActor.run { self?.update() } }
 
-- Use `Log.logger(_:)` with the predefined taxonomy in `Utils/Logging/Log.swift`; avoid ad-hoc category strings.[Verified-Code]
-- Apply `LogPrivacy.filename(_:)` and `LogPrivacy.truncated(_:limit:)` when logging user-sourced paths or long strings.[Verified-Code]
-- Optional counters live in `Utils/Logging/Metrics.swift`; call `Metrics.enable(true)` only in debug/testing contexts before using `Metrics.increment`.[Verified-Code]
-- Reference `docs/refactor/observability-walkthrough.md` for the end-to-end instrumentation guide.
+// ✅ ALWAYS: Inherit MainActor isolation
+Task { @MainActor [weak self] in self?.update() }
+```
 
-## Commit & Pull Request Guidelines
+### State Management Architecture
 
-**Commit Style:**
-- Imperative, capitalized subject lines under 72 characters
-- Example: "Fix NowPlaying crash", "Add gapless playback support"
-- Each commit encapsulates a complete feature or fix
+```
+PlaybackStateManager (Single source of truth)
+├── PlaybackState (Immutable state snapshot)
+├── PlaybackStateStore (Persistence layer)
+└── Published to:
+    ├── AudioEngineFacade
+    └── Individual ViewModels
 
-**Pull Requests:**
-1. Concise summary of user impact
-2. Notes on audio format or concurrency risks
-3. Proof of testing (build output, manual verification screenshots)
-4. Linked issues or task IDs
-5. Request reviewers familiar with touched area (audio vs. presentation)
-6. Document simulator/hardware prerequisites
+Coordinators (orchestrate complex operations):
+├── StateCoordinator - State transitions between managers
+├── QueueCoordinator - Queue/state/playback coordination
+└── PlaybackController - Playback operation control
 
-Use `make pr-create` for GitHub CLI pull request creation.
+UI State:
+└── AudioUIState - UI state derived from engine state
+```
 
-## Security & Configuration
+**State Flow:**
+1. User action → ViewModel method
+2. ViewModel → AudioEngineFacade command
+3. AudioEngine → PlaybackStateManager update
+4. StateCoordinator validates transition
+5. State change → Published to all observers
+6. UI updates via @Published properties + AudioUIState
 
-- Review `Fonic_HiFi.entitlements` when adding capabilities
-- App ships without network permissions (privacy-first design)
-- Keep sample libraries local, avoid embedding licensed audio in git
-- Verify new background modes or file-access rights with manual regression on iPhone 17 Pro simulator
+### Widget & Live Activity Architecture [Verified-Code]
 
-## Project Status & AI Tools
+```
+Widget Ecosystem (Fonic HiFi Widget/)
+├── Home Screen Widgets (WidgetKit)
+│   ├── Views/SmallWidgetView, MediumWidgetView, LargeWidgetView
+│   └── StandBy mode detection via showsWidgetContainerBackground
+├── Lock Screen Accessories
+│   └── accessoryCircular, accessoryRectangular, accessoryInline
+├── Core Files
+│   ├── NowPlayingWidget.swift (Widget configuration)
+│   ├── NowPlayingTimelineProvider.swift (Timeline updates)
+│   └── WidgetArtworkLoader.swift (Async artwork)
+└── Live Activities - NOT YET IMPLEMENTED
+```
 
-- `STATUS.md` tracks the current project status, active phases, verification history, and next steps—review it before making scope assumptions.
-- Custom droids live under `.factory/droids/`; invoke them via the Task tool, e.g.:
-  ```json
-  { "subagent_type": "generated-droid", "description": "Analyze diagnostics architecture", "prompt": "Summarize open Phase 2A follow-ups" }
-  ```
-  Adjust `subagent_type`, `description`, and `prompt` per task requirements.
+**Widget Update Strategy:**
+- Timeline provider refreshes on play/pause/seek/track change
+- Artwork: Async loading via WidgetArtworkLoader
+- StandBy mode: Detected via `showsWidgetContainerBackground` environment
 
-## Comprehensive Documentation
+### Apple Music UI Patterns [Verified-Code]
 
-For detailed guidance, see:
-- **@CLAUDE.md** - Claude Code-specific instructions (with Command & Build Notes)
-- **docs/DEBUGGING.md** - Audio debugging patterns and AVAudioSession best practices
-- **@STATUS.md** - Current session state, branch recovery status, staged changes
+The NowPlaying UI follows Apple Music's zoom transition pattern:
+- `MorphableArtwork.swift` - Artwork morphing with `.matchedGeometryEffect()`
+- `LiquidGlassMiniPlayer.swift` - Mini player with glass effect
+- Native iOS 26 `.glassEffect()` without custom drag gestures
+- Unified color service for artwork-based theming
+
+## Required Development Tools
+
+**Essential (via Homebrew):**
+- `xcbeautify` - Xcode build output formatting
+- `swiftlint` - Swift code linting
+- `swiftformat` - Swift code formatting
+- `ripgrep (rg)` - Ultra-fast code search
+- `fd` - Fast file finder
+- `fzf` - Interactive fuzzy finder
+
+**Install**: `make install-deps` | **Check**: `make check-deps`
+
+## Development Workflow Patterns
+
+### Git Operations (Repository-Specific Safety Directives)
+
+- **ALWAYS** ask after file edits: "Would you like me to commit these changes?"
+- Use `gh pr create` for pull requests, not web interface
+- Include Co-Authored-By in commits: `Co-Authored-By: Claude <noreply@anthropic.com>`
+- Never push unless explicitly requested
+
+### Branch Recovery Protocol [Verified-Code]
+
+**When to Create Emergency Backups:**
+- Build failing with complex multi-file changes
+- Major refactoring spans multiple sessions
+- Before risky git operations (rebase, filter-branch, reset --hard)
+- After manual file restoration from previous commits
+
+**Naming Convention:**
+```bash
+git branch emergency-backup-YYYYMMDD-HHMMSS
+```
+
+**Recovery Strategy: Sequential Cherry-Pick (RECOMMENDED)**
+
+1. **Preserve backup branch:** Never force-push or modify backup branches
+2. **Work from clean branch:** Ensure working tree is clean before starting recovery
+3. **Commit staged changes first:** Always commit any staged work before cherry-picking
+4. **Cherry-pick sequentially:** Process commits one at a time with build verification
+5. **Handle conflicts:** Use `--ours` for files already manually restored
+6. **Document progress:** Update STATUS.md after each phase
+
+**High-Risk Commits (Require Extra Caution):**
+- Threading changes: Any commit modifying `@MainActor` annotations (verify with manual testing)
+- Data layer changes: DataManager, SwiftData models, actors (test import/export)
+- Large formatting commits: 50+ files (consider splitting before applying)
+
+**Rollback Procedures:**
+```bash
+git reset --soft HEAD^  # Undo last commit (keep changes)
+git reset --hard HEAD^  # Undo last commit (discard changes)
+git revert COMMIT_SHA   # Revert specific commit
+```
+
+### Feature Development Flow
+
+1. Use TodoWrite for tasks with 3+ steps
+2. Run `make check-deps` to ensure tools are installed
+3. Create feature branch from main
+4. Implement with @MainActor boundaries (iOS 26 concurrency)
+5. Run `make lint` to check code quality
+6. Run `make format` to ensure consistent style
+7. Run `make build` to verify compilation
+8. Run `make run` to test in iPhone 17 Pro simulator (iOS 26.1)
+9. Update STATUS.md if session spans multiple days
+10. Ask to commit changes after edits
+11. **NEVER** add backwards compatibility code
+12. **ALWAYS** use modern iOS 26 APIs directly
+
+### Observability Checklist [Verified-Code]
+
+1. Select an existing `LogCategory` (see `Utils/Logging/Log.swift`) or add a new entry within the matching domain namespace when necessary.
+2. Redact filesystem details with `LogPrivacy.filename(_:)` and clamp long metadata via `LogPrivacy.truncated(_:limit:)` before logging.
+3. Wrap optional counters with `Metrics.increment` only after calling `Metrics.enable(true)` (e.g., in debug builds or test harnesses).
+4. Record instrumentation decisions in ADRs or `docs/refactor/observability-walkthrough.md` so future contributors share the same taxonomy assumptions.
+
+## Command & Build Notes [Verified-Code]
+
+**Essential Commands:**
+```
+make build       # Debug build with verification
+make test        # Run all tests (311 tests)
+make lint        # SwiftLint strict mode
+make format      # SwiftFormat auto-fix
+make run         # iPhone 17 Pro simulator (iOS 26.1)
+make coverage    # Generate coverage report
+```
+
+Full catalog: `make help` — avoid direct `xcodebuild`/`xctrace`/profilers.
+- Compiler builds from the working tree (including staged changes). A successful build can include staged-but-uncommitted code—commit or document staged work before relying on results.
+- Fast checks: `make build-check` for exit-code-only, `make build-verify` + `make error-report` for full failure context.
+- Makefile security hardening (Oct 2025): PID regex validation and bounded durations, mktemp + trap cleanup, bundle ID matching for processes, fail-fast error handling, crash log sorting + atos validation, and `CODEX_ALLOW_UPLOAD=1` gate for AI uploads.
+
+**Advanced Commands:**
+- Profiling: `make profile-cpu`, `make profile-memory`, `make profile-audio`
+- Crash diagnostics: `make crash-logs`, `make crash-latest`, `make crash-symbolicate`
+- App monitoring: `make run-verify`, `make app-status`, `make monitor-app`
+- Logging: `make logs-stream`, `make logs-filter SUBSYSTEM=...`, `make logs-errors`
+- Benchmarking: `make benchmark-build`, `make benchmark-test`
+- AI integration: `make codex-explain FILE=...` (requires CODEX_ALLOW_UPLOAD=1)
+
+## Test Organization [Verified-Code]
+
+**60+ test files organized by domain** (Fonic HiFiTests/):
+- Audio Engine: AVAudioEngineAdapterTests, AudioKitEngineAdapterTests, AudioEngineFactoryTests
+- Diagnostics: AudioMonitorTests, BitPerfectValidatorTests, PlaybackDiagnosticsTests (14 files)
+- Data Layer: TrackDataActorTests, FileImportProcessorTests, LibraryImportServiceTests
+- Queue/Playback: QueueCoordinatorTests, AudioQueueManagerTests
+- UI: LibraryViewModelTests, GlassUtilitiesTests
+
+**Coverage**: 46.54% overall, 34.17% app (target: 40%)
+**Run**: `make test` | `make coverage` | `make coverage-check`
+
+## Non-Existent References (Do NOT reference)
+
+These files/directories are referenced in older documentation but **DO NOT EXIST**:
+
+- ❌ `Core/LiveActivity/` directory - DOES NOT EXIST (use `Fonic HiFi Widget/`)
+- ❌ `LiveActivityManager.swift` - DOES NOT EXIST
+- ❌ `NowPlayingAttributes.swift` - DOES NOT EXIST
+- ❌ `NowPlayingActivityConfiguration.swift` - DOES NOT EXIST
+- ❌ `Core/Audio/Decoders/` - DOES NOT EXIST
+- ❌ `FormatBadge.swift` - DOES NOT EXIST
+- ❌ `AudioSessionActor` - DOES NOT EXIST (use `AudioSessionManager`)
+- ❌ `PerformanceOptimizedContainer.swift` - DELETED
+
+## Critical Implementation Patterns
+
+### Adding a New Audio Format
+
+1. Update Detection in `AudioFormatDetectionManager.detectFormat()`
+2. Map to Engine in `AudioEngineFactory.createEngine()`
+3. Add format support to appropriate engine adapter
+4. Test with real audio files
+
+### Fixing Audio Playback Issues
+
+**Common Issues & Solutions:**
+
+1. **Threading Crashes**
+   - Check for missing `@MainActor` annotations
+   - Verify `Task { @MainActor in ... }` wrapping
+   - Look for synchronous UI updates from background threads
+
+2. **State Desynchronization**
+   - Ensure single PlaybackStateManager instance
+   - Check for duplicate state updates
+   - Verify proper state transition validation
+
+3. **Engine Switching Failures**
+   - Review format detection logic
+   - Check engine capability matrix
+   - Verify engine cleanup in facade coordinators
+
+## Performance Optimization Points [UNVERIFIED]
+
+**Optimization Targets:**
+1. LibraryImportService: Batch SwiftData operations
+2. AudioQueueManager: Preload next track metadata
+3. AudioEngineFacade: Cache engine instances
+4. TrackDataActor: Implement pagination for large libraries
+
+**Note:** These are optimization targets, not verified measurements. Profile first with `make profile-cpu` and `make profile-memory`.
+
+## SwiftData Integration [Verified-Apple]
+
+**Model Persistence** (Data/Models/ and Data/Actors/TrackDataActor.swift):
+- All database operations through TrackDataActor
+- Batch imports for performance
+- Relationships: Artist ↔ Album ↔ Track ↔ Playlist
+- Migration support via versioned schemas
+
+## Project-Specific Context
+
+**Audio Quality Philosophy:**
+- Bit-perfect playback is the primary goal
+- Format support breadth over depth
+- User control over processing chain
+- Transparency in signal path
+
+**Privacy & Security:**
+- No cloud services or analytics
+- All data stored locally
+- No network permissions required
+- File access limited to user-selected directories
+
+**Target Audience:**
+- Audiophiles requiring bit-perfect playback
+- Users with diverse format collections
+- Privacy-conscious individuals
+- iOS power users
+
+## Architecture Decision Records
+
+See `@Files/docs/adr/` for detailed decisions:
+
+| ADR | Title | Key Decision |
+|-----|-------|--------------|
+| 001 | Import URL Normalisation | Multi-key hash deduplication (sourceURLHash + sourceBookmarkHash) |
+| 002 | Audio Monitor Decomposition | Modular diagnostics: AudioMetricsScheduler, AudioSessionAnalytics |
+| 003 | Paginated Fetch Descriptor | BatchProcessor for 5,000+ track libraries |
+| 004 | MainActor Service Concurrency | No `@unchecked Sendable` on `@MainActor` classes |
+
+**Why Multiple Audio Engines?**
+- AVAudioEngine: Best iOS integration, limited format support
+- AudioKit: Superior DSP and FLAC playback, slightly higher CPU usage
+- Trade-off: Complexity for flexibility (see ADR 002)
+
+**Why Actor-Based Concurrency?**
+- Swift 6 strict concurrency eliminates races
+- Clear isolation boundaries (see ADR 004)
+- Compile-time safety
+
+**Why SwiftData over Core Data?**
+- Modern Swift-first API (iOS 26 enhanced)
+- Better SwiftUI integration
+- Pagination support (see ADR 003)
+
+## Code Cleanup Requirements
+
+**iOS 26 is the ONLY target - write code as if iOS 26 is guaranteed (because it is).**
+
+Remove these patterns when found:
+```swift
+// REMOVE THIS:
+if #available(iOS 26, *) { /* iOS 26 code */ } else { /* fallback */ }
+@available(iOS 26, *) struct MyView: View { ... }
+
+// REPLACE WITH:
+// iOS 26 code directly
+struct MyView: View { ... }
+```
+
+## References
+
+- @STATUS.md - Current project state and progress
+- Makefile (`make help`) - Command catalog; see Command & Build Notes above

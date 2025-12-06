@@ -1,4 +1,7 @@
 # CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## Project Overview
 
 **Fonic HiFi** - High-fidelity iOS 26 audiophile music player built with Swift 6.2, SwiftUI, AVAudioEngine, and AudioKit. Focus: bit-perfect playback, format versatility, privacy-first design.
@@ -75,13 +78,11 @@ AudioEngineFacade (Main coordinator) - AudioEngineFacade.swift:20
 ├── AVAudioEngineAdapter (Core/Audio/Engines/AVAudioEngineAdapter.swift)
 └── AudioKitEngineAdapter (Core/Audio/Engines/AudioKitEngineAdapter.swift)
 
-Widget Extension (Fonic HiFi Widget/):
-├── FonicWidgetBundle.swift (Entry point)
-├── NowPlayingWidget.swift (Widget configuration)
-├── NowPlayingTimelineProvider.swift (Timeline updates)
-├── NowPlayingEntry.swift (Data model)
-├── WidgetArtworkLoader.swift (Async artwork loading)
-└── Views/ (SmallWidgetView, MediumWidgetView, LargeWidgetView)
+Widget System:
+├── LiveActivityManager.swift:13 (@MainActor lifecycle)
+├── NowPlayingAttributes.swift:17 (ActivityAttributes)
+├── Fonic HiFi Widget/NowPlayingActivityConfiguration.swift
+└── Fonic HiFi Widget/NowPlayingTimelineProvider.swift:12
 ```
 
 **Engine Selection** (AudioEngineFactory.swift):
@@ -111,19 +112,6 @@ Task { @MainActor [weak self] in
 }
 ```
 
-**Concurrency Anti-Patterns** (see ADR 004):
-```swift
-// ❌ NEVER: @unchecked Sendable on @MainActor classes
-@MainActor final class Service {}
-extension Service: @unchecked Sendable {} // Bypasses safety!
-
-// ❌ NEVER: Unnecessary actor hops
-Task { await MainActor.run { self?.update() } }
-
-// ✅ ALWAYS: Inherit MainActor isolation
-Task { @MainActor [weak self] in self?.update() }
-```
-
 ### State Management Architecture
 
 ```
@@ -133,44 +121,35 @@ PlaybackStateManager (Single source of truth)
 └── Published to:
     ├── AudioEngineFacade
     └── Individual ViewModels
-
-Coordinators (orchestrate complex operations):
-├── StateCoordinator - State transitions between managers
-├── QueueCoordinator - Queue/state/playback coordination
-└── PlaybackController - Playback operation control
-
-UI State:
-└── AudioUIState - UI state derived from engine state
 ```
 
 **State Flow:**
 1. User action → ViewModel method
 2. ViewModel → AudioEngineFacade command
 3. AudioEngine → PlaybackStateManager update
-4. StateCoordinator validates transition
-5. State change → Published to all observers
-6. UI updates via @Published properties + AudioUIState
+4. State change → Published to all observers
+5. UI updates via @Published properties
 
 ### Widget & Live Activity Architecture [Verified-Code]
 
 ```
-Widget Ecosystem (Fonic HiFi Widget/)
+Widget Ecosystem
 ├── Home Screen Widgets (WidgetKit)
-│   ├── Views/SmallWidgetView, MediumWidgetView, LargeWidgetView
+│   ├── SmallWidgetView, MediumWidgetView, LargeWidgetView
 │   └── StandBy mode detection via showsWidgetContainerBackground
 ├── Lock Screen Accessories
 │   └── accessoryCircular, accessoryRectangular, accessoryInline
-├── Core Files
-│   ├── NowPlayingWidget.swift (Widget configuration)
-│   ├── NowPlayingTimelineProvider.swift (Timeline updates)
-│   └── WidgetArtworkLoader.swift (Async artwork)
-└── Live Activities - NOT YET IMPLEMENTED
+└── Live Activities (Dynamic Island + Lock Screen Banner)
+    ├── LiveActivityManager.swift:13 (@MainActor lifecycle)
+    ├── NowPlayingAttributes.swift:17 (4KB limit enforcement)
+    └── NowPlayingActivityConfiguration.swift
 ```
 
-**Widget Update Strategy:**
-- Timeline provider refreshes on play/pause/seek/track change
-- Artwork: Async loading via WidgetArtworkLoader
-- StandBy mode: Detected via `showsWidgetContainerBackground` environment
+**Live Activity Sparse Update Strategy:**
+- Updates ONLY on play/pause/seek/track change (NOT every second)
+- Uses `playbackRate` (1.0 playing, 0.0 paused) for system interpolation
+- Artwork: 100x100 JPEG thumbnail (~3KB max)
+- Timeline refresh: 60s playing, 300s paused
 
 ### Apple Music UI Patterns [Verified-Code]
 
@@ -259,17 +238,7 @@ git revert COMMIT_SHA   # Revert specific commit
 
 ## Command & Build Notes [Verified-Code]
 
-**Essential Commands:**
-```
-make build       # Debug build with verification
-make test        # Run all tests (311 tests)
-make lint        # SwiftLint strict mode
-make format      # SwiftFormat auto-fix
-make run         # iPhone 17 Pro simulator (iOS 26.1)
-make coverage    # Generate coverage report
-```
-
-Full catalog: `make help` — avoid direct `xcodebuild`/`xctrace`/profilers.
+- Use `make help` as the single source of truth for build/test/debug commands; avoid direct `xcodebuild`/`xctrace`/profilers.
 - Compiler builds from the working tree (including staged changes). A successful build can include staged-but-uncommitted code—commit or document staged work before relying on results.
 - Fast checks: `make build-check` for exit-code-only, `make build-verify` + `make error-report` for full failure context.
 - Makefile security hardening (Oct 2025): PID regex validation and bounded durations, mktemp + trap cleanup, bundle ID matching for processes, fail-fast error handling, crash log sorting + atos validation, and `CODEX_ALLOW_UPLOAD=1` gate for AI uploads.
@@ -293,19 +262,6 @@ Full catalog: `make help` — avoid direct `xcodebuild`/`xctrace`/profilers.
 
 **Coverage**: 46.54% overall, 34.17% app (target: 40%)
 **Run**: `make test` | `make coverage` | `make coverage-check`
-
-## Non-Existent References (Do NOT reference)
-
-These files/directories are referenced in older documentation but **DO NOT EXIST**:
-
-- ❌ `Core/LiveActivity/` directory - DOES NOT EXIST (use `Fonic HiFi Widget/`)
-- ❌ `LiveActivityManager.swift` - DOES NOT EXIST
-- ❌ `NowPlayingAttributes.swift` - DOES NOT EXIST
-- ❌ `NowPlayingActivityConfiguration.swift` - DOES NOT EXIST
-- ❌ `Core/Audio/Decoders/` - DOES NOT EXIST
-- ❌ `FormatBadge.swift` - DOES NOT EXIST
-- ❌ `AudioSessionActor` - DOES NOT EXIST (use `AudioSessionManager`)
-- ❌ `PerformanceOptimizedContainer.swift` - DELETED
 
 ## Critical Implementation Patterns
 
@@ -375,29 +331,23 @@ These files/directories are referenced in older documentation but **DO NOT EXIST
 
 ## Architecture Decision Records
 
-See `@Files/docs/adr/` for detailed decisions:
-
-| ADR | Title | Key Decision |
-|-----|-------|--------------|
-| 001 | Import URL Normalisation | Multi-key hash deduplication (sourceURLHash + sourceBookmarkHash) |
-| 002 | Audio Monitor Decomposition | Modular diagnostics: AudioMetricsScheduler, AudioSessionAnalytics |
-| 003 | Paginated Fetch Descriptor | BatchProcessor for 5,000+ track libraries |
-| 004 | MainActor Service Concurrency | No `@unchecked Sendable` on `@MainActor` classes |
-
 **Why Multiple Audio Engines?**
 - AVAudioEngine: Best iOS integration, limited format support
 - AudioKit: Superior DSP and FLAC playback, slightly higher CPU usage
-- Trade-off: Complexity for flexibility (see ADR 002)
+- Extensible adapter layer: Leaves room for future specialized engines
+- Trade-off: Complexity for flexibility
 
 **Why Actor-Based Concurrency?**
 - Swift 6 strict concurrency eliminates races
-- Clear isolation boundaries (see ADR 004)
+- Clear isolation boundaries
 - Compile-time safety
+- Future-proof architecture
 
 **Why SwiftData over Core Data?**
 - Modern Swift-first API (iOS 26 enhanced)
-- Better SwiftUI integration
-- Pagination support (see ADR 003)
+- Better SwiftUI integration (iOS 26 features)
+- Automatic iCloud sync (iOS 26 implementation)
+- Simpler relationship management
 
 ## Code Cleanup Requirements
 
