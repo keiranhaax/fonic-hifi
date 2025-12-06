@@ -570,7 +570,8 @@ public final class AudioQueueManager: AudioQueue {
     // MARK: - Persistence
 
     /// Save current queue state to persistence
-    public func saveState() {
+    /// - Parameter playbackPosition: Current playback position in seconds (for resume)
+    public func saveState(playbackPosition: TimeInterval = 0) {
         let state = QueueState(
             tracks: tracks,
             currentIndex: currentIndex,
@@ -581,6 +582,7 @@ public final class AudioQueueManager: AudioQueue {
             history: history,
             shuffleSequence: shuffleMode.isActive ? shuffleSequence : nil,
             timestamp: Date(),
+            lastPlaybackPosition: playbackPosition,
         )
 
         do {

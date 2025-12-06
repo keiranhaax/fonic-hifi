@@ -262,11 +262,22 @@ public final class AudioEngineFacade: ObservableObject {
     public func pause() async {
         assertMainThread()
         guard isReady else { return }
+
+        // Save current position before pausing
+        if let engine = engineManager.currentEngine {
+            let position = await engine.currentTime
+            queueManager.saveState(playbackPosition: position)
+        }
+
         await playbackController.pause()
     }
 
     public func stop() async {
         assertMainThread()
+
+        // Save position as 0 when stopping (user intended to stop)
+        queueManager.saveState(playbackPosition: 0)
+
         await playbackController.stop()
     }
 
