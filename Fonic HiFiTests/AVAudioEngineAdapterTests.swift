@@ -143,4 +143,30 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         // Then - should still prepare (engine starts on demand)
         XCTAssertTrue(adapter.hasNextPrepared)
     }
+
+    // MARK: - EQ Tests
+
+    func testApplyEQ_updatesEQState() async throws {
+        // Given
+        let adapter = AVAudioEngineAdapter()
+        var config = EqualizerConfiguration.default
+        config.bands[0] = EQBand(frequency: 32, gain: 6.0) // Boost 32Hz
+        config.isEnabled = true
+
+        // When
+        await adapter.applyEQ(config)
+
+        // Then
+        let isEnabled = await adapter.isEQEnabled
+        XCTAssertTrue(isEnabled)
+    }
+
+    func testApplyEQ_disabledByDefault() async throws {
+        // Given
+        let adapter = AVAudioEngineAdapter()
+
+        // Then
+        let isEnabled = await adapter.isEQEnabled
+        XCTAssertFalse(isEnabled)
+    }
 }

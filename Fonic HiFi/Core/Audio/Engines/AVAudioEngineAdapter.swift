@@ -48,6 +48,18 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Secondary time pitch node for gapless playback
     private let secondaryTimePitchNode = AVAudioUnitTimePitch()
 
+    /// 10-band parametric equalizer
+    private let eqNode = AVAudioUnitEQ(numberOfBands: 10)
+
+    /// Submix node for combining both player chains before EQ
+    private let submixNode = AVAudioMixerNode()
+
+    /// Current EQ configuration
+    private var eqConfiguration = EqualizerConfiguration.default
+
+    /// Whether EQ processing is enabled
+    public private(set) var isEQEnabled = false
+
     /// Tracks which player is currently active (true = primary)
     private var isPrimaryActive = true
 
@@ -410,19 +422,43 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         engine.attach(secondaryPlayerNode)
         engine.attach(secondaryTimePitchNode)
 
+        // Attach EQ and submix nodes
+        engine.attach(submixNode)
+        engine.attach(eqNode)
+
         // Connect chains to mixer
         let format = engine.outputNode.outputFormat(forBus: 0)
 
-        // Primary chain: primaryPlayer → primaryTimePitch → mixer
+        // Primary chain: primaryPlayer → primaryTimePitch → submix
         engine.connect(primaryPlayerNode, to: primaryTimePitchNode, format: format)
-        engine.connect(primaryTimePitchNode, to: engine.mainMixerNode, format: format)
+        engine.connect(primaryTimePitchNode, to: submixNode, format: format)
 
-        // Secondary chain: secondaryPlayer → secondaryTimePitch → mixer
+        // Secondary chain: secondaryPlayer → secondaryTimePitch → submix
         engine.connect(secondaryPlayerNode, to: secondaryTimePitchNode, format: format)
-        engine.connect(secondaryTimePitchNode, to: engine.mainMixerNode, format: format)
+        engine.connect(secondaryTimePitchNode, to: submixNode, format: format)
+
+        // Master chain: submix → EQ → mainMixer
+        engine.connect(submixNode, to: eqNode, format: format)
+        engine.connect(eqNode, to: engine.mainMixerNode, format: format)
+
+        // Configure EQ bands with standard frequencies
+        configureEQBands()
 
         // Set up tap for monitoring (optional)
         setupMonitoring()
+    }
+
+    /// Configure EQ bands with standard audiophile frequencies
+    private func configureEQBands() {
+        let frequencies: [Float] = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
+
+        for (index, freq) in frequencies.enumerated() {
+            eqNode.bands[index].filterType = .parametric
+            eqNode.bands[index].frequency = freq
+            eqNode.bands[index].bandwidth = 1.0
+            eqNode.bands[index].gain = 0
+            eqNode.bands[index].bypass = true // Start bypassed (EQ disabled)
+        }
     }
 
     private func startEngine() throws {
@@ -434,7 +470,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     private func hasAudioProcessing() -> Bool {
         // Check if any effects or processing nodes are active
         // Time pitch node is active if rate is not 1.0
-        currentPlaybackRate != 1.0
+        // EQ is active if enabled
+        currentPlaybackRate != 1.0 || isEQEnabled
     }
 
     private func handlePlaybackCompletion() {
@@ -530,6 +567,21 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         primaryTimePitchNode.rate = Float(clampedRate)
         secondaryTimePitchNode.rate = Float(clampedRate)
         currentPlaybackRate = clampedRate
+    }
+
+    // MARK: - Equalizer
+
+    /// Apply an equalizer configuration to the audio output
+    public func applyEQ(_ configuration: EqualizerConfiguration) async {
+        eqConfiguration = configuration
+        isEQEnabled = configuration.isEnabled
+
+        for (index, band) in configuration.bands.enumerated() where index < 10 {
+            eqNode.bands[index].gain = band.gain
+            eqNode.bands[index].bypass = !configuration.isEnabled
+        }
+
+        logger.debug("EQ \(configuration.isEnabled ? "enabled" : "disabled") with preset: \(configuration.presetName ?? "Custom")")
     }
 
     // MARK: - Completion Handler
