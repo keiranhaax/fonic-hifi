@@ -86,6 +86,11 @@ struct AudioSettingsView: View {
 
                 Section {
                     Toggle("Gapless Playback", isOn: $enableGaplessPlayback)
+                        .onChange(of: enableGaplessPlayback) { _, newValue in
+                            Task {
+                                await audioService?.updateGaplessEnabled(newValue)
+                            }
+                        }
 
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -95,12 +100,23 @@ struct AudioSettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                         Slider(value: $crossfadeDuration, in: 0...12, step: 1)
+                            .onChange(of: crossfadeDuration) { _, newValue in
+                                Task {
+                                    await audioService?.updateCrossfadeDuration(newValue)
+                                }
+                            }
                     }
 
                     Picker("Replay Gain", selection: $replayGainMode) {
                         Text("Off").tag("off")
                         Text("Track").tag("track")
                         Text("Album").tag("album")
+                    }
+                    .onChange(of: replayGainMode) { _, newValue in
+                        let mode = ReplayGainMode(rawValue: newValue) ?? .off
+                        Task {
+                            await audioService?.updateReplayGainMode(mode)
+                        }
                     }
                 } header: {
                     Text("Playback Features")

@@ -174,6 +174,13 @@ public final class AudioEngineFacade: ObservableObject {
         await playbackController.refreshNowPlayingMetadata()
     }
 
+    public func updateGaplessEnabled(_ enabled: Bool) async {
+        objectWillChange.send()
+        let updated = engineManager.configuration.with(enableGapless: enabled)
+        await engineManager.updateConfiguration(updated)
+        await playbackSettingsStore.setGaplessEnabled(enabled)
+    }
+
     // MARK: - Lifecycle
 
     public func initialize() async throws {
