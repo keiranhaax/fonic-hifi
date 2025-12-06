@@ -39,6 +39,17 @@ struct SettingsView: View {
                         )
                     }
 
+                    NavigationLink {
+                        EqualizerView()
+                    } label: {
+                        SettingsRow(
+                            icon: "slider.horizontal.3",
+                            iconColor: .purple,
+                            title: "Equalizer",
+                            subtitle: "10-band parametric EQ"
+                        )
+                    }
+
                     Toggle(isOn: $bitPerfectEnabled) {
                         SettingsRow(
                             icon: "waveform",
