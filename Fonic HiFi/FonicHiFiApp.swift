@@ -193,10 +193,11 @@ struct FonicHiFiApp: App {
 
     @MainActor
     private func performStartupTasks() async {
-        // Cleanup missing files (in background)
         guard let dataManager else { return }
 
+        // Defer cleanup by 3 seconds - not launch-critical
         Task {
+            try? await Task.sleep(for: .seconds(3))
             do {
                 let removedCount = try await dataManager.cleanupMissingFiles()
                 if removedCount > 0 {
@@ -207,8 +208,9 @@ struct FonicHiFiApp: App {
             }
         }
 
-        // Log library statistics
+        // Defer statistics by 5 seconds - not launch-critical
         Task {
+            try? await Task.sleep(for: .seconds(5))
             do {
                 let stats = try await dataManager.getLibraryStatistics()
                 let statsMessage = "Library stats: \(stats.trackCount) tracks, \(stats.albumCount) albums, " +
