@@ -91,6 +91,10 @@ public protocol AudioEngineService: Sendable {
 
     /// Collect and store audio metrics for analysis
     func collectMetrics() async
+
+    /// Set a completion handler to be called when playback finishes naturally
+    /// - Parameter handler: Closure to invoke when track ends
+    func setCompletionHandler(_ handler: @escaping () -> Void)
 }
 
 /// Extension providing default implementations
@@ -125,6 +129,11 @@ public extension AudioEngineService {
 
     /// Default implementation does nothing for collectMetrics
     func collectMetrics() async {
+        // Optional implementation
+    }
+
+    /// Default implementation does nothing for setCompletionHandler
+    func setCompletionHandler(_: @escaping () -> Void) {
         // Optional implementation
     }
 }

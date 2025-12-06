@@ -20,6 +20,7 @@ protocol PlaybackQueueHandling: AnyObject {
 @MainActor
 final class PlaybackController {
     typealias DiagnosticsHandler = @MainActor (Track, AudioFileInfo?) async -> Void
+    typealias TrackCompletionHandler = @MainActor () async -> Void
 
     private let sessionManager: AudioSessionManager
     private let formatDetectionManager: AudioFormatDetectionManager
@@ -30,6 +31,9 @@ final class PlaybackController {
     private let progressTimer: ProgressTimerManager
     private let uiState: AudioUIState
     private let diagnosticsHandler: DiagnosticsHandler
+
+    /// Callback invoked when a track finishes playing naturally (not stopped by user)
+    var onTrackComplete: TrackCompletionHandler?
 
     private let logger = Log.logger(.playbackController)
 
@@ -86,6 +90,14 @@ final class PlaybackController {
 
         try await engine.load(url: audioTrack.url)
         await applyPlaybackParameters(for: audioTrack, engine: engine)
+
+        // Set completion handler for auto-advance
+        engine.setCompletionHandler { [weak self] in
+            Task { @MainActor in
+                await self?.handleTrackCompletion()
+            }
+        }
+
         try await engine.play()
 
         stateManager.updateState(.playing(currentTime: 0, duration: info.duration))
@@ -273,6 +285,20 @@ final class PlaybackController {
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
 
         await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
+    }
+
+    /// Handle track completion - called when engine finishes playing naturally
+    private func handleTrackCompletion() async {
+        logger.info("Track completed naturally")
+        progressTimer.stop()
+
+        // Invoke the completion callback (set by facade for auto-advance)
+        if let onTrackComplete {
+            await onTrackComplete()
+        } else {
+            // No callback set - just stop
+            stateManager.updateState(.stopped)
+        }
     }
 
     func reapplyPlaybackParameters() async {

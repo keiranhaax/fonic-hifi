@@ -142,6 +142,17 @@ public final class AudioEngineFacade: ObservableObject {
         _ = queueCoordinator
         _ = stateCoordinator
 
+        // Wire up auto-advance when tracks complete
+        playbackController.onTrackComplete = { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.queueCoordinator.playNext()
+            } catch {
+                self.logger.error("Failed to auto-advance: \(error.localizedDescription)")
+                self.stateManager.updateState(.stopped)
+            }
+        }
+
         logger.info("AudioEngineFacade initialised with configuration: \(String(describing: configuration.performanceMode))")
     }
 
