@@ -195,6 +195,17 @@ public final class AudioEngineFacade: ObservableObject {
         await playbackSettingsStore.setGaplessEnabled(enabled)
     }
 
+    public func applyEQ(_ configuration: EqualizerConfiguration) async {
+        objectWillChange.send()
+
+        // Apply to current engine if it's AVAudioEngineAdapter
+        if let engine = engineManager.currentEngine as? AVAudioEngineAdapter {
+            await engine.applyEQ(configuration)
+        }
+
+        logger.debug("Applied EQ configuration: \(configuration.presetName ?? "Custom")")
+    }
+
     // MARK: - Lifecycle
 
     public func initialize() async throws {
