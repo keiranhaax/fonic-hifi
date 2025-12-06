@@ -118,4 +118,29 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         let lowRate = await adapter.currentPlaybackRate
         XCTAssertEqual(lowRate, 0.5, accuracy: 0.01)
     }
+
+    func testPrepareNext_setsHasNextPrepared() async throws {
+        // Given
+        let url = try makePCMTestAudioFile(testCase: self)
+        let adapter = AVAudioEngineAdapter()
+        try await adapter.load(url: url)
+
+        // When
+        await adapter.prepareNext(url: url)
+
+        // Then
+        XCTAssertTrue(adapter.hasNextPrepared)
+    }
+
+    func testPrepareNext_withoutLoad_stillPrepares() async throws {
+        // Given
+        let url = try makePCMTestAudioFile(testCase: self)
+        let adapter = AVAudioEngineAdapter()
+
+        // When - prepareNext without loading a current track first
+        await adapter.prepareNext(url: url)
+
+        // Then - should still prepare (engine starts on demand)
+        XCTAssertTrue(adapter.hasNextPrepared)
+    }
 }

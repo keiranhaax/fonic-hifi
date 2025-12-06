@@ -36,11 +36,26 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// The underlying AVAudioEngine
     private let engine = AVAudioEngine()
 
-    /// Player node for audio playback
-    private let playerNode = AVAudioPlayerNode()
+    /// Primary player node for audio playback
+    private let primaryPlayerNode = AVAudioPlayerNode()
 
-    /// Time pitch node for playback rate adjustment
-    private let timePitchNode = AVAudioUnitTimePitch()
+    /// Secondary player node for gapless playback
+    private let secondaryPlayerNode = AVAudioPlayerNode()
+
+    /// Primary time pitch node for playback rate adjustment
+    private let primaryTimePitchNode = AVAudioUnitTimePitch()
+
+    /// Secondary time pitch node for gapless playback
+    private let secondaryTimePitchNode = AVAudioUnitTimePitch()
+
+    /// Tracks which player is currently active (true = primary)
+    private var isPrimaryActive = true
+
+    /// File prepared for gapless playback on secondary player
+    private var preparedFile: AVAudioFile?
+
+    /// Whether a next track has been prepared for gapless playback
+    public private(set) var hasNextPrepared = false
 
     /// Current playback rate (1.0 = normal speed)
     public private(set) var currentPlaybackRate: Double = 1.0
@@ -86,7 +101,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
     public var currentTime: TimeInterval {
         get async {
-            guard let playerTime = playerNode.playerTime(forNodeTime: playerNode.lastRenderTime ?? AVAudioTime()) else {
+            let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
+            guard let playerTime = activePlayer.playerTime(forNodeTime: activePlayer.lastRenderTime ?? AVAudioTime()) else {
                 return 0
             }
 
@@ -108,13 +124,14 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
     public var isPlaying: Bool {
         get async {
-            playerNode.isPlaying
+            let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
+            return activePlayer.isPlaying
         }
     }
 
     public var volume: Float {
         get async {
-            playerNode.volume
+            primaryPlayerNode.volume
         }
     }
 
@@ -132,7 +149,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             let outputFormat = engine.outputNode.outputFormat(forBus: 0)
 
             return file.processingFormat.sampleRate == outputFormat.sampleRate &&
-                playerNode.volume == 1.0 &&
+                primaryPlayerNode.volume == 1.0 &&
                 !hasAudioProcessing()
         }
     }
@@ -184,6 +201,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             throw AudioError.fileNotFound(URL(fileURLWithPath: ""))
         }
 
+        let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
+
         #if DEBUG
             logger.debug("=== AVAUDIOENGINE PLAY DEBUG ===")
             logger.debug("1. Engine running before start: \(self.engine.isRunning, privacy: .public)")
@@ -201,13 +220,13 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
         #if DEBUG
             logger.debug("3. Engine running after start: \(self.engine.isRunning, privacy: .public)")
-            logger.debug("4. Player node playing state: \(self.playerNode.isPlaying, privacy: .public)")
+            logger.debug("4. Player node playing state: \(activePlayer.isPlaying, privacy: .public)")
         #endif
 
         // Schedule file for playback
         // CRITICAL: AVAudioPlayerNode completion handlers run on background threads
         // per Apple documentation. We must explicitly dispatch to main actor.
-        playerNode.scheduleFile(file, at: nil) { [weak self] in
+        activePlayer.scheduleFile(file, at: nil) { [weak self] in
             #if DEBUG
                 self?.logger.debug("5. File playback completed")
             #endif
@@ -218,11 +237,11 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             }
         }
 
-        playerNode.play()
+        activePlayer.play()
         #if DEBUG
-            logger.debug("6. Called playerNode.play()")
-            logger.debug("7. Player node playing after play: \(self.playerNode.isPlaying, privacy: .public)")
-            logger.debug("8. Output volume: \(self.playerNode.volume, privacy: .public)")
+            logger.debug("6. Called activePlayer.play()")
+            logger.debug("7. Player node playing after play: \(activePlayer.isPlaying, privacy: .public)")
+            logger.debug("8. Output volume: \(activePlayer.volume, privacy: .public)")
             logger.debug("9. Engine output node volume: \(self.engine.mainMixerNode.outputVolume, privacy: .public)")
             logger.debug("=== END AVAUDIOENGINE DEBUG ===")
         #endif
@@ -236,19 +255,25 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
 
     public func pause() async {
-        playerNode.pause()
+        let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
+        activePlayer.pause()
         playbackState = await .paused(currentTime: currentTime, duration: duration)
         // Progress timer is managed by AudioEngineFacade
     }
 
     public func stop() async {
-        playerNode.stop()
+        // Stop both players
+        primaryPlayerNode.stop()
+        secondaryPlayerNode.stop()
         playbackState = .stopped
         // Progress timer is managed by AudioEngineFacade
 
-        // Reset position
+        // Reset position and gapless state
         audioFile = nil
         totalFrames = 0
+        preparedFile = nil
+        hasNextPrepared = false
+        isPrimaryActive = true
         await bufferUnderruns.reset()
 
         do {
@@ -263,10 +288,11 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             throw AudioError.invalidSeekPosition(time)
         }
 
-        let wasPlaying = playerNode.isPlaying
+        let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
+        let wasPlaying = activePlayer.isPlaying
 
         // Stop current playback
-        playerNode.stop()
+        activePlayer.stop()
 
         // Calculate frame position
         let sampleRate = file.processingFormat.sampleRate
@@ -281,7 +307,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         let framesToPlay = file.length - framePosition
 
         // Schedule segment
-        playerNode.scheduleSegment(
+        activePlayer.scheduleSegment(
             file,
             startingFrame: framePosition,
             frameCount: AVAudioFrameCount(framesToPlay),
@@ -296,12 +322,15 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
         // Resume if was playing
         if wasPlaying {
-            playerNode.play()
+            activePlayer.play()
         }
     }
 
     public func setVolume(_ volume: Float) async {
-        playerNode.volume = max(0.0, min(1.0, volume))
+        // Apply volume to both players
+        let clampedVolume = max(0.0, min(1.0, volume))
+        primaryPlayerNode.volume = clampedVolume
+        secondaryPlayerNode.volume = clampedVolume
     }
 
     public func configure(with configuration: AudioEngineConfiguration) async throws {
@@ -324,10 +353,34 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         }
     }
 
-    public func prepareNext(url _: URL) async {
-        // For gapless playback preparation
-        // This is a simplified implementation
-        // Full gapless requires more complex buffering
+    public func prepareNext(url: URL) async {
+        // Get the inactive player for gapless preparation
+        let inactivePlayer = isPrimaryActive ? secondaryPlayerNode : primaryPlayerNode
+
+        do {
+            // Ensure engine is running
+            if !engine.isRunning {
+                try startEngine()
+            }
+
+            // Load the next file
+            preparedFile = try AVAudioFile(forReading: url)
+            guard let file = preparedFile else { return }
+
+            // Schedule file on inactive player
+            inactivePlayer.scheduleFile(file, at: nil) { [weak self] in
+                Task { @MainActor [weak self] in
+                    self?.handlePlaybackCompletionSync()
+                }
+            }
+
+            hasNextPrepared = true
+            logger.debug("Prepared next track for gapless playback: \(url.lastPathComponent)")
+        } catch {
+            logger.error("Failed to prepare next track: \(error.localizedDescription)")
+            preparedFile = nil
+            hasNextPrepared = false
+        }
     }
 
     public func getMetrics() async -> AudioMetrics {
@@ -349,14 +402,24 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     // MARK: - Private Methods
 
     private func setupEngine() {
-        // Attach nodes
-        engine.attach(playerNode)
-        engine.attach(timePitchNode)
+        // Attach primary chain nodes
+        engine.attach(primaryPlayerNode)
+        engine.attach(primaryTimePitchNode)
 
-        // Connect player → timePitch → mixer
+        // Attach secondary chain nodes for gapless playback
+        engine.attach(secondaryPlayerNode)
+        engine.attach(secondaryTimePitchNode)
+
+        // Connect chains to mixer
         let format = engine.outputNode.outputFormat(forBus: 0)
-        engine.connect(playerNode, to: timePitchNode, format: format)
-        engine.connect(timePitchNode, to: engine.mainMixerNode, format: format)
+
+        // Primary chain: primaryPlayer → primaryTimePitch → mixer
+        engine.connect(primaryPlayerNode, to: primaryTimePitchNode, format: format)
+        engine.connect(primaryTimePitchNode, to: engine.mainMixerNode, format: format)
+
+        // Secondary chain: secondaryPlayer → secondaryTimePitch → mixer
+        engine.connect(secondaryPlayerNode, to: secondaryTimePitchNode, format: format)
+        engine.connect(secondaryTimePitchNode, to: engine.mainMixerNode, format: format)
 
         // Set up tap for monitoring (optional)
         setupMonitoring()
@@ -463,7 +526,9 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Set the playback rate (0.5 to 2.0, where 1.0 is normal speed)
     public func setPlaybackRate(_ rate: Double) async {
         let clampedRate = max(0.5, min(2.0, rate))
-        timePitchNode.rate = Float(clampedRate)
+        // Apply to both time pitch nodes for consistent gapless behavior
+        primaryTimePitchNode.rate = Float(clampedRate)
+        secondaryTimePitchNode.rate = Float(clampedRate)
         currentPlaybackRate = clampedRate
     }
 
