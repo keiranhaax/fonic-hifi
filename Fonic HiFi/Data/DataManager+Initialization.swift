@@ -100,9 +100,11 @@ extension DataManager {
                 logger.critical("Failed to create fallback ModelContainer with migration plan: \(error)")
                 logger.critical("Fallback error details: \(String(reflecting: error))")
 
-                // Third attempt: Try individual model validation
+                // Third attempt: Try individual model validation (DEBUG only)
+                #if DEBUG
                 logger.info("Running model container debugging...")
                 debugModelContainer()
+                #endif
 
                 // Fourth attempt: Try with minimal configuration
                 do {
@@ -191,6 +193,7 @@ public extension DataManager {
         }
     }
 
+    #if DEBUG
     /// Test creating a container with minimal models to identify which one is problematic
     static func debugModelContainer() {
         initLogger.info("Starting model container debugging")
@@ -234,6 +237,7 @@ public extension DataManager {
             initLogger.error("✗ Track + Album combination failed: \(error)")
         }
     }
+    #endif
 
     static func makePreviewImportService() -> LibraryImportService? {
         guard let container = previewContainer() else {
