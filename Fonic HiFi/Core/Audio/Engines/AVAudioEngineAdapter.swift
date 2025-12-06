@@ -39,6 +39,12 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Player node for audio playback
     private let playerNode = AVAudioPlayerNode()
 
+    /// Time pitch node for playback rate adjustment
+    private let timePitchNode = AVAudioUnitTimePitch()
+
+    /// Current playback rate (1.0 = normal speed)
+    public private(set) var currentPlaybackRate: Double = 1.0
+
     /// Current audio file being played
     private var audioFile: AVAudioFile?
 
@@ -343,12 +349,14 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     // MARK: - Private Methods
 
     private func setupEngine() {
-        // Attach player node
+        // Attach nodes
         engine.attach(playerNode)
+        engine.attach(timePitchNode)
 
-        // Connect player to output
+        // Connect player → timePitch → mixer
         let format = engine.outputNode.outputFormat(forBus: 0)
-        engine.connect(playerNode, to: engine.mainMixerNode, format: format)
+        engine.connect(playerNode, to: timePitchNode, format: format)
+        engine.connect(timePitchNode, to: engine.mainMixerNode, format: format)
 
         // Set up tap for monitoring (optional)
         setupMonitoring()
@@ -361,9 +369,9 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
 
     private func hasAudioProcessing() -> Bool {
-        // Check if any effects or processing nodes are connected
-        // For now, return false as we don't have effects yet
-        false
+        // Check if any effects or processing nodes are active
+        // Time pitch node is active if rate is not 1.0
+        currentPlaybackRate != 1.0
     }
 
     private func handlePlaybackCompletion() {
@@ -448,6 +456,15 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         #endif
 
         return 0
+    }
+
+    // MARK: - Playback Rate
+
+    /// Set the playback rate (0.5 to 2.0, where 1.0 is normal speed)
+    public func setPlaybackRate(_ rate: Double) async {
+        let clampedRate = max(0.5, min(2.0, rate))
+        timePitchNode.rate = Float(clampedRate)
+        currentPlaybackRate = clampedRate
     }
 
     // MARK: - Completion Handler

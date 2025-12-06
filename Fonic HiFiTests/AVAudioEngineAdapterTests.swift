@@ -91,4 +91,31 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(metrics.bufferUnderruns, 0)
         XCTAssertNotNil(metrics.timestamp)
     }
+
+    func testSetPlaybackRate_changesRate() async throws {
+        // Given
+        let adapter = AVAudioEngineAdapter()
+
+        // When
+        await adapter.setPlaybackRate(1.5)
+
+        // Then
+        let rate = await adapter.currentPlaybackRate
+        XCTAssertEqual(rate, 1.5, accuracy: 0.01)
+    }
+
+    func testSetPlaybackRate_clampsBetween0_5And2_0() async throws {
+        // Given
+        let adapter = AVAudioEngineAdapter()
+
+        // When - too high
+        await adapter.setPlaybackRate(3.0)
+        let highRate = await adapter.currentPlaybackRate
+        XCTAssertEqual(highRate, 2.0, accuracy: 0.01)
+
+        // When - too low
+        await adapter.setPlaybackRate(0.25)
+        let lowRate = await adapter.currentPlaybackRate
+        XCTAssertEqual(lowRate, 0.5, accuracy: 0.01)
+    }
 }
