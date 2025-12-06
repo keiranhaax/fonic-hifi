@@ -95,6 +95,15 @@ public protocol AudioEngineService: Sendable {
     /// Set a completion handler to be called when playback finishes naturally
     /// - Parameter handler: Closure to invoke when track ends
     func setCompletionHandler(_ handler: @escaping () -> Void)
+
+    // MARK: - Equalizer
+
+    /// Apply equalizer configuration to the audio output
+    /// Default implementation is no-op for engines that don't support EQ
+    func applyEQ(_ configuration: EqualizerConfiguration) async
+
+    /// Whether this engine supports EQ processing
+    var supportsEQ: Bool { get async }
 }
 
 /// Extension providing default implementations
@@ -135,5 +144,15 @@ public extension AudioEngineService {
     /// Default implementation does nothing for setCompletionHandler
     func setCompletionHandler(_: @escaping () -> Void) {
         // Optional implementation
+    }
+
+    /// Default implementation does nothing for applyEQ
+    func applyEQ(_: EqualizerConfiguration) async {
+        // Default no-op for engines that don't support EQ
+    }
+
+    /// Default implementation returns false for supportsEQ
+    var supportsEQ: Bool {
+        get async { false }
     }
 }

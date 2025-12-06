@@ -60,6 +60,9 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Whether EQ processing is enabled
     public private(set) var isEQEnabled = false
 
+    /// Whether the EQ node is currently in the audio graph
+    private var isEQInGraph = true
+
     /// Tracks which player is currently active (true = primary)
     private var isPrimaryActive = true
 
@@ -448,16 +451,46 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         setupMonitoring()
     }
 
+    /// Insert EQ node into the audio graph
+    private func insertEQIntoGraph() {
+        guard !isEQInGraph else { return }
+        engine.disconnectNodeOutput(submixNode)
+        engine.connect(submixNode, to: eqNode, format: nil)
+        engine.connect(eqNode, to: engine.mainMixerNode, format: nil)
+        isEQInGraph = true
+        logger.debug("EQ node inserted into audio graph")
+    }
+
+    /// Remove EQ node from the audio graph for true bit-perfect bypass
+    private func removeEQFromGraph() {
+        guard isEQInGraph else { return }
+        engine.disconnectNodeOutput(submixNode)
+        engine.disconnectNodeOutput(eqNode)
+        engine.connect(submixNode, to: engine.mainMixerNode, format: nil)
+        isEQInGraph = false
+        logger.debug("EQ node removed from audio graph for bit-perfect bypass")
+    }
+
     /// Configure EQ bands with standard audiophile frequencies
+    /// Uses shelf filters for edge bands (32 Hz, 16 kHz) for smoother response
     private func configureEQBands() {
         let frequencies: [Float] = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 
         for (index, freq) in frequencies.enumerated() {
-            eqNode.bands[index].filterType = .parametric
             eqNode.bands[index].frequency = freq
             eqNode.bands[index].bandwidth = 1.0
             eqNode.bands[index].gain = 0
             eqNode.bands[index].bypass = true // Start bypassed (EQ disabled)
+
+            // Use shelf filters for edge bands for smoother response
+            switch index {
+            case 0:
+                eqNode.bands[index].filterType = .lowShelf
+            case 9:
+                eqNode.bands[index].filterType = .highShelf
+            default:
+                eqNode.bands[index].filterType = .parametric
+            }
         }
     }
 
@@ -571,17 +604,42 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
     // MARK: - Equalizer
 
+    /// Whether this engine supports EQ processing
+    public var supportsEQ: Bool {
+        get async { true }
+    }
+
     /// Apply an equalizer configuration to the audio output
+    /// Uses true bypass (removes EQ node from graph) when disabled for bit-perfect playback
     public func applyEQ(_ configuration: EqualizerConfiguration) async {
         eqConfiguration = configuration
         isEQEnabled = configuration.isEnabled
 
-        for (index, band) in configuration.bands.enumerated() where index < 10 {
-            eqNode.bands[index].gain = band.gain
-            eqNode.bands[index].bypass = !configuration.isEnabled
+        if configuration.isEnabled {
+            // Ensure EQ is in the graph
+            if !isEQInGraph {
+                insertEQIntoGraph()
+            }
+
+            for (index, band) in configuration.bands.enumerated() where index < 10 {
+                eqNode.bands[index].frequency = band.frequency
+                eqNode.bands[index].bandwidth = band.bandwidth
+                eqNode.bands[index].gain = band.gain
+                eqNode.bands[index].bypass = false
+            }
+
+            // Apply preamp gain to prevent clipping
+            let linearGain = pow(10, configuration.preampGain / 20)
+            engine.mainMixerNode.outputVolume = Float(linearGain)
+        } else {
+            // Remove EQ from graph for true bit-perfect bypass
+            if isEQInGraph {
+                removeEQFromGraph()
+            }
+            engine.mainMixerNode.outputVolume = 1.0  // Reset to unity
         }
 
-        logger.debug("EQ \(configuration.isEnabled ? "enabled" : "disabled") with preset: \(configuration.presetName ?? "Custom")")
+        logger.debug("EQ \(configuration.isEnabled ? "enabled" : "disabled") with preset: \(LogPrivacy.truncated(configuration.presetName ?? "Custom", limit: 32))")
     }
 
     // MARK: - Completion Handler

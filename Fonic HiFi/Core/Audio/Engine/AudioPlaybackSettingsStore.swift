@@ -11,6 +11,7 @@ public actor AudioPlaybackSettingsStore {
         static let replayGainMode = "audio.replayGainMode"
         static let playbackRate = "audio.playbackRate"
         static let enableGapless = "enableGaplessPlayback"
+        static let equalizerConfiguration = "audio.equalizerConfiguration"
     }
 
     private let defaults: DefaultsBox
@@ -79,5 +80,21 @@ public actor AudioPlaybackSettingsStore {
             return true
         }
         return defaults.value.bool(forKey: Keys.enableGapless)
+    }
+
+    // MARK: - Equalizer Configuration
+
+    public func setEqualizerConfiguration(_ configuration: EqualizerConfiguration) {
+        if let data = try? JSONEncoder().encode(configuration) {
+            defaults.value.set(data, forKey: Keys.equalizerConfiguration)
+        }
+    }
+
+    public func equalizerConfiguration() -> EqualizerConfiguration {
+        guard let data = defaults.value.data(forKey: Keys.equalizerConfiguration),
+              let config = try? JSONDecoder().decode(EqualizerConfiguration.self, from: data) else {
+            return .default
+        }
+        return config
     }
 }

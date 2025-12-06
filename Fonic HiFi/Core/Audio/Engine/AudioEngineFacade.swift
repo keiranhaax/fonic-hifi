@@ -67,6 +67,9 @@ public final class AudioEngineFacade: ObservableObject {
     /// Pending seek position from restored queue state (used on first play after launch)
     private var pendingSeekPosition: TimeInterval?
 
+    /// Current EQ configuration (stored for reapplication on engine switch)
+    private var currentEQConfiguration: EqualizerConfiguration = .default
+
     // MARK: - Components
 
     private let progressTimer = ProgressTimerManager()
@@ -197,13 +200,21 @@ public final class AudioEngineFacade: ObservableObject {
 
     public func applyEQ(_ configuration: EqualizerConfiguration) async {
         objectWillChange.send()
+        currentEQConfiguration = configuration
 
-        // Apply to current engine if it's AVAudioEngineAdapter
-        if let engine = engineManager.currentEngine as? AVAudioEngineAdapter {
+        guard let engine = engineManager.currentEngine else { return }
+
+        if await engine.supportsEQ {
             await engine.applyEQ(configuration)
+            logger.debug("Applied EQ configuration: \(LogPrivacy.truncated(configuration.presetName ?? "Custom", limit: 32))")
+        } else {
+            logger.warning("Current engine does not support EQ")
         }
+    }
 
-        logger.debug("Applied EQ configuration: \(configuration.presetName ?? "Custom")")
+    /// Reapply the stored EQ configuration (e.g., after engine switch)
+    public func reapplyEQConfiguration() async {
+        await applyEQ(currentEQConfiguration)
     }
 
     // MARK: - Lifecycle

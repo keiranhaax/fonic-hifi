@@ -19,9 +19,9 @@ public struct EQBand: Codable, Equatable, Sendable {
     public var bandwidth: Float
 
     public init(frequency: Float, gain: Float = 0, bandwidth: Float = 1.0) {
-        self.frequency = frequency
+        self.frequency = max(20, min(20000, frequency))  // Audible range
         self.gain = max(-12, min(12, gain))
-        self.bandwidth = bandwidth
+        self.bandwidth = max(0.05, min(5.0, bandwidth))  // Apple's valid range [Verified-Apple]
     }
 }
 
@@ -40,6 +40,12 @@ public struct EqualizerConfiguration: Codable, Equatable, Sendable {
         self.bands = bands
         self.isEnabled = isEnabled
         self.presetName = presetName
+    }
+
+    /// Automatic preamp reduction to prevent clipping when boosting
+    public var preampGain: Float {
+        let maxBoost = bands.map { $0.gain }.max() ?? 0
+        return maxBoost > 0 ? -maxBoost : 0
     }
 
     /// Default flat configuration with all bands at 0 dB

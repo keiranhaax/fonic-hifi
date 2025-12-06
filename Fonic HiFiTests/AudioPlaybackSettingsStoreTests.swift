@@ -47,4 +47,45 @@ final class AudioPlaybackSettingsStoreTests: XCTestCase {
         XCTAssertEqual(merged.replayGainMode, .off)
         XCTAssertEqual(merged.playbackRate, 1.0, accuracy: 0.0001)
     }
+
+    // MARK: - EQ Persistence Tests
+
+    func testEqualizerConfiguration_roundTrip() async {
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Unable to create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let store = AudioPlaybackSettingsStore(defaults: defaults)
+
+        // Create custom config
+        var bands = EqualizerConfiguration.default.bands
+        bands[0] = EQBand(frequency: 32, gain: 6.0, bandwidth: 1.0)
+        let config = EqualizerConfiguration(bands: bands, isEnabled: true, presetName: "Bass Boost")
+
+        // Save
+        await store.setEqualizerConfiguration(config)
+
+        // Load
+        let loaded = await store.equalizerConfiguration()
+
+        XCTAssertEqual(loaded.isEnabled, true)
+        XCTAssertEqual(loaded.presetName, "Bass Boost")
+        XCTAssertEqual(loaded.bands[0].gain, 6.0, accuracy: 0.01)
+    }
+
+    func testEqualizerConfiguration_defaultWhenNone() async {
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Unable to create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let store = AudioPlaybackSettingsStore(defaults: defaults)
+        let loaded = await store.equalizerConfiguration()
+
+        XCTAssertFalse(loaded.isEnabled, "Default should be disabled")
+        XCTAssertEqual(loaded.presetName, "Flat")
+    }
 }

@@ -11,6 +11,7 @@ struct EqualizerView: View {
     @Environment(\.audioEngine) private var audioEngine
     @State private var configuration = EqualizerConfiguration.default
     @State private var selectedPreset: String = "Flat"
+    @State private var hasLoadedFromPersistence = false
 
     private let frequencyLabels = ["32", "64", "125", "250", "500", "1K", "2K", "4K", "8K", "16K"]
     private let presetNames = Array(EqualizerConfiguration.presets.keys).sorted()
@@ -58,6 +59,13 @@ struct EqualizerView: View {
                         applyConfiguration()
                     }
                 }
+            }
+
+            // Frequency Response Curve
+            Section {
+                EQCurveView(configuration: configuration)
+            } header: {
+                Text("Frequency Response")
             }
 
             // Band Sliders Section
@@ -123,10 +131,14 @@ struct EqualizerView: View {
             }
         }
         .navigationTitle("Equalizer")
-        .onAppear {
-            // Sync preset name with current configuration
-            if let presetName = configuration.presetName {
-                selectedPreset = presetName
+        .task {
+            // Load persisted configuration on appear
+            guard !hasLoadedFromPersistence else { return }
+            hasLoadedFromPersistence = true
+
+            if let store = audioEngine?.playbackSettingsStore {
+                configuration = await store.equalizerConfiguration()
+                selectedPreset = configuration.presetName ?? "Custom"
             }
         }
     }
@@ -134,6 +146,10 @@ struct EqualizerView: View {
     private func applyConfiguration() {
         Task {
             await audioEngine?.applyEQ(configuration)
+            // Persist the configuration
+            if let store = audioEngine?.playbackSettingsStore {
+                await store.setEqualizerConfiguration(configuration)
+            }
         }
     }
 
