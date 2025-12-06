@@ -190,7 +190,7 @@ public final class AudioEngineFacade: ObservableObject {
 
             try await sessionManager.configureAudioSession()
             await setupServiceIntegrations()
-            await monitor.startMonitoring(updateInterval: 1.0)
+            await monitor.startMonitoring(updateInterval: 2.0)
             await sessionManager.enableRemoteCommands()
 
             if queueManager.restoreState() {
