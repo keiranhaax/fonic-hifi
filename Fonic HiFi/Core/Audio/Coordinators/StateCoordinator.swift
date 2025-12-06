@@ -121,6 +121,38 @@ public final class StateCoordinator {
             }
             .store(in: &cancellables)
 
+        // Adjust monitoring based on playback state
+        stateManager.statePublisher
+            .map(\.nextState)
+            .removeDuplicates { lhs, rhs in
+                // Only care about state type changes, not time updates
+                switch (lhs, rhs) {
+                case (.playing, .playing), (.paused, .paused), (.stopped, .stopped), (.idle, .idle):
+                    return true
+                default:
+                    return false
+                }
+            }
+            .sink { [weak self] state in
+                guard let self, let monitor = self.facade?.monitor else { return }
+                Task { @MainActor in
+                    switch state {
+                    case .playing:
+                        // Active playback needs monitoring
+                        await monitor.startMonitoring(updateInterval: 2.0)
+                    case .paused:
+                        // Paused - reduce monitoring frequency
+                        await monitor.updateMonitoringInterval(5.0)
+                    case .stopped, .idle:
+                        // Stopped/idle - minimal monitoring
+                        await monitor.stopMonitoring()
+                    default:
+                        break
+                    }
+                }
+            }
+            .store(in: &cancellables)
+
         // Queue state changes are captured through AudioQueueManager's observation.
         // No additional Combine observation needed here.
     }
