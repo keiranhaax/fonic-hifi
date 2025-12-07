@@ -62,7 +62,17 @@
       "mcp__code-index__get_file_summary",
       "Bash(cat:*)",
       "Bash(grep:*)",
-      "Skill(improve-prompt)"
+      "Skill(improve-prompt)",
+      "Bash(\"Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift\" )",
+      "Bash(\"Fonic HiFi/Core/Audio/Engine/AudioPlaybackSettingsStore.swift\" )",
+      "Bash(\"Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift\" )",
+      "Bash(\"Fonic HiFi/Core/Audio/Interfaces/AudioEngineService.swift\" )",
+      "Bash(\"Fonic HiFi/Presentation/Views/Settings/EqualizerView.swift\" )",
+      "Bash(\"Fonic HiFi/Presentation/Views/Settings/EQCurveView.swift\" )",
+      "Bash(\"Fonic HiFiTests/AVAudioEngineAdapterTests.swift\" )",
+      "Bash(\"Fonic HiFiTests/AudioPlaybackSettingsStoreTests.swift\" )",
+      "Bash(\"Fonic HiFiTests/Core/Audio/DSP/EqualizerConfigurationTests.swift\")",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
