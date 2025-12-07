@@ -25,6 +25,7 @@ struct NowPlayingContent: View {
     @State private var trackDetailItem: TrackDetailItem?
     @State private var isFavorite = false
     @State private var showSleepTimerSheet = false
+    @State private var showingLyrics = false
     @State private var playbackSpeed: Double = 1.0
 
     // Sleep Timer
@@ -111,6 +112,15 @@ struct NowPlayingContent: View {
             )
             .ignoresSafeArea()
         )
+        .overlay {
+            if showingLyrics {
+                LyricsView(
+                    lyrics: audioService?.currentTrack?.lyrics,
+                    isPresented: $showingLyrics
+                )
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: showingLyrics)
         .task {
             await colorService.extractColor(for: audioService?.currentTrack)
             // Sync favorite state on appear
@@ -307,6 +317,19 @@ struct NowPlayingContent: View {
                 .accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
 
                 Button {
+                    showingLyrics.toggle()
+                    logger.info("Lyrics toggled: \(showingLyrics)")
+                } label: {
+                    Image(systemName: "text.quote")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(hasLyrics ? .white : .white.opacity(0.4))
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .disabled(!hasLyrics)
+                .accessibilityLabel(hasLyrics ? "Show lyrics" : "No lyrics available")
+
+                Button {
                     guard let track = audioService?.currentTrack else { return }
                     trackDetailItem = TrackDetailItem(track: track)
                 } label: {
@@ -483,6 +506,11 @@ struct NowPlayingContent: View {
         case .all: "repeat"
         case .one: "repeat.1"
         }
+    }
+
+    private var hasLyrics: Bool {
+        guard let lyrics = audioService?.currentTrack?.lyrics else { return false }
+        return !lyrics.isEmpty
     }
 
     private func formatTime(_ time: TimeInterval) -> String {
