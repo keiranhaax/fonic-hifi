@@ -19,6 +19,10 @@ struct SearchView: View {
     @State private var recentSearches: [RecentSearchData] = []
     @State private var showingRecentSearches = true
 
+    // Smart search
+    @State private var smartSearchViewModel = SmartSearchViewModel()
+    @State private var useSmartSearch = false
+
     private let logger = Log.logger(.search)
 
     var body: some View {
@@ -35,21 +39,40 @@ struct SearchView: View {
                             try? await dataManager?.clearRecentSearches()
                             recentSearches = []
                         }
-                    },
+                    }
                 )
+            } else if useSmartSearch, case .results = smartSearchViewModel.searchState {
+                // Smart search results
+                SmartSearchResultsView(
+                    result: smartSearchViewModel.smartSearchResult ?? SmartSearchResult(
+                        trackIDs: [],
+                        matchReasons: [],
+                        searchStrategy: "",
+                        suggestions: []
+                    ),
+                    trackIDs: smartSearchViewModel.smartSearchResult?.trackIDs ?? []
+                ) { track in
+                    playTrack(track)
+                }
+            } else if useSmartSearch, case .noResults = smartSearchViewModel.searchState {
+                // Smart search no results
+                NoResultsView(query: searchText, isSmartSearch: true)
             } else if searchResults.isEmpty, !searchText.isEmpty, !isSearching {
                 // Show no results message
-                NoResultsView(query: searchText)
+                NoResultsView(query: searchText, isSmartSearch: false)
             } else if !searchResults.isEmpty {
                 // Show search results
                 SearchResultsListView(results: searchResults)
-            } else if isSearching {
+            } else if isSearching || smartSearchViewModel.searchState == .searching {
                 // Show loading state
-                ProgressView("Searching...")
+                ProgressView(useSmartSearch ? "Searching with AI..." : "Searching...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // Empty state before search
-                EmptySearchView()
+                EmptySearchView(
+                    useSmartSearch: $useSmartSearch,
+                    isSmartSearchAvailable: smartSearchViewModel.isSmartSearchEnabled
+                )
             }
         }
         .navigationTitle("Search")
@@ -63,6 +86,7 @@ struct SearchView: View {
                 if newValue.isEmpty {
                     showingRecentSearches = true
                     searchResults = SearchResults()
+                    smartSearchViewModel.clearSearch()
                     isSearching = false
                     return
                 }
@@ -76,13 +100,23 @@ struct SearchView: View {
                 // Check if task was cancelled
                 guard !Task.isCancelled else { return }
 
-                // Perform search
-                await performSearch(newValue)
+                // Perform smart or standard search
+                if useSmartSearch, let dataManager {
+                    await smartSearchViewModel.performSmartSearch(
+                        query: newValue,
+                        dataManager: dataManager
+                    )
+                    isSearching = false
+                } else {
+                    await performSearch(newValue)
+                }
             }
         }
         .task {
             // Load recent searches on appear
             await loadRecentSearches()
+            // Check smart search availability
+            await smartSearchViewModel.checkSmartSearchAvailability()
         }
     }
 
@@ -141,6 +175,12 @@ struct SearchView: View {
             logger.error("Failed to load recent searches: \(error.localizedDescription, privacy: .public)")
             recentSearches = []
         }
+    }
+
+    private func playTrack(_ track: Track) {
+        // Delegate to audio engine via environment if available
+        // For now, this is a placeholder - integrate with audioEngine environment
+        logger.info("Playing track from smart search: \(track.title, privacy: .public)")
     }
 }
 
@@ -313,17 +353,35 @@ private struct RecentSearchesView: View {
 // MARK: - Empty States
 
 private struct EmptySearchView: View {
+    @Binding var useSmartSearch: Bool
+    let isSmartSearchAvailable: Bool
+
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "magnifyingglass")
+            Image(systemName: useSmartSearch ? "sparkles" : "magnifyingglass")
                 .font(.system(size: 60))
-                .foregroundStyle(.tertiary)
-            Text("Search your library")
+                .foregroundColor(useSmartSearch ? .purple : .gray.opacity(0.3))
+
+            Text(useSmartSearch ? "Smart Search" : "Search your library")
                 .font(.title3)
                 .foregroundStyle(.secondary)
-            Text("Find tracks, albums, artists, and playlists")
+
+            Text(useSmartSearch
+                ? "Try descriptive queries like \"upbeat songs\" or \"chill evening music\""
+                : "Find tracks, albums, artists, and playlists")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            if isSmartSearchAvailable {
+                Toggle(isOn: $useSmartSearch) {
+                    Label("Smart Search", systemImage: "sparkles")
+                }
+                .toggleStyle(.button)
+                .buttonStyle(.bordered)
+                .tint(.purple)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -331,18 +389,23 @@ private struct EmptySearchView: View {
 
 private struct NoResultsView: View {
     let query: String
+    var isSmartSearch = false
 
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "magnifyingglass")
+            Image(systemName: isSmartSearch ? "sparkles" : "magnifyingglass")
                 .font(.system(size: 60))
-                .foregroundStyle(.tertiary)
+                .foregroundColor(isSmartSearch ? .purple.opacity(0.5) : .gray.opacity(0.3))
             Text("No results for \"\(query)\"")
                 .font(.title3)
                 .foregroundStyle(.secondary)
-            Text("Try searching for something else")
+            Text(isSmartSearch
+                ? "Try a different description or switch to standard search"
+                : "Try searching for something else")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
