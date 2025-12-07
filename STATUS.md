@@ -1,9 +1,9 @@
 # Project Status
 
-**Last Updated**: 2025-12-05 (Artwork theming implementation)
+**Last Updated**: 2025-12-07 (Phase 4: AI Recommendations)
 
 **Branch**: `main`
-**Build**: ✅ `make lint` (2025-11-24 – 0 violations)  •  ✅ `make test` (2025-12-05 – 311 tests, 0 failures)  •  ✅ `make coverage-check` (target lowered to 40%)
+**Build**: ✅ `make lint` (2025-12-07 – 0 violations)  •  ✅ `make test` (2025-12-07 – 358 tests, 0 failures)  •  ✅ `make coverage-check` (target lowered to 40%)
 
 **Archive**: Historical milestones and recovery notes moved to `STATUS-ARCHIVE.md`.
 
@@ -44,6 +44,13 @@
 - ✅ ThemePaletteEnvironment - Presentation/Environment/ThemePaletteEnvironment.swift
 - ✅ DominantColorService expanded for full-app artwork-reactive theming
 - ✅ Settings toggles for Artwork Theming and Light Mode theming
+
+**AI Recommendations (Phase 4):**
+- ✅ RecommendationSchemas - @Generable types for AI output (Core/AI/Recommendations/)
+- ✅ ListeningPatternAnalyzer - Session context builder for Foundation Models
+- ✅ RecommendationService - Foundation Models integration with rule-based fallbacks
+- ✅ TimeBasedGreetingSection - AI greeting UI component (Home/Sections/)
+- ✅ HomeView integration - AI-powered "Surprise Me" and time-based greetings
 
 **Non-Existent References (Do NOT reference):**
 - ❌ Core/Audio/Decoders/ - DOES NOT EXIST
