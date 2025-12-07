@@ -91,4 +91,31 @@ public struct ListeningSessionData: Sendable {
         self.hourOfDay = model.hourOfDay
         self.dayOfWeek = model.dayOfWeek
     }
+
+    /// Memberwise initializer for testing and direct construction
+    public init(
+        id: UUID,
+        trackId: UUID,
+        startedAt: Date,
+        endedAt: Date?,
+        durationListened: TimeInterval,
+        trackDuration: TimeInterval,
+        completionPercentage: Double,
+        wasSkipped: Bool,
+        wasCompleted: Bool,
+        hourOfDay: Int,
+        dayOfWeek: Int
+    ) {
+        self.id = id
+        self.trackId = trackId
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.durationListened = durationListened
+        self.trackDuration = trackDuration
+        self.completionPercentage = completionPercentage
+        self.wasSkipped = wasSkipped
+        self.wasCompleted = wasCompleted
+        self.hourOfDay = hourOfDay
+        self.dayOfWeek = dayOfWeek
+    }
 }
