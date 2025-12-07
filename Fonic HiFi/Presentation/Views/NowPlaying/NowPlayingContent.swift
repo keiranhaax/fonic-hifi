@@ -13,6 +13,7 @@ import SwiftUI
 struct NowPlayingContent: View {
     private let logger = Log.logger(.nowPlaying)
     @Environment(\.audioEngine) private var audioService: AudioEngineFacade?
+    @Environment(\.dataManager) private var dataManager: DataManager?
     @Environment(\.sizeCategory) private var sizeCategory
     @Environment(\.themePalette) private var theme
 
@@ -112,6 +113,12 @@ struct NowPlayingContent: View {
         )
         .task {
             await colorService.extractColor(for: audioService?.currentTrack)
+            // Sync favorite state on appear
+            isFavorite = audioService?.currentTrack?.isFavorite ?? false
+        }
+        .onChange(of: audioService?.currentTrack?.id) { _, _ in
+            // Sync favorite state on track change
+            isFavorite = audioService?.currentTrack?.isFavorite ?? false
         }
         .sheet(item: $trackDetailItem) { item in
             NavigationStack {
@@ -274,12 +281,11 @@ struct NowPlayingContent: View {
 
             HStack(spacing: 8) {
                 Button {
-                    isFavorite.toggle()
-                    logger.debug("Favorite toggled: \(isFavorite, privacy: .public)")
+                    toggleFavorite()
                 } label: {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(isFavorite ? .red : .white)
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
@@ -551,6 +557,25 @@ struct NowPlayingContent: View {
             }
             audioService.setRepeatMode(newMode)
             repeatModeRawValue = newMode.rawValue
+        }
+    }
+
+    private func toggleFavorite() {
+        guard let track = audioService?.currentTrack,
+              let trackDataActor = dataManager?.trackDataActor else { return }
+
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+
+        Task {
+            do {
+                try await trackDataActor.toggleFavorite(trackId: track.persistentModelID)
+                isFavorite.toggle()
+                logger.info("Favorite toggled: \(isFavorite)")
+            } catch {
+                logger.error("Failed to toggle favorite: \(error.localizedDescription)")
+            }
         }
     }
 }
