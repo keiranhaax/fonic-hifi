@@ -14,6 +14,8 @@ import SwiftUI
 struct CustomProgressSlider: View {
     @Binding var progress: Double
     let onEditingChanged: (Bool) -> Void
+    var abLoopState: ABLoopState?
+    var duration: TimeInterval?
 
     @State private var isDragging = false
     @State private var trackWidth: CGFloat = 1 // Avoid division by zero
@@ -29,6 +31,24 @@ struct CustomProgressSlider: View {
                 .fill(Color.white.opacity(0.3))
                 .frame(height: 4)
 
+            // A-B Loop region highlight
+            if let loopState = abLoopState,
+               let duration,
+               duration > 0,
+               let pointA = loopState.pointA {
+                let aProgress = pointA / duration
+                let bProgress = loopState.pointB.map { $0 / duration } ?? progress
+
+                // Highlighted region
+                Capsule()
+                    .fill(Color.orange.opacity(0.4))
+                    .frame(
+                        width: max(0, trackWidth * (bProgress - aProgress)),
+                        height: 4
+                    )
+                    .offset(x: trackWidth * aProgress)
+            }
+
             // Filled track
             Capsule()
                 .fill(Color.white)
@@ -40,6 +60,29 @@ struct CustomProgressSlider: View {
                 .frame(width: thumbSize, height: thumbSize)
                 .offset(x: thumbOffset)
                 .animation(.easeInOut(duration: 0.15), value: isDragging)
+
+            // A-B Loop markers
+            if let loopState = abLoopState,
+               let duration,
+               duration > 0 {
+                // Point A marker
+                if let pointA = loopState.pointA {
+                    let aProgress = pointA / duration
+                    Rectangle()
+                        .fill(Color.orange)
+                        .frame(width: 2, height: 10)
+                        .offset(x: trackWidth * aProgress - 1)
+                }
+
+                // Point B marker
+                if let pointB = loopState.pointB {
+                    let bProgress = pointB / duration
+                    Rectangle()
+                        .fill(Color.orange)
+                        .frame(width: 2, height: 10)
+                        .offset(x: trackWidth * bProgress - 1)
+                }
+            }
         }
         .frame(height: 44, alignment: .center) // Full touch target
         .contentShape(Rectangle())

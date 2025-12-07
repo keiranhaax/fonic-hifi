@@ -367,7 +367,9 @@ struct NowPlayingContent: View {
                             logger.error("Seek failed: \(error.localizedDescription, privacy: .public)")
                         }
                     }
-                }
+                },
+                abLoopState: audioService?.abLoopState,
+                duration: audioService?.duration
             )
             .onAppear {
                 sliderProgress = audioService?.playbackProgress ?? 0.0
