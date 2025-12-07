@@ -137,6 +137,60 @@ final class DominantColorService: ObservableObject {
         }
     }
 
+    /// Extract dominant color for the given album.
+    /// Uses cache if available, otherwise extracts asynchronously.
+    func extractColor(for album: Album?) async {
+        guard let album else {
+            rawDominantColor = .accentColor
+            currentTrackID = nil
+            withAnimation(.easeInOut(duration: transitionDuration)) {
+                rebuildPalette()
+            }
+            return
+        }
+
+        // Check cache first (reusing same cache as tracks)
+        if let cached = colorCache[album.id] {
+            rawDominantColor = cached
+            currentTrackID = album.id
+            withAnimation(.easeInOut(duration: transitionDuration)) {
+                rebuildPalette()
+            }
+            return
+        }
+
+        // Guard concurrent extractions
+        guard !isExtractingColor else { return }
+        isExtractingColor = true
+        defer { isExtractingColor = false }
+
+        // No artwork - use default
+        guard let artworkData = album.artwork else {
+            rawDominantColor = .accentColor
+            currentTrackID = album.id
+            withAnimation(.easeInOut(duration: transitionDuration)) {
+                rebuildPalette()
+            }
+            return
+        }
+
+        // Extract on background thread
+        let extractedColor = await Task.detached(priority: .utility) {
+            UIImage(data: artworkData)?.fastAverageColor ?? Color.accentColor
+        }.value
+
+        // Cache result
+        colorCache[album.id] = extractedColor
+        maintainCacheSize()
+
+        // Apply with animation
+        rawDominantColor = extractedColor
+        currentTrackID = album.id
+        withAnimation(.easeInOut(duration: transitionDuration)) {
+            rebuildPalette()
+        }
+    }
+
     /// Clear the cache and reset to default color
     func reset() {
         colorCache.removeAll()

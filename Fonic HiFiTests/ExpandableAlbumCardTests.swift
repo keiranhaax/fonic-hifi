@@ -52,4 +52,16 @@ struct ExpandableAlbumCardTests {
 
         #expect(type(of: overlay.body) != Never.self)
     }
+
+    @Test("DominantColorService can extract color for album")
+    func dominantColorServiceExtractsAlbumColor() async throws {
+        let service = DominantColorService.shared
+        let album = Album(title: "Test", albumArtist: "Artist")
+
+        // Should be able to call extractColor for album
+        await service.extractColor(for: album)
+
+        // Palette should exist (neutral if no artwork)
+        #expect(service.palette != nil)
+    }
 }
