@@ -286,6 +286,96 @@ struct NowPlayingContent: View {
         return activeItems.isEmpty ? "More options" : "More options: \(activeItems.joined(separator: ", "))"
     }
 
+    private var overflowMenu: some View {
+        Menu {
+            // Sleep Timer
+            Button {
+                showSleepTimerSheet = true
+            } label: {
+                Label {
+                    HStack {
+                        Text("Sleep Timer")
+                        if sleepTimerManager.isActive {
+                            Spacer()
+                            Text(formatTimerBadge(sleepTimerManager.remainingSeconds))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: sleepTimerManager.isActive ? "moon.zzz.fill" : "moon.zzz")
+                }
+            }
+
+            // Playback Speed Submenu
+            Menu {
+                ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { speed in
+                    Button {
+                        playbackSpeed = speed
+                        Task {
+                            await audioService?.updatePlaybackRate(speed)
+                        }
+                    } label: {
+                        HStack {
+                            Text(formatSpeed(speed))
+                            if playbackSpeed == speed {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Label {
+                    HStack {
+                        Text("Playback Speed")
+                        if playbackSpeed != 1.0 {
+                            Spacer()
+                            Text(formatSpeed(playbackSpeed))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: "speedometer")
+                }
+            }
+
+            Divider()
+
+            // Lyrics Toggle
+            Button {
+                showingLyrics.toggle()
+                logger.info("Lyrics toggled: \(showingLyrics)")
+            } label: {
+                Label {
+                    HStack {
+                        Text("Lyrics")
+                        if showingLyrics {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                } icon: {
+                    Image(systemName: "text.quote")
+                }
+            }
+            .disabled(!hasLyrics)
+
+            // Track Info
+            Button {
+                guard let track = audioService?.currentTrack else { return }
+                trackDetailItem = TrackDetailItem(track: track)
+            } label: {
+                Label("Track Info", systemImage: "info.circle")
+            }
+        } label: {
+            Image(systemName: hasActiveOverflowFeatures ? "ellipsis.circle.fill" : "ellipsis.circle")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(hasActiveOverflowFeatures ? .orange : .white)
+                .contentShape(.rect)
+                .frame(width: 44, height: 44)
+        }
+        .accessibilityLabel(overflowMenuAccessibilityLabel)
+    }
+
     // MARK: - Album Artwork
 
     private var albumArtworkView: some View {
