@@ -1,9 +1,9 @@
 # Project Status
 
-**Last Updated**: 2025-12-07 (Phase 4: AI Recommendations)
+**Last Updated**: 2025-12-07 (Phase 5: Smart Search)
 
 **Branch**: `main`
-**Build**: ✅ `make lint` (2025-12-07 – 0 violations)  •  ✅ `make test` (2025-12-07 – 358 tests, 0 failures)  •  ✅ `make coverage-check` (target lowered to 40%)
+**Build**: ✅ `make lint` (2025-12-07 – 0 violations)  •  ✅ `make test` (2025-12-07 – 361 tests, 0 failures)  •  ✅ `make coverage-check` (target lowered to 40%)
 
 **Archive**: Historical milestones and recovery notes moved to `STATUS-ARCHIVE.md`.
 
@@ -51,6 +51,15 @@
 - ✅ RecommendationService - Foundation Models integration with rule-based fallbacks
 - ✅ TimeBasedGreetingSection - AI greeting UI component (Home/Sections/)
 - ✅ HomeView integration - AI-powered "Surprise Me" and time-based greetings
+
+**Smart Search (Phase 5):**
+- ✅ SmartSearchResult - @Generable schema for search results (Core/AI/Recommendations/)
+- ✅ SmartSearchService - Foundation Models search integration (Core/AI/Search/)
+- ✅ SmartSearchViewModel - Search state management (Presentation/ViewModels/)
+- ✅ SmartSearchResultsView - AI results with explanations (Presentation/Views/Search/)
+- ✅ SearchView integration - Toggle between standard and smart search
+- ✅ DataManager+SmartSearch - Convenience extension for search context
+- ✅ Rule-based fallbacks - Seamless degradation when AI unavailable
 
 **Non-Existent References (Do NOT reference):**
 - ❌ Core/Audio/Decoders/ - DOES NOT EXIST
