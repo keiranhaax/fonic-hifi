@@ -176,6 +176,74 @@ final class TrackDataActorTests: XCTestCase {
         // Most recent first
         XCTAssertEqual(sessions.first?.trackId, trackId2)
     }
+
+    // MARK: - AI Recommendations Support
+
+    func testGetSessionsByHourRangeReturnsFilteredSessions() async throws {
+        let environment = try makeEnvironment(testCase: self)
+
+        // Create session at 8am (morning)
+        let morningDate = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date())!
+        try await environment.actor.recordListeningSession(
+            trackId: UUID(),
+            startedAt: morningDate,
+            durationListened: 120,
+            trackDuration: 200,
+            completionPercentage: 0.6,
+            wasSkipped: false,
+            wasCompleted: false
+        )
+
+        // Create session at 3pm (afternoon)
+        let afternoonDate = Calendar.current.date(bySettingHour: 15, minute: 0, second: 0, of: Date())!
+        try await environment.actor.recordListeningSession(
+            trackId: UUID(),
+            startedAt: afternoonDate,
+            durationListened: 180,
+            trackDuration: 200,
+            completionPercentage: 0.9,
+            wasSkipped: false,
+            wasCompleted: true
+        )
+
+        let morningSessions = try await environment.actor.getSessionsByHourRange(startHour: 5, endHour: 12, limit: 10)
+
+        XCTAssertEqual(morningSessions.count, 1)
+        XCTAssertTrue(morningSessions.allSatisfy { (5..<12).contains($0.hourOfDay) })
+    }
+
+    func testGetAllTrackIDsReturnsTrackUUIDs() async throws {
+        let environment = try makeEnvironment(testCase: self)
+
+        // Create some tracks
+        let file1 = try makeTemporaryFile(named: "track1.flac", testCase: self)
+        let file2 = try makeTemporaryFile(named: "track2.flac", testCase: self)
+
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: file1, title: "Track One"))
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: file2, title: "Track Two"))
+
+        let trackIDs = try await environment.actor.getAllTrackIDs(limit: 100)
+
+        XCTAssertEqual(trackIDs.count, 2)
+    }
+
+    func testGetAllUniqueGenresReturnsDistinctGenres() async throws {
+        let environment = try makeEnvironment(testCase: self)
+
+        let file1 = try makeTemporaryFile(named: "rock1.flac", testCase: self)
+        let file2 = try makeTemporaryFile(named: "jazz1.flac", testCase: self)
+        let file3 = try makeTemporaryFile(named: "rock2.flac", testCase: self)
+
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: file1, title: "Rock Song", genre: "Rock"))
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: file2, title: "Jazz Song", genre: "Jazz"))
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: file3, title: "Another Rock", genre: "Rock"))
+
+        let genres = try await environment.actor.getUniqueGenres()
+
+        XCTAssertEqual(genres.count, 2)
+        XCTAssertTrue(genres.contains("Rock"))
+        XCTAssertTrue(genres.contains("Jazz"))
+    }
 }
 
 // MARK: - Helpers
@@ -194,12 +262,13 @@ private func makeEnvironment(testCase: XCTestCase) throws -> TrackActorEnvironme
     return TrackActorEnvironment(actor: actor, container: container)
 }
 
-private func makeMetadata(url: URL, title: String = "Sample Title") -> TrackMetadata {
+private func makeMetadata(url: URL, title: String = "Sample Title", genre: String? = nil) -> TrackMetadata {
     TrackMetadata(
         url: url,
         title: title,
         artist: "Sample Artist",
         album: "Sample Album",
+        genre: genre,
         audioFormat: "FLAC",
         duration: 240,
         sampleRate: 96_000,

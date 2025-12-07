@@ -590,6 +590,60 @@ public actor TrackDataActor {
         descriptor.fetchLimit = 1
         return try modelContext.fetch(descriptor).first
     }
+
+    // MARK: - AI Recommendations Support
+
+    /// Get listening sessions filtered by hour range
+    /// - Parameters:
+    ///   - startHour: Start hour (inclusive, 0-23)
+    ///   - endHour: End hour (exclusive, 0-24)
+    ///   - limit: Maximum number of sessions to return
+    /// - Returns: Sessions that occurred during the specified hours
+    public func getSessionsByHourRange(
+        startHour: Int,
+        endHour: Int,
+        limit: Int
+    ) throws -> [ListeningSessionData] {
+        var descriptor = FetchDescriptor<ListeningSession>(
+            predicate: #Predicate<ListeningSession> { session in
+                session.hourOfDay >= startHour && session.hourOfDay < endHour
+            },
+            sortBy: [SortDescriptor(\ListeningSession.startedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        let sessions = try modelContext.fetch(descriptor)
+        return sessions.map { ListeningSessionData(from: $0) }
+    }
+
+    /// Get all track IDs in the library
+    /// - Parameter limit: Maximum number of IDs to return
+    /// - Returns: Array of track UUIDs
+    public func getAllTrackIDs(limit: Int) throws -> [UUID] {
+        var descriptor = FetchDescriptor<Track>(
+            sortBy: [SortDescriptor(\Track.dateAdded, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        let tracks = try modelContext.fetch(descriptor)
+        return tracks.map { $0.id }
+    }
+
+    /// Get all unique genres from the library
+    /// - Returns: Array of distinct genre strings
+    public func getUniqueGenres() throws -> [String] {
+        let descriptor = FetchDescriptor<Track>()
+        let tracks = try modelContext.fetch(descriptor)
+
+        var genres = Set<String>()
+        for track in tracks {
+            if let genre = track.genre, !genre.isEmpty {
+                genres.insert(genre)
+            }
+        }
+
+        return Array(genres).sorted()
+    }
 }
 
 // MARK: - Protocol Conformances
