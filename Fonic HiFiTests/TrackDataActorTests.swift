@@ -101,6 +101,29 @@ final class TrackDataActorTests: XCTestCase {
         XCTAssertNotNil(metadata.sourceURLHash)
         XCTAssertNotNil(metadata.sourceBookmarkHash)
     }
+
+    func testToggleFavorite() async throws {
+        // Given
+        let environment = try makeEnvironment(testCase: self)
+        let fileURL = try makeTemporaryFile(named: "favorite-test.flac", testCase: self)
+        let metadata = makeMetadata(url: fileURL)
+
+        let trackId = try await environment.actor.createTrack(from: metadata)
+
+        // When - toggle favorite on
+        try await environment.actor.toggleFavorite(trackId: trackId)
+
+        // Then - should be favorite
+        let afterFirstToggle = try await environment.actor.getTrackMetadata(for: trackId)
+        XCTAssertTrue(afterFirstToggle.isFavorite == true, "Track should be marked as favorite after first toggle")
+
+        // When - toggle favorite off
+        try await environment.actor.toggleFavorite(trackId: trackId)
+
+        // Then - should not be favorite
+        let afterSecondToggle = try await environment.actor.getTrackMetadata(for: trackId)
+        XCTAssertTrue(afterSecondToggle.isFavorite == false, "Track should not be favorite after second toggle")
+    }
 }
 
 // MARK: - Helpers

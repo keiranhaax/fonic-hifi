@@ -276,6 +276,7 @@ public actor TrackDataActor {
             sourceBookmark: track.sourceURLBookmark,
             sourceURLHash: track.sourceURLHash,
             sourceBookmarkHash: track.sourceBookmarkHash,
+            isFavorite: track.isFavorite,
         )
     }
 
@@ -441,6 +442,22 @@ public actor TrackDataActor {
             throw TrackDataError.updateFailed(error)
         }
     }
+
+    /// Toggle the favorite status of a track
+    /// - Parameter trackId: PersistentIdentifier of the track
+    /// - Throws: TrackDataError if track not found or update fails
+    public func toggleFavorite(trackId: PersistentIdentifier) throws {
+        let track = try resolveTrack(with: trackId)
+        track.isFavorite.toggle()
+
+        do {
+            try modelContext.save()
+            Log.logger(.data).info("Toggled favorite for track")
+        } catch {
+            logger.error("Failed to toggle favorite: \(error.localizedDescription)")
+            throw TrackDataError.updateFailed(error)
+        }
+    }
 }
 
 // MARK: - Supporting Types
@@ -503,6 +520,7 @@ public struct TrackMetadata: Sendable {
     public let sourceBookmarkHash: String?
     public let replayGainTrack: Float?
     public let replayGainAlbum: Float?
+    public let isFavorite: Bool
 
     public init(
         url: URL,
@@ -532,6 +550,7 @@ public struct TrackMetadata: Sendable {
         sourceBookmarkHash: String? = nil,
         replayGainTrack: Float? = nil,
         replayGainAlbum: Float? = nil,
+        isFavorite: Bool = false,
     ) {
         self.url = url
         self.title = title
@@ -560,6 +579,7 @@ public struct TrackMetadata: Sendable {
         self.sourceBookmarkHash = sourceBookmarkHash
         self.replayGainTrack = replayGainTrack
         self.replayGainAlbum = replayGainAlbum
+        self.isFavorite = isFavorite
     }
 }
 
@@ -601,6 +621,7 @@ public extension TrackMetadata {
             sourceBookmarkHash: resolvedBookmarkHash,
             replayGainTrack: replayGainTrack,
             replayGainAlbum: replayGainAlbum,
+            isFavorite: isFavorite,
         )
     }
 }
