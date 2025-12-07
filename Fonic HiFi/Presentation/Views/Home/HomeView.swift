@@ -31,6 +31,11 @@ struct HomeView: View {
     @State private var selectedGenre: String?
     @State private var selectedAlbum: Album?
 
+    // Album morph state
+    @Namespace private var albumMorphNamespace
+    @State private var expandedAlbum: Album?
+    @State private var expandedAlbumColor: Color = .accentColor
+
     var body: some View {
         NavigationStack {
             Group {
@@ -94,9 +99,15 @@ struct HomeView: View {
 
                 // Albums
                 if !albums.isEmpty {
-                    AlbumsSection(title: "Albums", albums: albums) { album in
-                        selectedAlbum = album
-                    }
+                    AlbumsSection(
+                        title: "Albums",
+                        albums: albums,
+                        expandedAlbumID: expandedAlbum?.id,
+                        namespace: albumMorphNamespace,
+                        onAlbumTap: { album in
+                            expandAlbum(album)
+                        }
+                    )
                 }
 
                 // Recently Played (if user has history)
@@ -115,13 +126,44 @@ struct HomeView: View {
 
                 // Favorite Albums
                 if !favoriteAlbums.isEmpty {
-                    AlbumsSection(title: "Favorite Albums", albums: favoriteAlbums) { album in
-                        selectedAlbum = album
-                    }
+                    AlbumsSection(
+                        title: "Favorite Albums",
+                        albums: favoriteAlbums,
+                        expandedAlbumID: expandedAlbum?.id,
+                        namespace: albumMorphNamespace,
+                        onAlbumTap: { album in
+                            expandAlbum(album)
+                        }
+                    )
                 }
             }
             .padding(.vertical)
         }
+        .overlay {
+            if let album = expandedAlbum {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        collapseAlbum()
+                    }
+
+                GlassEffectContainer {
+                    ExpandedAlbumOverlay(
+                        album: album,
+                        namespace: albumMorphNamespace,
+                        accentColor: expandedAlbumColor,
+                        onTrackTap: { track in
+                            playTrackFromAlbum(track)
+                        },
+                        onDismiss: {
+                            collapseAlbum()
+                        }
+                    )
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: expandedAlbum?.id)
     }
 
     private func loadData() async {
@@ -182,6 +224,41 @@ struct HomeView: View {
             do {
                 try await audioEngine.play(track: track)
                 showingNowPlaying.wrappedValue = true
+            } catch {
+                // Handle error silently
+            }
+        }
+    }
+
+    private func expandAlbum(_ album: Album) {
+        Task {
+            await DominantColorService.shared.extractColor(for: album)
+            expandedAlbumColor = DominantColorService.shared.palette.glassTint
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+                expandedAlbum = album
+            }
+        }
+    }
+
+    private func collapseAlbum() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+            expandedAlbum = nil
+        }
+    }
+
+    private func playTrackFromAlbum(_ track: Track) {
+        guard let audioEngine else { return }
+
+        // First collapse, then play
+        collapseAlbum()
+
+        Task {
+            // Small delay to let animation complete
+            try? await Task.sleep(for: .milliseconds(150))
+
+            do {
+                try await audioEngine.play(track: track)
+                // Don't show NowPlaying - play in mini player only
             } catch {
                 // Handle error silently
             }
