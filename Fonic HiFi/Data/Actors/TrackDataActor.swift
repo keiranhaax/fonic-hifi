@@ -591,6 +591,10 @@ public actor TrackDataActor {
     }
 }
 
+// MARK: - Protocol Conformances
+
+extension TrackDataActor: ListeningSessionRecording {}
+
 // MARK: - Supporting Types
 
 /// Cache of known source identifiers for fast duplicate detection

@@ -27,6 +27,7 @@ enum LogCategory: String, CaseIterable {
     case audioStateCoordinator = "audio.stateCoordinator"
     case audioDetection = "audio.detection"
     case audioMetrics = "audio.metrics"
+    case audioAnalytics = "audio.analytics"
 
     // Playback orchestration
     case playback = "playback.core"
