@@ -42,7 +42,7 @@ struct QueueView: View {
         let remaining = audioService?.queueManager.queueState.remainingTracks ?? []
         if !remaining.isEmpty {
             Section("Up Next \u{2022} \(remaining.count) tracks") {
-                ForEach(Array(remaining.enumerated()), id: \.element.id) { index, track in
+                ForEach(Array(remaining.enumerated()), id: \.element.id) { _, track in
                     QueueRowView(track: track, isPlaying: false)
                 }
                 .onMove(perform: moveTrack)

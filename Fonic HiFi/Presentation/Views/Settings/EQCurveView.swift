@@ -157,11 +157,15 @@ struct EQCurveView: View {
         EQCurveView(configuration: .default)
             .padding()
 
-        EQCurveView(configuration: EqualizerConfiguration.presets["Bass Boost"]!)
-            .padding()
+        if let bassBoost = EqualizerConfiguration.presets["Bass Boost"] {
+            EQCurveView(configuration: bassBoost)
+                .padding()
+        }
 
-        EQCurveView(configuration: EqualizerConfiguration.presets["Rock"]!)
-            .padding()
+        if let rock = EqualizerConfiguration.presets["Rock"] {
+            EQCurveView(configuration: rock)
+                .padding()
+        }
     }
     .background(Color(.systemBackground))
 }

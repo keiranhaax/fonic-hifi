@@ -129,6 +129,9 @@ struct NowPlayingContent: View {
             SleepTimerSheet(timerManager: sleepTimerManager)
                 .presentationDetents([.medium])
         }
+        .sheet(isPresented: $showingQueue) {
+            QueueView()
+        }
         .onAppear {
             // Wire sleep timer to audio engine
             sleepTimerManager.onComplete = { [weak audioService] in
@@ -197,6 +200,18 @@ struct NowPlayingContent: View {
                 .foregroundStyle(.white)
 
             Spacer()
+
+            // Queue button
+            Button {
+                showingQueue = true
+            } label: {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Show queue")
 
             AirPlayRouteButton()
                 .frame(width: 44, height: 44)
