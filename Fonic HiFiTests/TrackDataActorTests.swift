@@ -124,6 +124,58 @@ final class TrackDataActorTests: XCTestCase {
         let afterSecondToggle = try await environment.actor.getTrackMetadata(for: trackId)
         XCTAssertTrue(afterSecondToggle.isFavorite == false, "Track should not be favorite after second toggle")
     }
+
+    // MARK: - Listening Sessions
+
+    func testRecordListeningSession() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let trackId = UUID()
+
+        try await environment.actor.recordListeningSession(
+            trackId: trackId,
+            startedAt: Date(),
+            durationListened: 120.0,
+            trackDuration: 240.0,
+            completionPercentage: 0.5,
+            wasSkipped: false,
+            wasCompleted: false
+        )
+
+        let sessions = try await environment.actor.getListeningSessions(limit: 10)
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions.first?.trackId, trackId)
+    }
+
+    func testGetRecentSessions() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let trackId1 = UUID()
+        let trackId2 = UUID()
+
+        try await environment.actor.recordListeningSession(
+            trackId: trackId1,
+            startedAt: Date().addingTimeInterval(-3600),
+            durationListened: 60.0,
+            trackDuration: 180.0,
+            completionPercentage: 0.33,
+            wasSkipped: false,
+            wasCompleted: false
+        )
+
+        try await environment.actor.recordListeningSession(
+            trackId: trackId2,
+            startedAt: Date(),
+            durationListened: 120.0,
+            trackDuration: 240.0,
+            completionPercentage: 0.5,
+            wasSkipped: false,
+            wasCompleted: true
+        )
+
+        let sessions = try await environment.actor.getListeningSessions(limit: 10)
+        XCTAssertEqual(sessions.count, 2)
+        // Most recent first
+        XCTAssertEqual(sessions.first?.trackId, trackId2)
+    }
 }
 
 // MARK: - Helpers
@@ -134,7 +186,7 @@ private struct TrackActorEnvironment {
 }
 
 private func makeEnvironment(testCase: XCTestCase) throws -> TrackActorEnvironment {
-    let schema = Schema([Track.self])
+    let schema = Schema([Track.self, ListeningSession.self])
     let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try ModelContainer(for: schema, configurations: [configuration])
     let actor = TrackDataActor(modelContainer: container)

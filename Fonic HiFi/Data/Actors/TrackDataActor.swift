@@ -458,6 +458,137 @@ public actor TrackDataActor {
             throw TrackDataError.updateFailed(error)
         }
     }
+
+    // MARK: - Listening Sessions
+
+    /// Record a new listening session
+    public func recordListeningSession(
+        trackId: UUID,
+        startedAt: Date,
+        durationListened: TimeInterval,
+        trackDuration: TimeInterval,
+        completionPercentage: Double,
+        wasSkipped: Bool,
+        wasCompleted: Bool
+    ) throws {
+        let session = ListeningSession(
+            trackId: trackId,
+            startedAt: startedAt,
+            durationListened: durationListened,
+            trackDuration: trackDuration,
+            completionPercentage: completionPercentage,
+            wasSkipped: wasSkipped,
+            wasCompleted: wasCompleted
+        )
+        session.endedAt = Date()
+
+        modelContext.insert(session)
+
+        do {
+            try modelContext.save()
+            logger.debug("Recorded listening session for track: \(trackId)")
+        } catch {
+            logger.error("Failed to record listening session: \(error.localizedDescription)")
+            throw TrackDataError.insertFailed(error)
+        }
+    }
+
+    /// Get recent listening sessions
+    /// - Parameter limit: Maximum number of sessions to return
+    /// - Returns: Array of session data sorted by startedAt descending
+    public func getListeningSessions(limit: Int) throws -> [ListeningSessionData] {
+        var descriptor = FetchDescriptor<ListeningSession>(
+            sortBy: [SortDescriptor(\ListeningSession.startedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        let sessions = try modelContext.fetch(descriptor)
+        return sessions.map { ListeningSessionData(from: $0) }
+    }
+
+    /// Get the most recent session for a specific track
+    /// - Parameter trackId: UUID of the track
+    /// - Returns: Most recent session data or nil
+    public func getLastSession(for trackId: UUID) throws -> ListeningSessionData? {
+        var descriptor = FetchDescriptor<ListeningSession>(
+            predicate: #Predicate<ListeningSession> { session in
+                session.trackId == trackId
+            },
+            sortBy: [SortDescriptor(\ListeningSession.startedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+
+        let sessions = try modelContext.fetch(descriptor)
+        return sessions.first.map { ListeningSessionData(from: $0) }
+    }
+
+    /// Get tracks that haven't been played recently (for Rediscover section)
+    /// - Parameters:
+    ///   - daysSinceLastPlay: Minimum days since last play
+    ///   - minimumPlayCount: Minimum play count to qualify as "known"
+    ///   - limit: Maximum number of tracks to return
+    /// - Returns: Array of track IDs that qualify as neglected
+    public func getNeglectedTrackIds(
+        daysSinceLastPlay: Int,
+        minimumPlayCount: Int,
+        limit: Int
+    ) throws -> [UUID] {
+        let cutoffDate = Calendar.current.date(
+            byAdding: .day,
+            value: -daysSinceLastPlay,
+            to: Date()
+        ) ?? Date()
+
+        var descriptor = FetchDescriptor<Track>(
+            predicate: #Predicate<Track> { track in
+                track.playCount >= minimumPlayCount &&
+                    (track.lastPlayed == nil || track.lastPlayed! < cutoffDate)
+            },
+            sortBy: [SortDescriptor(\Track.playCount, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        let tracks = try modelContext.fetch(descriptor)
+        return tracks.map { $0.id }
+    }
+
+    /// Increment play count and update last played for a track
+    /// - Parameter trackId: UUID of the track
+    public func incrementPlayCount(for trackId: UUID) throws {
+        var descriptor = FetchDescriptor<Track>(
+            predicate: #Predicate<Track> { track in
+                track.id == trackId
+            }
+        )
+        descriptor.fetchLimit = 1
+
+        guard let track = try modelContext.fetch(descriptor).first else {
+            logger.warning("Track not found for play count increment: \(trackId)")
+            return
+        }
+
+        track.playCount += 1
+        track.lastPlayed = Date()
+
+        do {
+            try modelContext.save()
+            logger.debug("Incremented play count for: \(track.title) (now \(track.playCount))")
+        } catch {
+            logger.error("Failed to increment play count: \(error.localizedDescription)")
+            throw TrackDataError.updateFailed(error)
+        }
+    }
+
+    /// Get a track by its UUID
+    public func getTrack(by id: UUID) throws -> Track? {
+        var descriptor = FetchDescriptor<Track>(
+            predicate: #Predicate<Track> { track in
+                track.id == id
+            }
+        )
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first
+    }
 }
 
 // MARK: - Supporting Types
@@ -635,6 +766,7 @@ public enum TrackDataError: Error, LocalizedError {
     case updateFailed(Error)
     case cleanupFailed(Error)
     case deleteFailed(Error)
+    case insertFailed(Error)
 
     public var errorDescription: String? {
         switch self {
@@ -652,6 +784,8 @@ public enum TrackDataError: Error, LocalizedError {
             "Failed to cleanup tracks: \(error.localizedDescription)"
         case let .deleteFailed(error):
             "Failed to delete track: \(error.localizedDescription)"
+        case let .insertFailed(error):
+            "Failed to insert record: \(error.localizedDescription)"
         }
     }
 }
