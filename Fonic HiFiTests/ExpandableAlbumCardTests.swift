@@ -36,4 +36,20 @@ struct ExpandableAlbumCardTests {
         // Card should be constructible
         #expect(type(of: card.body) != Never.self)
     }
+
+    @Test("ExpandedAlbumOverlay exists and shows track list")
+    func expandedAlbumOverlayShowsTrackList() throws {
+        let album = Album(title: "Test", albumArtist: "Artist")
+        let namespace = Namespace().wrappedValue
+
+        let overlay = ExpandedAlbumOverlay(
+            album: album,
+            namespace: namespace,
+            accentColor: .blue,
+            onTrackTap: { _ in },
+            onDismiss: {}
+        )
+
+        #expect(type(of: overlay.body) != Never.self)
+    }
 }
