@@ -2,7 +2,7 @@
 //  AlbumsSection.swift
 //  Fonic HiFi
 //
-//  Horizontal scrolling albums carousel section
+//  Horizontal scrolling albums carousel with glass morph support
 //
 
 import SwiftUI
@@ -11,6 +11,8 @@ import SwiftUI
 struct AlbumsSection: View {
     let title: String
     let albums: [Album]
+    let expandedAlbumID: UUID?
+    let namespace: Namespace.ID
     let onAlbumTap: (Album) -> Void
 
     var body: some View {
@@ -20,44 +22,36 @@ struct AlbumsSection: View {
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(albums) { album in
-                        HomeAlbumCardView(album: album)
-                            .onTapGesture {
-                                onAlbumTap(album)
-                            }
+                GlassEffectContainer {
+                    HStack(spacing: 16) {
+                        ForEach(albums) { album in
+                            ExpandableAlbumCard(
+                                album: album,
+                                namespace: namespace,
+                                isExpanded: expandedAlbumID == album.id,
+                                onTap: { onAlbumTap(album) }
+                            )
+                            .opacity(shouldHideCard(for: album) ? 0 : 1)
+                        }
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
             }
         }
     }
-}
 
-private struct HomeAlbumCardView: View {
-    let album: Album
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            LazyArtworkView(album: album, size: 140, cornerRadius: 8)
-
-            Text(album.title)
-                .font(.callout.bold())
-                .lineLimit(1)
-
-            Text(album.albumArtist)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
-        .frame(width: 140)
+    private func shouldHideCard(for album: Album) -> Bool {
+        expandedAlbumID == album.id
     }
 }
 
 #Preview {
+    @Previewable @Namespace var namespace
     AlbumsSection(
         title: "Albums",
         albums: [],
+        expandedAlbumID: nil,
+        namespace: namespace,
         onAlbumTap: { _ in }
     )
 }
