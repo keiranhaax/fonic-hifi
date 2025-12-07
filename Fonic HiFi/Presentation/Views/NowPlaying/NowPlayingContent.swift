@@ -383,7 +383,22 @@ struct NowPlayingContent: View {
                     .font(.footnote)
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.8))
+
                 Spacer()
+
+                // A-B Loop button
+                Button {
+                    handleLoopTap()
+                } label: {
+                    Image(systemName: loopButtonIcon)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(loopButtonTint)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(loopAccessibilityLabel)
+
+                Spacer()
+
                 Text(formatTime(audioService?.duration ?? 0))
                     .font(.footnote)
                     .monospacedDigit()
@@ -511,6 +526,41 @@ struct NowPlayingContent: View {
     private var hasLyrics: Bool {
         guard let lyrics = audioService?.currentTrack?.lyrics else { return false }
         return !lyrics.isEmpty
+    }
+
+    // MARK: - A-B Loop Helpers
+
+    private var loopButtonIcon: String {
+        guard let state = audioService?.abLoopState else { return "a.square" }
+        if state.isEnabled { return "repeat.circle.fill" }
+        if state.pointA != nil { return "b.square" }
+        return "a.square"
+    }
+
+    private var loopButtonTint: Color {
+        guard let state = audioService?.abLoopState else { return .white.opacity(0.6) }
+        if state.isEnabled { return .orange }
+        if state.pointA != nil { return .orange.opacity(0.8) }
+        return .white.opacity(0.6)
+    }
+
+    private var loopAccessibilityLabel: String {
+        guard let state = audioService?.abLoopState else { return "Set loop point A" }
+        if state.isEnabled { return "Clear loop" }
+        if state.pointA != nil { return "Set loop point B" }
+        return "Set loop point A"
+    }
+
+    private func handleLoopTap() {
+        guard let service = audioService else { return }
+
+        if service.abLoopState.isEnabled {
+            service.clearLoop()
+        } else if service.abLoopState.pointA != nil {
+            service.setLoopPointB()
+        } else {
+            service.setLoopPointA()
+        }
     }
 
     private func formatTime(_ time: TimeInterval) -> String {
