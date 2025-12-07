@@ -250,6 +250,22 @@ final class TrackDataActorTests: XCTestCase {
         XCTAssertTrue(genres.contains("Rock"))
         XCTAssertTrue(genres.contains("Jazz"))
     }
+
+    func testGetTrackMetadataForSearchReturnsMetadata() async throws {
+        let environment = try makeEnvironment(testCase: self)
+
+        let file1 = try makeTemporaryFile(named: "search1.flac", testCase: self)
+        let file2 = try makeTemporaryFile(named: "search2.flac", testCase: self)
+
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: file1, title: "Song One", genre: "Rock"))
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: file2, title: "Song Two", genre: "Jazz"))
+
+        let metadata = try await environment.actor.getTrackMetadataForSearch(limit: 50)
+
+        XCTAssertEqual(metadata.count, 2)
+        XCTAssertTrue(metadata.allSatisfy { !$0.title.isEmpty })
+        XCTAssertTrue(metadata.allSatisfy { !$0.artist.isEmpty })
+    }
 }
 
 // MARK: - Helpers

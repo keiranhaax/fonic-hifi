@@ -644,11 +644,46 @@ public actor TrackDataActor {
 
         return Array(genres).sorted()
     }
+
+    /// Get track metadata for smart search context
+    /// - Parameter limit: Maximum number of tracks to return
+    /// - Returns: Array of TrackSearchMetadata
+    public func getTrackMetadataForSearch(limit: Int) throws -> [TrackSearchMetadata] {
+        var descriptor = FetchDescriptor<Track>(
+            sortBy: [SortDescriptor(\Track.playCount, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        let tracks = try modelContext.fetch(descriptor)
+        return tracks.map { track in
+            TrackSearchMetadata(
+                id: track.id,
+                title: track.title,
+                artist: track.artist ?? "Unknown Artist",
+                genre: track.genre
+            )
+        }
+    }
 }
 
 // MARK: - Protocol Conformances
 
 extension TrackDataActor: ListeningSessionRecording {}
+
+/// Sendable type for track metadata used in smart search
+public struct TrackSearchMetadata: Sendable {
+    public let id: UUID
+    public let title: String
+    public let artist: String
+    public let genre: String?
+
+    public init(id: UUID, title: String, artist: String, genre: String?) {
+        self.id = id
+        self.title = title
+        self.artist = artist
+        self.genre = genre
+    }
+}
 
 // MARK: - Supporting Types
 
