@@ -174,44 +174,7 @@ struct NowPlayingContent: View {
 
     private var headerBar: some View {
         HStack(spacing: 12) {
-            // Sleep timer button
-            Button {
-                showSleepTimerSheet = true
-            } label: {
-                ZStack {
-                    Image(systemName: sleepTimerManager.isActive ? "moon.zzz.fill" : "moon.zzz")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(sleepTimerManager.isActive ? .orange : .white)
-
-                    // Badge showing remaining time
-                    if sleepTimerManager.isActive {
-                        Text(formatTimerBadge(sleepTimerManager.remainingSeconds))
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(.orange, in: Capsule())
-                            .offset(x: 12, y: -10)
-                    }
-                }
-                .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(sleepTimerManager.isActive ? "Sleep timer active" : "Set sleep timer")
-
-            // Playback speed button
-            playbackSpeedMenu
-
-            Spacer()
-
-            Text("Now Playing")
-                .font(.headline)
-                .fontWeight(.medium)
-                .foregroundStyle(.white)
-
-            Spacer()
-
-            // Queue button
+            // Queue button (moved to LEFT for symmetry)
             Button {
                 showingQueue = true
             } label: {
@@ -223,6 +186,16 @@ struct NowPlayingContent: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Show queue")
 
+            Spacer()
+
+            Text("Now Playing")
+                .font(.headline)
+                .fontWeight(.medium)
+                .foregroundStyle(.white)
+
+            Spacer()
+
+            // AirPlay button (stays on RIGHT)
             AirPlayRouteButton()
                 .frame(width: 44, height: 44)
                 .tint(.white)
