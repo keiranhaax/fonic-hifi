@@ -97,6 +97,22 @@ final class DataManagerRecentTests: XCTestCase {
         XCTAssertTrue(searches.isEmpty)
     }
 
+    func testGetAllArtistsReturnsSortedByName() async throws {
+        try insertArtist(name: "Zeppelin")
+        try insertArtist(name: "ABBA")
+        try insertArtist(name: "Metallica")
+        try manager.mainContext.save()
+
+        let artists = try await manager.getAllArtists(limit: 10)
+        XCTAssertEqual(artists.count, 3)
+        XCTAssertEqual(artists.map { $0.name }, ["ABBA", "Metallica", "Zeppelin"])
+    }
+
+    private func insertArtist(name: String) throws {
+        let artist = Artist(name: name)
+        manager.mainContext.insert(artist)
+    }
+
     private func insertTrack(name: String, dateAdded: Date, lastPlayed: Date? = nil) throws {
         let url = temporaryDirectory.appendingPathComponent("\(name).flac")
         let data = Data(repeating: 0xAB, count: 2048)

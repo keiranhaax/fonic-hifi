@@ -90,4 +90,18 @@ public extension DataManager {
             throw DataManagerError.fetchFailed(error)
         }
     }
+
+    func getAllArtists(limit: Int = 50) async throws -> [Artist] {
+        var descriptor = FetchDescriptor<Artist>(
+            sortBy: [SortDescriptor(\.sortName, order: .forward)]
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            return try mainContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to get artists: \(error.localizedDescription)")
+            throw DataManagerError.fetchFailed(error)
+        }
+    }
 }
