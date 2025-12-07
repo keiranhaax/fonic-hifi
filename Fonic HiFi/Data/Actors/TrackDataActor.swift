@@ -542,6 +542,7 @@ public actor TrackDataActor {
         var descriptor = FetchDescriptor<Track>(
             predicate: #Predicate<Track> { track in
                 track.playCount >= minimumPlayCount &&
+                    // swiftlint:disable:next force_unwrapping
                     (track.lastPlayed == nil || track.lastPlayed! < cutoffDate)
             },
             sortBy: [SortDescriptor(\Track.playCount, order: .reverse)]

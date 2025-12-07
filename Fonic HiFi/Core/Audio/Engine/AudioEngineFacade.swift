@@ -32,6 +32,9 @@ public final class AudioEngineFacade: ObservableObject {
     public let monitor: AudioMonitor
     public let playbackSettingsStore: AudioPlaybackSettingsStore
 
+    /// Listening session tracking service
+    private var sessionService: ListeningSessionService?
+
     // MARK: - Derived Read-Only State
 
     public var currentState: PlaybackState { stateCoordinator.currentState }
@@ -152,6 +155,17 @@ public final class AudioEngineFacade: ObservableObject {
         // Wire up auto-advance when tracks complete
         playbackController.onTrackComplete = { [weak self] in
             guard let self else { return }
+
+            // Record completed listening session
+            if let engine = self.engineManager.currentEngine {
+                let currentTime = await engine.currentTime
+                await self.sessionService?.endSession(
+                    currentTime: currentTime,
+                    wasSkipped: false,
+                    wasCompleted: true
+                )
+            }
+
             do {
                 try await self.queueCoordinator.playNext()
             } catch {
@@ -171,6 +185,15 @@ public final class AudioEngineFacade: ObservableObject {
         }
 
         logger.info("AudioEngineFacade initialised with configuration: \(String(describing: configuration.performanceMode))")
+    }
+
+    // MARK: - Session Tracking Configuration
+
+    /// Configure listening session tracking with the data actor
+    /// - Parameter dataActor: The TrackDataActor for persisting listening sessions
+    public func configureSessionTracking(dataActor: TrackDataActor) {
+        self.sessionService = ListeningSessionService(dataActor: dataActor)
+        logger.info("Session tracking configured")
     }
 
     // MARK: - Configuration Mutations
@@ -295,6 +318,12 @@ public final class AudioEngineFacade: ObservableObject {
         logger.info("Playing track: \(track.title, privacy: .public)")
         try await playbackController.play(track: track)
 
+        // Start listening session after successful play
+        if let engine = engineManager.currentEngine {
+            let duration = await engine.duration
+            sessionService?.startSession(trackId: track.id, duration: duration)
+        }
+
         // Apply pending seek position from restored state (first play after launch)
         if let seekPosition = pendingSeekPosition {
             pendingSeekPosition = nil
@@ -325,6 +354,16 @@ public final class AudioEngineFacade: ObservableObject {
     public func stop() async {
         assertMainThread()
 
+        // End listening session without completion
+        if let engine = engineManager.currentEngine {
+            let currentTime = await engine.currentTime
+            await sessionService?.endSession(
+                currentTime: currentTime,
+                wasSkipped: false,
+                wasCompleted: false
+            )
+        }
+
         // Save position as 0 when stopping (user intended to stop)
         queueManager.saveState(playbackPosition: 0)
 
@@ -348,10 +387,30 @@ public final class AudioEngineFacade: ObservableObject {
     }
 
     public func playNext() async throws {
+        // End current session as skipped before changing track
+        if let engine = engineManager.currentEngine {
+            let currentTime = await engine.currentTime
+            await sessionService?.endSession(
+                currentTime: currentTime,
+                wasSkipped: true,
+                wasCompleted: false
+            )
+        }
+
         try await queueCoordinator.playNext()
     }
 
     public func playPrevious() async throws {
+        // End current session as skipped before changing track
+        if let engine = engineManager.currentEngine {
+            let currentTime = await engine.currentTime
+            await sessionService?.endSession(
+                currentTime: currentTime,
+                wasSkipped: true,
+                wasCompleted: false
+            )
+        }
+
         try await queueCoordinator.playPrevious()
     }
 

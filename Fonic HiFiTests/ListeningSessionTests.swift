@@ -35,7 +35,10 @@ struct ListeningSessionTests {
         components.day = 7
         components.hour = 14
         components.minute = 30
-        let date = calendar.date(from: components)!
+        guard let date = calendar.date(from: components) else {
+            Issue.record("Failed to create date from components")
+            return
+        }
 
         let session = ListeningSession(
             trackId: UUID(),
