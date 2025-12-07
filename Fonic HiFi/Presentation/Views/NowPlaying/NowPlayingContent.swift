@@ -272,6 +272,20 @@ struct NowPlayingContent: View {
         }
     }
 
+    // MARK: - Overflow Menu
+
+    private var hasActiveOverflowFeatures: Bool {
+        sleepTimerManager.isActive || playbackSpeed != 1.0 || showingLyrics
+    }
+
+    private var overflowMenuAccessibilityLabel: String {
+        var activeItems: [String] = []
+        if sleepTimerManager.isActive { activeItems.append("Sleep timer active") }
+        if playbackSpeed != 1.0 { activeItems.append("Speed \(formatSpeed(playbackSpeed))") }
+        if showingLyrics { activeItems.append("Lyrics showing") }
+        return activeItems.isEmpty ? "More options" : "More options: \(activeItems.joined(separator: ", "))"
+    }
+
     // MARK: - Album Artwork
 
     private var albumArtworkView: some View {
