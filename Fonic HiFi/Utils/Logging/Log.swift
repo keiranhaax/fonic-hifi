@@ -76,6 +76,9 @@ enum LogCategory: String, CaseIterable {
     // Widget
     case widget = "widget.core"
     case widgetData = "widget.data"
+
+    // AI & Recommendations
+    case recommendations = "ai.recommendations"
 }
 
 enum Log {
