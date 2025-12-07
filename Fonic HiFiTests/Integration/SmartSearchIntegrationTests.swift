@@ -66,7 +66,7 @@ struct SmartSearchIntegrationTests {
 
         // Verify Sendable conformance by passing across concurrency boundary
         Task {
-            let _ = result.trackIDs
+            _ = result.trackIDs
         }
     }
 }
