@@ -183,7 +183,10 @@ final class TrackDataActorTests: XCTestCase {
         let environment = try makeEnvironment(testCase: self)
 
         // Create session at 8am (morning)
-        let morningDate = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date())!
+        guard let morningDate = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) else {
+            XCTFail("Could not create morning date")
+            return
+        }
         try await environment.actor.recordListeningSession(
             trackId: UUID(),
             startedAt: morningDate,
@@ -195,7 +198,10 @@ final class TrackDataActorTests: XCTestCase {
         )
 
         // Create session at 3pm (afternoon)
-        let afternoonDate = Calendar.current.date(bySettingHour: 15, minute: 0, second: 0, of: Date())!
+        guard let afternoonDate = Calendar.current.date(bySettingHour: 15, minute: 0, second: 0, of: Date()) else {
+            XCTFail("Could not create afternoon date")
+            return
+        }
         try await environment.actor.recordListeningSession(
             trackId: UUID(),
             startedAt: afternoonDate,

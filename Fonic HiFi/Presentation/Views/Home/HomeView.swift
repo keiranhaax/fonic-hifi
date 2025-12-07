@@ -29,6 +29,12 @@ struct HomeView: View {
     @State private var continueListening: [Track] = []
     @State private var rediscoverTracks: [Track] = []
 
+    // AI recommendations
+    private let recommendationService = RecommendationService()
+    @State private var timeBasedGreeting: TimeBasedGreeting?
+    @State private var greetingTracks: [Track] = []
+    @State private var isGeneratingRecommendations = false
+
     // UI state
     @State private var isLoading = true
     @State private var selectedArtist: Artist?
@@ -80,6 +86,17 @@ struct HomeView: View {
                     onShuffleAll: shuffleAll,
                     onSurpriseMe: surpriseMe
                 )
+
+                // Time-based greeting (AI-powered)
+                if let greeting = timeBasedGreeting, !greetingTracks.isEmpty {
+                    TimeBasedGreetingSection(
+                        greeting: greeting,
+                        tracks: greetingTracks,
+                        onTrackTap: { track in
+                            playTrack(track)
+                        }
+                    )
+                }
 
                 // Continue Listening (if has incomplete sessions)
                 if !continueListening.isEmpty {
@@ -208,6 +225,22 @@ struct HomeView: View {
             // History-based sections
             continueListening = try await dataManager.getContinueListeningTracks(limit: 3)
             rediscoverTracks = try await dataManager.getRediscoverTracks(limit: 10)
+
+            // Generate AI greeting if we have history
+            if !recentlyPlayed.isEmpty {
+                let sessions = try await dataManager.trackDataActor.getListeningSessions(limit: 50)
+                let trackIDs = try await dataManager.trackDataActor.getAllTrackIDs(limit: 200)
+
+                let greeting = await recommendationService.generateTimeBasedGreeting(
+                    sessions: sessions,
+                    availableTrackIDs: trackIDs,
+                    genres: genres
+                )
+                timeBasedGreeting = greeting
+
+                // Load the actual tracks for the greeting using mainContext
+                greetingTracks = try dataManager.fetchTracks(by: greeting.trackIDs)
+            }
         } catch {
             // Silently handle errors - home screen shows empty state gracefully
         }
@@ -236,9 +269,45 @@ struct HomeView: View {
     }
 
     private func surpriseMe() {
-        // Phase 4: Will use Foundation Models
-        // For now: same as shuffle
-        shuffleAll()
+        guard let dataManager, let audioEngine else { return }
+
+        Task {
+            isGeneratingRecommendations = true
+            defer { isGeneratingRecommendations = false }
+
+            do {
+                // Gather context
+                let sessions = try await dataManager.trackDataActor.getListeningSessions(limit: 50)
+                let trackIDs = try await dataManager.trackDataActor.getAllTrackIDs(limit: 200)
+
+                // Generate surprise mix
+                let result = await recommendationService.generateSurpriseMix(
+                    sessions: sessions,
+                    availableTrackIDs: trackIDs,
+                    genres: genres
+                )
+
+                // Fetch actual tracks from IDs using mainContext
+                let tracks = try dataManager.fetchTracks(by: result.trackIDs)
+
+                guard !tracks.isEmpty else {
+                    // Fallback to shuffle if no tracks resolved
+                    shuffleAll()
+                    return
+                }
+
+                // Queue and play
+                let audioTracks = tracks.map { $0.toAudioTrack() }
+                audioEngine.queueManager.replaceQueue(with: audioTracks, startIndex: 0)
+                if let firstTrack = tracks.first {
+                    try await audioEngine.play(track: firstTrack)
+                    showingNowPlaying.wrappedValue = true
+                }
+            } catch {
+                // Fallback to shuffle on any error
+                shuffleAll()
+            }
+        }
     }
 
     private func playTrack(_ track: Track) {

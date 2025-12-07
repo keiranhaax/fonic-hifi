@@ -165,8 +165,9 @@ public extension DataManager {
         return try fetchTracks(by: neglectedIds)
     }
 
-    /// Helper to fetch tracks by UUIDs using mainContext
-    private func fetchTracks(by ids: [UUID]) throws -> [Track] {
+    /// Fetch tracks by UUIDs using mainContext (already on MainActor)
+    /// This avoids crossing actor boundaries by using the main context directly
+    func fetchTracks(by ids: [UUID]) throws -> [Track] {
         guard !ids.isEmpty else { return [] }
 
         let descriptor = FetchDescriptor<Track>(
