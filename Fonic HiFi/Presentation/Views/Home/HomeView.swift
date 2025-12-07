@@ -25,6 +25,10 @@ struct HomeView: View {
     @State private var mostListened: [Track] = []
     @State private var favoriteAlbums: [Album] = []
 
+    // History-based sections
+    @State private var continueListening: [Track] = []
+    @State private var rediscoverTracks: [Track] = []
+
     // UI state
     @State private var isLoading = true
     @State private var selectedArtist: Artist?
@@ -63,7 +67,8 @@ struct HomeView: View {
 
     private var isEmpty: Bool {
         recentlyAdded.isEmpty && artists.isEmpty && genres.isEmpty && albums.isEmpty &&
-        recentlyPlayed.isEmpty && mostListened.isEmpty && favoriteAlbums.isEmpty
+        recentlyPlayed.isEmpty && mostListened.isEmpty && favoriteAlbums.isEmpty &&
+        continueListening.isEmpty && rediscoverTracks.isEmpty
     }
 
     @ViewBuilder
@@ -75,6 +80,13 @@ struct HomeView: View {
                     onShuffleAll: shuffleAll,
                     onSurpriseMe: surpriseMe
                 )
+
+                // Continue Listening (if has incomplete sessions)
+                if !continueListening.isEmpty {
+                    ContinueListeningSection(tracks: continueListening) { track in
+                        playTrack(track)
+                    }
+                }
 
                 // Recently Added (hero section)
                 if !recentlyAdded.isEmpty {
@@ -121,6 +133,13 @@ struct HomeView: View {
                 if !mostListened.isEmpty {
                     HomeSection(title: "Most Listened") {
                         CarouselView(tracks: mostListened)
+                    }
+                }
+
+                // Rediscover (if has neglected tracks)
+                if !rediscoverTracks.isEmpty {
+                    RediscoverSection(tracks: rediscoverTracks) { track in
+                        playTrack(track)
                     }
                 }
 
@@ -185,6 +204,10 @@ struct HomeView: View {
             recentlyPlayed = try await dataManager.getRecentlyPlayedTracks(limit: 10)
             mostListened = try await dataManager.getMostListenedTracks(limit: 10)
             favoriteAlbums = try await dataManager.getFavoriteAlbums(limit: 10)
+
+            // History-based sections
+            continueListening = try await dataManager.getContinueListeningTracks(limit: 3)
+            rediscoverTracks = try await dataManager.getRediscoverTracks(limit: 10)
         } catch {
             // Silently handle errors - home screen shows empty state gracefully
         }
