@@ -63,6 +63,7 @@ public final class AudioEngineFacade: ObservableObject {
     @Published public private(set) var currentTrack: Track?
     @Published public private(set) var showMiniPlayer: Bool = false
     @Published public private(set) var diagnosticsStatus: DiagnosticsStatus = .empty
+    @Published public var abLoopState = ABLoopState()
 
     /// Pending seek position from restored queue state (used on first play after launch)
     private var pendingSeekPosition: TimeInterval?
@@ -157,6 +158,16 @@ public final class AudioEngineFacade: ObservableObject {
                 self.logger.error("Failed to auto-advance: \(error.localizedDescription)")
                 self.stateManager.updateState(.stopped)
             }
+        }
+
+        // Wire up A-B loop checking
+        playbackController.loopCheckHandler = { [weak self] currentTime in
+            guard let self,
+                  self.abLoopState.isEnabled,
+                  let pointA = self.abLoopState.pointA,
+                  let pointB = self.abLoopState.pointB,
+                  currentTime >= pointB else { return nil }
+            return pointA
         }
 
         logger.info("AudioEngineFacade initialised with configuration: \(String(describing: configuration.performanceMode))")
@@ -344,6 +355,27 @@ public final class AudioEngineFacade: ObservableObject {
         try await queueCoordinator.playPrevious()
     }
 
+    // MARK: - A-B Loop
+
+    public func setLoopPointA() {
+        abLoopState.pointA = currentTime
+        let time = currentTime
+        Log.logger(.playback).info("Set loop point A at \(time)")
+    }
+
+    public func setLoopPointB() {
+        abLoopState.pointB = currentTime
+        abLoopState.isEnabled = abLoopState.isValid
+        let time = currentTime
+        let enabled = abLoopState.isEnabled
+        Log.logger(.playback).info("Set loop point B at \(time), enabled: \(enabled)")
+    }
+
+    public func clearLoop() {
+        abLoopState.clear()
+        Log.logger(.playback).info("Cleared A-B loop")
+    }
+
     // MARK: - Queue Operations
 
     public func enqueue(_ tracks: [Track]) {
@@ -429,6 +461,11 @@ public final class AudioEngineFacade: ObservableObject {
     // MARK: - UI Bridging
 
     public func setCurrentTrack(_ track: Track?) {
+        // Clear A-B loop on track change
+        if track?.id != uiStateStore.currentTrack?.id {
+            abLoopState.clear()
+        }
+
         uiStateStore.currentTrack = track
         if track == nil {
             uiStateStore.showMiniPlayer = false

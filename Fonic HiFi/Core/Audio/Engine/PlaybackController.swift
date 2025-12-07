@@ -21,6 +21,7 @@ protocol PlaybackQueueHandling: AnyObject {
 final class PlaybackController {
     typealias DiagnosticsHandler = @MainActor (Track, AudioFileInfo?) async -> Void
     typealias TrackCompletionHandler = @MainActor () async -> Void
+    typealias LoopCheckHandler = @MainActor (TimeInterval) -> TimeInterval?
 
     private let sessionManager: AudioSessionManager
     private let formatDetectionManager: AudioFormatDetectionManager
@@ -34,6 +35,9 @@ final class PlaybackController {
 
     /// Callback invoked when a track finishes playing naturally (not stopped by user)
     var onTrackComplete: TrackCompletionHandler?
+
+    /// Callback to check if A-B loop should trigger. Returns seek target if loop needed.
+    var loopCheckHandler: LoopCheckHandler?
 
     private let logger = Log.logger(.playbackController)
 
@@ -263,6 +267,11 @@ final class PlaybackController {
             async let duration = engine.duration
             let (time, total) = await (currentTime, duration)
             stateManager.updateTime(time, duration: total)
+
+            // Check A-B loop
+            if let seekTarget = loopCheckHandler?(time) {
+                try? await engine.seek(to: seekTarget)
+            }
 
             var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
             nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = time

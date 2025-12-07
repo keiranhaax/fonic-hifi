@@ -7,23 +7,29 @@
 
 import Foundation
 
-struct ABLoopState: Sendable, Equatable {
-    var isEnabled: Bool = false
-    var pointA: TimeInterval?
-    var pointB: TimeInterval?
+public struct ABLoopState: Sendable, Equatable {
+    public var isEnabled: Bool = false
+    public var pointA: TimeInterval?
+    public var pointB: TimeInterval?
 
-    var isComplete: Bool {
+    public var isComplete: Bool {
         pointA != nil && pointB != nil
     }
 
-    var isValid: Bool {
+    public var isValid: Bool {
         guard let a = pointA, let b = pointB else { return false }
         return b > a
     }
 
-    mutating func clear() {
+    public mutating func clear() {
         isEnabled = false
         pointA = nil
         pointB = nil
+    }
+
+    public init(isEnabled: Bool = false, pointA: TimeInterval? = nil, pointB: TimeInterval? = nil) {
+        self.isEnabled = isEnabled
+        self.pointA = pointA
+        self.pointB = pointB
     }
 }
