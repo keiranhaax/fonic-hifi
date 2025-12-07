@@ -104,4 +104,17 @@ public extension DataManager {
             throw DataManagerError.fetchFailed(error)
         }
     }
+
+    func getUniqueGenres() async throws -> [String] {
+        let descriptor = FetchDescriptor<Track>()
+
+        do {
+            let tracks = try mainContext.fetch(descriptor)
+            let genres = Set(tracks.compactMap(\.genre))
+            return genres.sorted()
+        } catch {
+            logger.error("Failed to get unique genres: \(error.localizedDescription)")
+            throw DataManagerError.fetchFailed(error)
+        }
+    }
 }

@@ -108,12 +108,29 @@ final class DataManagerRecentTests: XCTestCase {
         XCTAssertEqual(artists.map { $0.name }, ["ABBA", "Metallica", "Zeppelin"])
     }
 
+    func testGetUniqueGenresReturnsDistinctGenresSorted() async throws {
+        try insertTrack(name: "Track1", dateAdded: Date(), genre: "Rock")
+        try insertTrack(name: "Track2", dateAdded: Date(), genre: "Jazz")
+        try insertTrack(name: "Track3", dateAdded: Date(), genre: "Rock") // Duplicate
+        try insertTrack(name: "Track4", dateAdded: Date(), genre: "Electronic")
+        try insertTrack(name: "Track5", dateAdded: Date(), genre: nil) // No genre
+        try manager.mainContext.save()
+
+        let genres = try await manager.getUniqueGenres()
+        XCTAssertEqual(genres, ["Electronic", "Jazz", "Rock"])
+    }
+
     private func insertArtist(name: String) throws {
         let artist = Artist(name: name)
         manager.mainContext.insert(artist)
     }
 
-    private func insertTrack(name: String, dateAdded: Date, lastPlayed: Date? = nil) throws {
+    private func insertTrack(
+        name: String,
+        dateAdded: Date,
+        lastPlayed: Date? = nil,
+        genre: String? = nil
+    ) throws {
         let url = temporaryDirectory.appendingPathComponent("\(name).flac")
         let data = Data(repeating: 0xAB, count: 2048)
         try data.write(to: url)
@@ -133,6 +150,7 @@ final class DataManagerRecentTests: XCTestCase {
 
         track.dateAdded = dateAdded
         track.lastPlayed = lastPlayed
+        track.genre = genre
         manager.mainContext.insert(track)
     }
 }
