@@ -11,12 +11,25 @@ import SwiftUI
 @MainActor
 struct HomeView: View {
     @Environment(\.dataManager) private var dataManager
+    @Environment(\.audioEngine) private var audioEngine
     @Environment(\.showingNowPlaying) private var showingNowPlaying
 
+    // Fresh library state
+    @State private var recentlyAdded: [Track] = []
+    @State private var artists: [Artist] = []
+    @State private var genres: [String] = []
+    @State private var albums: [Album] = []
+
+    // Active library state (existing)
     @State private var recentlyPlayed: [Track] = []
     @State private var mostListened: [Track] = []
     @State private var favoriteAlbums: [Album] = []
+
+    // UI state
     @State private var isLoading = true
+    @State private var selectedArtist: Artist?
+    @State private var selectedGenre: String?
+    @State private var selectedAlbum: Album?
 
     var body: some View {
         NavigationStack {
@@ -24,44 +37,90 @@ struct HomeView: View {
                 if isLoading {
                     ProgressView("Loading your music...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if recentlyPlayed.isEmpty, mostListened.isEmpty, favoriteAlbums.isEmpty {
+                } else if isEmpty {
                     EmptyHomeView()
                 } else {
-                    ScrollView {
-                        VStack(spacing: 32) {
-                            if !recentlyPlayed.isEmpty {
-                                HomeSection(title: "Recently Played") {
-                                    CarouselView(tracks: recentlyPlayed)
-                                }
-                            }
-
-                            if !mostListened.isEmpty {
-                                HomeSection(title: "Most Listened") {
-                                    CarouselView(tracks: mostListened)
-                                }
-                            }
-
-                            if !favoriteAlbums.isEmpty {
-                                HomeSection(title: "Favorite Albums") {
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 16) {
-                                            ForEach(favoriteAlbums) { album in
-                                                AlbumCardView(album: album)
-                                            }
-                                        }
-                                        .padding(.horizontal)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.vertical)
-                    }
+                    contentView
                 }
             }
             .navigationTitle("Home")
             .task {
                 await loadData()
             }
+            .sheet(item: $selectedArtist) { artist in
+                ArtistDetailView(artist: artist)
+            }
+            .sheet(item: $selectedAlbum) { album in
+                AlbumDetailView(album: album)
+            }
+        }
+    }
+
+    private var isEmpty: Bool {
+        recentlyAdded.isEmpty && artists.isEmpty && genres.isEmpty && albums.isEmpty &&
+        recentlyPlayed.isEmpty && mostListened.isEmpty && favoriteAlbums.isEmpty
+    }
+
+    @ViewBuilder
+    private var contentView: some View {
+        ScrollView {
+            VStack(spacing: 32) {
+                // Quick Actions
+                QuickActionsSection(
+                    onShuffleAll: shuffleAll,
+                    onSurpriseMe: surpriseMe
+                )
+
+                // Recently Added (hero section)
+                if !recentlyAdded.isEmpty {
+                    RecentlyAddedSection(tracks: recentlyAdded) { track in
+                        playTrack(track)
+                    }
+                }
+
+                // Your Artists
+                if !artists.isEmpty {
+                    ArtistsSection(artists: artists) { artist in
+                        selectedArtist = artist
+                    }
+                }
+
+                // Browse by Genre
+                if !genres.isEmpty {
+                    GenresSection(genres: genres) { genre in
+                        selectedGenre = genre
+                    }
+                }
+
+                // Albums
+                if !albums.isEmpty {
+                    AlbumsSection(title: "Albums", albums: albums) { album in
+                        selectedAlbum = album
+                    }
+                }
+
+                // Recently Played (if user has history)
+                if !recentlyPlayed.isEmpty {
+                    HomeSection(title: "Recently Played") {
+                        CarouselView(tracks: recentlyPlayed)
+                    }
+                }
+
+                // Most Listened (if user has history)
+                if !mostListened.isEmpty {
+                    HomeSection(title: "Most Listened") {
+                        CarouselView(tracks: mostListened)
+                    }
+                }
+
+                // Favorite Albums
+                if !favoriteAlbums.isEmpty {
+                    AlbumsSection(title: "Favorite Albums", albums: favoriteAlbums) { album in
+                        selectedAlbum = album
+                    }
+                }
+            }
+            .padding(.vertical)
         }
     }
 
@@ -74,6 +133,13 @@ struct HomeView: View {
         }
 
         do {
+            // Fresh library data
+            recentlyAdded = try await dataManager.getRecentlyAddedTracks(limit: 10)
+            artists = try await dataManager.getAllArtists(limit: 15)
+            genres = try await dataManager.getUniqueGenres()
+            albums = try await dataManager.getAllAlbums(limit: 10)
+
+            // Active library data
             recentlyPlayed = try await dataManager.getRecentlyPlayedTracks(limit: 10)
             mostListened = try await dataManager.getMostListenedTracks(limit: 10)
             favoriteAlbums = try await dataManager.getFavoriteAlbums(limit: 10)
@@ -82,6 +148,44 @@ struct HomeView: View {
         }
 
         isLoading = false
+    }
+
+    private func shuffleAll() {
+        guard let dataManager, let audioEngine else { return }
+        Task {
+            do {
+                let allTracks = try await dataManager.getRecentlyAddedTracks(limit: 1000)
+                guard !allTracks.isEmpty else { return }
+
+                let shuffledTracks = allTracks.shuffled()
+                let audioTracks = shuffledTracks.map { $0.toAudioTrack() }
+                audioEngine.queueManager.replaceQueue(with: audioTracks, startIndex: 0)
+                if let firstTrack = shuffledTracks.first {
+                    try await audioEngine.play(track: firstTrack)
+                    showingNowPlaying.wrappedValue = true
+                }
+            } catch {
+                // Handle error silently
+            }
+        }
+    }
+
+    private func surpriseMe() {
+        // Phase 4: Will use Foundation Models
+        // For now: same as shuffle
+        shuffleAll()
+    }
+
+    private func playTrack(_ track: Track) {
+        guard let audioEngine else { return }
+        Task {
+            do {
+                try await audioEngine.play(track: track)
+                showingNowPlaying.wrappedValue = true
+            } catch {
+                // Handle error silently
+            }
+        }
     }
 }
 
