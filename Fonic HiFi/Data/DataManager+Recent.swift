@@ -131,4 +131,58 @@ public extension DataManager {
             throw DataManagerError.fetchFailed(error)
         }
     }
+
+    // MARK: - Listening History
+
+    /// Get tracks with recent incomplete sessions for "Continue Listening"
+    /// - Parameter limit: Maximum number of tracks to return
+    /// - Returns: Array of tracks that were recently started but not completed
+    func getContinueListeningTracks(limit: Int = 3) async throws -> [Track] {
+        // Get recent sessions that weren't completed
+        let sessions = try await trackDataActor.getListeningSessions(limit: 50)
+
+        // Filter to sessions that weren't completed and have >10% but <90% progress
+        let incompleteSessionTrackIds = Array(sessions
+            .filter { !$0.wasCompleted && $0.completionPercentage > 0.1 && $0.completionPercentage < 0.9 }
+            .prefix(limit)
+            .map { $0.trackId })
+
+        // Fetch the actual tracks using mainContext (already on MainActor)
+        return try fetchTracks(by: incompleteSessionTrackIds)
+    }
+
+    /// Get neglected tracks for "Rediscover" section
+    /// - Parameter limit: Maximum number of tracks to return
+    /// - Returns: Array of tracks that user knows but hasn't played recently
+    func getRediscoverTracks(limit: Int = 10) async throws -> [Track] {
+        let neglectedIds = try await trackDataActor.getNeglectedTrackIds(
+            daysSinceLastPlay: 30,
+            minimumPlayCount: 2,
+            limit: limit
+        )
+
+        // Fetch the actual tracks using mainContext (already on MainActor)
+        return try fetchTracks(by: neglectedIds)
+    }
+
+    /// Helper to fetch tracks by UUIDs using mainContext
+    private func fetchTracks(by ids: [UUID]) throws -> [Track] {
+        guard !ids.isEmpty else { return [] }
+
+        let descriptor = FetchDescriptor<Track>(
+            predicate: #Predicate<Track> { track in
+                ids.contains(track.id)
+            }
+        )
+
+        let allTracks = try mainContext.fetch(descriptor)
+
+        // Preserve order from original IDs
+        var trackMap: [UUID: Track] = [:]
+        for track in allTracks {
+            trackMap[track.id] = track
+        }
+
+        return ids.compactMap { trackMap[$0] }
+    }
 }
