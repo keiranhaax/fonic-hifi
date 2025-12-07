@@ -117,4 +117,18 @@ public extension DataManager {
             throw DataManagerError.fetchFailed(error)
         }
     }
+
+    func getAllAlbums(limit: Int = 50) async throws -> [Album] {
+        var descriptor = FetchDescriptor<Album>(
+            sortBy: [SortDescriptor(\.dateAdded, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            return try mainContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to get albums: \(error.localizedDescription)")
+            throw DataManagerError.fetchFailed(error)
+        }
+    }
 }

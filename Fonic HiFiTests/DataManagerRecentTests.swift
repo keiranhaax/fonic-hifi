@@ -120,6 +120,24 @@ final class DataManagerRecentTests: XCTestCase {
         XCTAssertEqual(genres, ["Electronic", "Jazz", "Rock"])
     }
 
+    func testGetAllAlbumsReturnsSortedByDateAdded() async throws {
+        let baseDate = Date()
+        try insertAlbum(title: "Old Album", dateAdded: baseDate.addingTimeInterval(-3600))
+        try insertAlbum(title: "New Album", dateAdded: baseDate)
+        try insertAlbum(title: "Mid Album", dateAdded: baseDate.addingTimeInterval(-1800))
+        try manager.mainContext.save()
+
+        let albums = try await manager.getAllAlbums(limit: 10)
+        XCTAssertEqual(albums.count, 3)
+        XCTAssertEqual(albums.map { $0.title }, ["New Album", "Mid Album", "Old Album"])
+    }
+
+    private func insertAlbum(title: String, dateAdded: Date = Date()) throws {
+        let album = Album(title: title, albumArtist: "Artist")
+        album.dateAdded = dateAdded
+        manager.mainContext.insert(album)
+    }
+
     private func insertArtist(name: String) throws {
         let artist = Artist(name: name)
         manager.mainContext.insert(artist)
