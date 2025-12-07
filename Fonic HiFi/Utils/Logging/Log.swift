@@ -79,6 +79,7 @@ enum LogCategory: String, CaseIterable {
 
     // AI & Recommendations
     case recommendations = "ai.recommendations"
+    case smartSearch = "ai.search.smart"
 }
 
 enum Log {
