@@ -42,4 +42,19 @@ struct RecommendationSchemasTests {
         #expect(result.trackIDs.count == 3)
         #expect(result.mixTheme == "Nostalgic favorites")
     }
+
+    @Test("SmartSearchResult has correct properties")
+    func smartSearchResultProperties() {
+        let result = SmartSearchResult(
+            trackIDs: [UUID(), UUID()],
+            matchReasons: ["Matches 'chill' mood based on tempo", "Recently played in evening"],
+            searchStrategy: "Semantic search with listening context",
+            suggestions: ["Try 'relaxing music'", "Browse Jazz genre"]
+        )
+
+        #expect(result.trackIDs.count == 2)
+        #expect(result.matchReasons.count == 2)
+        #expect(!result.searchStrategy.isEmpty)
+        #expect(result.suggestions.count == 2)
+    }
 }

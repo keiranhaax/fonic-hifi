@@ -73,3 +73,36 @@ public struct SurpriseMixResult: Sendable {
         self.mixTheme = mixTheme
     }
 }
+
+/// Result from AI-enhanced smart search
+@Generable
+public struct SmartSearchResult: Sendable {
+    @Guide(description: "Track UUID strings matching the query, ranked by relevance", .maximumCount(15))
+    public var trackIDStrings: [String]
+
+    @Guide(description: "Brief explanation for why each top result matched", .maximumCount(5))
+    public var matchReasons: [String]
+
+    @Guide(description: "Description of the search strategy used")
+    public var searchStrategy: String
+
+    @Guide(description: "Suggested refined queries if results are limited", .maximumCount(3))
+    public var suggestions: [String]
+
+    /// Computed property to get UUIDs from strings
+    public var trackIDs: [UUID] {
+        trackIDStrings.compactMap { UUID(uuidString: $0) }
+    }
+
+    public init(
+        trackIDs: [UUID],
+        matchReasons: [String],
+        searchStrategy: String,
+        suggestions: [String]
+    ) {
+        self.trackIDStrings = trackIDs.map { $0.uuidString }
+        self.matchReasons = matchReasons
+        self.searchStrategy = searchStrategy
+        self.suggestions = suggestions
+    }
+}
