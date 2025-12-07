@@ -350,6 +350,7 @@ struct NowPlayingContent: View {
             Spacer()
 
             HStack(spacing: 8) {
+                // Heart button (UNCHANGED)
                 Button {
                     toggleFavorite()
                 } label: {
@@ -361,30 +362,8 @@ struct NowPlayingContent: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
 
-                Button {
-                    showingLyrics.toggle()
-                    logger.info("Lyrics toggled: \(showingLyrics)")
-                } label: {
-                    Image(systemName: "text.quote")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(hasLyrics ? .white : .white.opacity(0.4))
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .disabled(!hasLyrics)
-                .accessibilityLabel(hasLyrics ? "Show lyrics" : "No lyrics available")
-
-                Button {
-                    guard let track = audioService?.currentTrack else { return }
-                    trackDetailItem = TrackDetailItem(track: track)
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(.white)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Show track options")
+                // Overflow menu (replaces Lyrics + Ellipsis buttons)
+                overflowMenu
             }
         }
         .padding(.horizontal, 16)
