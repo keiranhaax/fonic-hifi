@@ -72,7 +72,8 @@
       "Bash(\"Fonic HiFiTests/AVAudioEngineAdapterTests.swift\" )",
       "Bash(\"Fonic HiFiTests/AudioPlaybackSettingsStoreTests.swift\" )",
       "Bash(\"Fonic HiFiTests/Core/Audio/DSP/EqualizerConfigurationTests.swift\")",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Skill(superpowers:brainstorming)"
     ],
     "deny": [],
     "ask": []

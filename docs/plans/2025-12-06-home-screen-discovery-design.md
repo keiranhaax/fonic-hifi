@@ -49,7 +49,7 @@ Transform the Home screen from an empty placeholder into an intelligent discover
 ┌─────────────────────────────────────┐
 │  Home                               │
 ├─────────────────────────────────────┤
-│  ▶️ Shuffle All    🎲 Surprise Me   │  ← Quick action buttons (glass)
+│  ▶️ Shuffle All    🎲 Surprise Me   │  ← Quick action buttons (.buttonSizing(.flexible))
 ├─────────────────────────────────────┤
 │  Recently Added                     │
 │  ┌────┐ ┌────┐ ┌────┐ ┌────┐       │  ← Large artwork carousel (hero)
@@ -116,19 +116,38 @@ Transform the Home screen from an empty placeholder into an intelligent discover
 ### Flow
 
 1. User taps Album card in Home
-2. Album card morphs (`matchedGeometryEffect`) to screen center
+2. Album card morphs (via native Liquid Glass) to screen center
 3. Glass effect expands with album accent color tint (`.glassEffect(.regular.tint(albumAccentColor))`)
 4. Track list appears inside the morphed glass container
 5. User taps a track
 6. Glass morphs back to album card position
 7. Track starts playing in mini player (NowPlaying stays hidden)
 
-### Technical Approach
+### Technical Approach (iOS 26 Liquid Glass APIs)
 
-- `GlassEffectContainer` for the morphing container
-- `.matchedGeometryEffect(id: album.id, in: namespace)` for position morph
-- `DominantColorService` extracts album accent color for tint
-- `@Namespace` shared between album cards and expanded view
+**Use native glass morphing (NOT matchedGeometryEffect):**
+
+```swift
+// Both states must be in the SAME GlassEffectContainer
+GlassEffectContainer(spacing: 10.0) {
+    if isExpanded {
+        ExpandedAlbumView(album: album)
+            .glassEffect(.regular.tint(albumAccentColor))
+            .glassEffectID(album.id, in: namespace)
+            .glassEffectTransition(.matchedGeometry)
+    } else {
+        AlbumCard(album: album)
+            .glassEffect()
+            .glassEffectID(album.id, in: namespace)
+    }
+}
+```
+
+**Key components:**
+- `GlassEffectContainer` wraps all morphing elements
+- `.glassEffectID(album.id, in: namespace)` for morph identity (NOT matchedGeometryEffect)
+- `.glassEffectTransition(.matchedGeometry)` for the animation
+- `DominantColorService.shared` extracts album accent color (already cached)
 - Track tap triggers: dismiss → play (not navigate to NowPlaying)
 
 ### Behavior Comparison
@@ -198,9 +217,17 @@ The model receives:
 ### Availability Fallback
 
 If Foundation Models unavailable:
-- Simple rule-based recommendations
-- Time-based: Filter by `hourOfDay` patterns from history
-- No degradation message shown to user
+- **"Your Mixes"**: Show rule-based mixes (genre-based, decade-based)
+- **Time-based sections**: Filter by `hourOfDay` patterns from history
+- **"Surprise Me"**: Falls back to random genre mix
+- No degradation message shown to user (seamless fallback)
+
+### Quick Action Behaviors
+
+| Button | Behavior |
+|--------|----------|
+| **Shuffle All** | Shuffle entire library, start playing |
+| **Surprise Me** | Generate AI mix using Foundation Models (fallback: random genre mix) |
 
 ---
 
@@ -256,8 +283,8 @@ struct SearchResult {
 ### Phase 2: Album Glass Morph
 
 - [ ] Implement `GlassEffectContainer` for album expansion
-- [ ] Add `matchedGeometryEffect` for position morphing
-- [ ] Integrate `DominantColorService` for accent tinting
+- [ ] Add `glassEffectID` + `glassEffectTransition(.matchedGeometry)` for morphing
+- [ ] Reuse `DominantColorService.shared` for accent tinting (already cached)
 - [ ] Build inline track list within morphed view
 - [ ] Wire "tap track → dismiss → play in mini player" flow
 
@@ -322,3 +349,6 @@ struct SearchResult {
 - Foundation Models availability checked before use
 - Graceful fallback to rule-based recommendations
 - No `@available` checks needed (iOS 26 only)
+- **Color extraction**: `DominantColorService.shared` already handles caching (50-entry limit)
+- **Button sizing**: Use `.buttonSizing(.flexible)` for quick action buttons
+- **Glass morphing**: Use `glassEffectID` + `glassEffectTransition`, NOT `matchedGeometryEffect`
