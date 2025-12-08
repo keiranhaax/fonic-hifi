@@ -379,7 +379,7 @@ extension View {
 // MARK: - Performance Utilities
 
 @MainActor
-final class GlassPerformanceProfiler: ObservableObject, @unchecked Sendable {
+final class GlassPerformanceProfiler: ObservableObject {
     enum OptimizationHint {
         case performance
         case balanced
@@ -435,7 +435,7 @@ struct PerformanceMetric: Identifiable {
 }
 
 @MainActor
-final class GlassEffectMemoryManager: ObservableObject, @unchecked Sendable {
+final class GlassEffectMemoryManager: ObservableObject {
     static let shared = GlassEffectMemoryManager()
 
     @Published var activeEffectCount: Int = 0
