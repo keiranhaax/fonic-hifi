@@ -151,7 +151,7 @@ UI State:
 5. State change → Published to all observers
 6. UI updates via @Published properties + AudioUIState
 
-### Widget & Live Activity Architecture [Verified-Code]
+### Widget Architecture [Verified-Code]
 
 ```
 Widget Ecosystem (Fonic HiFi Widget/)
@@ -160,11 +160,13 @@ Widget Ecosystem (Fonic HiFi Widget/)
 │   └── StandBy mode detection via showsWidgetContainerBackground
 ├── Lock Screen Accessories
 │   └── accessoryCircular, accessoryRectangular, accessoryInline
-├── Core Files
-│   ├── NowPlayingWidget.swift (Widget configuration)
-│   ├── NowPlayingTimelineProvider.swift (Timeline updates)
-│   └── WidgetArtworkLoader.swift (Async artwork)
-└── Live Activities - NOT YET IMPLEMENTED
+└── Core Files
+    ├── NowPlayingWidget.swift (Widget configuration)
+    ├── NowPlayingTimelineProvider.swift (Timeline updates)
+    └── WidgetArtworkLoader.swift (Async artwork)
+
+Note: Lock Screen Now Playing controls are handled automatically by iOS
+via MPNowPlayingInfoCenter and MPRemoteCommandCenter (not Live Activities).
 ```
 
 **Widget Update Strategy:**
@@ -298,10 +300,10 @@ Full catalog: `make help` — avoid direct `xcodebuild`/`xctrace`/profilers.
 
 These files/directories are referenced in older documentation but **DO NOT EXIST**:
 
-- ❌ `Core/LiveActivity/` directory - DOES NOT EXIST (use `Fonic HiFi Widget/`)
-- ❌ `LiveActivityManager.swift` - DOES NOT EXIST
-- ❌ `NowPlayingAttributes.swift` - DOES NOT EXIST
-- ❌ `NowPlayingActivityConfiguration.swift` - DOES NOT EXIST
+- ❌ `Core/LiveActivity/` directory - NOT PLANNED (system Now Playing controls used instead)
+- ❌ `LiveActivityManager.swift` - NOT PLANNED (system Now Playing controls used instead)
+- ❌ `NowPlayingAttributes.swift` - NOT PLANNED (no Live Activities - system handles this)
+- ❌ `NowPlayingActivityConfiguration.swift` - NOT PLANNED (no Live Activities)
 - ❌ `Core/Audio/Decoders/` - DOES NOT EXIST
 - ❌ `FormatBadge.swift` - DOES NOT EXIST
 - ❌ `AudioSessionActor` - DOES NOT EXIST (use `AudioSessionManager`)

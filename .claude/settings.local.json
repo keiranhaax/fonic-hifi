@@ -73,7 +73,11 @@
       "Bash(\"Fonic HiFiTests/AudioPlaybackSettingsStoreTests.swift\" )",
       "Bash(\"Fonic HiFiTests/Core/Audio/DSP/EqualizerConfigurationTests.swift\")",
       "Bash(mkdir:*)",
-      "Skill(superpowers:brainstorming)"
+      "Skill(superpowers:brainstorming)",
+      "Bash(ls:*)",
+      "Bash(xargs ls:*)",
+      "Bash(git worktree:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

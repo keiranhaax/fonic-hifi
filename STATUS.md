@@ -3,7 +3,7 @@
 **Last Updated**: 2025-12-07 (Phase 5: Smart Search)
 
 **Branch**: `main`
-**Build**: ✅ `make lint` (2025-12-07 – 0 violations)  •  ✅ `make test` (2025-12-07 – 361 tests, 0 failures)  •  ✅ `make coverage-check` (target lowered to 40%)
+**Build**: ✅ `make lint` (2025-12-07 – 0 violations)  •  ✅ `make test` (2025-12-07 – 347 tests, 0 failures)  •  ❌ `make coverage-check` (33.61% < 40% target)
 
 **Archive**: Historical milestones and recovery notes moved to `STATUS-ARCHIVE.md`.
 
@@ -34,10 +34,11 @@
 - ✅ Apple Music UI patterns - MorphableArtwork, zoom transitions (commit 2015368)
 
 **Widget System:**
-- ✅ LiveActivityManager - Core/LiveActivity/LiveActivityManager.swift:13
-- ✅ NowPlayingAttributes - Core/LiveActivity/NowPlayingAttributes.swift:17
 - ✅ Widget Extension - Fonic HiFi Widget/ (Small, Medium, Large, Lock Screen)
-- ✅ Dynamic Island - NowPlayingActivityConfiguration.swift
+- ✅ NowPlayingWidget - Fonic HiFi Widget/NowPlayingWidget.swift
+- ✅ NowPlayingTimelineProvider - Fonic HiFi Widget/NowPlayingTimelineProvider.swift
+- ✅ WidgetArtworkLoader - Fonic HiFi Widget/WidgetArtworkLoader.swift
+- ℹ️ Lock Screen Now Playing - Handled automatically by iOS via MPNowPlayingInfoCenter (not Live Activities)
 
 **Theming:**
 - ✅ ThemePalette - Core/Services/ThemePalette.swift
@@ -63,6 +64,10 @@
 
 **Non-Existent References (Do NOT reference):**
 - ❌ Core/Audio/Decoders/ - DOES NOT EXIST
+- ❌ Core/LiveActivity/ directory - NOT PLANNED (system Now Playing controls used instead)
+- ❌ LiveActivityManager.swift - NOT PLANNED (system Now Playing controls used instead)
+- ❌ NowPlayingAttributes.swift - NOT PLANNED (no Live Activities)
+- ❌ NowPlayingActivityConfiguration.swift - NOT PLANNED (no Live Activities)
 - ❌ FormatBadge.swift - DOES NOT EXIST
 - ❌ AudioSessionActor - DOES NOT EXIST (uses AudioSessionManager)
 - ❌ Files/TestAudio/ - DOES NOT EXIST
@@ -72,7 +77,7 @@
 
 **Phase 4 – Testing & CI Foundation:**
 
-1. **Code coverage** – Current overall coverage is 46.54% (App 34.17%); target lowered to 40% (realistic baseline for active development).
+1. **Code coverage** – Current overall coverage is 45.36% (App 33.61%); target is 40% but currently failing.
 2. **Monitor CI coverage gate** – `.github/workflows/ci.yml` already enforces `make coverage-check`; keep the gate active while coverage remains below target.
 
 **Phase 5 – Observability & Documentation:**
@@ -84,7 +89,7 @@
 
 - Share observability walkthrough/postmortem with stakeholders and capture any requested metrics metadata tweaks.
 - Keep metrics counters disabled by default; toggle during QA sessions to verify logging remains redacted.
-- Track coverage status (46.54% overall / 34.17% app) and keep the `make coverage-check` gate active while uplift is paused.
+- Address coverage gap: 33.61% app coverage is below 40% target (coverage check failing).
 
 ## Known Issues
 
@@ -95,6 +100,8 @@
 **Memory:**
 - AudioKit DSP chain retains references (workaround: periodic cleanup in facade)
 
-- Coverage at 46.54% overall / 34.17% app (target 40% - currently passing)
+**Testing & Coverage:**
+- Coverage check FAILING: 33.61% app coverage below 40% target
+- Overall coverage: 45.36%, needs improvement to pass CI gate
 - UI automation limited to integration tests; XCUITest smoke coverage still outstanding
 - Device testing protocol not yet formalized
