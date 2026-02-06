@@ -23,8 +23,8 @@ final class PlaybackController {
     typealias TrackCompletionHandler = @MainActor () async -> Void
     typealias LoopCheckHandler = @MainActor (TimeInterval) -> TimeInterval?
 
-    private let sessionManager: AudioSessionManager
-    private let formatDetectionManager: AudioFormatDetectionManager
+    private let sessionManager: any AudioSessionService
+    private let formatDetectionManager: any FormatDetectionService
     private let validator: BitPerfectValidator
     private let stateManager: PlaybackStateManager
     private let queueManager: AudioQueueManager
@@ -45,8 +45,8 @@ final class PlaybackController {
     private let logger = Log.logger(.playbackController)
 
     init(
-        sessionManager: AudioSessionManager,
-        formatDetectionManager: AudioFormatDetectionManager,
+        sessionManager: any AudioSessionService,
+        formatDetectionManager: any FormatDetectionService,
         validator: BitPerfectValidator,
         stateManager: PlaybackStateManager,
         queueManager: AudioQueueManager,
@@ -73,9 +73,9 @@ final class PlaybackController {
     // MARK: - Playback Commands
 
     func play(track: Track, queueEntry: AudioTrack? = nil) async throws {
-        try await sessionManager.activateAudioSession()
-
         let info = try await formatDetectionManager.detectFormat(at: track.url)
+        await sessionManager.setPreferredSampleRate(info.sampleRate)
+        try await sessionManager.activateAudioSession()
         logger.info("Detected format for playback: \(info.format.displayName)")
 
         if engineManager.configuration.performanceMode == .quality {

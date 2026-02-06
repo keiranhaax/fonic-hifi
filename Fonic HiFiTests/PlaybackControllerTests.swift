@@ -98,11 +98,47 @@ struct PlaybackControllerTests {
         #expect(harness.stateManager.currentState == .playing(currentTime: 0, duration: second.duration))
     }
 
+    @Test("play sets preferred sample rate before activating audio session")
+    @MainActor
+    func playSetsPreferredSampleRateBeforeActivatingSession() async throws {
+        let track = makeDisplayTrack(name: "sample-rate")
+        let sessionManager = PlaybackControllerSessionServiceStub()
+        let detectedInfo = AudioFileInfo(
+            url: track.url,
+            format: .alac,
+            duration: 183,
+            bitDepth: 24,
+            sampleRate: 96_000,
+            channels: 2,
+            fileSize: 1_024
+        )
+        let formatDetectionManager = PlaybackControllerFormatDetectionServiceStub(info: detectedInfo)
+
+        let harness = makeHarness(
+            sessionManager: sessionManager,
+            formatDetectionManager: formatDetectionManager
+        )
+
+        try await harness.controller.play(track: track)
+
+        let detectedURLs = await formatDetectionManager.detectedURLs
+        #expect(detectedURLs == [track.url])
+        #expect(sessionManager.preferredSampleRates == [96_000])
+        #expect(
+            Array(sessionManager.eventLog.prefix(2)) == [
+                "setPreferredSampleRate",
+                "activateAudioSession",
+            ]
+        )
+    }
+
     // MARK: - Helpers
 
     @MainActor
     private func makeHarness(
-        configuration: AudioEngineConfiguration = .default
+        configuration: AudioEngineConfiguration = .default,
+        sessionManager: (any AudioSessionService)? = nil,
+        formatDetectionManager: (any FormatDetectionService)? = nil
     ) -> PlaybackControllerHarness {
         let stateManager = PlaybackStateManager(enableTransitionValidation: false)
         let queueManager = AudioQueueManager()
@@ -118,8 +154,8 @@ struct PlaybackControllerTests {
         manager.overrideCurrentEngine(engine, type: .avAudioEngine, format: .flac)
 
         let controller = PlaybackController(
-            sessionManager: AudioSessionManager(),
-            formatDetectionManager: AudioFormatDetectionManager(),
+            sessionManager: sessionManager ?? AudioSessionManager(),
+            formatDetectionManager: formatDetectionManager ?? AudioFormatDetectionManager(),
             validator: BitPerfectValidator(),
             stateManager: stateManager,
             queueManager: queueManager,
@@ -178,6 +214,85 @@ struct PlaybackControllerTests {
                 .appendingPathExtension("flac"),
             duration: duration,
             format: .flac
+        )
+    }
+}
+
+@MainActor
+private final class PlaybackControllerSessionServiceStub: AudioSessionService {
+    private(set) var preferredSampleRates: [Double] = []
+    private(set) var eventLog: [String] = []
+    private var sessionActive = false
+
+    func configureAudioSession() async throws {}
+
+    func activateAudioSession() async throws {
+        sessionActive = true
+        eventLog.append("activateAudioSession")
+    }
+
+    func setPreferredSampleRate(_ sampleRate: Double) async {
+        preferredSampleRates.append(sampleRate)
+        eventLog.append("setPreferredSampleRate")
+    }
+
+    func deactivateAudioSession() async throws {
+        sessionActive = false
+        eventLog.append("deactivateAudioSession")
+    }
+
+    var isSessionActive: Bool { get async { sessionActive } }
+    var currentRoute: String { get async { "Stub Route" } }
+    var isBackgroundAudioEnabled: Bool { get async { true } }
+
+    func handleInterruption(_: AudioInterruptionType) async {}
+    func handleRouteChange(_: AudioRouteChange) async {}
+
+    func updateNowPlayingInfo(_ info: [String: Any]) async {
+        _ = info
+        eventLog.append("updateNowPlayingInfo")
+    }
+
+    func clearNowPlayingInfo() async {
+        eventLog.append("clearNowPlayingInfo")
+    }
+
+    func enableRemoteCommands() async {}
+    func disableRemoteCommands() async {}
+
+    func getAvailableOutputs() async -> [AudioDevice] { [] }
+    func setPreferredOutput(_: AudioDevice) async throws {}
+}
+
+private actor PlaybackControllerFormatDetectionServiceStub: FormatDetectionService {
+    let info: AudioFileInfo
+    private(set) var detectedURLs: [URL] = []
+
+    init(info: AudioFileInfo) {
+        self.info = info
+    }
+
+    func detectFormat(at url: URL) async throws -> AudioFileInfo {
+        detectedURLs.append(url)
+        return info
+    }
+
+    func validateFile(at _: URL) async -> Bool {
+        true
+    }
+
+    func isFormatSupported(_: AudioFormat) -> Bool {
+        true
+    }
+
+    func getFormatCapabilities(_: AudioFormat) -> FormatCapabilities? {
+        FormatCapabilities(
+            maxSampleRate: 192_000,
+            maxBitDepth: 32,
+            supportsMultiChannel: true,
+            supportsArtwork: true,
+            supportsChapters: false,
+            requiresSpecializedDecoder: false
         )
     }
 }

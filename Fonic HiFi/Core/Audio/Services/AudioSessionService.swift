@@ -68,6 +68,11 @@ public protocol AudioSessionService: Sendable {
     /// - Throws: AudioError if activation fails
     func activateAudioSession() async throws
 
+    /// Set the preferred hardware sample rate.
+    /// The system may choose a different active sample rate depending on route capabilities.
+    /// - Parameter sampleRate: Preferred sample rate in Hz.
+    func setPreferredSampleRate(_ sampleRate: Double) async
+
     /// Deactivate the audio session
     /// - Throws: AudioError if deactivation fails
     func deactivateAudioSession() async throws

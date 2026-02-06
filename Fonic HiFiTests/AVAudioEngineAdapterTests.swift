@@ -16,6 +16,20 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         XCTAssertNotNil(format)
     }
 
+    func testLoadHandlesMixedSampleRateFilesSequentially() async throws {
+        let highRateURL = try makePCMTestAudioFile(sampleRate: 96_000, testCase: self)
+        let standardRateURL = try makePCMTestAudioFile(sampleRate: 44_100, testCase: self)
+        let adapter = AVAudioEngineAdapter()
+
+        try await adapter.load(url: highRateURL)
+        let firstDuration = await adapter.duration
+        XCTAssertGreaterThan(firstDuration, 0)
+
+        try await adapter.load(url: standardRateURL)
+        let secondDuration = await adapter.duration
+        XCTAssertGreaterThan(secondDuration, 0)
+    }
+
     func testPlayAndStopUpdatePlaybackState() async throws {
         let url = try makePCMTestAudioFile(testCase: self)
         let adapter = AVAudioEngineAdapter()
@@ -294,6 +308,8 @@ private final class StubAudioSessionManager: AudioSessionManaging {
     func activateSession(_ active: Bool) async throws {
         activateSessionCalls.append(active)
     }
+
+    func setPreferredSampleRate(_: Double) async {}
 
     func enableRemoteCommands() async {}
     func disableRemoteCommands() async {}

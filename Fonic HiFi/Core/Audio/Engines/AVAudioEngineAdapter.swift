@@ -189,6 +189,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             // Store total frames for duration calculation
             totalFrames = file.length
 
+            try reconnectPlayerNodesIfNeeded(for: file.processingFormat)
+
             // Connect player node if needed
             if !engine.isRunning {
                 try startEngine()
@@ -434,11 +436,11 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         let format = engine.outputNode.outputFormat(forBus: 0)
 
         // Primary chain: primaryPlayer → primaryTimePitch → submix
-        engine.connect(primaryPlayerNode, to: primaryTimePitchNode, format: format)
+        engine.connect(primaryPlayerNode, to: primaryTimePitchNode, format: nil)
         engine.connect(primaryTimePitchNode, to: submixNode, format: format)
 
         // Secondary chain: secondaryPlayer → secondaryTimePitch → submix
-        engine.connect(secondaryPlayerNode, to: secondaryTimePitchNode, format: format)
+        engine.connect(secondaryPlayerNode, to: secondaryTimePitchNode, format: nil)
         engine.connect(secondaryTimePitchNode, to: submixNode, format: format)
 
         // Master chain: submix → EQ → mainMixer
@@ -499,6 +501,45 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         if !engine.isRunning {
             try engine.start()
         }
+    }
+
+    private func reconnectPlayerNodesIfNeeded(for fileFormat: AVAudioFormat) throws {
+        let primaryInput = primaryTimePitchNode.inputFormat(forBus: 0)
+        let secondaryInput = secondaryTimePitchNode.inputFormat(forBus: 0)
+        let requiresReconnect =
+            formatsDiffer(primaryInput, fileFormat) ||
+            formatsDiffer(secondaryInput, fileFormat)
+
+        guard requiresReconnect else { return }
+
+        let wasRunning = engine.isRunning
+        if wasRunning {
+            engine.stop()
+        }
+
+        engine.disconnectNodeOutput(primaryPlayerNode)
+        engine.disconnectNodeOutput(secondaryPlayerNode)
+        engine.connect(primaryPlayerNode, to: primaryTimePitchNode, format: fileFormat)
+        engine.connect(secondaryPlayerNode, to: secondaryTimePitchNode, format: fileFormat)
+
+        logger.debug(
+            """
+            Reconnected player nodes for file format:
+            sampleRate=\(fileFormat.sampleRate, privacy: .public)
+            channels=\(fileFormat.channelCount, privacy: .public)
+            """
+        )
+
+        if wasRunning {
+            try startEngine()
+        }
+    }
+
+    private func formatsDiffer(_ lhs: AVAudioFormat, _ rhs: AVAudioFormat) -> Bool {
+        lhs.sampleRate != rhs.sampleRate ||
+            lhs.channelCount != rhs.channelCount ||
+            lhs.commonFormat != rhs.commonFormat ||
+            lhs.isInterleaved != rhs.isInterleaved
     }
 
     private func hasAudioProcessing() -> Bool {

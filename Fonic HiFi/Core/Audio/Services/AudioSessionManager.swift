@@ -16,6 +16,7 @@ public protocol AudioSessionManaging: Sendable {
     // Configuration
     func configureSession() async throws
     func activateSession(_ active: Bool) async throws
+    func setPreferredSampleRate(_ sampleRate: Double) async
 
     // Remote Commands
     func enableRemoteCommands() async
@@ -102,6 +103,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                 """
                 Audio session activated:
                 category=\(self.session.category.rawValue, privacy: .public)
+                sampleRate=\(self.session.sampleRate, privacy: .public)
                 otherAudioPlaying=\(self.session.isOtherAudioPlaying, privacy: .public)
                 """
             )
@@ -121,6 +123,27 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             throw AudioError.sessionConfigurationFailed(
                 reason: "Failed to deactivate session: \(error.localizedDescription)",
             )
+        }
+    }
+
+    public func setPreferredSampleRate(_ sampleRate: Double) async {
+        guard sampleRate > 0 else {
+            logger.warning("Ignoring invalid preferred sample rate: \(sampleRate, privacy: .public)")
+            return
+        }
+
+        do {
+            try session.setPreferredSampleRate(sampleRate)
+            logger.info(
+                """
+                Requested preferred sample rate:
+                requested=\(sampleRate, privacy: .public)
+                actualPreferred=\(self.session.preferredSampleRate, privacy: .public)
+                active=\(self.session.sampleRate, privacy: .public)
+                """
+            )
+        } catch {
+            logger.warning("Failed to set preferred sample rate: \(error.localizedDescription, privacy: .public)")
         }
     }
 
