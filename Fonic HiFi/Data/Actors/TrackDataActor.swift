@@ -13,6 +13,8 @@ import SwiftData
 @ModelActor
 public actor TrackDataActor {
     private let logger = Log.logger(.dataTrackActor)
+    private let unknownArtistName = "Unknown Artist"
+    private let unknownAlbumTitle = "Unknown Album"
 
     // MARK: - Helpers
 
@@ -42,29 +44,39 @@ public actor TrackDataActor {
         return track
     }
 
-    // MARK: - Track Creation
+    private func normalizedLookupValue(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
 
-    /// Create a new Track from extracted metadata
-    /// - Parameter metadata: Sendable metadata extracted from audio file
-    /// - Returns: PersistentIdentifier of the created Track
-    /// - Throws: TrackDataError if creation fails
-    public func createTrack(from metadata: TrackMetadata) throws -> PersistentIdentifier {
-        logger.info("Creating track: \(metadata.title)")
+    private func resolvedArtistName(_ name: String?) -> String {
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? unknownArtistName : trimmed
+    }
 
-        let track = Track(
-            url: metadata.url,
-            title: metadata.title,
-            artist: metadata.artist,
-            album: metadata.album,
-            audioFormat: metadata.audioFormat,
-            duration: metadata.duration,
-            sampleRate: metadata.sampleRate,
-            bitDepth: metadata.bitDepth,
-            channels: metadata.channels,
-            isLossless: metadata.isLossless,
-        )
+    private func resolvedAlbumTitle(_ title: String?) -> String {
+        let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? unknownAlbumTitle : trimmed
+    }
 
-        // Set additional metadata properties
+    private func resolvedAlbumArtistName(albumArtist: String?, artist: String?) -> String {
+        let trimmedAlbumArtist = albumArtist?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedAlbumArtist.isEmpty {
+            return trimmedAlbumArtist
+        }
+        return resolvedArtistName(artist)
+    }
+
+    private func normalizedArtistKey(_ name: String) -> String {
+        normalizedLookupValue(name)
+    }
+
+    private func normalizedAlbumKey(title: String, albumArtist: String) -> String {
+        "\(normalizedLookupValue(title))::\(normalizedLookupValue(albumArtist))"
+    }
+
+    private func applyTrackMetadata(_ metadata: TrackMetadata, to track: Track) {
         track.albumArtist = metadata.albumArtist
         track.genre = metadata.genre
         track.year = metadata.year
@@ -86,8 +98,208 @@ public actor TrackDataActor {
         if track.sourceBookmarkHash == nil, let bookmark = metadata.sourceBookmark {
             track.sourceBookmarkHash = bookmark.sha256Hex()
         }
+    }
+
+    private func findOrCreateArtist(
+        name: String,
+        genre: String?,
+        cache: inout [String: Artist]
+    ) throws -> (artist: Artist, created: Bool) {
+        let normalizedName = resolvedArtistName(name)
+        let key = normalizedArtistKey(normalizedName)
+        if let cached = cache[key] {
+            return (cached, false)
+        }
+
+        var descriptor = FetchDescriptor<Artist>(
+            predicate: #Predicate<Artist> { artist in
+                artist.name == normalizedName
+            }
+        )
+        descriptor.fetchLimit = 1
+
+        if let existing = try modelContext.fetch(descriptor).first {
+            if let genre, !genre.isEmpty {
+                if existing.primaryGenre == nil {
+                    existing.primaryGenre = genre
+                }
+                if !existing.genres.contains(where: { normalizedLookupValue($0) == normalizedLookupValue(genre) }) {
+                    existing.genres.append(genre)
+                }
+            }
+            cache[key] = existing
+            return (existing, false)
+        }
+
+        let artist = Artist(name: normalizedName, primaryGenre: genre)
+        if let genre, !genre.isEmpty {
+            artist.genres = [genre]
+        }
+        modelContext.insert(artist)
+        cache[key] = artist
+        return (artist, true)
+    }
+
+    private func findOrCreateAlbum(
+        title: String,
+        albumArtist: String,
+        year: Int?,
+        genre: String?,
+        artwork: Data?,
+        cache: inout [String: Album]
+    ) throws -> (album: Album, created: Bool) {
+        let normalizedTitle = resolvedAlbumTitle(title)
+        let normalizedAlbumArtist = resolvedArtistName(albumArtist)
+        let key = normalizedAlbumKey(title: normalizedTitle, albumArtist: normalizedAlbumArtist)
+        if let cached = cache[key] {
+            return (cached, false)
+        }
+
+        var descriptor = FetchDescriptor<Album>(
+            predicate: #Predicate<Album> { album in
+                album.title == normalizedTitle && album.albumArtist == normalizedAlbumArtist
+            }
+        )
+        descriptor.fetchLimit = 1
+
+        if let existing = try modelContext.fetch(descriptor).first {
+            if existing.year == nil {
+                existing.year = year
+            }
+            if let genre, !genre.isEmpty {
+                if existing.primaryGenre == nil {
+                    existing.primaryGenre = genre
+                }
+                if !existing.genres.contains(where: { normalizedLookupValue($0) == normalizedLookupValue(genre) }) {
+                    existing.genres.append(genre)
+                }
+            }
+            if existing.artwork == nil, let artwork {
+                existing.artwork = artwork
+                existing.hasEmbeddedArtwork = true
+            }
+            cache[key] = existing
+            return (existing, false)
+        }
+
+        let album = Album(
+            title: normalizedTitle,
+            albumArtist: normalizedAlbumArtist,
+            year: year
+        )
+        if let genre, !genre.isEmpty {
+            album.primaryGenre = genre
+            album.genres = [genre]
+        }
+        if let artwork {
+            album.artwork = artwork
+            album.hasEmbeddedArtwork = true
+        }
+        modelContext.insert(album)
+        cache[key] = album
+        return (album, true)
+    }
+
+    private func linkAlbumArtistRelationships(
+        track: Track,
+        albumTitle: String,
+        artistName: String,
+        albumArtistName: String,
+        genre: String?,
+        year: Int?,
+        artwork: Data?,
+        overwriteTrackRelations: Bool,
+        artistCache: inout [String: Artist],
+        albumCache: inout [String: Album]
+    ) throws -> RelationshipLinkResult {
+        let artistResult = try findOrCreateArtist(
+            name: artistName,
+            genre: genre,
+            cache: &artistCache
+        )
+        let albumResult = try findOrCreateAlbum(
+            title: albumTitle,
+            albumArtist: albumArtistName,
+            year: year,
+            genre: genre,
+            artwork: artwork,
+            cache: &albumCache
+        )
+
+        var updatedTrack = false
+
+        if overwriteTrackRelations || track.artistRelation == nil {
+            if track.artistRelation?.id != artistResult.artist.id {
+                track.artistRelation = artistResult.artist
+                updatedTrack = true
+            }
+        }
+
+        if overwriteTrackRelations || track.albumRelation == nil {
+            if track.albumRelation?.id != albumResult.album.id {
+                track.albumRelation = albumResult.album
+                updatedTrack = true
+            }
+        }
+
+        if albumResult.album.artistRelation?.id != artistResult.artist.id {
+            albumResult.album.artistRelation = artistResult.artist
+        }
+
+        return RelationshipLinkResult(
+            trackUpdated: updatedTrack,
+            createdArtist: artistResult.created,
+            createdAlbum: albumResult.created
+        )
+    }
+
+    // MARK: - Track Creation
+
+    /// Create a new Track from extracted metadata
+    /// - Parameter metadata: Sendable metadata extracted from audio file
+    /// - Returns: PersistentIdentifier of the created Track
+    /// - Throws: TrackDataError if creation fails
+    public func createTrack(from metadata: TrackMetadata) throws -> PersistentIdentifier {
+        logger.info("Creating track: \(metadata.title)")
+
+        let resolvedArtist = resolvedArtistName(metadata.artist)
+        let resolvedAlbum = resolvedAlbumTitle(metadata.album)
+        let resolvedAlbumArtist = resolvedAlbumArtistName(
+            albumArtist: metadata.albumArtist,
+            artist: metadata.artist
+        )
+
+        let track = Track(
+            url: metadata.url,
+            title: metadata.title,
+            artist: resolvedArtist,
+            album: resolvedAlbum,
+            audioFormat: metadata.audioFormat,
+            duration: metadata.duration,
+            sampleRate: metadata.sampleRate,
+            bitDepth: metadata.bitDepth,
+            channels: metadata.channels,
+            isLossless: metadata.isLossless,
+        )
+
+        applyTrackMetadata(metadata, to: track)
 
         modelContext.insert(track)
+
+        var artistCache: [String: Artist] = [:]
+        var albumCache: [String: Album] = [:]
+        _ = try linkAlbumArtistRelationships(
+            track: track,
+            albumTitle: resolvedAlbum,
+            artistName: resolvedArtist,
+            albumArtistName: resolvedAlbumArtist,
+            genre: metadata.genre,
+            year: metadata.year,
+            artwork: metadata.artwork,
+            overwriteTrackRelations: true,
+            artistCache: &artistCache,
+            albumCache: &albumCache
+        )
 
         do {
             try modelContext.save()
@@ -107,13 +319,22 @@ public actor TrackDataActor {
         logger.info("Creating \(metadataArray.count) tracks")
 
         var identifiers: [PersistentIdentifier] = []
+        var artistCache: [String: Artist] = [:]
+        var albumCache: [String: Album] = [:]
 
         for metadata in metadataArray {
+            let resolvedArtist = resolvedArtistName(metadata.artist)
+            let resolvedAlbum = resolvedAlbumTitle(metadata.album)
+            let resolvedAlbumArtist = resolvedAlbumArtistName(
+                albumArtist: metadata.albumArtist,
+                artist: metadata.artist
+            )
+
             let track = Track(
                 url: metadata.url,
                 title: metadata.title,
-                artist: metadata.artist,
-                album: metadata.album,
+                artist: resolvedArtist,
+                album: resolvedAlbum,
                 audioFormat: metadata.audioFormat,
                 duration: metadata.duration,
                 sampleRate: metadata.sampleRate,
@@ -122,30 +343,21 @@ public actor TrackDataActor {
                 isLossless: metadata.isLossless,
             )
 
-            // Set additional metadata properties
-            track.albumArtist = metadata.albumArtist
-            track.genre = metadata.genre
-            track.year = metadata.year
-            track.trackNumber = metadata.trackNumber
-            track.discNumber = metadata.discNumber
-            track.composer = metadata.composer
-            track.conductor = metadata.conductor
-            track.comments = metadata.comment
-            track.lyrics = metadata.lyrics
-            track.artwork = metadata.artwork
-            track.bitrate = metadata.bitrate
-            track.sourceURLBookmark = metadata.sourceBookmark
-            track.sourceURLString = metadata.sourceURL?.absoluteString
-            track.sourceURLHash = metadata.sourceURLHash ?? metadata.sourceURL?.librarySourceHash()
-            track.sourceBookmarkHash = metadata.sourceBookmarkHash
-            if track.sourceURLHash == nil, let source = metadata.sourceURL {
-                track.sourceURLHash = source.librarySourceHash()
-            }
-            if track.sourceBookmarkHash == nil, let bookmark = metadata.sourceBookmark {
-                track.sourceBookmarkHash = bookmark.sha256Hex()
-            }
+            applyTrackMetadata(metadata, to: track)
 
             modelContext.insert(track)
+            _ = try linkAlbumArtistRelationships(
+                track: track,
+                albumTitle: resolvedAlbum,
+                artistName: resolvedArtist,
+                albumArtistName: resolvedAlbumArtist,
+                genre: metadata.genre,
+                year: metadata.year,
+                artwork: metadata.artwork,
+                overwriteTrackRelations: true,
+                artistCache: &artistCache,
+                albumCache: &albumCache
+            )
             identifiers.append(track.persistentModelID)
         }
 
@@ -157,6 +369,107 @@ public actor TrackDataActor {
             logger.error("Failed to save tracks: \(error.localizedDescription)")
             throw TrackDataError.batchSaveFailed(error)
         }
+    }
+
+    /// Backfill Album/Artist relationships for existing tracks missing relational links.
+    /// - Parameter batchSize: Number of updated tracks to save per transaction.
+    /// - Returns: Summary of backfill work performed.
+    public func backfillAlbumArtistRelationships(batchSize: Int = 200) throws -> AlbumArtistBackfillResult {
+        let effectiveBatchSize = max(1, batchSize)
+        logger.info("Starting relationship backfill (batch size: \(effectiveBatchSize))")
+
+        let descriptor = FetchDescriptor<Track>(
+            predicate: #Predicate<Track> { track in
+                track.albumRelation == nil || track.artistRelation == nil
+            }
+        )
+
+        let tracks: [Track]
+        do {
+            tracks = try modelContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to fetch tracks for relationship backfill: \(error.localizedDescription)")
+            throw TrackDataError.fetchFailed(error)
+        }
+
+        guard !tracks.isEmpty else {
+            return AlbumArtistBackfillResult(
+                scannedTracks: 0,
+                updatedTracks: 0,
+                createdAlbums: 0,
+                createdArtists: 0
+            )
+        }
+
+        var artistCache: [String: Artist] = [:]
+        var albumCache: [String: Album] = [:]
+        var updatedTracks = 0
+        var createdAlbums = 0
+        var createdArtists = 0
+        var pendingUpdatedTracks = 0
+
+        for track in tracks {
+            let resolvedArtist = resolvedArtistName(track.artist)
+            let resolvedAlbum = resolvedAlbumTitle(track.album)
+            let resolvedAlbumArtist = resolvedAlbumArtistName(
+                albumArtist: track.albumArtist,
+                artist: track.artist
+            )
+
+            let linkResult = try linkAlbumArtistRelationships(
+                track: track,
+                albumTitle: resolvedAlbum,
+                artistName: resolvedArtist,
+                albumArtistName: resolvedAlbumArtist,
+                genre: track.genre,
+                year: track.year,
+                artwork: track.artwork,
+                overwriteTrackRelations: false,
+                artistCache: &artistCache,
+                albumCache: &albumCache
+            )
+
+            if linkResult.trackUpdated {
+                updatedTracks += 1
+                pendingUpdatedTracks += 1
+            }
+            if linkResult.createdArtist {
+                createdArtists += 1
+            }
+            if linkResult.createdAlbum {
+                createdAlbums += 1
+            }
+
+            if pendingUpdatedTracks >= effectiveBatchSize {
+                do {
+                    try modelContext.save()
+                    pendingUpdatedTracks = 0
+                } catch {
+                    logger.error("Failed to save relationship backfill batch: \(error.localizedDescription)")
+                    throw TrackDataError.saveFailed(error)
+                }
+            }
+        }
+
+        if modelContext.hasChanges {
+            do {
+                try modelContext.save()
+            } catch {
+                logger.error("Failed to save final relationship backfill batch: \(error.localizedDescription)")
+                throw TrackDataError.saveFailed(error)
+            }
+        }
+
+        logger.info(
+            "Relationship backfill complete - scanned: \(tracks.count), updated: \(updatedTracks), created albums: \(createdAlbums), created artists: \(createdArtists)"
+        )
+
+        return AlbumArtistBackfillResult(
+            scannedTracks: tracks.count,
+            updatedTracks: updatedTracks,
+            createdAlbums: createdAlbums,
+            createdArtists: createdArtists
+        )
     }
 
     // MARK: - Track Queries
@@ -659,7 +972,7 @@ public actor TrackDataActor {
             TrackSearchMetadata(
                 id: track.id,
                 title: track.title,
-                artist: track.artist ?? "Unknown Artist",
+                artist: track.artist,
                 genre: track.genre
             )
         }
@@ -669,6 +982,12 @@ public actor TrackDataActor {
 // MARK: - Protocol Conformances
 
 extension TrackDataActor: ListeningSessionRecording {}
+
+private struct RelationshipLinkResult {
+    let trackUpdated: Bool
+    let createdArtist: Bool
+    let createdAlbum: Bool
+}
 
 /// Sendable type for track metadata used in smart search
 public struct TrackSearchMetadata: Sendable {
@@ -713,6 +1032,20 @@ public struct SourceHashCache: Sendable {
         if let hash = urlHash { urlHashes.insert(hash) }
         if let hash = bookmarkHash { bookmarkHashes.insert(hash) }
         if let str = urlString { urlStrings.insert(str) }
+    }
+}
+
+public struct AlbumArtistBackfillResult: Sendable {
+    public let scannedTracks: Int
+    public let updatedTracks: Int
+    public let createdAlbums: Int
+    public let createdArtists: Int
+
+    public init(scannedTracks: Int, updatedTracks: Int, createdAlbums: Int, createdArtists: Int) {
+        self.scannedTracks = scannedTracks
+        self.updatedTracks = updatedTracks
+        self.createdAlbums = createdAlbums
+        self.createdArtists = createdArtists
     }
 }
 

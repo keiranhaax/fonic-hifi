@@ -80,6 +80,7 @@ struct StateCoordinatorTests {
 
         #expect(facade.showMiniPlayer == true)
     }
+
 }
 
 @MainActor

@@ -62,4 +62,41 @@ final class PlaybackStateManagerTests: XCTestCase {
         XCTAssertTrue(firstResult, "First update should succeed")
         XCTAssertTrue(secondResult, "Duplicate update should return true (no-op success)")
     }
+
+    func testUpdateTimeDebouncesSmallPlayingDeltas() async throws {
+        let manager = PlaybackStateManager(
+            initialState: .playing(currentTime: 10.0, duration: 180.0),
+            enableTransitionValidation: false
+        )
+
+        var stateChanges: [PlaybackStateChange] = []
+        let cancellable = manager.statePublisher.sink { stateChanges.append($0) }
+        defer { cancellable.cancel() }
+
+        manager.updateTime(10.1, duration: 180.0)
+        manager.updateTime(10.2, duration: 180.0)
+
+        try await Task.sleep(for: .milliseconds(100))
+
+        XCTAssertEqual(stateChanges.count, 0, "Expected no emissions for tiny playing deltas")
+        XCTAssertEqual(manager.currentState, .playing(currentTime: 10.0, duration: 180.0))
+    }
+
+    func testUpdateTimeEmitsWhenPlayingDeltaExceedsThreshold() async throws {
+        let manager = PlaybackStateManager(
+            initialState: .playing(currentTime: 10.0, duration: 180.0),
+            enableTransitionValidation: false
+        )
+
+        var stateChanges: [PlaybackStateChange] = []
+        let cancellable = manager.statePublisher.sink { stateChanges.append($0) }
+        defer { cancellable.cancel() }
+
+        manager.updateTime(10.35, duration: 180.0)
+
+        try await Task.sleep(for: .milliseconds(100))
+
+        XCTAssertEqual(stateChanges.count, 1, "Expected one emission when delta exceeds debounce threshold")
+        XCTAssertEqual(manager.currentState, .playing(currentTime: 10.35, duration: 180.0))
+    }
 }

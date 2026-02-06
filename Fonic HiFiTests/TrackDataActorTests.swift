@@ -41,6 +41,64 @@ final class TrackDataActorTests: XCTestCase {
         XCTAssertEqual(count, 2)
     }
 
+    func testCreateTrackCreatesAlbumAndArtistRelationships() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let fileURL = try makeTemporaryFile(named: "relationship-link.flac", testCase: self)
+
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: fileURL))
+
+        let context = ModelContext(environment.container)
+        let tracks = try context.fetch(FetchDescriptor<Track>())
+        XCTAssertEqual(tracks.count, 1)
+
+        guard let track = tracks.first else {
+            XCTFail("Expected one stored track")
+            return
+        }
+
+        XCTAssertNotNil(track.albumRelation)
+        XCTAssertNotNil(track.artistRelation)
+        XCTAssertEqual(track.albumRelation?.title, "Sample Album")
+        XCTAssertEqual(track.artistRelation?.name, "Sample Artist")
+        XCTAssertEqual(track.albumRelation?.artistRelation?.name, "Sample Artist")
+    }
+
+    func testBackfillAlbumArtistRelationshipsPopulatesMissingRelations() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let fileURL = try makeTemporaryFile(named: "legacy-track.flac", testCase: self)
+
+        let context = ModelContext(environment.container)
+        let legacyTrack = Track(
+            url: fileURL,
+            title: "Legacy Track",
+            artist: "Legacy Artist",
+            album: "Legacy Album",
+            audioFormat: "FLAC",
+            duration: 180,
+            sampleRate: 44_100,
+            bitDepth: 16,
+            channels: 2,
+            isLossless: true
+        )
+        context.insert(legacyTrack)
+        try context.save()
+
+        let result = try await environment.actor.backfillAlbumArtistRelationships(batchSize: 1)
+        XCTAssertEqual(result.scannedTracks, 1)
+        XCTAssertEqual(result.updatedTracks, 1)
+        XCTAssertEqual(result.createdAlbums, 1)
+        XCTAssertEqual(result.createdArtists, 1)
+
+        let reloadedTracks = try context.fetch(FetchDescriptor<Track>())
+        guard let track = reloadedTracks.first else {
+            XCTFail("Expected backfilled track")
+            return
+        }
+        XCTAssertNotNil(track.albumRelation)
+        XCTAssertNotNil(track.artistRelation)
+        XCTAssertEqual(track.albumRelation?.artistRelation?.name, "Legacy Artist")
+    }
+
     func testTrackExistsMatchesSourceURLAndBookmark() async throws {
         let environment = try makeEnvironment(testCase: self)
         let fileURL = try makeTemporaryFile(named: "duplicate-check.flac", testCase: self)
@@ -276,7 +334,7 @@ private struct TrackActorEnvironment {
 }
 
 private func makeEnvironment(testCase: XCTestCase) throws -> TrackActorEnvironment {
-    let schema = Schema([Track.self, ListeningSession.self])
+    let schema = Schema([Track.self, Artist.self, Album.self, Playlist.self, ListeningSession.self])
     let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try ModelContainer(for: schema, configurations: [configuration])
     let actor = TrackDataActor(modelContainer: container)

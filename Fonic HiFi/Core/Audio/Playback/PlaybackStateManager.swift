@@ -149,8 +149,17 @@ public final class PlaybackStateManager {
         let newState: PlaybackState
 
         switch currentState {
-        case let .playing(_, existingDuration):
-            newState = .playing(currentTime: currentTime, duration: duration ?? existingDuration)
+        case let .playing(previousTime, existingDuration):
+            let resolvedDuration = duration ?? existingDuration
+            let timeDelta = abs(currentTime - previousTime)
+            let durationChanged = resolvedDuration != existingDuration
+
+            // Debounce tiny time deltas to reduce unnecessary @Observable churn.
+            if timeDelta < 0.3, !durationChanged {
+                return
+            }
+
+            newState = .playing(currentTime: currentTime, duration: resolvedDuration)
         case let .paused(_, existingDuration):
             newState = .paused(currentTime: currentTime, duration: duration ?? existingDuration)
         case let .buffering(progress, _):

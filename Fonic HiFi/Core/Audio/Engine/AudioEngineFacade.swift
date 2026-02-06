@@ -114,6 +114,18 @@ public final class AudioEngineFacade: ObservableObject {
     private var isInitialized = false
     private var lastHandledPreference: String?
     private var preferenceObserver: NSKeyValueObservation?
+    private static let runtimeMonitoringDefaultsKey = "audioRuntimeMonitoringEnabled"
+
+    var isRuntimeMonitoringEnabled: Bool {
+        if UserDefaults.standard.object(forKey: Self.runtimeMonitoringDefaultsKey) != nil {
+            return UserDefaults.standard.bool(forKey: Self.runtimeMonitoringDefaultsKey)
+        }
+        #if DEBUG
+            return true
+        #else
+            return false
+        #endif
+    }
 
     // MARK: - Initialization
 
@@ -267,7 +279,11 @@ public final class AudioEngineFacade: ObservableObject {
 
             try await sessionManager.configureAudioSession()
             await setupServiceIntegrations()
-            await monitor.startMonitoring(updateInterval: 2.0)
+            if isRuntimeMonitoringEnabled {
+                await monitor.startMonitoring(updateInterval: 2.0)
+            } else {
+                logger.info("Runtime audio monitoring is disabled")
+            }
             await sessionManager.enableRemoteCommands()
 
             if queueManager.restoreState() {

@@ -32,6 +32,9 @@ final class PlaybackController {
     private let progressTimer: ProgressTimerManager
     private let uiState: AudioUIState
     private let diagnosticsHandler: DiagnosticsHandler
+    private let nowProvider: @Sendable () -> Date
+    private let nowPlayingSyncInterval: TimeInterval
+    private var lastNowPlayingSyncDate: Date?
 
     /// Callback invoked when a track finishes playing naturally (not stopped by user)
     var onTrackComplete: TrackCompletionHandler?
@@ -51,6 +54,8 @@ final class PlaybackController {
         progressTimer: ProgressTimerManager,
         uiState: AudioUIState,
         diagnosticsHandler: @escaping DiagnosticsHandler,
+        nowProvider: @escaping @Sendable () -> Date = Date.init,
+        nowPlayingSyncInterval: TimeInterval = 5.0,
     ) {
         self.sessionManager = sessionManager
         self.formatDetectionManager = formatDetectionManager
@@ -61,6 +66,8 @@ final class PlaybackController {
         self.progressTimer = progressTimer
         self.uiState = uiState
         self.diagnosticsHandler = diagnosticsHandler
+        self.nowProvider = nowProvider
+        self.nowPlayingSyncInterval = max(0, nowPlayingSyncInterval)
     }
 
     // MARK: - Playback Commands
@@ -150,6 +157,9 @@ final class PlaybackController {
         let currentTime = await engine.currentTime
         let duration = await engine.duration
         stateManager.updateState(.paused(currentTime: currentTime, duration: duration))
+        if let track = uiState.currentTrack {
+            await updateNowPlayingInfo(track: track, duration: duration, currentTime: currentTime, playbackRate: 0)
+        }
     }
 
     func stop() async {
@@ -162,6 +172,7 @@ final class PlaybackController {
         stateManager.updateState(.stopped)
         uiState.reset()
         await sessionManager.clearNowPlayingInfo()
+        lastNowPlayingSyncDate = nil
     }
 
     func seek(to time: TimeInterval) async throws {
@@ -184,6 +195,10 @@ final class PlaybackController {
                 stateManager.updateState(.playing(currentTime: time, duration: duration))
             } else {
                 stateManager.updateState(.paused(currentTime: time, duration: duration))
+            }
+            if let track = uiState.currentTrack {
+                let playbackRate: Float = currentState.isPlaying ? Float(engineManager.configuration.playbackRate) : 0
+                await updateNowPlayingInfo(track: track, duration: duration, currentTime: time, playbackRate: playbackRate)
             }
         } catch {
             if currentState.isPlaying {
@@ -259,7 +274,7 @@ final class PlaybackController {
     }
 
     private func startProgressTracking(engine: AudioEngineService) {
-        progressTimer.start(pollInterval: 0.2) { [weak self] in
+        progressTimer.start(pollInterval: 0.5) { [weak self] in
             guard let self else { return }
             guard stateManager.currentState.isPlaying else { return }
 
@@ -273,14 +288,29 @@ final class PlaybackController {
                 try? await engine.seek(to: seekTarget)
             }
 
-            var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
-            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = time
-            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = engineManager.configuration.playbackRate
-            await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
+            await updateNowPlayingElapsedTimeIfNeeded(currentTime: time)
         }
     }
 
-    private func updateNowPlayingInfo(track: Track, duration: TimeInterval, currentTime: TimeInterval = 0) async {
+    private func updateNowPlayingElapsedTimeIfNeeded(currentTime: TimeInterval) async {
+        let now = nowProvider()
+        if let lastNowPlayingSyncDate, nowPlayingSyncInterval > 0, now.timeIntervalSince(lastNowPlayingSyncDate) < nowPlayingSyncInterval {
+            return
+        }
+
+        var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = engineManager.configuration.playbackRate
+        await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
+        lastNowPlayingSyncDate = now
+    }
+
+    private func updateNowPlayingInfo(
+        track: Track,
+        duration: TimeInterval,
+        currentTime: TimeInterval = 0,
+        playbackRate: Float? = nil
+    ) async {
         var artworkImage: UIImage?
         if let data = track.artwork {
             artworkImage = UIImage(data: data)
@@ -288,12 +318,13 @@ final class PlaybackController {
 
         var nowPlayingInfo = track.toNowPlayingInfo(
             currentTime: currentTime,
-            playbackRate: Float(engineManager.configuration.playbackRate),
+            playbackRate: playbackRate ?? Float(engineManager.configuration.playbackRate),
             artwork: artworkImage,
         )
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
 
         await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
+        lastNowPlayingSyncDate = nowProvider()
     }
 
     /// Handle track completion - called when engine finishes playing naturally

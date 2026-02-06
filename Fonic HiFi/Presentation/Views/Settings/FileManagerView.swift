@@ -56,88 +56,86 @@ struct FileManagerView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Navigation bar
-                HStack {
-                    Button("Back") {
-                        navigateToParent()
-                    }
-                    .disabled(isRootDirectory)
+        VStack(spacing: 0) {
+            // Navigation bar
+            HStack {
+                Button("Back") {
+                    navigateToParent()
+                }
+                .disabled(isRootDirectory)
 
-                    Spacer()
+                Spacer()
 
-                    Text(currentDirectory.lastPathComponent)
-                        .font(.headline)
-                        .lineLimit(1)
+                Text(currentDirectory.lastPathComponent)
+                    .font(.headline)
+                    .lineLimit(1)
 
-                    Spacer()
+                Spacer()
 
-                    Menu {
-                        Picker("Sort by", selection: $sortOption) {
-                            ForEach(SortOption.allCases, id: \.self) { option in
-                                Label(option.displayName, systemImage: option.iconName)
-                                    .tag(option)
-                            }
+                Menu {
+                    Picker("Sort by", selection: $sortOption) {
+                        ForEach(SortOption.allCases, id: \.self) { option in
+                            Label(option.displayName, systemImage: option.iconName)
+                                .tag(option)
                         }
-                    } label: {
-                        Image(systemName: "arrow.up.arrow.down")
                     }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                }
+            }
+            .padding()
+            .background(Color(UIColor.systemGray6))
+
+            // Search bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+
+                TextField("Search files...", text: $searchText)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            }
+            .padding(.horizontal)
+
+            if isLoading {
+                ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // File list
+                List(selection: $selectedItems) {
+                    ForEach(filteredContents, id: \.id) { item in
+                        FileRowView(
+                            item: item,
+                            onTap: { handleItemTap(item) },
+                            onLongPress: { showFileDetails(item) },
+                        )
+                    }
+                }
+                .refreshable {
+                    await loadDirectoryContents()
+                }
+            }
+
+            // Bottom toolbar
+            if !selectedItems.isEmpty {
+                HStack {
+                    Button(action: deleteSelectedFiles) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("Delete (\(selectedItems.count))")
+                        }
+                    }
+                    .foregroundColor(.red)
+                    .disabled(selectedItems.isEmpty)
+
+                    Spacer()
+
+                    Button("Import Selected") {
+                        importSelectedFiles()
+                    }
+                    .disabled(selectedItems.filter(\.isAudioFile).isEmpty)
                 }
                 .padding()
                 .background(Color(UIColor.systemGray6))
-
-                // Search bar
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-
-                    TextField("Search files...", text: $searchText)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
-                .padding(.horizontal)
-
-                if isLoading {
-                    ProgressView("Loading...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    // File list
-                    List(selection: $selectedItems) {
-                        ForEach(filteredContents, id: \.id) { item in
-                            FileRowView(
-                                item: item,
-                                onTap: { handleItemTap(item) },
-                                onLongPress: { showFileDetails(item) },
-                            )
-                        }
-                    }
-                    .refreshable {
-                        await loadDirectoryContents()
-                    }
-                }
-
-                // Bottom toolbar
-                if !selectedItems.isEmpty {
-                    HStack {
-                        Button(action: deleteSelectedFiles) {
-                            HStack {
-                                Image(systemName: "trash")
-                                Text("Delete (\(selectedItems.count))")
-                            }
-                        }
-                        .foregroundColor(.red)
-                        .disabled(selectedItems.isEmpty)
-
-                        Spacer()
-
-                        Button("Import Selected") {
-                            importSelectedFiles()
-                        }
-                        .disabled(selectedItems.filter(\.isAudioFile).isEmpty)
-                    }
-                    .padding()
-                    .background(Color(UIColor.systemGray6))
-                }
             }
         }
         .navigationTitle("File Manager")

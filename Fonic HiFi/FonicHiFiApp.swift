@@ -220,6 +220,12 @@ struct FonicHiFiApp: App {
                 logger.error("Failed to get library statistics: \(error.localizedDescription)")
             }
         }
+
+        // Defer relationship backfill to keep launch responsive.
+        Task {
+            try? await Task.sleep(for: .seconds(8))
+            await dataManager.backfillAlbumArtistRelationshipsIfNeeded()
+        }
     }
 }
 

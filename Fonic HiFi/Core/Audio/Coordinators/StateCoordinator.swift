@@ -134,8 +134,14 @@ public final class StateCoordinator {
                 }
             }
             .sink { [weak self] state in
-                guard let self, let monitor = self.facade?.monitor else { return }
+                guard let self, let facade = self.facade else { return }
+                let monitor = facade.monitor
                 Task { @MainActor in
+                    guard facade.isRuntimeMonitoringEnabled else {
+                        await monitor.stopMonitoring()
+                        return
+                    }
+
                     switch state {
                     case .playing:
                         // Active playback needs monitoring
