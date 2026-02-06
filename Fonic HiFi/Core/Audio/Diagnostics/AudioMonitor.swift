@@ -15,7 +15,7 @@ import OSLog
 
 /// Comprehensive audio monitoring implementation with periodic polling and real-time metrics
 @MainActor
-public final class AudioMonitor: ObservableObject, AudioMonitoringService {
+public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioPerformanceMonitoring, AudioDiagnosticsReporting, AudioSessionMonitoring {
     // MARK: - Publishers
 
     private let _metricsSubject = PassthroughSubject<AudioMetrics, Never>()

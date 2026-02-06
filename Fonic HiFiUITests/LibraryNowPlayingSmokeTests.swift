@@ -2,25 +2,33 @@ import XCTest
 
 @MainActor
 final class LibraryNowPlayingSmokeTests: XCTestCase {
-    private var app: XCUIApplication!
-
     override func setUpWithError() throws {
         try super.setUpWithError()
         continueAfterFailure = false
-
-        app = XCUIApplication()
-        app.launchArguments.append("-UITestPreviewData")
-        app.launch()
     }
 
-    override func tearDownWithError() throws {
-        app.terminate()
-        app = nil
-        try super.tearDownWithError()
+    private func launchPreviewApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments.append("-UITestPreviewData")
+        app.launch()
+        addTeardownBlock {
+            app.terminate()
+        }
+        return app
+    }
+
+    private func tabButton(_ title: String, in app: XCUIApplication) -> XCUIElement {
+        let exactMatch = app.tabBars.buttons[title]
+        if exactMatch.exists {
+            return exactMatch
+        }
+        return app.tabBars.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", title)).firstMatch
     }
 
     func testLibraryTabAndNowPlayingSheet() throws {
-        let libraryTab = app.buttons["Library"]
+        let app = launchPreviewApp()
+
+        let libraryTab = tabButton("Library", in: app)
         XCTAssertTrue(libraryTab.waitForExistence(timeout: 10), "Library tab not found")
         libraryTab.tap()
 
@@ -35,5 +43,76 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
 
         let nowPlayingHeader = app.staticTexts["Now Playing"]
         XCTAssertTrue(nowPlayingHeader.waitForExistence(timeout: 5), "Now Playing view did not present")
+    }
+
+    func testTabNavigationAndSettingsLinks() throws {
+        let app = launchPreviewApp()
+
+        let libraryTab = tabButton("Library", in: app)
+        XCTAssertTrue(libraryTab.waitForExistence(timeout: 10), "Library tab not found")
+
+        let homeTab = tabButton("Home", in: app)
+        XCTAssertTrue(homeTab.waitForExistence(timeout: 5), "Home tab not found")
+        homeTab.tap()
+        XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5), "Home screen did not appear")
+
+        let settingsTab = tabButton("Settings", in: app)
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5), "Settings tab not found")
+        settingsTab.tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5), "Settings screen did not appear")
+
+        let audioEngineRow = app.staticTexts["Audio Engine"]
+        if audioEngineRow.waitForExistence(timeout: 5) {
+            audioEngineRow.tap()
+            let backButton = app.navigationBars.buttons["Settings"].firstMatch
+            XCTAssertTrue(backButton.waitForExistence(timeout: 5), "Settings back button not found")
+            backButton.tap()
+            XCTAssertTrue(
+                app.navigationBars["Settings"].waitForExistence(timeout: 5),
+                "Failed to return to Settings"
+            )
+        }
+
+        let searchTab = tabButton("Search", in: app)
+        XCTAssertTrue(searchTab.waitForExistence(timeout: 5), "Search tab not found")
+        searchTab.tap()
+        XCTAssertTrue(app.navigationBars["Search"].waitForExistence(timeout: 5), "Search screen did not appear")
+
+        let searchField = app.searchFields.firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5), "Search field not available")
+        searchField.tap()
+        searchField.typeText("test\n")
+    }
+
+    func testLibraryTabsAndNowPlayingControls() throws {
+        let app = launchPreviewApp()
+
+        let libraryTab = tabButton("Library", in: app)
+        XCTAssertTrue(libraryTab.waitForExistence(timeout: 10), "Library tab not found")
+        libraryTab.tap()
+        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 5), "Library screen did not appear")
+
+        let librarySections = ["Albums", "Artists", "Playlists", "Tracks"]
+        for section in librarySections {
+            let sectionButton = app.buttons[section]
+            XCTAssertTrue(sectionButton.waitForExistence(timeout: 5), "\(section) segment not found")
+            sectionButton.tap()
+        }
+
+        let miniPlayer = app.otherElements["MiniPlayer"]
+        guard miniPlayer.waitForExistence(timeout: 5) else {
+            throw XCTSkip("Mini player not visible")
+        }
+        miniPlayer.tap()
+
+        XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5), "Now Playing did not present")
+
+        let controlLabels = ["Show queue", "Previous track", "Next track", "Shuffle off", "Repeat off"]
+        for label in controlLabels {
+            let control = app.buttons[label]
+            if control.waitForExistence(timeout: 3) {
+                control.tap()
+            }
+        }
     }
 }

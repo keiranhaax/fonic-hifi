@@ -5,142 +5,14 @@
 //  Created by Claude on 5/27/25.
 //
 
-import Combine
 import Foundation
 
-/// Protocol defining comprehensive audio monitoring and metrics tracking API
-@MainActor
-public protocol AudioMonitoringService: AnyObject, Sendable {
-    // MARK: - Publishers for Real-time Monitoring
-
-    /// Publisher that emits updated metrics at regular intervals
-    var metricsPublisher: AnyPublisher<AudioMetrics, Never> { get }
-
-    /// Publisher that emits playback health status changes
-    var healthStatusPublisher: AnyPublisher<PlaybackHealthStatus, Never> { get }
-
-    /// Publisher that emits critical alerts (buffer underruns, high CPU, etc.)
-    var alertsPublisher: AnyPublisher<PlaybackAlert, Never> { get }
-
-    // MARK: - Monitoring Control
-
-    /// Start monitoring with specified update interval
-    /// - Parameter interval: Update interval in seconds (default: 1.0)
-    func startMonitoring(updateInterval: TimeInterval) async
-
-    /// Stop all monitoring activities
-    func stopMonitoring() async
-
-    /// Check if monitoring is currently active
-    var isMonitoring: Bool { get async }
-
-    /// Update monitoring interval while running
-    /// - Parameter interval: New update interval in seconds
-    func updateMonitoringInterval(_ interval: TimeInterval) async
-
-    // MARK: - Metrics Retrieval
-
-    /// Get current metrics snapshot
-    /// - Returns: Current audio performance metrics
-    func getCurrentMetrics() async -> AudioMetrics
-
-    /// Get historical metrics for a time range
-    /// - Parameters:
-    ///   - startTime: Start of time range
-    ///   - endTime: End of time range
-    /// - Returns: Array of metrics within the time range
-    func getHistoricalMetrics(from startTime: Date, to endTime: Date) async -> [AudioMetrics]
-
-    /// Get aggregated metrics for a session
-    /// - Returns: Summary statistics for the current monitoring session
-    func getSessionSummary() async -> AudioSessionSummary
-
-    /// Clear historical metrics data
-    func clearHistory() async
-
-    // MARK: - Engine Integration
-
-    /// Associate monitoring with a specific audio engine
-    /// - Parameter engine: Audio engine to monitor
-    func attachToEngine(_ engine: AudioEngineService) async
-
-    /// Remove association with current audio engine
-    func detachFromEngine() async
-
-    /// Get the currently monitored engine
-    var currentEngine: AudioEngineService? { get async }
-
-    // MARK: - Diagnostics & Health
-
-    /// Perform comprehensive diagnostics check
-    /// - Returns: Detailed diagnostics report
-    func performDiagnosticsCheck() async -> PlaybackDiagnostics
-
-    /// Check current playback health status
-    /// - Returns: Overall health assessment
-    func checkPlaybackHealth() async -> PlaybackHealthStatus
-
-    /// Get recommendations for improving performance
-    /// - Returns: Array of performance improvement suggestions
-    func getPerformanceRecommendations() async -> [PerformanceRecommendation]
-
-    // MARK: - Alerting & Thresholds
-
-    /// Configure alert thresholds for various metrics
-    /// - Parameter configuration: Alert threshold configuration
-    func configureAlerts(_ configuration: AlertConfiguration) async
-
-    /// Get current alert configuration
-    /// - Returns: Current alert thresholds
-    func getAlertConfiguration() async -> AlertConfiguration
-
-    /// Manually trigger alert evaluation
-    func evaluateAlerts() async
-
-    // MARK: - System Resource Monitoring
-
-    /// Get system-wide audio resource usage
-    /// - Returns: System audio resource metrics
-    func getSystemAudioMetrics() async -> SystemAudioMetrics
-
-    /// Monitor device thermal state impact on audio
-    /// - Returns: Thermal monitoring information
-    func getThermalState() async -> ThermalMonitoringInfo
-
-    /// Get audio session interruption statistics
-    /// - Returns: Information about audio interruptions
-    func getInterruptionStatistics() async -> InterruptionStatistics
-
-    // MARK: - Performance Profiling
-
-    /// Start detailed performance profiling
-    /// - Parameter duration: How long to profile (nil = until stopped)
-    func startProfiling(duration: TimeInterval?) async
-
-    /// Stop performance profiling
-    func stopProfiling() async
-
-    /// Get profiling results
-    /// - Returns: Detailed performance profile
-    func getProfilingResults() async -> PerformanceProfile?
-
-    /// Check if profiling is active
-    var isProfiling: Bool { get async }
-
-    // MARK: - Export & Reporting
-
-    /// Export metrics data for analysis
-    /// - Parameters:
-    ///   - format: Export format (JSON, CSV, etc.)
-    ///   - timeRange: Time range to export (nil = all data)
-    /// - Returns: Exported data
-    func exportMetrics(format: ExportFormat, timeRange: DateInterval?) async -> Data
-
-    /// Generate comprehensive monitoring report
-    /// - Parameter timeRange: Time range for the report
-    /// - Returns: Formatted monitoring report
-    func generateReport(for timeRange: DateInterval) async -> MonitoringReport
-}
+/// Backward-compatible monitoring surface composed from focused protocol roles.
+public typealias AudioMonitoringService =
+    AudioHealthMonitoring &
+    AudioPerformanceMonitoring &
+    AudioDiagnosticsReporting &
+    AudioSessionMonitoring
 
 // MARK: - Supporting Types
 
