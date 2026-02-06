@@ -27,8 +27,30 @@ final class SearchCacheTests: XCTestCase {
         await cache.set("jazz", result: .init(query: "jazz", albums: initialAlbums))
 
         let tracks = [
-            Track(url: URL(fileURLWithPath: "/tmp/a.flac"), title: "A", artist: "Artist", album: "Album", audioFormat: "FLAC", duration: 200, sampleRate: 96_000, bitDepth: 24, channels: 2, isLossless: true),
-            Track(url: URL(fileURLWithPath: "/tmp/b.flac"), title: "B", artist: "Artist", album: "Album", audioFormat: "FLAC", duration: 180, sampleRate: 96_000, bitDepth: 24, channels: 2, isLossless: true),
+            Track(
+                url: URL(fileURLWithPath: "/tmp/a.flac"),
+                title: "A",
+                artist: "Artist",
+                album: "Album",
+                audioFormat: "FLAC",
+                duration: 200,
+                sampleRate: 96_000,
+                bitDepth: 24,
+                channels: 2,
+                isLossless: true
+            ),
+            Track(
+                url: URL(fileURLWithPath: "/tmp/b.flac"),
+                title: "B",
+                artist: "Artist",
+                album: "Album",
+                audioFormat: "FLAC",
+                duration: 180,
+                sampleRate: 96_000,
+                bitDepth: 24,
+                channels: 2,
+                isLossless: true
+            ),
         ]
 
         await cache.updateTracks("jazz", tracks: tracks)

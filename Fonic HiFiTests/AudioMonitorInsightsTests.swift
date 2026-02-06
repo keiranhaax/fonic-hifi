@@ -6,11 +6,66 @@ final class AudioMonitorInsightsTests: XCTestCase {
     func testPerformanceTrendsDetectDegradingPattern() {
         let environment = makeInsightsEnvironment()
         let metrics: [AudioMetrics] = [
-            AudioMetrics(cpuUsage: 40, memoryUsage: 400_000_000, bufferUnderruns: 0, decodingLatency: 0.02, bufferFillLevel: 0.82, droppedFrames: 0, renderLatency: 0.03, performanceScore: 0.9, qualityScore: 0.88, efficiencyScore: 0.82),
-            AudioMetrics(cpuUsage: 42, memoryUsage: 408_000_000, bufferUnderruns: 0, decodingLatency: 0.023, bufferFillLevel: 0.8, droppedFrames: 0, renderLatency: 0.033, performanceScore: 0.86, qualityScore: 0.84, efficiencyScore: 0.78),
-            AudioMetrics(cpuUsage: 44, memoryUsage: 416_000_000, bufferUnderruns: 1, decodingLatency: 0.026, bufferFillLevel: 0.78, droppedFrames: 1, renderLatency: 0.036, performanceScore: 0.82, qualityScore: 0.8, efficiencyScore: 0.74),
-            AudioMetrics(cpuUsage: 46, memoryUsage: 424_000_000, bufferUnderruns: 1, decodingLatency: 0.029, bufferFillLevel: 0.76, droppedFrames: 1, renderLatency: 0.039, performanceScore: 0.78, qualityScore: 0.76, efficiencyScore: 0.7),
-            AudioMetrics(cpuUsage: 48, memoryUsage: 432_000_000, bufferUnderruns: 2, decodingLatency: 0.032, bufferFillLevel: 0.74, droppedFrames: 2, renderLatency: 0.042, performanceScore: 0.74, qualityScore: 0.72, efficiencyScore: 0.66)
+            AudioMetrics(
+                cpuUsage: 40,
+                memoryUsage: 400_000_000,
+                bufferUnderruns: 0,
+                decodingLatency: 0.02,
+                bufferFillLevel: 0.82,
+                droppedFrames: 0,
+                renderLatency: 0.03,
+                performanceScore: 0.9,
+                qualityScore: 0.88,
+                efficiencyScore: 0.82
+            ),
+            AudioMetrics(
+                cpuUsage: 42,
+                memoryUsage: 408_000_000,
+                bufferUnderruns: 0,
+                decodingLatency: 0.023,
+                bufferFillLevel: 0.8,
+                droppedFrames: 0,
+                renderLatency: 0.033,
+                performanceScore: 0.86,
+                qualityScore: 0.84,
+                efficiencyScore: 0.78
+            ),
+            AudioMetrics(
+                cpuUsage: 44,
+                memoryUsage: 416_000_000,
+                bufferUnderruns: 1,
+                decodingLatency: 0.026,
+                bufferFillLevel: 0.78,
+                droppedFrames: 1,
+                renderLatency: 0.036,
+                performanceScore: 0.82,
+                qualityScore: 0.8,
+                efficiencyScore: 0.74
+            ),
+            AudioMetrics(
+                cpuUsage: 46,
+                memoryUsage: 424_000_000,
+                bufferUnderruns: 1,
+                decodingLatency: 0.029,
+                bufferFillLevel: 0.76,
+                droppedFrames: 1,
+                renderLatency: 0.039,
+                performanceScore: 0.78,
+                qualityScore: 0.76,
+                efficiencyScore: 0.7
+            ),
+            AudioMetrics(
+                cpuUsage: 48,
+                memoryUsage: 432_000_000,
+                bufferUnderruns: 2,
+                decodingLatency: 0.032,
+                bufferFillLevel: 0.74,
+                droppedFrames: 2,
+                renderLatency: 0.042,
+                performanceScore: 0.74,
+                qualityScore: 0.72,
+                efficiencyScore: 0.66
+            )
         ]
 
         metrics.forEach { environment.analytics.append($0) }
@@ -25,8 +80,51 @@ final class AudioMonitorInsightsTests: XCTestCase {
     func testQualityAssessmentHighlightsIssues() {
         let environment = makeInsightsEnvironment()
         let metrics: [AudioMetrics] = [
-            AudioMetrics(cpuUsage: 60, memoryUsage: 460_000_000, bufferUnderruns: 0, decodingLatency: 0.03, bufferFillLevel: 0.7, droppedFrames: 0, renderLatency: 0.04, sampleRate: 192_000, bitDepth: 24, channelCount: 2, engineType: "TestEngine", audioFormat: "FLAC", isBitPerfect: true, estimatedSNR: 85, dynamicRange: 92, performanceScore: 0.8, qualityScore: 0.8, efficiencyScore: 0.74),
-            AudioMetrics(cpuUsage: 68, memoryUsage: 480_000_000, bufferUnderruns: 1, decodingLatency: 0.045, bufferFillLevel: 0.48, droppedFrames: 1, renderLatency: 0.055, currentBitrate: 2_500_000, averageLatency: 0.05, peakLatency: 0.08, glitchCount: 1, sampleRate: 192_000, bitDepth: 24, channelCount: 2, engineType: "TestEngine", audioFormat: "FLAC", isBitPerfect: false, estimatedSNR: 60, dynamicRange: 60, jitter: 0.006, performanceScore: 0.6, qualityScore: 0.55, efficiencyScore: 0.6)
+            AudioMetrics(
+                cpuUsage: 60,
+                memoryUsage: 460_000_000,
+                bufferUnderruns: 0,
+                decodingLatency: 0.03,
+                bufferFillLevel: 0.7,
+                droppedFrames: 0,
+                renderLatency: 0.04,
+                sampleRate: 192_000,
+                bitDepth: 24,
+                channelCount: 2,
+                engineType: "TestEngine",
+                audioFormat: "FLAC",
+                isBitPerfect: true,
+                estimatedSNR: 85,
+                dynamicRange: 92,
+                performanceScore: 0.8,
+                qualityScore: 0.8,
+                efficiencyScore: 0.74
+            ),
+            AudioMetrics(
+                cpuUsage: 68,
+                memoryUsage: 480_000_000,
+                bufferUnderruns: 1,
+                decodingLatency: 0.045,
+                bufferFillLevel: 0.48,
+                droppedFrames: 1,
+                renderLatency: 0.055,
+                currentBitrate: 2_500_000,
+                averageLatency: 0.05,
+                peakLatency: 0.08,
+                glitchCount: 1,
+                sampleRate: 192_000,
+                bitDepth: 24,
+                channelCount: 2,
+                engineType: "TestEngine",
+                audioFormat: "FLAC",
+                isBitPerfect: false,
+                estimatedSNR: 60,
+                dynamicRange: 60,
+                jitter: 0.006,
+                performanceScore: 0.6,
+                qualityScore: 0.55,
+                efficiencyScore: 0.6
+            )
         ]
 
         metrics.forEach { environment.analytics.append($0) }

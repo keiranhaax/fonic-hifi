@@ -282,7 +282,12 @@ actor FileImportProcessor {
                             let elapsed = now.timeIntervalSince(startTime)
                             let throughput = elapsed > 0 ? Double(completed) / elapsed : Double(completed)
                             log.info(
-                                "import.queue.metrics completed=\(completed, privacy: .public) inFlight=\(inFlight, privacy: .public) maxInFlight=\(maxInFlight, privacy: .public) successes=\(successes, privacy: .public) failures=\(failures, privacy: .public) throughput=\(throughput, format: .fixed(precision: 2), privacy: .public)"
+                                "import.queue.metrics completed=\(completed, privacy: .public) " +
+                                    "inFlight=\(inFlight, privacy: .public) " +
+                                    "maxInFlight=\(maxInFlight, privacy: .public) " +
+                                    "successes=\(successes, privacy: .public) " +
+                                    "failures=\(failures, privacy: .public) " +
+                                    "throughput=\(throughput, format: .fixed(precision: 2), privacy: .public)"
                             )
                             nextProgressLog = now
                         }
@@ -298,7 +303,12 @@ actor FileImportProcessor {
                 let totalElapsed = Date().timeIntervalSince(startTime)
                 let averageDuration = completed > 0 ? totalDuration / Double(completed) : 0
                 logger.info(
-                    "import.queue.summary files=\(completed, privacy: .public) successes=\(successes, privacy: .public) failures=\(failures, privacy: .public) maxInFlight=\(maxInFlight, privacy: .public) elapsed=\(totalElapsed, format: .fixed(precision: 2), privacy: .public) avgDuration=\(averageDuration, format: .fixed(precision: 2), privacy: .public)"
+                    "import.queue.summary files=\(completed, privacy: .public) " +
+                        "successes=\(successes, privacy: .public) " +
+                        "failures=\(failures, privacy: .public) " +
+                        "maxInFlight=\(maxInFlight, privacy: .public) " +
+                        "elapsed=\(totalElapsed, format: .fixed(precision: 2), privacy: .public) " +
+                        "avgDuration=\(averageDuration, format: .fixed(precision: 2), privacy: .public)"
                 )
 
                 continuation.finish()

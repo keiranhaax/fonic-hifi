@@ -14,7 +14,7 @@ DEPLOYMENT_TARGET = 26.0
 
 # Simulator Configuration
 SIMULATOR_NAME = iPhone 17 Pro
-SIMULATOR_OS = 26.1
+SIMULATOR_OS = 26.2
 DESTINATION = platform=iOS Simulator,name=$(SIMULATOR_NAME),OS=$(SIMULATOR_OS)
 
 # Derived Data Path

@@ -14,7 +14,18 @@ final class SearchResultsTests: XCTestCase {
     }
 
     func testResultsExposeCountsPerCategory() {
-        let track = Track(url: URL(fileURLWithPath: "/tmp/track.flac"), title: "Song", artist: "Artist", album: "Album", audioFormat: "FLAC", duration: 180, sampleRate: 96_000, bitDepth: 24, channels: 2, isLossless: true)
+        let track = Track(
+            url: URL(fileURLWithPath: "/tmp/track.flac"),
+            title: "Song",
+            artist: "Artist",
+            album: "Album",
+            audioFormat: "FLAC",
+            duration: 180,
+            sampleRate: 96_000,
+            bitDepth: 24,
+            channels: 2,
+            isLossless: true
+        )
         let album = Album(title: "Album", albumArtist: "Artist")
         let artist = Artist(name: "Artist")
         let playlist = Playlist(name: "Favorites")
