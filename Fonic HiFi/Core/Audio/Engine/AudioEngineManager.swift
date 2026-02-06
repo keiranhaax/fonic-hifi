@@ -14,7 +14,7 @@ public final class AudioEngineManager {
     // MARK: - Dependencies
 
     private let engineFactory: any AudioEngineFactoring
-    private let monitor: AudioMonitor
+    private let monitor: any AudioPerformanceMonitoring
     private let logger = Log.logger(.audioEngineManager)
 
     // MARK: - State
@@ -31,7 +31,7 @@ public final class AudioEngineManager {
     public init(
         configuration: AudioEngineConfiguration,
         engineFactory: any AudioEngineFactoring,
-        monitor: AudioMonitor,
+        monitor: any AudioPerformanceMonitoring,
     ) {
         self.configuration = configuration
         self.engineFactory = engineFactory

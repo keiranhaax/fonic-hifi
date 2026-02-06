@@ -78,7 +78,7 @@ struct LibraryView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
-                .padding(.vertical, 8)
+                .padding(.vertical, DesignTokens.Spacing.small)
 
                 ZStack {
                     content
@@ -216,7 +216,18 @@ struct LibraryView: View {
 
     private var albumsSection: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16)], spacing: 20) {
+            LazyVGrid(
+                columns: [
+                    GridItem(
+                        .adaptive(
+                            minimum: DesignTokens.Grid.adaptiveMinimum,
+                            maximum: DesignTokens.Grid.adaptiveMaximum
+                        ),
+                        spacing: DesignTokens.Grid.spacing
+                    ),
+                ],
+                spacing: 20
+            ) {
                 ForEach(Array(viewModel.albums.enumerated()), id: \.element.id) { index, album in
                     AlbumEntityTile(album: album)
                         .onTapGesture {
@@ -231,7 +242,7 @@ struct LibraryView: View {
 
             if viewModel.isLoadingSection == .albums {
                 ProgressView()
-                    .padding(.vertical, 24)
+                    .padding(.vertical, DesignTokens.Spacing.xLarge)
             }
         }
     }
@@ -786,7 +797,7 @@ struct LoadingOverlay: View {
                 Color.black.opacity(0.4)
                     .ignoresSafeArea()
 
-                VStack(spacing: 16) {
+                VStack(spacing: DesignTokens.Spacing.large) {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle())
                         .scaleEffect(1.5)
@@ -795,13 +806,13 @@ struct LoadingOverlay: View {
                         .font(.headline)
                         .foregroundColor(.primary)
                 }
-                .padding(24)
+                .padding(DesignTokens.Spacing.xLarge)
                 .background(Color(UIColor.systemBackground))
-                .cornerRadius(12)
+                .cornerRadius(DesignTokens.CornerRadius.medium)
                 .shadow(radius: 10)
             }
             .transition(.opacity)
-            .animation(.easeInOut(duration: 0.3), value: isShowing)
+            .animation(.easeInOut(duration: DesignTokens.Animation.standardFadeDuration), value: isShowing)
         }
     }
 }

@@ -80,7 +80,7 @@ struct HomeView: View {
     @ViewBuilder
     private var contentView: some View {
         ScrollView {
-            VStack(spacing: 32) {
+            VStack(spacing: DesignTokens.Spacing.section) {
                 // Quick Actions
                 QuickActionsSection(
                     onShuffleAll: shuffleAll,
@@ -199,7 +199,13 @@ struct HomeView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: expandedAlbum?.id)
+        .animation(
+            .spring(
+                response: DesignTokens.Animation.springResponse,
+                dampingFraction: DesignTokens.Animation.springDamping
+            ),
+            value: expandedAlbum?.id
+        )
     }
 
     private func loadData() async {
@@ -326,14 +332,24 @@ struct HomeView: View {
         Task {
             await DominantColorService.shared.extractColor(for: album)
             expandedAlbumColor = DominantColorService.shared.palette.glassTint
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+            withAnimation(
+                .spring(
+                    response: DesignTokens.Animation.springResponse,
+                    dampingFraction: DesignTokens.Animation.springDamping
+                )
+            ) {
                 expandedAlbum = album
             }
         }
     }
 
     private func collapseAlbum() {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+        withAnimation(
+            .spring(
+                response: DesignTokens.Animation.collapseSpringResponse,
+                dampingFraction: DesignTokens.Animation.collapseSpringDamping
+            )
+        ) {
             expandedAlbum = nil
         }
     }
@@ -365,7 +381,7 @@ private struct HomeSection<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.medium) {
             Text(title)
                 .font(.title2.bold())
                 .padding(.horizontal)
@@ -377,7 +393,7 @@ private struct HomeSection<Content: View>: View {
 
 private struct EmptyHomeView: View {
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DesignTokens.Spacing.large) {
             Image(systemName: "music.note.house")
                 .font(.system(size: 60))
                 .foregroundStyle(.tertiary)
@@ -396,8 +412,8 @@ private struct AlbumCardView: View {
     let album: Album
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            LazyArtworkView(album: album, size: 160, cornerRadius: 8)
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
+            LazyArtworkView(album: album, size: 160, cornerRadius: DesignTokens.CornerRadius.small)
 
             Text(album.title)
                 .font(.callout.bold())
@@ -417,7 +433,7 @@ private struct CarouselView: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
+            HStack(spacing: DesignTokens.Spacing.medium) {
                 ForEach(tracks) { track in
                     TrackCardView(track: track)
                 }
@@ -431,7 +447,7 @@ private struct TrackCardView: View {
     let track: Track
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DesignTokens.Spacing.medium) {
             LazyArtworkView(track: track, size: 50, cornerRadius: 6)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -448,8 +464,8 @@ private struct TrackCardView: View {
             Spacer()
         }
         .frame(width: 250)
-        .padding(8)
-        .glassSurface(style: .standard, cornerRadius: 12)
+        .padding(DesignTokens.Spacing.small)
+        .glassSurface(style: .standard, cornerRadius: DesignTokens.CornerRadius.medium)
     }
 }
 

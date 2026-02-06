@@ -61,7 +61,7 @@ struct NowPlayingContent: View {
             dragIndicator
 
             headerBar
-                .padding(.horizontal, 24)
+                .padding(.horizontal, DesignTokens.Spacing.xLarge)
 
             Color.clear.frame(height: 6)
 
@@ -91,11 +91,11 @@ struct NowPlayingContent: View {
                 Spacer()
                     .frame(minHeight: 20, maxHeight: 60)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
+            .padding(.horizontal, DesignTokens.Spacing.xLarge)
+            .padding(.bottom, DesignTokens.Spacing.large)
             .onGeometryChange(for: CGFloat.self) { proxy in
                 // 24pt padding each side, max 400pt
-                min(proxy.size.width - 48, 400)
+                min(proxy.size.width - (DesignTokens.Spacing.xLarge * 2), 400)
             } action: { newSize in
                 artworkSize = newSize
             }
@@ -120,7 +120,7 @@ struct NowPlayingContent: View {
                 )
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: showingLyrics)
+        .animation(.easeInOut(duration: DesignTokens.Animation.quickFadeDuration), value: showingLyrics)
         .task {
             await colorService.extractColor(for: audioService?.currentTrack)
             // Sync favorite state on appear
@@ -166,14 +166,14 @@ struct NowPlayingContent: View {
         Capsule()
             .fill(.primary.secondary)
             .frame(width: 35, height: 3)
-            .padding(.top, 8)
-            .padding(.bottom, 4)
+            .padding(.top, DesignTokens.Spacing.small)
+            .padding(.bottom, DesignTokens.Spacing.xSmall)
     }
 
     // MARK: - Header Bar
 
     private var headerBar: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DesignTokens.Spacing.medium) {
             // Queue button (moved to LEFT for symmetry)
             Button {
                 showingQueue = true
@@ -200,7 +200,7 @@ struct NowPlayingContent: View {
                 .frame(width: 44, height: 44)
                 .tint(.white)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, DesignTokens.Spacing.xSmall)
     }
 
     private func formatSpeed(_ speed: Double) -> String {
@@ -333,7 +333,7 @@ struct NowPlayingContent: View {
     // MARK: - Track Info
 
     private var trackInfoView: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: DesignTokens.Spacing.medium) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(audioService?.currentTrack?.title ?? "Not Playing")
                     .font(.headline)
@@ -349,7 +349,7 @@ struct NowPlayingContent: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
+            HStack(spacing: DesignTokens.Spacing.small) {
                 // Heart button (UNCHANGED)
                 Button {
                     toggleFavorite()
@@ -366,8 +366,8 @@ struct NowPlayingContent: View {
                 overflowMenu
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, DesignTokens.Spacing.large)
+        .padding(.vertical, DesignTokens.Spacing.small)
     }
 
     // MARK: - Progress View
@@ -431,7 +431,7 @@ struct NowPlayingContent: View {
                     .foregroundStyle(.white.opacity(0.8))
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DesignTokens.Spacing.large)
     }
 
     // MARK: - Playback Controls
@@ -506,13 +506,13 @@ struct NowPlayingContent: View {
             .accessibilityLabel(repeatMode == .none ? "Repeat off" : (repeatMode == .one ? "Repeat one" : "Repeat all"))
         }
         .frame(height: 56)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DesignTokens.Spacing.large)
     }
 
     // MARK: - Volume View
 
     private var volumeView: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DesignTokens.Spacing.medium) {
             Image(systemName: "speaker.fill")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -536,7 +536,7 @@ struct NowPlayingContent: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DesignTokens.Spacing.large)
     }
 
     // MARK: - Helpers

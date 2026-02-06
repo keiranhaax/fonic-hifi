@@ -91,7 +91,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     private var playbackState: PlaybackState = .idle
 
     /// Audio session manager
-    private let sessionManager = AudioSessionManager.shared
+    private let sessionManager: any AudioSessionManaging
 
     private let logger = Log.logger(.audioEngine)
 
@@ -107,7 +107,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
     // MARK: - Initialization
 
-    override public init() {
+    public init(sessionManager: any AudioSessionManaging = AudioSessionManager.shared) {
+        self.sessionManager = sessionManager
         super.init()
         setupEngine()
     }
@@ -292,7 +293,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         await bufferUnderruns.reset()
 
         do {
-            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            try await sessionManager.activateSession(false)
         } catch {
             logger.error("Failed to deactivate audio session: \(String(describing: error), privacy: .public)")
         }

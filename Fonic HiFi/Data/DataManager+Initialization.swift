@@ -31,23 +31,37 @@ public extension DataManager {
     }
 
     convenience init() throws {
+        let startTime = CFAbsoluteTimeGetCurrent()
         Self.initLogger.info("Starting DataManager initialization")
+
+        // Pre-create App Group directories to avoid CoreData's synchronous recovery
+        let dirStart = CFAbsoluteTimeGetCurrent()
+        Self.ensureAppGroupDirectoriesExist()
+        let dirDuration = String(format: "%.3f", CFAbsoluteTimeGetCurrent() - dirStart)
+        Self.initLogger.info("Directory setup: \(dirDuration)s")
 
         let schema = Schema(SchemaV2.models)
         let modelConfiguration = ModelConfiguration(
             isStoredInMemoryOnly: false,
             allowsSave: true,
+            groupContainer: .identifier(WidgetConstants.appGroupIdentifier),
             cloudKitDatabase: .none
         )
 
         do {
+            let containerStart = CFAbsoluteTimeGetCurrent()
             let container = try Self.buildContainer(
                 schema: schema,
                 configuration: modelConfiguration,
                 logger: Self.initLogger
             )
+            let containerDuration = String(format: "%.3f", CFAbsoluteTimeGetCurrent() - containerStart)
+            Self.initLogger.info("Container creation: \(containerDuration)s")
+
             self.init(container: container, isFallback: false)
-            Self.initLogger.info("DataManager initialized successfully")
+
+            let totalDuration = String(format: "%.3f", CFAbsoluteTimeGetCurrent() - startTime)
+            Self.initLogger.info("DataManager initialized successfully in \(totalDuration)s")
         } catch {
             Self.initLogger.error("Failed to initialize DataManager: \(error)")
             Self.initLogger.error("Error details: \(String(reflecting: error))")
@@ -68,6 +82,44 @@ public extension DataManager {
 
 @MainActor
 extension DataManager {
+    /// Pre-creates App Group directories before SwiftData attempts to use them.
+    ///
+    /// When `ModelContainer` is created with an App Group, CoreData expects the
+    /// `Library/Application Support` directory to exist. If missing, CoreData's
+    /// recovery mechanism runs synchronously, adding 2-3 seconds to launch time.
+    ///
+    /// This method creates the required directories upfront to avoid that delay.
+    private static func ensureAppGroupDirectoriesExist() {
+        guard let containerURL = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: WidgetConstants.appGroupIdentifier
+        ) else {
+            initLogger.warning("App Group container not available, using default location")
+            return
+        }
+
+        let applicationSupportURL = containerURL
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+
+        let cachesURL = containerURL
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Caches", isDirectory: true)
+
+        let fileManager = FileManager.default
+
+        for url in [applicationSupportURL, cachesURL] {
+            if !fileManager.fileExists(atPath: url.path) {
+                do {
+                    try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+                    initLogger.info("Created directory: \(LogPrivacy.filename(url.lastPathComponent))")
+                } catch {
+                    // Log but don't throw - let SwiftData attempt its own recovery
+                    initLogger.error("Failed to create directory: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
     static func buildContainer(
         schema: Schema,
         configuration: ModelConfiguration,

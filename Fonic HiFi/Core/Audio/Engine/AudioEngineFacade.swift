@@ -29,7 +29,7 @@ public final class AudioEngineFacade: ObservableObject {
     public let stateManager: PlaybackStateManager
     public let queueManager: AudioQueueManager
     public let validator: BitPerfectValidator
-    public let monitor: AudioMonitor
+    public let monitor: any AudioPerformanceMonitoring & AudioDiagnosticsReporting
     public let playbackSettingsStore: AudioPlaybackSettingsStore
 
     /// Listening session tracking service
@@ -125,7 +125,7 @@ public final class AudioEngineFacade: ObservableObject {
         stateManager: PlaybackStateManager? = nil,
         queueManager: AudioQueueManager? = nil,
         validator: BitPerfectValidator? = nil,
-        monitor: AudioMonitor? = nil,
+        monitor: (any AudioPerformanceMonitoring & AudioDiagnosticsReporting)? = nil,
         playbackSettingsStore: AudioPlaybackSettingsStore? = nil,
         uiStateStore: AudioUIState? = nil,
     ) {

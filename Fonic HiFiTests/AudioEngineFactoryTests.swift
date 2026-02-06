@@ -80,4 +80,59 @@ final class AudioEngineFactoryTests: XCTestCase {
 
         XCTAssertEqual(engine, .audioKitEngine)
     }
+
+    func testMakeEngineForURLUsesInjectedFormatDetector() async throws {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("factory-injection")
+            .appendingPathExtension("wav")
+
+        let detectedInfo = AudioFileInfo(
+            url: url,
+            format: .wav,
+            duration: 30,
+            bitDepth: 16,
+            sampleRate: 44_100,
+            channels: 2,
+            fileSize: 4_096
+        )
+        let detector = StubFormatDetectionService(fileInfo: detectedInfo)
+        let factory = AudioEngineFactory(formatDetector: detector)
+        let configuration = AudioEngineConfiguration(performanceMode: .efficiency)
+
+        let engine = try await factory.makeEngine(for: url, configuration: configuration)
+
+        XCTAssertTrue(engine is AVAudioEngineAdapter)
+        let calls = await detector.detectCallCount()
+        XCTAssertEqual(calls, 1)
+    }
+}
+
+private actor StubFormatDetectionService: FormatDetectionService {
+    private let fileInfo: AudioFileInfo
+    private var calls = 0
+
+    init(fileInfo: AudioFileInfo) {
+        self.fileInfo = fileInfo
+    }
+
+    func detectFormat(at _: URL) async throws -> AudioFileInfo {
+        calls += 1
+        return fileInfo
+    }
+
+    func validateFile(at _: URL) async -> Bool { true }
+    func isFormatSupported(_: AudioFormat) -> Bool { true }
+
+    func getFormatCapabilities(_: AudioFormat) -> FormatCapabilities? {
+        FormatCapabilities(
+            maxSampleRate: 192_000,
+            maxBitDepth: 24,
+            supportsMultiChannel: true,
+            supportsArtwork: true,
+            supportsChapters: false,
+            requiresSpecializedDecoder: false
+        )
+    }
+
+    func detectCallCount() -> Int { calls }
 }

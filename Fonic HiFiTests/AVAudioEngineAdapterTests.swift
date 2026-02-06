@@ -1,4 +1,5 @@
 @testable import Fonic_HiFi
+import AVFoundation
 import XCTest
 
 @MainActor
@@ -35,6 +36,15 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         XCTAssertFalse(stopped)
         let currentTime = await adapter.currentTime
         XCTAssertEqual(currentTime, 0, accuracy: 0.01)
+    }
+
+    func testStopUsesInjectedSessionManagerForDeactivation() async {
+        let sessionManager = StubAudioSessionManager()
+        let adapter = AVAudioEngineAdapter(sessionManager: sessionManager)
+
+        await adapter.stop()
+
+        XCTAssertEqual(sessionManager.activateSessionCalls, [false])
     }
 
     func testSeekWithoutLoadedFileThrows() async {
@@ -272,5 +282,33 @@ final class AVAudioEngineAdapterTests: XCTestCase {
 
         let supportsEQ = await adapter.supportsEQ
         XCTAssertTrue(supportsEQ, "AVAudioEngineAdapter should support EQ")
+    }
+}
+
+@MainActor
+private final class StubAudioSessionManager: AudioSessionManaging {
+    private(set) var activateSessionCalls: [Bool] = []
+
+    func configureSession() async throws {}
+
+    func activateSession(_ active: Bool) async throws {
+        activateSessionCalls.append(active)
+    }
+
+    func enableRemoteCommands() async {}
+    func disableRemoteCommands() async {}
+    func handleInterruption(_: Notification) async {}
+    func handleRouteChange(_: Notification) async {}
+
+    var currentRouteDescription: AVAudioSessionRouteDescription {
+        get async { AVAudioSession.sharedInstance().currentRoute }
+    }
+
+    var isSessionActive: Bool {
+        get async { false }
+    }
+
+    var supportsBitPerfect: Bool {
+        get async { false }
     }
 }
