@@ -2,7 +2,7 @@
 //  ExpandableAlbumCardTests.swift
 //  Fonic HiFiTests
 //
-//  Tests for ExpandableAlbumCard and ExpandedAlbumOverlay components
+//  Tests for ExpandableAlbumCard and AlbumSheetView components
 //
 
 import SwiftUI
@@ -34,14 +34,13 @@ struct ExpandableAlbumCardTests {
         #expect(type(of: card.body) != Never.self)
     }
 
-    @Test("ExpandedAlbumOverlay exists and shows track list")
-    func expandedAlbumOverlayShowsTrackList() throws {
+    @Test("AlbumSheetView exists and shows track list")
+    func albumSheetViewShowsTrackList() throws {
         let album = Album(title: "Test", albumArtist: "Artist")
 
-        let overlay = ExpandedAlbumOverlay(
+        let overlay = AlbumSheetView(
             album: album,
-            onTrackTap: { _ in },
-            onDismiss: {}
+            onTrackTap: { _ in }
         )
 
         #expect(type(of: overlay.body) != Never.self)

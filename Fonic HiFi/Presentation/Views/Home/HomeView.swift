@@ -42,9 +42,6 @@ struct HomeView: View {
     @State private var selectedGenre: String?
     @State private var selectedAlbum: Album?
 
-    // Album expansion state
-    @State private var expandedAlbum: Album?
-
     var body: some View {
         NavigationStack {
             Group {
@@ -73,7 +70,12 @@ struct HomeView: View {
                 ArtistDetailView(artist: artist)
             }
             .sheet(item: $selectedAlbum) { album in
-                AlbumDetailView(album: album)
+                AlbumSheetView(
+                    album: album,
+                    onTrackTap: { track in
+                        playTrack(track)
+                    }
+                )
             }
         }
     }
@@ -86,128 +88,99 @@ struct HomeView: View {
 
     @ViewBuilder
     private var contentView: some View {
-        ZStack {
-            ScrollView {
-                VStack(spacing: DesignTokens.Spacing.xLarge) {
-                    // Quick Actions
-                    QuickActionsSection(
-                        onShuffleAll: shuffleAll,
-                        onSurpriseMe: surpriseMe
+        ScrollView {
+            VStack(spacing: DesignTokens.Spacing.xLarge) {
+                // Quick Actions
+                QuickActionsSection(
+                    onShuffleAll: shuffleAll,
+                    onSurpriseMe: surpriseMe
+                )
+
+                // Time-based greeting (AI-powered)
+                if let greeting = timeBasedGreeting, !greetingTracks.isEmpty {
+                    TimeBasedGreetingSection(
+                        greeting: greeting,
+                        tracks: greetingTracks,
+                        onTrackTap: { track in
+                            playTrack(track)
+                        }
                     )
+                }
 
-                    // Time-based greeting (AI-powered)
-                    if let greeting = timeBasedGreeting, !greetingTracks.isEmpty {
-                        TimeBasedGreetingSection(
-                            greeting: greeting,
-                            tracks: greetingTracks,
-                            onTrackTap: { track in
-                                playTrack(track)
-                            }
-                        )
-                    }
-
-                    // Continue Listening (if has incomplete sessions)
-                    if !continueListening.isEmpty {
-                        ContinueListeningSection(tracks: continueListening) { track in
-                            playTrack(track)
-                        }
-                    }
-
-                    // Recently Added (hero section)
-                    if !recentlyAdded.isEmpty {
-                        RecentlyAddedSection(tracks: recentlyAdded) { track in
-                            playTrack(track)
-                        }
-                    }
-
-                    // Your Artists
-                    if !artists.isEmpty {
-                        ArtistsSection(artists: artists) { artist in
-                            selectedArtist = artist
-                        }
-                    }
-
-                    // Browse by Genre
-                    if !genres.isEmpty {
-                        GenresSection(genres: genres) { genre in
-                            selectedGenre = genre
-                        }
-                    }
-
-                    // Albums
-                    if !albums.isEmpty {
-                        AlbumsSection(
-                            title: "Albums",
-                            albums: albums,
-                            onAlbumTap: { album in
-                                expandAlbum(album)
-                            }
-                        )
-                    }
-
-                    // Recently Played (if user has history)
-                    if !recentlyPlayed.isEmpty {
-                        HomeSection(title: "Recently Played") {
-                            CarouselView(tracks: recentlyPlayed)
-                        }
-                    }
-
-                    // Most Listened (if user has history)
-                    if !mostListened.isEmpty {
-                        HomeSection(title: "Most Listened") {
-                            CarouselView(tracks: mostListened)
-                        }
-                    }
-
-                    // Rediscover (if has neglected tracks)
-                    if !rediscoverTracks.isEmpty {
-                        RediscoverSection(tracks: rediscoverTracks) { track in
-                            playTrack(track)
-                        }
-                    }
-
-                    // Favorite Albums
-                    if !favoriteAlbums.isEmpty {
-                        AlbumsSection(
-                            title: "Favorite Albums",
-                            albums: favoriteAlbums,
-                            onAlbumTap: { album in
-                                expandAlbum(album)
-                            }
-                        )
+                // Continue Listening (if has incomplete sessions)
+                if !continueListening.isEmpty {
+                    ContinueListeningSection(tracks: continueListening) { track in
+                        playTrack(track)
                     }
                 }
-                .padding(.top, DesignTokens.Spacing.vertical)
-                .padding(.bottom, DesignTokens.Spacing.small)
-            }
 
-            if let album = expandedAlbum {
-                Color.black.opacity(0.35)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        collapseAlbum()
+                // Recently Added (hero section)
+                if !recentlyAdded.isEmpty {
+                    RecentlyAddedSection(tracks: recentlyAdded) { track in
+                        playTrack(track)
                     }
-                    .transition(.opacity)
+                }
 
-                ExpandedAlbumOverlay(
-                    album: album,
-                    onTrackTap: { track in
-                        playTrackFromAlbum(track)
-                    },
-                    onDismiss: {
-                        collapseAlbum()
+                // Your Artists
+                if !artists.isEmpty {
+                    ArtistsSection(artists: artists) { artist in
+                        selectedArtist = artist
                     }
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                }
+
+                // Browse by Genre
+                if !genres.isEmpty {
+                    GenresSection(genres: genres) { genre in
+                        selectedGenre = genre
+                    }
+                }
+
+                // Albums
+                if !albums.isEmpty {
+                    AlbumsSection(
+                        title: "Albums",
+                        albums: albums,
+                        onAlbumTap: { album in
+                            selectedAlbum = album
+                        }
+                    )
+                }
+
+                // Recently Played (if user has history)
+                if !recentlyPlayed.isEmpty {
+                    HomeSection(title: "Recently Played") {
+                        CarouselView(tracks: recentlyPlayed)
+                    }
+                }
+
+                // Most Listened (if user has history)
+                if !mostListened.isEmpty {
+                    HomeSection(title: "Most Listened") {
+                        CarouselView(tracks: mostListened)
+                    }
+                }
+
+                // Rediscover (if has neglected tracks)
+                if !rediscoverTracks.isEmpty {
+                    RediscoverSection(tracks: rediscoverTracks) { track in
+                        playTrack(track)
+                    }
+                }
+
+                // Favorite Albums
+                if !favoriteAlbums.isEmpty {
+                    AlbumsSection(
+                        title: "Favorite Albums",
+                        albums: favoriteAlbums,
+                        onAlbumTap: { album in
+                            selectedAlbum = album
+                        }
+                    )
+                }
             }
+            .padding(.top, DesignTokens.Spacing.vertical)
+            .padding(.bottom, DesignTokens.Spacing.small)
         }
-        .animation(
-            .spring(
-                response: DesignTokens.Animation.springResponse,
-                dampingFraction: DesignTokens.Animation.springDamping
-            ),
-            value: expandedAlbum?.id
-        )
     }
 
     private func loadData(showLoading: Bool) async {
@@ -338,46 +311,6 @@ struct HomeView: View {
         }
     }
 
-    private func expandAlbum(_ album: Album) {
-        withAnimation(
-            .spring(
-                response: DesignTokens.Animation.springResponse,
-                dampingFraction: DesignTokens.Animation.springDamping
-            )
-        ) {
-            expandedAlbum = album
-        }
-    }
-
-    private func collapseAlbum() {
-        withAnimation(
-            .spring(
-                response: DesignTokens.Animation.collapseSpringResponse,
-                dampingFraction: DesignTokens.Animation.collapseSpringDamping
-            )
-        ) {
-            expandedAlbum = nil
-        }
-    }
-
-    private func playTrackFromAlbum(_ track: Track) {
-        guard let audioEngine else { return }
-
-        // First collapse, then play
-        collapseAlbum()
-
-        Task {
-            // Small delay to let animation complete
-            try? await Task.sleep(for: .milliseconds(150))
-
-            do {
-                try await audioEngine.play(track: track)
-                // Don't show NowPlaying - play in mini player only
-            } catch {
-                // Handle error silently
-            }
-        }
-    }
 }
 
 // MARK: - Supporting Views
