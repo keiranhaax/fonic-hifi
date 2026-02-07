@@ -199,6 +199,13 @@ final class DominantColorService: ObservableObject {
         rebuildPalette()
     }
 
+    /// Pre-compute and cache album colors without updating the active palette.
+    func prewarmColorCache(for albums: [Album]) async {
+        for album in albums {
+            await prewarmColorCache(for: album)
+        }
+    }
+
     // MARK: - Private Helpers
 
     private func rebuildPalette() {
@@ -225,5 +232,24 @@ final class DominantColorService: ObservableObject {
         let overflow = colorCache.count - maxCacheSize
         let keysToRemove = Array(colorCache.keys.prefix(overflow))
         keysToRemove.forEach { colorCache.removeValue(forKey: $0) }
+    }
+
+    private func prewarmColorCache(for album: Album) async {
+        if colorCache[album.id] != nil {
+            return
+        }
+
+        guard let artworkData = album.artwork else {
+            colorCache[album.id] = .accentColor
+            maintainCacheSize()
+            return
+        }
+
+        let extractedColor = await Task.detached(priority: .utility) {
+            UIImage(data: artworkData)?.fastAverageColor ?? Color.accentColor
+        }.value
+
+        colorCache[album.id] = extractedColor
+        maintainCacheSize()
     }
 }

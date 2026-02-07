@@ -37,14 +37,13 @@ struct HomeView: View {
 
     // UI state
     @State private var isLoading = true
+    @State private var hasLoadedOnce = false
     @State private var selectedArtist: Artist?
     @State private var selectedGenre: String?
     @State private var selectedAlbum: Album?
 
-    // Album morph state
-    @Namespace private var albumMorphNamespace
+    // Album expansion state
     @State private var expandedAlbum: Album?
-    @State private var expandedAlbumColor: Color = .accentColor
 
     var body: some View {
         NavigationStack {
@@ -60,7 +59,15 @@ struct HomeView: View {
             }
             .navigationTitle("Home")
             .task {
-                await loadData()
+                guard !hasLoadedOnce else { return }
+                await loadData(showLoading: true)
+                hasLoadedOnce = true
+            }
+            .onAppear {
+                guard hasLoadedOnce else { return }
+                Task {
+                    await loadData(showLoading: false)
+                }
             }
             .sheet(item: $selectedArtist) { artist in
                 ArtistDetailView(artist: artist)
@@ -79,124 +86,119 @@ struct HomeView: View {
 
     @ViewBuilder
     private var contentView: some View {
-        ScrollView {
-            VStack(spacing: DesignTokens.Spacing.section) {
-                // Quick Actions
-                QuickActionsSection(
-                    onShuffleAll: shuffleAll,
-                    onSurpriseMe: surpriseMe
-                )
+        ZStack {
+            ScrollView {
+                VStack(spacing: DesignTokens.Spacing.xLarge) {
+                    // Quick Actions
+                    QuickActionsSection(
+                        onShuffleAll: shuffleAll,
+                        onSurpriseMe: surpriseMe
+                    )
 
-                // Time-based greeting (AI-powered)
-                if let greeting = timeBasedGreeting, !greetingTracks.isEmpty {
-                    TimeBasedGreetingSection(
-                        greeting: greeting,
-                        tracks: greetingTracks,
-                        onTrackTap: { track in
+                    // Time-based greeting (AI-powered)
+                    if let greeting = timeBasedGreeting, !greetingTracks.isEmpty {
+                        TimeBasedGreetingSection(
+                            greeting: greeting,
+                            tracks: greetingTracks,
+                            onTrackTap: { track in
+                                playTrack(track)
+                            }
+                        )
+                    }
+
+                    // Continue Listening (if has incomplete sessions)
+                    if !continueListening.isEmpty {
+                        ContinueListeningSection(tracks: continueListening) { track in
                             playTrack(track)
                         }
-                    )
-                }
-
-                // Continue Listening (if has incomplete sessions)
-                if !continueListening.isEmpty {
-                    ContinueListeningSection(tracks: continueListening) { track in
-                        playTrack(track)
                     }
-                }
 
-                // Recently Added (hero section)
-                if !recentlyAdded.isEmpty {
-                    RecentlyAddedSection(tracks: recentlyAdded) { track in
-                        playTrack(track)
-                    }
-                }
-
-                // Your Artists
-                if !artists.isEmpty {
-                    ArtistsSection(artists: artists) { artist in
-                        selectedArtist = artist
-                    }
-                }
-
-                // Browse by Genre
-                if !genres.isEmpty {
-                    GenresSection(genres: genres) { genre in
-                        selectedGenre = genre
-                    }
-                }
-
-                // Albums
-                if !albums.isEmpty {
-                    AlbumsSection(
-                        title: "Albums",
-                        albums: albums,
-                        expandedAlbumID: expandedAlbum?.id,
-                        namespace: albumMorphNamespace,
-                        onAlbumTap: { album in
-                            expandAlbum(album)
+                    // Recently Added (hero section)
+                    if !recentlyAdded.isEmpty {
+                        RecentlyAddedSection(tracks: recentlyAdded) { track in
+                            playTrack(track)
                         }
-                    )
-                }
-
-                // Recently Played (if user has history)
-                if !recentlyPlayed.isEmpty {
-                    HomeSection(title: "Recently Played") {
-                        CarouselView(tracks: recentlyPlayed)
                     }
-                }
 
-                // Most Listened (if user has history)
-                if !mostListened.isEmpty {
-                    HomeSection(title: "Most Listened") {
-                        CarouselView(tracks: mostListened)
-                    }
-                }
-
-                // Rediscover (if has neglected tracks)
-                if !rediscoverTracks.isEmpty {
-                    RediscoverSection(tracks: rediscoverTracks) { track in
-                        playTrack(track)
-                    }
-                }
-
-                // Favorite Albums
-                if !favoriteAlbums.isEmpty {
-                    AlbumsSection(
-                        title: "Favorite Albums",
-                        albums: favoriteAlbums,
-                        expandedAlbumID: expandedAlbum?.id,
-                        namespace: albumMorphNamespace,
-                        onAlbumTap: { album in
-                            expandAlbum(album)
+                    // Your Artists
+                    if !artists.isEmpty {
+                        ArtistsSection(artists: artists) { artist in
+                            selectedArtist = artist
                         }
-                    )
+                    }
+
+                    // Browse by Genre
+                    if !genres.isEmpty {
+                        GenresSection(genres: genres) { genre in
+                            selectedGenre = genre
+                        }
+                    }
+
+                    // Albums
+                    if !albums.isEmpty {
+                        AlbumsSection(
+                            title: "Albums",
+                            albums: albums,
+                            onAlbumTap: { album in
+                                expandAlbum(album)
+                            }
+                        )
+                    }
+
+                    // Recently Played (if user has history)
+                    if !recentlyPlayed.isEmpty {
+                        HomeSection(title: "Recently Played") {
+                            CarouselView(tracks: recentlyPlayed)
+                        }
+                    }
+
+                    // Most Listened (if user has history)
+                    if !mostListened.isEmpty {
+                        HomeSection(title: "Most Listened") {
+                            CarouselView(tracks: mostListened)
+                        }
+                    }
+
+                    // Rediscover (if has neglected tracks)
+                    if !rediscoverTracks.isEmpty {
+                        RediscoverSection(tracks: rediscoverTracks) { track in
+                            playTrack(track)
+                        }
+                    }
+
+                    // Favorite Albums
+                    if !favoriteAlbums.isEmpty {
+                        AlbumsSection(
+                            title: "Favorite Albums",
+                            albums: favoriteAlbums,
+                            onAlbumTap: { album in
+                                expandAlbum(album)
+                            }
+                        )
+                    }
                 }
+                .padding(.top, DesignTokens.Spacing.vertical)
+                .padding(.bottom, DesignTokens.Spacing.small)
             }
-            .padding(.vertical)
-        }
-        .overlay {
+
             if let album = expandedAlbum {
-                Color.black.opacity(0.4)
+                Color.black.opacity(0.35)
                     .ignoresSafeArea()
                     .onTapGesture {
                         collapseAlbum()
                     }
+                    .transition(.opacity)
 
-                GlassEffectContainer {
-                    ExpandedAlbumOverlay(
-                        album: album,
-                        namespace: albumMorphNamespace,
-                        accentColor: expandedAlbumColor,
-                        onTrackTap: { track in
-                            playTrackFromAlbum(track)
-                        },
-                        onDismiss: {
-                            collapseAlbum()
-                        }
-                    )
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                ExpandedAlbumOverlay(
+                    album: album,
+                    onTrackTap: { track in
+                        playTrackFromAlbum(track)
+                    },
+                    onDismiss: {
+                        collapseAlbum()
+                    }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
         }
         .animation(
@@ -208,8 +210,10 @@ struct HomeView: View {
         )
     }
 
-    private func loadData() async {
-        isLoading = true
+    private func loadData(showLoading: Bool) async {
+        if showLoading {
+            isLoading = true
+        }
 
         guard let dataManager else {
             isLoading = false
@@ -227,6 +231,12 @@ struct HomeView: View {
             recentlyPlayed = try await dataManager.getRecentlyPlayedTracks(limit: 10)
             mostListened = try await dataManager.getMostListenedTracks(limit: 10)
             favoriteAlbums = try await dataManager.getFavoriteAlbums(limit: 10)
+
+            // Pre-cache visible album artwork colors for smoother overlay theming work.
+            let albumsToPrewarm = Array((albums + favoriteAlbums).prefix(12))
+            Task(priority: .utility) {
+                await DominantColorService.shared.prewarmColorCache(for: albumsToPrewarm)
+            }
 
             // History-based sections
             continueListening = try await dataManager.getContinueListeningTracks(limit: 3)
@@ -329,17 +339,13 @@ struct HomeView: View {
     }
 
     private func expandAlbum(_ album: Album) {
-        Task {
-            await DominantColorService.shared.extractColor(for: album)
-            expandedAlbumColor = DominantColorService.shared.palette.glassTint
-            withAnimation(
-                .spring(
-                    response: DesignTokens.Animation.springResponse,
-                    dampingFraction: DesignTokens.Animation.springDamping
-                )
-            ) {
-                expandedAlbum = album
-            }
+        withAnimation(
+            .spring(
+                response: DesignTokens.Animation.springResponse,
+                dampingFraction: DesignTokens.Animation.springDamping
+            )
+        ) {
+            expandedAlbum = album
         }
     }
 

@@ -39,9 +39,11 @@ actor FormatDetectionCoordinator {
         let identifier = context.identifier.uuidString
         let fileName = context.url.lastPathComponent
         logger.debug(
-            "detection.start id=\(identifier, privacy: .public) " +
-                "url=\(fileName, privacy: .public) " +
-                "wait_ms=\(milliseconds(waitDuration), privacy: .public)"
+            """
+            detection.start id=\(identifier, privacy: .public) \
+            url=\(fileName, privacy: .public) \
+            wait_ms=\(milliseconds(waitDuration), privacy: .public)
+            """
         )
 
         let detectionBegan = ContinuousClock.now
@@ -75,9 +77,11 @@ actor FormatDetectionCoordinator {
 
             let detectionDuration = detectionBegan.duration(to: .now)
             logger.debug(
-                "detection.success id=\(identifier, privacy: .public) " +
-                    "url=\(fileName, privacy: .public) " +
-                    "duration_ms=\(milliseconds(detectionDuration), privacy: .public)"
+                """
+                detection.success id=\(identifier, privacy: .public) \
+                url=\(fileName, privacy: .public) \
+                duration_ms=\(milliseconds(detectionDuration), privacy: .public)
+                """
             )
             return result
         } catch is CancellationError {
@@ -92,9 +96,11 @@ actor FormatDetectionCoordinator {
             throw DetectionError.timeout
         } catch {
             logger.error(
-                "detection.failure id=\(identifier, privacy: .public) " +
-                    "url=\(fileName, privacy: .public) " +
-                    "error=\(error.localizedDescription, privacy: .public)"
+                """
+                detection.failure id=\(identifier, privacy: .public) \
+                url=\(fileName, privacy: .public) \
+                error=\(error.localizedDescription, privacy: .public)
+                """
             )
             throw error
         }

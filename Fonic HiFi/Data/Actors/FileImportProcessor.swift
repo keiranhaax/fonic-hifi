@@ -123,195 +123,35 @@ actor FileImportProcessor {
         return processFilesStream(stream, maxConcurrentTasks: maxConcurrentTasks)
     }
 
-    func processFilesStream<S: AsyncSequence>(
-        _ files: S,
+    func processFilesStream(
+        _ files: AsyncStream<DiscoveredAudioFile>,
         maxConcurrentTasks: Int = 3
-    ) -> AsyncStream<ProcessedFileResult> where S.Element == DiscoveredAudioFile {
-        AsyncStream { continuation in
+    ) -> AsyncStream<ProcessedFileResult> {
+        do {
+            try ensureMusicContainerExists()
+        } catch {
+            logger.error("Failed to prepare music container: \(error.localizedDescription)")
+            return Self.makeContainerPreparationFailureStream(from: files, error: error)
+        }
+
+        let baseDirectory = musicContainerURL
+        let extractor = metadataExtractor
+        let trackActor = trackDataActor
+        let accessor = securityAccessor
+        let log = logger
+
+        return AsyncStream<ProcessedFileResult> { continuation in
             Task {
-                var iterator = files.makeAsyncIterator()
-                let log = logger
-
-                func nextFile() async -> DiscoveredAudioFile? {
-                    do {
-                        return try await iterator.next()
-                    } catch {
-                        log.error(
-                            "import.queue.iteratorFailed error=\(error.localizedDescription, privacy: .public)"
-                        )
-                        return nil
-                    }
-                }
-
-                do {
-                    try ensureMusicContainerExists()
-                } catch {
-                    logger.error("Failed to prepare music container: \(error.localizedDescription)")
-                    while let file = await nextFile() {
-                        continuation.yield(
-                            ProcessedFileResult(
-                                file: file,
-                                identifier: nil,
-                                error: ProcessedFileError(message: error.localizedDescription),
-                                duration: 0
-                            )
-                        )
-                    }
-                    continuation.finish()
-                    return
-                }
-
-                let baseDirectory = musicContainerURL
-                let extractor = metadataExtractor
-                let trackActor = trackDataActor
-                let accessor = securityAccessor
-                let startTime = Date()
-                var nextProgressLog = startTime
-                let concurrency = max(1, maxConcurrentTasks)
-
-                // Load hash cache for batch duplicate detection (1 query instead of N)
-                var hashCache: SourceHashCache
-                do {
-                    hashCache = try await trackActor.loadSourceHashCache()
-                } catch {
-                    log.warning("Failed to load hash cache, falling back to per-file checks: \(error.localizedDescription)")
-                    hashCache = SourceHashCache()
-                }
-
-                var completed = 0
-                var successes = 0
-                var failures = 0
-                var totalDuration: TimeInterval = 0
-                var inFlight = 0
-                var maxInFlight = 0
-
-                await withTaskGroup(of: ProcessedFileResult?.self) { group in
-                    func launchNext() async {
-                        guard !Task.isCancelled else { return }
-                        guard let nextFile = await nextFile() else { return }
-
-                        inFlight += 1
-                        if inFlight > maxInFlight {
-                            maxInFlight = inFlight
-                        }
-
-                        // Capture current cache state for this task
-                        let currentCache = hashCache
-
-                        group.addTask {
-                            let taskStart = Date()
-
-                            // Fast in-memory duplicate check first
-                            let urlHash = nextFile.originalURL.librarySourceHash()
-                            let bookmarkHash = nextFile.securityScopedBookmark?.sha256Hex()
-                            let urlString = nextFile.originalURL.absoluteString
-
-                            if currentCache.contains(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString) {
-                                log.notice("Duplicate import skipped (cache hit): \(nextFile.originalURL.lastPathComponent, privacy: .public)")
-                                return ProcessedFileResult(
-                                    file: nextFile,
-                                    identifier: nil,
-                                    error: ProcessedFileError(message: "Duplicate file already exists"),
-                                    duration: Date().timeIntervalSince(taskStart)
-                                )
-                            }
-
-                            do {
-                                let identifier = try await Self.importFile(
-                                    nextFile,
-                                    baseDirectory: baseDirectory,
-                                    metadataExtractor: extractor,
-                                    trackDataActor: trackActor,
-                                    securityAccessor: accessor,
-                                    logger: log
-                                )
-                                let duration = Date().timeIntervalSince(taskStart)
-                                return ProcessedFileResult(
-                                    file: nextFile,
-                                    identifier: identifier,
-                                    error: nil,
-                                    duration: duration
-                                )
-                            } catch {
-                                let duration = Date().timeIntervalSince(taskStart)
-                                let filename = nextFile.originalURL.lastPathComponent
-                                let errorDescription = error.localizedDescription
-                                log.error(
-                                    """
-                                    File import failed for \(filename, privacy: .public):
-                                    \(errorDescription, privacy: .public)
-                                    """
-                                )
-                                return ProcessedFileResult(
-                                    file: nextFile,
-                                    identifier: nil,
-                                    error: ProcessedFileError(message: error.localizedDescription),
-                                    duration: duration
-                                )
-                            }
-                        }
-                    }
-
-                    for _ in 0..<concurrency {
-                        await launchNext()
-                    }
-
-                    while let result = await group.next() {
-                        guard let result else { continue }
-
-                        inFlight = max(inFlight - 1, 0)
-                        completed += 1
-                        totalDuration += result.duration
-
-                        if result.succeeded {
-                            successes += 1
-                            // Update cache after successful import to prevent re-importing same file
-                            let urlHash = result.file.originalURL.librarySourceHash()
-                            let bookmarkHash = result.file.securityScopedBookmark?.sha256Hex()
-                            let urlString = result.file.originalURL.absoluteString
-                            hashCache.addEntry(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString)
-                        } else {
-                            failures += 1
-                        }
-
-                        continuation.yield(result)
-                        await launchNext()
-
-                        let now = Date()
-                        if completed % 10 == 0 || now.timeIntervalSince(nextProgressLog) >= 5 {
-                            let elapsed = now.timeIntervalSince(startTime)
-                            let throughput = elapsed > 0 ? Double(completed) / elapsed : Double(completed)
-                            log.info(
-                                "import.queue.metrics completed=\(completed, privacy: .public) " +
-                                    "inFlight=\(inFlight, privacy: .public) " +
-                                    "maxInFlight=\(maxInFlight, privacy: .public) " +
-                                    "successes=\(successes, privacy: .public) " +
-                                    "failures=\(failures, privacy: .public) " +
-                                    "throughput=\(throughput, format: .fixed(precision: 2), privacy: .public)"
-                            )
-                            nextProgressLog = now
-                        }
-
-                        if Task.isCancelled {
-                            break
-                        }
-                    }
-
-                    group.cancelAll()
-                }
-
-                let totalElapsed = Date().timeIntervalSince(startTime)
-                let averageDuration = completed > 0 ? totalDuration / Double(completed) : 0
-                logger.info(
-                    "import.queue.summary files=\(completed, privacy: .public) " +
-                        "successes=\(successes, privacy: .public) " +
-                        "failures=\(failures, privacy: .public) " +
-                        "maxInFlight=\(maxInFlight, privacy: .public) " +
-                        "elapsed=\(totalElapsed, format: .fixed(precision: 2), privacy: .public) " +
-                        "avgDuration=\(averageDuration, format: .fixed(precision: 2), privacy: .public)"
+                await Self.emitProcessedFiles(
+                    from: files,
+                    maxConcurrentTasks: maxConcurrentTasks,
+                    baseDirectory: baseDirectory,
+                    metadataExtractor: extractor,
+                    trackDataActor: trackActor,
+                    securityAccessor: accessor,
+                    logger: log,
+                    to: continuation
                 )
-
-                continuation.finish()
             }
         }
     }
@@ -359,6 +199,259 @@ actor FileImportProcessor {
     }
 
     // MARK: - Private Methods
+
+    private struct ImportQueueStats {
+        let startedAt: Date
+        var nextProgressLog: Date
+        var completed = 0
+        var successes = 0
+        var failures = 0
+        var totalDuration: TimeInterval = 0
+        var inFlight = 0
+        var maxInFlight = 0
+
+        init(startedAt: Date = Date()) {
+            self.startedAt = startedAt
+            nextProgressLog = startedAt
+        }
+
+        mutating func recordLaunch() {
+            inFlight += 1
+            if inFlight > maxInFlight {
+                maxInFlight = inFlight
+            }
+        }
+
+        mutating func recordCompletion(for result: ProcessedFileResult) {
+            inFlight = max(inFlight - 1, 0)
+            completed += 1
+            totalDuration += result.duration
+            if result.succeeded {
+                successes += 1
+            } else {
+                failures += 1
+            }
+        }
+    }
+
+    private static func makeContainerPreparationFailureStream(
+        from files: AsyncStream<DiscoveredAudioFile>,
+        error: Error
+    ) -> AsyncStream<ProcessedFileResult> {
+        let message = error.localizedDescription
+        return AsyncStream<ProcessedFileResult> { continuation in
+            Task {
+                var iterator = files.makeAsyncIterator()
+                while let file = await iterator.next() {
+                    continuation.yield(
+                        ProcessedFileResult(
+                            file: file,
+                            identifier: nil,
+                            error: ProcessedFileError(message: message),
+                            duration: 0
+                        )
+                    )
+                }
+                continuation.finish()
+            }
+        }
+    }
+
+    private static func emitProcessedFiles(
+        from files: AsyncStream<DiscoveredAudioFile>,
+        maxConcurrentTasks: Int,
+        baseDirectory: URL,
+        metadataExtractor: MetadataExtracting,
+        trackDataActor: TrackDataActor,
+        securityAccessor: SecurityScopedAccessing,
+        logger: Logger,
+        to continuation: AsyncStream<ProcessedFileResult>.Continuation
+    ) async {
+        var iterator = files.makeAsyncIterator()
+        let concurrency = max(1, maxConcurrentTasks)
+
+        var hashCache = await loadSourceHashCache(from: trackDataActor, logger: logger)
+        var stats = ImportQueueStats()
+
+        await withTaskGroup(of: ProcessedFileResult.self) { group in
+            for _ in 0..<concurrency {
+                guard !Task.isCancelled else { break }
+                guard let discoveredFile = await iterator.next() else { break }
+
+                let currentCache = hashCache
+                group.addTask {
+                    await Self.processDiscoveredFile(
+                        discoveredFile,
+                        hashCache: currentCache,
+                        baseDirectory: baseDirectory,
+                        metadataExtractor: metadataExtractor,
+                        trackDataActor: trackDataActor,
+                        securityAccessor: securityAccessor,
+                        logger: logger
+                    )
+                }
+                stats.recordLaunch()
+            }
+
+            while let result = await group.next() {
+                stats.recordCompletion(for: result)
+
+                if result.succeeded {
+                    let urlHash = result.file.originalURL.librarySourceHash()
+                    let bookmarkHash = result.file.securityScopedBookmark?.sha256Hex()
+                    let urlString = result.file.originalURL.absoluteString
+                    hashCache.addEntry(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString)
+                }
+
+                continuation.yield(
+                    result
+                )
+
+                if Task.isCancelled {
+                    break
+                }
+
+                if let discoveredFile = await iterator.next() {
+                    let currentCache = hashCache
+                    group.addTask {
+                        await Self.processDiscoveredFile(
+                            discoveredFile,
+                            hashCache: currentCache,
+                            baseDirectory: baseDirectory,
+                            metadataExtractor: metadataExtractor,
+                            trackDataActor: trackDataActor,
+                            securityAccessor: securityAccessor,
+                            logger: logger
+                        )
+                    }
+                    stats.recordLaunch()
+                }
+
+                logQueueProgressIfNeeded(stats: &stats, logger: logger)
+            }
+
+            group.cancelAll()
+        }
+
+        logQueueSummary(stats: stats, logger: logger)
+        continuation.finish()
+    }
+
+    private static func loadSourceHashCache(
+        from trackDataActor: TrackDataActor,
+        logger: Logger
+    ) async -> SourceHashCache {
+        do {
+            return try await trackDataActor.loadSourceHashCache()
+        } catch {
+            logger.warning("Failed to load hash cache, falling back to per-file checks: \(error.localizedDescription)")
+            return SourceHashCache()
+        }
+    }
+
+    private static func processDiscoveredFile(
+        _ file: DiscoveredAudioFile,
+        hashCache: SourceHashCache,
+        baseDirectory: URL,
+        metadataExtractor: MetadataExtracting,
+        trackDataActor: TrackDataActor,
+        securityAccessor: SecurityScopedAccessing,
+        logger: Logger
+    ) async -> ProcessedFileResult {
+        let taskStart = Date()
+
+        let urlHash = file.originalURL.librarySourceHash()
+        let bookmarkHash = file.securityScopedBookmark?.sha256Hex()
+        let urlString = file.originalURL.absoluteString
+
+        if hashCache.contains(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString) {
+            logger.notice("Duplicate import skipped (cache hit): \(file.originalURL.lastPathComponent, privacy: .public)")
+            return ProcessedFileResult(
+                file: file,
+                identifier: nil,
+                error: ProcessedFileError(message: "Duplicate file already exists"),
+                duration: Date().timeIntervalSince(taskStart)
+            )
+        }
+
+        do {
+            let identifier = try await Self.importFile(
+                file,
+                baseDirectory: baseDirectory,
+                metadataExtractor: metadataExtractor,
+                trackDataActor: trackDataActor,
+                securityAccessor: securityAccessor,
+                logger: logger
+            )
+            let duration = Date().timeIntervalSince(taskStart)
+            return ProcessedFileResult(
+                file: file,
+                identifier: identifier,
+                error: nil,
+                duration: duration
+            )
+        } catch {
+            let duration = Date().timeIntervalSince(taskStart)
+            let filename = file.originalURL.lastPathComponent
+            let errorDescription = error.localizedDescription
+            logger.error(
+                """
+                File import failed for \(filename, privacy: .public):
+                \(errorDescription, privacy: .public)
+                """
+            )
+            return ProcessedFileResult(
+                file: file,
+                identifier: nil,
+                error: ProcessedFileError(message: error.localizedDescription),
+                duration: duration
+            )
+        }
+    }
+
+    private static func logQueueProgressIfNeeded(
+        stats: inout ImportQueueStats,
+        logger: Logger
+    ) {
+        let now = Date()
+        guard stats.completed % 10 == 0 || now.timeIntervalSince(stats.nextProgressLog) >= 5 else {
+            return
+        }
+
+        let completed = stats.completed
+        let inFlight = stats.inFlight
+        let maxInFlight = stats.maxInFlight
+        let successes = stats.successes
+        let failures = stats.failures
+        let elapsed = now.timeIntervalSince(stats.startedAt)
+        let throughput = elapsed > 0 ? Double(completed) / elapsed : Double(completed)
+        logger.info(
+            """
+            import.queue.metrics completed=\(completed, privacy: .public) \
+            inFlight=\(inFlight, privacy: .public) \
+            maxInFlight=\(maxInFlight, privacy: .public) \
+            successes=\(successes, privacy: .public) \
+            failures=\(failures, privacy: .public) \
+            throughput=\(throughput, format: .fixed(precision: 2), privacy: .public)
+            """
+        )
+        stats.nextProgressLog = now
+    }
+
+    private static func logQueueSummary(stats: ImportQueueStats, logger: Logger) {
+        let totalElapsed = Date().timeIntervalSince(stats.startedAt)
+        let averageDuration = stats.completed > 0 ? stats.totalDuration / Double(stats.completed) : 0
+        logger.info(
+            """
+            import.queue.summary files=\(stats.completed, privacy: .public) \
+            successes=\(stats.successes, privacy: .public) \
+            failures=\(stats.failures, privacy: .public) \
+            maxInFlight=\(stats.maxInFlight, privacy: .public) \
+            elapsed=\(totalElapsed, format: .fixed(precision: 2), privacy: .public) \
+            avgDuration=\(averageDuration, format: .fixed(precision: 2), privacy: .public)
+            """
+        )
+    }
 
     private func emitDiscoveredFiles(
         from urls: [URL],

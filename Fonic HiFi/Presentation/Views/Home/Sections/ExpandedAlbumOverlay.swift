@@ -11,8 +11,6 @@ import SwiftUI
 @MainActor
 struct ExpandedAlbumOverlay: View {
     let album: Album
-    let namespace: Namespace.ID
-    let accentColor: Color
     let onTrackTap: (Track) -> Void
     let onDismiss: () -> Void
 
@@ -20,14 +18,10 @@ struct ExpandedAlbumOverlay: View {
 
     init(
         album: Album,
-        namespace: Namespace.ID,
-        accentColor: Color,
         onTrackTap: @escaping (Track) -> Void,
         onDismiss: @escaping () -> Void
     ) {
         self.album = album
-        self.namespace = namespace
-        self.accentColor = accentColor
         self.onTrackTap = onTrackTap
         self.onDismiss = onDismiss
 
@@ -54,9 +48,8 @@ struct ExpandedAlbumOverlay: View {
             trackListView
         }
         .frame(maxWidth: 360)
-        .glassEffect(.regular.tint(accentColor))
-        .glassEffectID(album.id, in: namespace)
-        .glassEffectTransition(.matchedGeometry)
+        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+        .glassEffectTransition(.materialize)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .shadow(color: .black.opacity(0.3), radius: 30, y: 10)
         .onTapGesture {
@@ -157,11 +150,8 @@ private struct OverlayTrackRowView: View {
 }
 
 #Preview {
-    @Previewable @Namespace var namespace
     ExpandedAlbumOverlay(
         album: Album(title: "Sample Album", albumArtist: "Sample Artist", year: 2024),
-        namespace: namespace,
-        accentColor: .blue,
         onTrackTap: { _ in },
         onDismiss: {}
     )

@@ -77,81 +77,31 @@
       "Bash(ls:*)",
       "Bash(xargs ls:*)",
       "Bash(git worktree:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(for f in docs/references/architecture-reference.md docs/references/git-recovery-sop.md docs/references/observability-sop.md docs/references/performance-targets.md)",
+      "Bash(do test -f \"$f\")",
+      "Bash(claude mcp add-json omnisearch-remote '{\"\"type\"\":\"\"http\"\",\"\"url\"\":\"\"http://100.84.79.102:8000/mcp\"\",\"\"headers\"\":{\"\"X-API-Key\"\":\"\"8e3b2b43ab397cd1eb9d218f84acebaad3a7b7a968f64ec7806a9388c18833ae\"\"}}' -s user)",
+      "mcp__xcode__XcodeListWindows",
+      "Bash(while IFS= read -r file)",
+      "Bash(do wc -l \"$file\")",
+      "Bash(for file in *.swift)",
+      "Bash(do echo \"$file\")",
+      "Bash(comm:*)",
+      "Bash(cut:*)",
+      "mcp__xcodebuildmcp__session-show-defaults",
+      "mcp__xcodebuildmcp__list_sims",
+      "mcp__xcodebuildmcp__list_schemes",
+      "Bash(xcrun simctl get_app_container:*)",
+      "Bash(xcrun simctl addmedia --help:*)",
+      "Bash(xcrun simctl listapps:*)",
+      "mcp__xcode__XcodeRM",
+      "mcp__xcode__XcodeLS",
+      "mcp__xcode__BuildProject",
+      "mcp__xcode__DocumentationSearch"
     ],
     "deny": [],
     "ask": []
   },
   "enableAllProjectMcpServers": false,
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/keiran/.claude/hooks/inject-date.sh"
-          },
-          {
-            "type": "command",
-            "command": "/Users/keiran/.claude/hooks/ios26-context.sh"
-          },
-          {
-            "type": "command",
-            "command": "/Users/keiran/.claude/hooks/makefile-suggest.sh"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "(Edit|Write).*\\.swift$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/keiran/.claude/hooks/swift6-concurrency-check.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/keiran/.claude/hooks/code-quality-validator.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash.*git commit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/keiran/.claude/hooks/pre-commit-validate.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "(Edit|Write).*\\.swift$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/keiran/.claude/hooks/coverage-aware-test.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit.*\\.swift$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/keiran/.claude/hooks/post-edit-test.sh"
-          }
-        ]
-      }
-    ]
-  },
   "outputStyle": "Senior iOS Developer"
 }

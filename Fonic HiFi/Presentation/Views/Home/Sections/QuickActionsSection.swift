@@ -21,7 +21,7 @@ struct QuickActionsSection: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonSizing(.flexible)
-            .glassEffect(.regular.interactive())
+            .buttonStyle(.glass)
 
             Button {
                 onSurpriseMe()
@@ -30,7 +30,7 @@ struct QuickActionsSection: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonSizing(.flexible)
-            .glassEffect(.regular.interactive())
+            .buttonStyle(.glass)
         }
         .padding(.horizontal)
     }

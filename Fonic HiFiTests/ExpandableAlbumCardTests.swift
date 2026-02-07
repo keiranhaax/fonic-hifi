@@ -24,12 +24,9 @@ struct ExpandableAlbumCardTests {
     @Test("ExpandableAlbumCard exists and is a View")
     func expandableAlbumCardIsView() throws {
         let album = Album(title: "Test", albumArtist: "Artist")
-        let namespace = Namespace().wrappedValue
 
         let card = ExpandableAlbumCard(
             album: album,
-            namespace: namespace,
-            isExpanded: false,
             onTap: {}
         )
 
@@ -40,12 +37,9 @@ struct ExpandableAlbumCardTests {
     @Test("ExpandedAlbumOverlay exists and shows track list")
     func expandedAlbumOverlayShowsTrackList() throws {
         let album = Album(title: "Test", albumArtist: "Artist")
-        let namespace = Namespace().wrappedValue
 
         let overlay = ExpandedAlbumOverlay(
             album: album,
-            namespace: namespace,
-            accentColor: .blue,
             onTrackTap: { _ in },
             onDismiss: {}
         )
@@ -61,7 +55,7 @@ struct ExpandableAlbumCardTests {
         // Should be able to call extractColor for album
         await service.extractColor(for: album)
 
-        // Palette should exist (neutral if no artwork)
-        #expect(service.palette != nil)
+        // Service should track the active album after extraction
+        #expect(service.currentTrackID == album.id)
     }
 }
