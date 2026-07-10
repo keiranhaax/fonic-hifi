@@ -1,7 +1,7 @@
 # Fonic HiFi Audit Cross-Check and Remediation Ledger
 
 **Created:** 2026-07-10
-**Status:** implementation in progress; second bounded batch verified, with E-07 split at shuffle-active editing
+**Status:** implementation in progress; third bounded batch verified, with E-02 complete and E-07 split at shuffle-active editing
 **Audited revision:** `459db9bfd18d17960e8fd2ff8defc4701085532e` on `main`
 **Task order:** easiest to hardest, except the security response, which is urgent and external
 
@@ -179,7 +179,7 @@ For every implementation row:
 | ID | Status | Outcome and source | Exact verification |
 |---|---|---|---|
 | E-01 | VERIFIED | Finish `.gitignore`: preserve the current main-project/`Package.resolved` fix, repair the corrupted `.apdiskbuild_verify.log` line, and add scoped log/local-config rules. A-C04, A-C07. | Ten path probes matched: eight intended artifacts/configs are ignored by repository rules; the authoritative project and pin are not ignored. `git diff --check` exits 0. |
-| E-02 | PENDING/OWNER | Remove tracked non-secret logs, backups, and `xcuserdata` in batches of at most three paths, preserving current deletions. PCFG-008, PSR-007, DCA-ART-001. | `git ls-files` omits the approved batch; main project build remains 0 errors. |
+| E-02 | VERIFIED | Removed three tracked personal `xcuserdata` files in `b64b89d`, then removed the stale project backup and two tracked build logs in `814bf5e`. Existing ignore rules prevent regeneration from becoming tracked. PCFG-008, PSR-007, DCA-ART-001. | Each commit contained exactly three deletions, staged diff checks exited 0, the unrelated-worktree fingerprint remained unchanged, and post-deletion simulator builds succeeded in 2.0 s and 1.3 s with 0 errors. |
 | E-03 | PENDING/OWNER | Resolve the mode-160000 orphan gitlink: remove it or restore a verified upstream plus `.gitmodules`. PCFG-006. | `git submodule status` exits 0 and a fresh clone has no broken gitlink. |
 | E-04 | PENDING/TOOLING | Add widget and UI-test roots to SwiftLint without enabling unrelated rule churn. SwiftLint is not installed on the selected host, and project rules prohibit installing it without approval. PCFG-009. | `swiftlint lint --strict` scans all four target roots and exits 0; touched source count is nonzero for each root. |
 | E-05 | BLOCKED(PRODUCT/SIGNING) | Decide APNs and Live Activities. Remove unused declarations through Xcode/capability tooling, or create separate implementation epics. PCFG-010/012, PSR-008/009. | Processed Release entitlements/Info.plist match the decision; archive signing succeeds. |
