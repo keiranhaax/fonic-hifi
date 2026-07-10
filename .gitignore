@@ -115,4 +115,5 @@ log.md
 
 # Machine-local tool configuration
 .claude/settings.local.json
+.claude/skills/ios-simulator-skill/
 .kilocode/mcp.json
