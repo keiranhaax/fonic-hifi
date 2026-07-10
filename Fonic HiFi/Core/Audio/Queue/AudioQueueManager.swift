@@ -200,6 +200,26 @@ public final class AudioQueueManager: AudioQueue {
         return true
     }
 
+    public func removeRemaining(at offsets: IndexSet) {
+        guard !shuffleMode.isActive else { return }
+
+        let baseIndex = currentIndex.map { $0 + 1 } ?? 0
+        var remaining = Array(tracks.dropFirst(baseIndex))
+        let sortedOffsets = offsets.sorted()
+
+        guard !sortedOffsets.isEmpty,
+              sortedOffsets.allSatisfy(remaining.indices.contains) else { return }
+
+        for offset in sortedOffsets.reversed() {
+            remaining.remove(at: offset)
+        }
+
+        replaceQueue(
+            with: Array(tracks.prefix(baseIndex)) + remaining,
+            startIndex: currentIndex
+        )
+    }
+
     public func move(from fromIndex: Int, to toIndex: Int) {
         guard fromIndex >= 0, fromIndex < tracks.count,
               toIndex >= 0, toIndex < tracks.count,
@@ -234,6 +254,33 @@ public final class AudioQueueManager: AudioQueue {
             "from": "\(fromIndex)",
             "to": "\(toIndex)"
         ])
+    }
+
+    public func moveRemaining(fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard !shuffleMode.isActive else { return }
+
+        let baseIndex = currentIndex.map { $0 + 1 } ?? 0
+        let remaining = Array(tracks.dropFirst(baseIndex))
+        let sortedOffsets = source.sorted()
+
+        guard !sortedOffsets.isEmpty,
+              destination >= 0, destination <= remaining.count,
+              sortedOffsets.allSatisfy(remaining.indices.contains) else { return }
+
+        let movingTracks = sortedOffsets.map { remaining[$0] }
+        var reorderedRemaining = remaining
+        for offset in sortedOffsets.reversed() {
+            reorderedRemaining.remove(at: offset)
+        }
+
+        let removedBeforeDestination = sortedOffsets.filter { $0 < destination }.count
+        let insertionIndex = destination - removedBeforeDestination
+        reorderedRemaining.insert(contentsOf: movingTracks, at: insertionIndex)
+
+        replaceQueue(
+            with: Array(tracks.prefix(baseIndex)) + reorderedRemaining,
+            startIndex: currentIndex
+        )
     }
 
     public func clear() {

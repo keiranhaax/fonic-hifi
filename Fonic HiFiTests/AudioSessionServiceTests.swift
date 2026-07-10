@@ -1,4 +1,5 @@
 import AVFoundation
+import MediaPlayer
 @testable import Fonic_HiFi
 import XCTest
 
@@ -45,5 +46,19 @@ final class AudioSessionServiceTests: XCTestCase {
         XCTAssertEqual(RemoteCommand.seek(to: 42.5).description, "seek(to: 42.5)")
         XCTAssertEqual(RemoteCommand.skipForward(15).description, "skipForward(15.0)")
         XCTAssertEqual(RemoteCommand.skipBackward(7.5).description, "skipBackward(7.5)")
+    }
+
+    @MainActor
+    func testUnsupportedSkipCommandsRemainDisabledWhenRemoteCommandsAreEnabled() async {
+        let manager = AudioSessionManager()
+        let commandCenter = MPRemoteCommandCenter.shared()
+
+        await manager.disableRemoteCommands()
+        await manager.enableRemoteCommands()
+
+        XCTAssertFalse(commandCenter.skipForwardCommand.isEnabled)
+        XCTAssertFalse(commandCenter.skipBackwardCommand.isEnabled)
+
+        await manager.disableRemoteCommands()
     }
 }

@@ -21,6 +21,9 @@ struct QueueView: View {
             .navigationBarTitleDisplayMode(.inline)
             .scrollEdgeEffectStyle(.hard, for: .top)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    EditButton()
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
@@ -39,11 +42,15 @@ struct QueueView: View {
 
     @ViewBuilder
     private var upNextSection: some View {
-        let remaining = audioService?.queueManager.queueState.remainingTracks ?? []
+        let queueState = audioService?.queueManager.queueState
+        let remaining = queueState?.remainingTracks ?? []
+        let editingDisabled = queueState?.isShuffled ?? false
         if !remaining.isEmpty {
             Section("Up Next \u{2022} \(remaining.count) tracks") {
                 ForEach(Array(remaining.enumerated()), id: \.element.id) { _, track in
                     QueueRowView(track: track, isPlaying: false)
+                        .moveDisabled(editingDisabled)
+                        .deleteDisabled(editingDisabled)
                 }
                 .onMove(perform: moveTrack)
                 .onDelete(perform: deleteTrack)
@@ -52,19 +59,12 @@ struct QueueView: View {
     }
 
     private func moveTrack(from source: IndexSet, to destination: Int) {
-        guard let fromIndex = source.first else { return }
-        // Offset by 1 since we skip current track
-        let actualFrom = fromIndex + 1
-        let actualTo = destination + 1
-        audioService?.queueManager.move(from: actualFrom, to: actualTo)
+        audioService?.queueManager.moveRemaining(fromOffsets: source, toOffset: destination)
         Log.logger(.audioQueue).info("Moved track in queue")
     }
 
     private func deleteTrack(at offsets: IndexSet) {
-        for index in offsets {
-            let actualIndex = index + 1 // Offset by 1
-            _ = audioService?.queueManager.remove(at: actualIndex)
-        }
+        audioService?.queueManager.removeRemaining(at: offsets)
         Log.logger(.audioQueue).info("Removed track from queue")
     }
 }

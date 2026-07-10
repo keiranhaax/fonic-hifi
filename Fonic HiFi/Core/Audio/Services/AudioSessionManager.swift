@@ -240,30 +240,9 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             return .success
         }
 
-        // Skip intervals (15 seconds default)
-        commandCenter.skipForwardCommand.isEnabled = true
-        commandCenter.skipForwardCommand.preferredIntervals = [15]
-        commandCenter.skipForwardCommand.addTarget { [weak self] event in
-            guard let skipEvent = event as? MPSkipIntervalCommandEvent else {
-                return .commandFailed
-            }
-            Task { @MainActor [weak self] in
-                await self?.delegate?.audioSessionDidReceiveCommand(.skipForward(skipEvent.interval))
-            }
-            return .success
-        }
-
-        commandCenter.skipBackwardCommand.isEnabled = true
-        commandCenter.skipBackwardCommand.preferredIntervals = [15]
-        commandCenter.skipBackwardCommand.addTarget { [weak self] event in
-            guard let skipEvent = event as? MPSkipIntervalCommandEvent else {
-                return .commandFailed
-            }
-            Task { @MainActor [weak self] in
-                await self?.delegate?.audioSessionDidReceiveCommand(.skipBackward(skipEvent.interval))
-            }
-            return .success
-        }
+        // Relative skip commands are unsupported; keep them hidden from system controls.
+        commandCenter.skipForwardCommand.isEnabled = false
+        commandCenter.skipBackwardCommand.isEnabled = false
     }
 
     public func disableRemoteCommands() async {

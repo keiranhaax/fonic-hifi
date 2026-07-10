@@ -230,6 +230,96 @@ final class AudioQueueManagerTests: XCTestCase {
         XCTAssertEqual(queue.currentIndex, 0)
     }
 
+    func testRemoveRemainingUsesCurrentPositionAndStableOffsets() {
+        let firstQueue = AudioQueueManager()
+        let firstTracks = ["A", "B", "C", "D"].map { makeTrack(title: $0) }
+        firstQueue.enqueue(tracks: firstTracks)
+        XCTAssertTrue(firstQueue.setCurrentIndex(0))
+
+        firstQueue.removeRemaining(at: IndexSet([0, 2]))
+
+        XCTAssertEqual(firstQueue.tracks.map(\._id), [firstTracks[0].id, firstTracks[2].id])
+        XCTAssertEqual(firstQueue.currentTrack?.id, firstTracks[0].id)
+
+        let middleQueue = AudioQueueManager()
+        let middleTracks = ["A", "B", "C", "D", "E"].map { makeTrack(title: $0) }
+        middleQueue.enqueue(tracks: middleTracks)
+        XCTAssertTrue(middleQueue.setCurrentIndex(2))
+
+        middleQueue.removeRemaining(at: IndexSet([0, 1]))
+
+        XCTAssertEqual(middleQueue.tracks.map(\._id), Array(middleTracks.prefix(3)).map(\._id))
+        XCTAssertEqual(middleQueue.currentTrack?.id, middleTracks[2].id)
+    }
+
+    func testMoveRemainingUsesCollectionDestinationSemantics() {
+        let queue = AudioQueueManager()
+        let tracks = ["A", "B", "C", "D", "E"].map { makeTrack(title: $0) }
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(1))
+
+        queue.moveRemaining(fromOffsets: IndexSet(integer: 0), toOffset: 3)
+
+        XCTAssertEqual(queue.tracks.map(\._id), [tracks[0].id, tracks[1].id, tracks[3].id, tracks[4].id, tracks[2].id])
+        XCTAssertEqual(queue.currentTrack?.id, tracks[1].id)
+
+        queue.moveRemaining(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        XCTAssertEqual(queue.tracks.map(\._id), tracks.map(\._id))
+    }
+
+    func testMoveRemainingSupportsMultipleOffsetsWithoutCurrentTrack() {
+        let queue = AudioQueueManager()
+        let tracks = ["A", "B", "C", "D"].map { makeTrack(title: $0) }
+        queue.enqueue(tracks: tracks)
+
+        queue.moveRemaining(fromOffsets: IndexSet([0, 2]), toOffset: 4)
+
+        XCTAssertEqual(queue.tracks.map(\._id), [tracks[1].id, tracks[3].id, tracks[0].id, tracks[2].id])
+        XCTAssertNil(queue.currentTrack)
+    }
+
+    func testRemoveRemainingRejectsInvalidOffsetsAtomically() {
+        let queue = AudioQueueManager()
+        let tracks = ["A", "B", "C"].map { makeTrack(title: $0) }
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(0))
+
+        queue.removeRemaining(at: IndexSet([0, 99]))
+
+        XCTAssertEqual(queue.tracks.map(\._id), tracks.map(\._id))
+        XCTAssertEqual(queue.currentTrack?.id, tracks[0].id)
+    }
+
+    func testRemainingEditsAreNoOpsWhileShuffleIsActive() {
+        let queue = AudioQueueManager()
+        let tracks = ["A", "B", "C", "D"].map { makeTrack(title: $0) }
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(1))
+        queue.shuffleMode = .random
+        let shuffledIDs = queue.tracks.map(\._id)
+        let currentID = queue.currentTrack?.id
+
+        queue.removeRemaining(at: IndexSet(integer: 0))
+        queue.moveRemaining(fromOffsets: IndexSet(integer: 0), toOffset: 1)
+
+        XCTAssertEqual(queue.tracks.map(\._id), shuffledIDs)
+        XCTAssertEqual(queue.currentTrack?.id, currentID)
+    }
+
+    func testRemainingEditsAreNoOpsWhenCurrentTrackIsLast() {
+        let queue = AudioQueueManager()
+        let tracks = ["A", "B", "C"].map { makeTrack(title: $0) }
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(2))
+
+        queue.removeRemaining(at: IndexSet(integer: 0))
+        queue.moveRemaining(fromOffsets: IndexSet(integer: 0), toOffset: 1)
+
+        XCTAssertEqual(queue.tracks.map(\._id), tracks.map(\._id))
+        XCTAssertEqual(queue.currentTrack?.id, tracks[2].id)
+    }
+
     func testClearHistoryRemovesRecordedTracks() {
         let queue = AudioQueueManager()
         let tracks = [makeTrack(title: "Intro"), makeTrack(title: "Outro")]
