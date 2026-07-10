@@ -96,13 +96,6 @@ public final class QueueCoordinator {
         logger.info("Queue cleared")
     }
 
-    /// Remove a track from the queue
-    /// - Parameter trackId: ID of the track to remove
-    public func removeFromQueue(trackId: String) {
-        // Note: This would need to be implemented in AudioQueueManager
-        logger.info("Removing track \(trackId) from queue")
-    }
-
     // MARK: - Queue Modes
 
     /// Set shuffle mode
@@ -168,20 +161,6 @@ public final class QueueCoordinator {
     /// Check if there's a previous track available
     public var hasPrevious: Bool {
         queueManager.hasPrevious
-    }
-
-    // MARK: - Queue Persistence
-
-    /// Save the current queue state
-    public func saveQueueState() async {
-        // This could be implemented to persist queue to disk
-        logger.info("Saving queue state")
-    }
-
-    /// Restore a previously saved queue state
-    public func restoreQueueState() async {
-        // This could be implemented to restore queue from disk
-        logger.info("Restoring queue state")
     }
 
     // MARK: - Private Helpers

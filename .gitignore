@@ -4,6 +4,9 @@
 
 ## User settings
 xcuserdata/
+*.xcodeproj
+!Fonic HiFi.xcodeproj/
+*.pbxproj.backup
 
 ## Build generated
 build/
@@ -34,8 +37,6 @@ xcuserdata/
 # Add this line if you want to avoid checking in source code from Swift Package Manager dependencies.
 Packages/
 Package.pins
-Package.resolved
-*.xcodeproj
 #
 # Xcode automatically generates this directory with a .xcworkspacedata file and xcuserdata
 # hence it is not needed unless you have added a package configuration file to your project
@@ -105,4 +106,13 @@ iOSInjectionProject/
 .AppleDesktop
 Network Trash Folder
 Temporary Items
-.apdiskbuild_verify.log
+.apdisk
+
+# Repository-local generated logs
+build_errors.log
+build_verify.log
+log.md
+
+# Machine-local tool configuration
+.claude/settings.local.json
+.kilocode/mcp.json

@@ -9,7 +9,7 @@ import Foundation
 import WidgetKit
 
 /// Timeline provider that reads playback state from App Group
-/// Uses AppIntentTimelineProvider for interactive widget support [Verified-Apple]
+/// Uses a standard TimelineProvider; button interactivity is supplied by App Intents.
 struct NowPlayingTimelineProvider: TimelineProvider {
     typealias Entry = NowPlayingEntry
 
