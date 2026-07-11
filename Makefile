@@ -288,8 +288,27 @@ test-unit: check-deps ## Run unit tests only
 	echo "✅ Unit tests complete"
 
 # Run UI tests only
-test-ui: ## Run UI tests (alias of make test)
-	@$(MAKE) test
+test-ui: check-deps ## Run UI tests only
+	@echo "Running UI tests..."
+	@rm -rf "$(UI_RESULT_BUNDLE)"
+	@set -o pipefail && $(XCODEBUILD) test \
+		-project "$(PROJECT_NAME).xcodeproj" \
+		-scheme "$(SCHEME)" \
+		-configuration $(CONFIGURATION_DEBUG) \
+		-destination "$(DESTINATION)" \
+		-derivedDataPath $(BUILD_DIR) \
+		-only-testing:"Fonic HiFiUITests" \
+		-resultBundlePath "$(UI_RESULT_BUNDLE)" \
+		2>&1 | tee .test_ui_output.tmp | $(XCBEAUTIFY); \
+	EXIT_CODE=$${PIPESTATUS[0]}; \
+	rm -f .test_ui_output.tmp; \
+	if [ $$EXIT_CODE -ne 0 ]; then \
+		echo "❌ UI tests failed with exit code $$EXIT_CODE"; \
+		exit $$EXIT_CODE; \
+	fi; \
+	$(XCRUN) xcresulttool get test-results summary --path "$(UI_RESULT_BUNDLE)" --format json | \
+		python3 scripts/validate_test_results.py --label "UI tests"; \
+	echo "✅ UI tests complete"
 
 # Generate test coverage report
 coverage: ## Generate test coverage report for the latest test run
