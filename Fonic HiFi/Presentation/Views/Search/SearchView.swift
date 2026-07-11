@@ -12,6 +12,7 @@ import SwiftUI
 @MainActor
 struct SearchView: View {
     @Binding var searchText: String
+    @Environment(\.audioEngine) private var audioService
     @Environment(\.dataManager) private var dataManager
     @State private var searchResults = SearchResults()
     @State private var searchTask: Task<Void, Never>?
@@ -21,6 +22,7 @@ struct SearchView: View {
 
     // Smart search
     @State private var smartSearchViewModel = SmartSearchViewModel()
+    @State private var smartSearchPlaybackState = SmartSearchPlaybackState()
     @State private var useSmartSearch = false
 
     private let logger = Log.logger(.search)
@@ -57,6 +59,15 @@ struct SearchView: View {
             } else if useSmartSearch, case .noResults = smartSearchViewModel.searchState {
                 // Smart search no results
                 NoResultsView(query: searchText, isSmartSearch: true)
+            } else if useSmartSearch, case let .error(message) = smartSearchViewModel.searchState {
+                ContentUnavailableView {
+                    Label("Smart Search Failed", systemImage: "exclamationmark.magnifyingglass")
+                } description: {
+                    Text(message)
+                } actions: {
+                    Button("Try Again") { scheduleSearch(searchText) }
+                        .buttonStyle(.borderedProminent)
+                }
             } else if searchResults.isEmpty, !searchText.isEmpty, !isSearching {
                 // Show no results message
                 NoResultsView(query: searchText, isSmartSearch: false)
@@ -100,14 +111,18 @@ struct SearchView: View {
             }
         }
         .safeAreaInset(edge: .top) {
-            if case let .unavailable(message) = smartSearchViewModel.availabilityState {
-                Label(message, systemImage: "sparkles")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: 0) {
+                if case let .unavailable(message) = smartSearchViewModel.availabilityState {
+                    searchStatusBanner(message, systemImage: "sparkles")
+                }
+                if let message = smartSearchPlaybackState.errorMessage {
+                    HStack {
+                        searchStatusBanner(message, systemImage: "exclamationmark.triangle")
+                        Button("Dismiss") { smartSearchPlaybackState.clearError() }
+                            .padding(.trailing)
+                    }
                     .background(.thinMaterial)
+                }
             }
         }
         .task {
@@ -141,6 +156,16 @@ struct SearchView: View {
                 await performSearch(query)
             }
         }
+    }
+
+    private func searchStatusBanner(_ message: String, systemImage: String) -> some View {
+        Label(message, systemImage: systemImage)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.thinMaterial)
     }
 
     private func performSearch(_ query: String) async {
@@ -201,9 +226,16 @@ struct SearchView: View {
     }
 
     private func playTrack(_ track: Track) {
-        // Delegate to audio engine via environment if available
-        // For now, this is a placeholder - integrate with audioEngine environment
-        logger.info("Playing track from smart search: \(track.title, privacy: .public)")
+        logger.info("Starting Smart Search result playback")
+        Task { @MainActor in
+            guard let audioService else {
+                smartSearchPlaybackState.reportUnavailable()
+                return
+            }
+            await smartSearchPlaybackState.play(track) { selectedTrack in
+                try await audioService.play(track: selectedTrack)
+            }
+        }
     }
 }
 
