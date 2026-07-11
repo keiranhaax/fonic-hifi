@@ -117,28 +117,6 @@ struct GlassTransitionModifier: ViewModifier {
     }
 }
 
-private struct AdaptiveGlassModifier: ViewModifier {
-    let cornerRadius: CGFloat
-    let borderOpacity: Double
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        let tint = colorScheme == .dark ? Color.white.opacity(0.4) : Color.white.opacity(0.2)
-        content
-            .clipShape(shape)
-            .overlay(shape.strokeBorder(.white.opacity(borderOpacity), lineWidth: 1))
-            .glassEffect(.regular.tint(tint), in: shape)
-    }
-}
-
-private struct ClearGlassFixModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content.background(Color.white.opacity(0.01))
-    }
-}
-
 private struct A11yAwareGlassModifier: ViewModifier {
     let style: LiquidGlassStyle
     let tint: Color?
@@ -273,14 +251,6 @@ extension View {
 
     func glassTransition(isActive: Bool, duration: Double = 0.6) -> some View {
         modifier(GlassTransitionModifier(isActive: isActive, duration: duration))
-    }
-
-    func adaptiveGlass(cornerRadius: CGFloat = 16, borderOpacity: Double = 0.2) -> some View {
-        modifier(AdaptiveGlassModifier(cornerRadius: cornerRadius, borderOpacity: borderOpacity))
-    }
-
-    func clearGlassFix() -> some View {
-        modifier(ClearGlassFixModifier())
     }
 
     func a11yAwareGlass(
