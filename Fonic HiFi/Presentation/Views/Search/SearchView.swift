@@ -314,7 +314,7 @@ private struct RecentSearchesView: View {
     var body: some View {
         List {
             Section {
-                ForEach(recentSearches, id: \.query) { search in
+                ForEach(recentSearches) { search in
                     Button {
                         onSelectSearch(search.query)
                     } label: {
