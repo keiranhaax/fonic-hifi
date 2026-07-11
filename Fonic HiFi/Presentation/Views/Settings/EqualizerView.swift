@@ -88,34 +88,39 @@ struct EqualizerView: View {
                     .padding(.horizontal)
 
                     // Band sliders
-                    HStack(alignment: .center, spacing: 4) {
-                        ForEach(0..<10, id: \.self) { index in
-                            VStack(spacing: 4) {
-                                // Vertical slider
-                                VerticalSlider(
-                                    value: $configuration.bands[index].gain,
-                                    range: -12...12
-                                )
-                                .frame(height: 140)
-                                .disabled(!configuration.isEnabled)
-                                .onChange(of: configuration.bands[index].gain) { _, _ in
-                                    selectedPreset = "Custom"
-                                    applyConfiguration()
+                    ScrollView(.horizontal) {
+                        HStack(alignment: .center, spacing: 4) {
+                            ForEach(0..<10, id: \.self) { index in
+                                VStack(spacing: 4) {
+                                    // Vertical slider
+                                    VerticalSlider(
+                                        value: $configuration.bands[index].gain,
+                                        range: -12...12,
+                                        accessibilityLabel: "\(frequencyLabels[index]) Hz"
+                                    )
+                                    .frame(width: 44, height: 140)
+                                    .disabled(!configuration.isEnabled)
+                                    .onChange(of: configuration.bands[index].gain) { _, _ in
+                                        selectedPreset = "Custom"
+                                        applyConfiguration()
+                                    }
+
+                                    // Frequency label
+                                    Text(frequencyLabels[index])
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+
+                                    // Gain value
+                                    Text(String(format: "%.1f", configuration.bands[index].gain))
+                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                        .foregroundStyle(gainColor(for: configuration.bands[index].gain))
                                 }
-
-                                // Frequency label
-                                Text(frequencyLabels[index])
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-
-                                // Gain value
-                                Text(String(format: "%.1f", configuration.bands[index].gain))
-                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(gainColor(for: configuration.bands[index].gain))
+                                .frame(width: 44)
                             }
                         }
+                        .padding(.horizontal, 4)
                     }
-                    .padding(.horizontal, 4)
+                    .scrollIndicators(.hidden)
                 }
                 .padding(.vertical)
             }
@@ -169,6 +174,7 @@ struct EqualizerView: View {
 private struct VerticalSlider: View {
     @Binding var value: Float
     let range: ClosedRange<Float>
+    let accessibilityLabel: String
 
     var body: some View {
         GeometryReader { geometry in
@@ -207,17 +213,26 @@ private struct VerticalSlider: View {
                         let newY = gesture.location.y
                         let normalizedY = 1 - (newY / height)
                         let clampedY = max(0, min(1, normalizedY))
-                        let newValue = range.lowerBound + Float(clampedY) * (range.upperBound - range.lowerBound)
-                        // Snap to 0 if close
-                        if abs(newValue) < 0.5 {
-                            value = 0
-                        } else {
-                            value = round(newValue * 2) / 2 // Round to 0.5
-                        }
+                        setValue(range.lowerBound + Float(clampedY) * (range.upperBound - range.lowerBound))
                     }
             )
         }
-        .frame(width: 30)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue("\(String(format: "%.1f", value)) decibels")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: setValue(value + 0.5)
+            case .decrement: setValue(value - 0.5)
+            @unknown default: break
+            }
+        }
+    }
+
+    private func setValue(_ proposedValue: Float) {
+        let clampedValue = min(range.upperBound, max(range.lowerBound, proposedValue))
+        value = abs(clampedValue) < 0.5 ? 0 : round(clampedValue * 2) / 2
     }
 }
 

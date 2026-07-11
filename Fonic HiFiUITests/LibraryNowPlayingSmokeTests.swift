@@ -128,6 +128,25 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         }
     }
 
+    func testEqualizerBandHasAccessibleAdjustmentTarget() throws {
+        let app = launchPreviewApp()
+
+        app.buttons["Settings"].tap()
+        let equalizerLink = app.staticTexts["Equalizer"]
+        XCTAssertTrue(equalizerLink.waitForExistence(timeout: 5), "Equalizer setting not found")
+        equalizerLink.tap()
+
+        let enableSwitch = app.switches["Enable Equalizer"]
+        XCTAssertTrue(enableSwitch.waitForExistence(timeout: 5), "Equalizer enable switch not found")
+        if enableSwitch.value as? String == "0" { enableSwitch.tap() }
+
+        let band = app.descendants(matching: .any)["32 Hz"]
+        XCTAssertTrue(band.waitForExistence(timeout: 5), "32 Hz band is not an adjustable control")
+        XCTAssertGreaterThanOrEqual(band.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(band.frame.height, 44)
+        XCTAssertTrue((band.value as? String)?.contains("decibels") == true)
+    }
+
     func testResetAllSettingsRequiresConfirmation() throws {
         let app = launchPreviewApp()
         let settingsTab = tabButton("Settings", in: app)
