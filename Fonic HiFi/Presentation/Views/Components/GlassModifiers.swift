@@ -117,57 +117,6 @@ struct GlassTransitionModifier: ViewModifier {
     }
 }
 
-private struct A11yAwareGlassModifier: ViewModifier {
-    let style: LiquidGlassStyle
-    let tint: Color?
-    let fallbackColor: Color
-    let cornerRadius: CGFloat
-
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
-    @Environment(\.colorScheme) private var colorScheme
-
-    func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-
-        if reduceTransparency {
-            content
-                .background(
-                    shape
-                        .fill(fallbackColor)
-                        .overlay(
-                            shape.strokeBorder(borderColor, lineWidth: differentiateWithoutColor ? 2 : 1),
-                        ),
-                )
-                .clipShape(shape)
-        } else {
-            let glass = accessibleGlass()
-            content
-                .clipShape(shape)
-                .overlay(
-                    shape.strokeBorder(borderColor, lineWidth: differentiateWithoutColor ? 2 : 1),
-                )
-                .glassEffect(glass, in: shape)
-        }
-    }
-
-    private func accessibleGlass() -> Glass {
-        let overrideTint: Color = differentiateWithoutColor
-            ? (colorScheme == .dark ? .white.opacity(0.6) : .black.opacity(0.4))
-            : .white.opacity(colorScheme == .dark ? 0.5 : 0.35)
-        let appliedTint = tint ?? overrideTint
-        return style.resolvedGlass(tint: appliedTint, interactive: false, colorScheme: colorScheme)
-    }
-
-    private var borderColor: Color {
-        if differentiateWithoutColor {
-            colorScheme == .dark ? .white.opacity(0.45) : .black.opacity(0.4)
-        } else {
-            .white.opacity(0.25)
-        }
-    }
-}
-
 private struct GlassPerformanceProfileModifier: ViewModifier {
     let label: String
 
@@ -251,15 +200,6 @@ extension View {
 
     func glassTransition(isActive: Bool, duration: Double = 0.6) -> some View {
         modifier(GlassTransitionModifier(isActive: isActive, duration: duration))
-    }
-
-    func a11yAwareGlass(
-        style: LiquidGlassStyle = .standard,
-        tint: Color? = nil,
-        fallbackColor: Color = .init(uiColor: .systemBackground),
-        cornerRadius: CGFloat = 16,
-    ) -> some View {
-        modifier(A11yAwareGlassModifier(style: style, tint: tint, fallbackColor: fallbackColor, cornerRadius: cornerRadius))
     }
 
     func glassPerformanceProfiled(_ label: String) -> some View {
