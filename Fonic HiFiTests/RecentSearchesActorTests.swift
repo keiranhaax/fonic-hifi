@@ -40,6 +40,25 @@ final class RecentSearchesActorTests: XCTestCase {
         XCTAssertEqual(results.first?.resultCount, 42)
     }
 
+    func testAddSearchUpsertsNormalizedQueryAndMovesItToFront() async throws {
+        try await actor.addSearch("Ambient")
+        try await actor.updateResultCount(for: "ambient", count: 12)
+        try await actor.addSearch("Focus")
+        try await actor.addSearch("  AMBIENT\n")
+
+        let results = try await actor.getRecentSearches(limit: 10)
+        XCTAssertEqual(results.count, 2)
+        XCTAssertEqual(results.map(\.query), ["Ambient", "Focus"])
+        XCTAssertEqual(results.first?.resultCount, 12)
+    }
+
+    func testAddSearchIgnoresEmptyNormalizedQuery() async throws {
+        try await actor.addSearch(" \n\t ")
+
+        let results = try await actor.getRecentSearches(limit: 10)
+        XCTAssertTrue(results.isEmpty)
+    }
+
     func testRemoveSearchDeletesMatchingEntry() async throws {
         try await actor.addSearch("first")
         try await actor.addSearch("second")
@@ -54,6 +73,18 @@ final class RecentSearchesActorTests: XCTestCase {
         all = try await actor.getRecentSearches(limit: 10)
         XCTAssertEqual(all.count, 1)
         XCTAssertEqual(all.first?.query, "second")
+    }
+
+    func testRemoveSearchUsesPersistentIdentityAfterUpsert() async throws {
+        try await actor.addSearch("Ambient")
+        let initialResults = try await actor.getRecentSearches(limit: 1)
+        let original = try XCTUnwrap(initialResults.first)
+
+        try await actor.addSearch(" ambient ")
+        try await actor.removeSearch(original)
+
+        let results = try await actor.getRecentSearches(limit: 10)
+        XCTAssertTrue(results.isEmpty)
     }
 
     func testClearAllSearchesRemovesEverything() async throws {

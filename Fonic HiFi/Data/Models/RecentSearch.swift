@@ -29,18 +29,21 @@ public final class RecentSearch {
 }
 
 /// Sendable value type for transferring recent search data across actor boundaries
-public struct RecentSearchData: Sendable {
+public struct RecentSearchData: Identifiable, Sendable {
+    public let id: PersistentIdentifier
     public let query: String
     public let timestamp: Date
     public let resultCount: Int
 
-    public init(query: String, timestamp: Date, resultCount: Int) {
+    public init(id: PersistentIdentifier, query: String, timestamp: Date, resultCount: Int) {
+        self.id = id
         self.query = query
         self.timestamp = timestamp
         self.resultCount = resultCount
     }
 
     public init(from model: RecentSearch) {
+        id = model.persistentModelID
         query = model.query
         timestamp = model.timestamp
         resultCount = model.resultCount

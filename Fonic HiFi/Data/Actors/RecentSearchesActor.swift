@@ -16,15 +16,32 @@ public actor RecentSearchesActor {
 
     /// Add a new search query to recent searches
     public func addSearch(_ query: String) async throws {
-        let search = RecentSearch(query: query, timestamp: Date())
-        modelContext.insert(search)
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else { return }
+
+        let normalizedQuery = normalize(trimmedQuery)
+        let descriptor = FetchDescriptor<RecentSearch>(
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)],
+        )
+        let matches = try modelContext.fetch(descriptor).filter {
+            normalize($0.query) == normalizedQuery
+        }
+
+        if let existing = matches.first {
+            existing.timestamp = Date()
+            for duplicate in matches.dropFirst() {
+                modelContext.delete(duplicate)
+            }
+        } else {
+            modelContext.insert(RecentSearch(query: trimmedQuery, timestamp: Date()))
+        }
         try modelContext.save()
 
         // Cleanup old searches (keep last 20)
-        var descriptor = FetchDescriptor<RecentSearch>(
+        let cleanupDescriptor = FetchDescriptor<RecentSearch>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)],
         )
-        let allSearches = try modelContext.fetch(descriptor)
+        let allSearches = try modelContext.fetch(cleanupDescriptor)
         if allSearches.count > 20 {
             for search in allSearches.suffix(from: 20) {
                 modelContext.delete(search)
@@ -45,7 +62,7 @@ public actor RecentSearchesActor {
 
     /// Clear all recent searches
     public func clearAllSearches() async throws {
-        var descriptor = FetchDescriptor<RecentSearch>()
+        let descriptor = FetchDescriptor<RecentSearch>()
         let allSearches = try modelContext.fetch(descriptor)
         for search in allSearches {
             modelContext.delete(search)
@@ -55,20 +72,7 @@ public actor RecentSearchesActor {
 
     /// Remove a specific recent search
     public func removeSearch(_ search: RecentSearchData) async throws {
-        // Capture values outside the predicate to avoid type mismatch
-        let searchQuery = search.query
-        let searchTimestamp = search.timestamp
-
-        var descriptor = FetchDescriptor<RecentSearch>(
-            predicate: #Predicate<RecentSearch> { candidate in
-                candidate.query == searchQuery &&
-                    candidate.timestamp == searchTimestamp
-            },
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)],
-        )
-        descriptor.fetchLimit = 1
-
-        if let match = try modelContext.fetch(descriptor).first {
+        if let match = modelContext.model(for: search.id) as? RecentSearch {
             modelContext.delete(match)
             try modelContext.save()
         }
@@ -76,17 +80,20 @@ public actor RecentSearchesActor {
 
     /// Update the result count for a search query
     public func updateResultCount(for query: String, count: Int) async throws {
-        var descriptor = FetchDescriptor<RecentSearch>(
-            predicate: #Predicate<RecentSearch> { search in
-                search.query == query
-            },
+        let normalizedQuery = normalize(query)
+        let descriptor = FetchDescriptor<RecentSearch>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)],
         )
-        descriptor.fetchLimit = 1
 
-        if let existingSearch = try modelContext.fetch(descriptor).first {
+        if let existingSearch = try modelContext.fetch(descriptor).first(where: {
+            normalize($0.query) == normalizedQuery
+        }) {
             existingSearch.resultCount = count
             try modelContext.save()
         }
+    }
+
+    private func normalize(_ query: String) -> String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 }
