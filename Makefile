@@ -348,15 +348,18 @@ format: ## Auto-format code with SwiftFormat
 
 # Run static analysis
 analyze: check-deps ## Run static analysis on codebase
-	@echo "Running static analysis..."
+	@echo "Running Release static analysis..."
 	@set -o pipefail && $(XCODEBUILD) analyze \
 		-project "$(PROJECT_NAME).xcodeproj" \
 		-scheme "$(SCHEME)" \
-		-configuration $(CONFIGURATION_DEBUG) \
+		-configuration $(CONFIGURATION_RELEASE) \
 		-destination "$(DESTINATION)" \
+		-derivedDataPath $(BUILD_DIR) \
+		CODE_SIGN_IDENTITY="" \
+		CODE_SIGNING_REQUIRED=NO \
 		-quiet \
 		| $(XCBEAUTIFY) || exit 1
-	@echo "Static analysis complete"
+	@echo "Release static analysis complete"
 
 # Open project in Xcode
 open: ## Open project in Xcode

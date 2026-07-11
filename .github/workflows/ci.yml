@@ -50,6 +50,12 @@ jobs:
       - name: Run UI tests
         run: make test-ui
 
+      - name: Build unsigned Release
+        run: make build-release
+
+      - name: Analyze Release
+        run: make analyze
+
       - name: Run coverage check
         id: coverage
         run: |
