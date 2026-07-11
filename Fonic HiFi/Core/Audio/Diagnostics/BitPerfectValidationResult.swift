@@ -543,38 +543,3 @@ public struct BitPerfectSettings: Sendable, Equatable {
             lhs.sessionCategory == rhs.sessionCategory
     }
 }
-
-/// Performance impact assessment of bit-perfect configuration
-// PerformanceImpact is defined in AudioEngineType.swift
-public struct PerformanceMetrics: Sendable, Equatable {
-    /// CPU usage impact (0.0 to 1.0)
-    public let cpuImpact: Double
-
-    /// Memory usage impact (0.0 to 1.0)
-    public let memoryImpact: Double
-
-    /// Battery life impact (0.0 to 1.0)
-    public let batteryImpact: Double
-
-    /// Expected latency in milliseconds
-    public let latency: Double
-
-    /// Overall performance rating
-    public let rating: PerformanceRating
-
-    public init(
-        cpuImpact: Double = 0.1,
-        memoryImpact: Double = 0.1,
-        batteryImpact: Double = 0.1,
-        latency: Double = 5.0,
-        rating: PerformanceRating = .good,
-    ) {
-        self.cpuImpact = cpuImpact
-        self.memoryImpact = memoryImpact
-        self.batteryImpact = batteryImpact
-        self.latency = latency
-        self.rating = rating
-    }
-}
-
-// PerformanceRating is defined in PlaybackDiagnostics.swift

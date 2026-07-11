@@ -51,8 +51,6 @@ public struct AudioPerformanceMetrics: Sendable {
     public let bufferUnderrunCount: Int
     public let formatSwitchCount: Int
     public let averageFormatSwitchTime: TimeInterval
-    public let bitPerfectSessions: Int
-    public let totalPlaybackTime: TimeInterval
 }
 
 public struct MemoryMetrics: Sendable {
@@ -107,9 +105,6 @@ public actor PerformanceMonitor: PerformanceMonitoring {
     private var audioLatencies: [TimeInterval] = []
     private var bufferUnderruns: Int = 0
     private var formatSwitches: [(from: AudioFormat, to: AudioFormat, duration: TimeInterval)] = []
-    private var bitPerfectSessionCount: Int = 0
-    private var totalPlaybackTime: TimeInterval = 0
-    private var playbackStartTime: Date?
 
     // Memory metrics storage
     private var memoryUsages: [Int64] = []
@@ -244,8 +239,6 @@ public actor PerformanceMonitor: PerformanceMonitoring {
             bufferUnderrunCount: self.bufferUnderruns,
             formatSwitchCount: self.formatSwitches.count,
             averageFormatSwitchTime: self.formatSwitches.isEmpty ? 0 : self.formatSwitches.map(\.duration).reduce(0, +) / Double(self.formatSwitches.count),
-            bitPerfectSessions: self.bitPerfectSessionCount,
-            totalPlaybackTime: self.totalPlaybackTime,
         )
 
         // Calculate memory metrics
@@ -299,9 +292,6 @@ public actor PerformanceMonitor: PerformanceMonitoring {
         self.audioLatencies.removeAll()
         self.bufferUnderruns = 0
         self.formatSwitches.removeAll()
-        self.bitPerfectSessionCount = 0
-        self.totalPlaybackTime = 0
-        self.playbackStartTime = nil
 
         self.memoryUsages.removeAll()
         self.memoryWarnings = 0
@@ -315,23 +305,4 @@ public actor PerformanceMonitor: PerformanceMonitoring {
         self.crashes.removeAll()
     }
 
-    // MARK: - Helper Methods
-
-    /// Start tracking playback time
-    public func startPlaybackTracking() {
-        playbackStartTime = Date()
-    }
-
-    /// Stop tracking playback time
-    public func stopPlaybackTracking() {
-        if let startTime = playbackStartTime {
-            totalPlaybackTime += Date().timeIntervalSince(startTime)
-            playbackStartTime = nil
-        }
-    }
-
-    /// Record a bit-perfect playback session
-    public func recordBitPerfectSession() {
-        bitPerfectSessionCount += 1
-    }
 }
