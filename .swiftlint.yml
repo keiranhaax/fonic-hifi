@@ -1,6 +1,8 @@
 included:
   - Fonic HiFi
+  - Fonic HiFi Widget
   - Fonic HiFiTests
+  - Fonic HiFiUITests
 
 excluded:
   - .build
