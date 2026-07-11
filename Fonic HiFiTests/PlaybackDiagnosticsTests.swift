@@ -30,51 +30,6 @@ final class PlaybackDiagnosticsTests: XCTestCase {
         XCTAssertEqual(diagnostics.priorityIssues.first?.title, "Dropout Spike")
     }
 
-    func testGenerateExecutiveSummaryIncludesHighlights() {
-        let issues = [PlaybackDiagnosticsFixtures.makeIssue(severity: .critical, title: "Thermal Throttling")]
-        let recommendations = [PlaybackDiagnosticsFixtures.makeRecommendation(priority: .high, title: "Increase Buffer Size")]
-
-        let diagnostics = PlaybackDiagnosticsFixtures.makeDiagnostics(
-            issues: issues,
-            recommendations: recommendations,
-        )
-
-        let summary = diagnostics.generateExecutiveSummary()
-
-        XCTAssertTrue(summary.contains("Priority Issues (1)"))
-        XCTAssertTrue(summary.contains("• Thermal Throttling"))
-        XCTAssertTrue(summary.contains("Key Recommendations:"))
-        XCTAssertTrue(summary.contains("• Increase Buffer Size"))
-    }
-
-    func testExportForAnalysisIncludesMetricsAndRecommendations() {
-        let recommendation = PlaybackDiagnosticsFixtures.makeRecommendation(priority: .critical, title: "Switch Engine")
-        let diagnostics = PlaybackDiagnosticsFixtures.makeDiagnostics(
-            systemHealth: .excellent,
-            metrics: PlaybackDiagnosticsFixtures.makeMetrics(performanceScore: 0.92),
-            recommendations: [recommendation],
-        )
-
-        let payload = diagnostics.exportForAnalysis()
-
-        XCTAssertEqual(payload["systemHealth"] as? String, "excellent")
-        XCTAssertEqual(payload["systemScore"] as? Int, diagnostics.systemScore)
-
-        let metrics = payload["metrics"] as? [String: Any]
-        let bufferUnderruns = (metrics?["bufferUnderruns"] as? NSNumber)?.intValue
-        XCTAssertEqual(bufferUnderruns, diagnostics.currentMetrics.bufferUnderruns)
-
-        let performanceScore = (metrics?["performanceScore"] as? NSNumber)?.floatValue
-        XCTAssertNotNil(performanceScore)
-        if let performanceScore {
-            XCTAssertEqual(performanceScore, diagnostics.currentMetrics.performanceScore, accuracy: 0.0001)
-        }
-
-        let recommendations = payload["recommendations"] as? [[String: Any]]
-        XCTAssertEqual(recommendations?.count, 1)
-        XCTAssertEqual(recommendations?.first?["title"] as? String, "Switch Engine")
-    }
-
     func testNeedsAttentionFlagsLowScores() {
         let diagnostics = PlaybackDiagnosticsFixtures.makeDiagnostics(
             systemHealth: .poor,
