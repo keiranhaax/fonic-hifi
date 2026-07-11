@@ -117,73 +117,6 @@ struct GlassTransitionModifier: ViewModifier {
     }
 }
 
-struct PlayingParticlesModifier: ViewModifier {
-    let isPlaying: Bool
-    let particleCount: Int
-
-    @State private var particleOffsets: [CGSize] = []
-    @State private var particleOpacities: [Double] = []
-
-    func body(content: Content) -> some View {
-        content
-            .overlay(
-                ZStack {
-                    ForEach(0 ..< particleCount, id: \.self) { index in
-                        if particleOffsets.indices.contains(index) {
-                            Circle()
-                                .fill(.white)
-                                .frame(width: 3, height: 3)
-                                .offset(particleOffsets[index])
-                                .opacity(particleOpacities.indices.contains(index) ? particleOpacities[index] : 0)
-                                .blur(radius: 0.5)
-                        }
-                    }
-                },
-            )
-            .onAppear(perform: initializeParticles)
-            .onChange(of: isPlaying) { _, newValue in
-                if newValue {
-                    animateParticles()
-                } else {
-                    resetParticles()
-                }
-            }
-    }
-
-    private func initializeParticles() {
-        particleOffsets = Array(repeating: .zero, count: particleCount)
-        particleOpacities = Array(repeating: 0.0, count: particleCount)
-        if isPlaying {
-            animateParticles()
-        }
-    }
-
-    private func animateParticles() {
-        for index in 0 ..< particleCount {
-            let delay = Double(index) * 0.1
-
-            withAnimation(
-                .easeInOut(duration: 2.0)
-                    .repeatForever(autoreverses: true)
-                    .delay(delay),
-            ) {
-                particleOffsets[index] = CGSize(
-                    width: Double.random(in: -50 ... 50),
-                    height: Double.random(in: -50 ... 50),
-                )
-                particleOpacities[index] = Double.random(in: 0.3 ... 0.8)
-            }
-        }
-    }
-
-    private func resetParticles() {
-        withAnimation(.easeOut(duration: 0.5)) {
-            particleOffsets = Array(repeating: .zero, count: particleCount)
-            particleOpacities = Array(repeating: 0.0, count: particleCount)
-        }
-    }
-}
-
 private struct AdaptiveGlassModifier: ViewModifier {
     let cornerRadius: CGFloat
     let borderOpacity: Double
@@ -340,10 +273,6 @@ extension View {
 
     func glassTransition(isActive: Bool, duration: Double = 0.6) -> some View {
         modifier(GlassTransitionModifier(isActive: isActive, duration: duration))
-    }
-
-    func playingParticles(isPlaying: Bool, particleCount: Int = 12) -> some View {
-        modifier(PlayingParticlesModifier(isPlaying: isPlaying, particleCount: particleCount))
     }
 
     func adaptiveGlass(cornerRadius: CGFloat = 16, borderOpacity: Double = 0.2) -> some View {
