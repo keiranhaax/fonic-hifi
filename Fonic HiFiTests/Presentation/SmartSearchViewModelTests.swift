@@ -14,17 +14,29 @@ struct SmartSearchViewModelTests {
         #expect(viewModel.searchState == .idle)
         #expect(viewModel.smartSearchResult == nil)
         #expect(!viewModel.isSmartSearchEnabled)
+        #expect(viewModel.availabilityState == .checking)
     }
 
-    @Test("Smart search availability updates isSmartSearchEnabled")
+    @Test("Available smart search is enabled deterministically")
     @MainActor
-    func availabilityCheckUpdatesState() async {
-        let viewModel = SmartSearchViewModel()
+    func availableSearchUpdatesState() async {
+        let viewModel = SmartSearchViewModel(availabilityCheck: { true })
 
         await viewModel.checkSmartSearchAvailability()
 
-        // Will be true or false depending on device
-        #expect(viewModel.isSmartSearchEnabled == true || viewModel.isSmartSearchEnabled == false)
+        #expect(viewModel.isSmartSearchEnabled)
+        #expect(viewModel.availabilityState == .available)
+    }
+
+    @Test("Unavailable smart search exposes an explanation")
+    @MainActor
+    func unavailableSearchUpdatesState() async {
+        let viewModel = SmartSearchViewModel(availabilityCheck: { false })
+
+        await viewModel.checkSmartSearchAvailability()
+
+        #expect(!viewModel.isSmartSearchEnabled)
+        #expect(viewModel.availabilityState == .unavailable("Smart Search is unavailable on this device."))
     }
 
     @Test("Clear search resets state")

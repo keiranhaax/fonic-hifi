@@ -17,27 +17,51 @@ public final class SmartSearchViewModel {
         case error(String)
     }
 
+    public enum AvailabilityState: Equatable {
+        case checking
+        case available
+        case unavailable(String)
+    }
+
     // MARK: - Properties
 
     public private(set) var searchState: SearchState = .idle
     public private(set) var smartSearchResult: SmartSearchResult?
     public private(set) var isSmartSearchEnabled = false
+    public private(set) var availabilityState: AvailabilityState = .checking
 
     /// Track IDs from the search result - use these with @Query in views
     public private(set) var resultTrackIDs: [UUID] = []
 
-    private let smartSearchService = SmartSearchService()
+    private let smartSearchService: SmartSearchService
+    @ObservationIgnored private let availabilityCheck: @MainActor () async -> Bool
     private let logger = Log.logger(.smartSearch)
 
     // MARK: - Initialization
 
-    public init() {}
+    public init() {
+        let service = SmartSearchService()
+        smartSearchService = service
+        availabilityCheck = { await service.isSmartSearchAvailable() }
+    }
+
+    init(
+        smartSearchService: SmartSearchService = SmartSearchService(),
+        availabilityCheck: @escaping @MainActor () async -> Bool
+    ) {
+        self.smartSearchService = smartSearchService
+        self.availabilityCheck = availabilityCheck
+    }
 
     // MARK: - Public Methods
 
     /// Check if smart search is available on this device
     public func checkSmartSearchAvailability() async {
-        isSmartSearchEnabled = await smartSearchService.isSmartSearchAvailable()
+        availabilityState = .checking
+        isSmartSearchEnabled = await availabilityCheck()
+        availabilityState = isSmartSearchEnabled
+            ? .available
+            : .unavailable("Smart Search is unavailable on this device.")
         let enabled = isSmartSearchEnabled
         logger.info("Smart search available: \(enabled)")
     }
