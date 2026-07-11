@@ -27,6 +27,8 @@ struct LiquidGlassMiniPlayer: View {
             nextButton
         }
         .contentShape(.rect)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("MiniPlayer")
         .foregroundStyle(Color.primary)
         .padding(.horizontal, 15)
     }

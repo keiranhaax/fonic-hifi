@@ -54,9 +54,11 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue(libraryNavigationBar.waitForExistence(timeout: 5), "Library screen did not appear")
 
         let miniPlayer = app.otherElements["MiniPlayer"]
-        guard miniPlayer.waitForExistence(timeout: 5) else {
-            throw XCTSkip("Mini player not visible")
-        }
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 5), "Mini player not visible")
+        XCTAssertTrue(
+            app.staticTexts["Impulse Response"].waitForExistence(timeout: 3),
+            "Preview track was not exposed in the mini player"
+        )
         miniPlayer.tap()
 
         let nowPlayingHeader = app.staticTexts["Now Playing"]
@@ -156,9 +158,11 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         }
 
         let miniPlayer = app.otherElements["MiniPlayer"]
-        guard miniPlayer.waitForExistence(timeout: 5) else {
-            throw XCTSkip("Mini player not visible")
-        }
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 5), "Mini player not visible")
+        XCTAssertTrue(
+            app.staticTexts["Impulse Response"].waitForExistence(timeout: 3),
+            "Preview track was not exposed in the mini player"
+        )
         miniPlayer.tap()
 
         XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5), "Now Playing did not present")

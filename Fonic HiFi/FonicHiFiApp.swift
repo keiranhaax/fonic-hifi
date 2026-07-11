@@ -363,6 +363,20 @@ private extension FonicHiFiApp {
             queueManager: queueManager,
             monitor: audioMonitor
         )
+        let previewTrack = Track(
+            url: FileManager.default.temporaryDirectory.appendingPathComponent("fonic-ui-test-preview.flac"),
+            title: "Impulse Response",
+            artist: "Fonic Ensemble",
+            album: "Signal Paths",
+            audioFormat: "FLAC",
+            duration: 245,
+            sampleRate: 96_000,
+            bitDepth: 24,
+            channels: 2,
+            isLossless: true
+        )
+        queueManager.setCurrentTrack(previewTrack.toAudioTrack())
+        audioService.setCurrentTrack(previewTrack)
         let importService = LibraryImportService(
             trackDataActor: dataManager.trackDataActor,
             metadataExtractor: dataManager.metadataExtractor

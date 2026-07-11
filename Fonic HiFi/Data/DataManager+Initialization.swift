@@ -230,19 +230,12 @@ public extension DataManager {
 
     static func makePreviewDataManager() -> DataManager? {
         initLogger.info("Creating preview DataManager")
-
-        if let fallback = makeFallbackDataManager() {
-            initLogger.info("Using fallback DataManager for preview")
-            return fallback
-        }
-
-        do {
-            initLogger.info("Attempting to create standard DataManager for preview")
-            return try DataManager()
-        } catch {
-            initLogger.error("Error creating preview DataManager: \(error)")
+        guard let container = previewContainer() else {
+            initLogger.error("Unable to create an in-memory preview DataManager")
             return nil
         }
+
+        return DataManager(container: container, isFallback: false)
     }
 
     #if DEBUG
