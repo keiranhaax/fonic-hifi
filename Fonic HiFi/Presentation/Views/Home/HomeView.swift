@@ -363,26 +363,6 @@ private struct EmptyHomeView: View {
     }
 }
 
-private struct AlbumCardView: View {
-    let album: Album
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
-            LazyArtworkView(album: album, size: 160, cornerRadius: DesignTokens.CornerRadius.small)
-
-            Text(album.title)
-                .font(.callout.bold())
-                .lineLimit(1)
-
-            Text(album.albumArtist)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
-        .frame(width: 160)
-    }
-}
-
 private struct CarouselView: View {
     let tracks: [Track]
 
