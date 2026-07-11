@@ -117,47 +117,6 @@ struct GlassTransitionModifier: ViewModifier {
     }
 }
 
-private struct GlassPerformanceProfileModifier: ViewModifier {
-    let label: String
-
-    func body(content: Content) -> some View {
-        content
-            .onAppear {
-                GlassPerformanceProfiler.shared.startProfiling(label)
-            }
-            .onDisappear {
-                GlassPerformanceProfiler.shared.endProfiling(label)
-            }
-    }
-}
-
-private struct AdaptiveGlassPerformanceModifier: ViewModifier {
-    @State private var isMonitoring = false
-
-    func body(content: Content) -> some View {
-        content
-            .task(startMonitoring)
-    }
-
-    private func startMonitoring() async {
-        guard !isMonitoring else { return }
-        isMonitoring = true
-
-        let thermalState = ProcessInfo.processInfo.thermalState
-        let lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
-
-        await MainActor.run {
-            if thermalState == .critical || lowPower {
-                GlassPerformanceProfiler.shared.recordAdaptiveHint(.performance)
-            } else if thermalState == .serious {
-                GlassPerformanceProfiler.shared.recordAdaptiveHint(.balanced)
-            } else {
-                GlassPerformanceProfiler.shared.recordAdaptiveHint(.quality)
-            }
-        }
-    }
-}
-
 private struct FrameRateControlModifier: ViewModifier {
     let targetFrameRate: Double
 
@@ -200,14 +159,6 @@ extension View {
 
     func glassTransition(isActive: Bool, duration: Double = 0.6) -> some View {
         modifier(GlassTransitionModifier(isActive: isActive, duration: duration))
-    }
-
-    func glassPerformanceProfiled(_ label: String) -> some View {
-        modifier(GlassPerformanceProfileModifier(label: label))
-    }
-
-    func adaptiveGlassPerformance() -> some View {
-        modifier(AdaptiveGlassPerformanceModifier())
     }
 
     func preferredFrameRate(_ rate: Double) -> some View {
