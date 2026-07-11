@@ -8,63 +8,6 @@
 import SwiftUI
 @preconcurrency import WidgetKit
 
-// MARK: - StandBy Environment Key
-
-/// Environment key for detecting StandBy mode
-/// When `showsWidgetContainerBackground` is false, we're in StandBy mode [Verified-Apple]
-struct StandByEnvironment: Sendable {
-    let showsBackground: Bool
-    let renderingMode: WidgetRenderingMode
-
-    /// True when widget is displayed in StandBy mode (bedside clock mode)
-    var isStandByMode: Bool {
-        !showsBackground
-    }
-
-    /// True when using vibrant (tinted monochrome) rendering
-    var isVibrantMode: Bool {
-        renderingMode == .vibrant
-    }
-
-    /// True when full color artwork should be displayed
-    var supportsFullColor: Bool {
-        renderingMode == .fullColor
-    }
-}
-
-// MARK: - StandBy Adaptive View Modifier
-
-/// View modifier that adapts content for StandBy mode
-/// Enlarges text and increases contrast for distance viewing
-struct StandByAdaptive: ViewModifier {
-    @Environment(\.showsWidgetContainerBackground) var showsBackground
-    @Environment(\.widgetRenderingMode) var renderingMode
-
-    let scaleFactor: CGFloat
-
-    init(scaleFactor: CGFloat = 1.2) {
-        self.scaleFactor = scaleFactor
-    }
-
-    var isStandByMode: Bool {
-        !showsBackground
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .scaleEffect(isStandByMode ? scaleFactor : 1.0)
-            .environment(\.dynamicTypeSize, isStandByMode ? .xxxLarge : .large)
-    }
-}
-
-extension View {
-    /// Apply StandBy mode adaptive scaling
-    /// - Parameter scaleFactor: How much to scale up in StandBy mode (default 1.2)
-    func standByAdaptive(scaleFactor: CGFloat = 1.2) -> some View {
-        modifier(StandByAdaptive(scaleFactor: scaleFactor))
-    }
-}
-
 // MARK: - StandBy Aware Font
 
 /// Provides fonts that scale appropriately for StandBy mode
@@ -162,40 +105,3 @@ struct StandBySizes {
         showsBackground ? 8 : 12
     }
 }
-
-// MARK: - Environment-Aware Container
-
-/// A container view that provides StandBy-aware environment values to children
-struct StandByAwareContainer<Content: View>: View {
-    @Environment(\.showsWidgetContainerBackground) var showsBackground
-    @Environment(\.widgetRenderingMode) var renderingMode
-
-    let content: (StandByEnvironment) -> Content
-
-    init(@ViewBuilder content: @escaping (StandByEnvironment) -> Content) {
-        self.content = content
-    }
-
-    var body: some View {
-        let environment = StandByEnvironment(
-            showsBackground: showsBackground,
-            renderingMode: renderingMode
-        )
-        content(environment)
-    }
-}
-
-// MARK: - Preview Helpers
-
-#if DEBUG
-extension StandByEnvironment {
-    /// Normal widget context (Home Screen)
-    static let normal = StandByEnvironment(showsBackground: true, renderingMode: .fullColor)
-
-    /// StandBy mode context (bedside clock)
-    static let standBy = StandByEnvironment(showsBackground: false, renderingMode: .vibrant)
-
-    /// Lock Screen vibrant context
-    static let lockScreenVibrant = StandByEnvironment(showsBackground: true, renderingMode: .vibrant)
-}
-#endif

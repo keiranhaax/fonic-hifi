@@ -65,35 +65,6 @@ struct AccessoryCircularView: View {
     }
 }
 
-// MARK: - Gauge-based Alternative
-
-/// Alternative circular view using Gauge for StandBy mode optimization
-/// Gauge automatically adapts well to StandBy and different rendering modes [Verified-Apple]
-struct AccessoryCircularGaugeView: View {
-    @Environment(\.showsWidgetContainerBackground) private var showsBackground
-
-    let entry: NowPlayingEntry
-
-    /// StandBy mode detection
-    private var isStandByMode: Bool { !showsBackground }
-
-    /// Adaptive icon size
-    private var iconSize: CGFloat { isStandByMode ? 18 : 14 }
-
-    var body: some View {
-        Gauge(value: entry.progress) {
-            // Label (used in some widget renderings)
-            Image(systemName: entry.isPlaying ? "waveform" : "play.fill")
-        } currentValueLabel: {
-            // Center content
-            Image(systemName: entry.isPlaying ? "waveform" : "play.fill")
-                .font(.system(size: iconSize, weight: .medium))
-        }
-        .gaugeStyle(.accessoryCircular)
-        .widgetURL(URL(string: "fonichifi://nowplaying"))
-    }
-}
-
 // MARK: - Preview
 
 #Preview("Accessory Circular", as: .accessoryCircular) {
