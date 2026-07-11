@@ -104,6 +104,30 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         searchField.typeText("test\n")
     }
 
+    func testSmartSearchModeIsReachable() throws {
+        let app = launchPreviewApp()
+
+        let searchTab = app.buttons["Search"]
+        XCTAssertTrue(searchTab.waitForExistence(timeout: 10), "Search tab not found")
+        searchTab.tap()
+
+        let searchMode = app.buttons["Search Mode"]
+        XCTAssertTrue(searchMode.waitForExistence(timeout: 5), "Search mode control is not reachable")
+        searchMode.tap()
+
+        let smartSearch = app.buttons["Smart Search"]
+        XCTAssertTrue(smartSearch.waitForExistence(timeout: 3), "Smart Search mode is not exposed")
+        if smartSearch.isEnabled {
+            smartSearch.tap()
+            XCTAssertEqual(searchMode.value as? String, "Smart Search")
+        } else {
+            XCTAssertTrue(
+                app.staticTexts["Smart Search is unavailable on this device."].waitForExistence(timeout: 3),
+                "Unavailable Smart Search state is not explained"
+            )
+        }
+    }
+
     func testResetAllSettingsRequiresConfirmation() throws {
         let app = launchPreviewApp()
         let settingsTab = tabButton("Settings", in: app)

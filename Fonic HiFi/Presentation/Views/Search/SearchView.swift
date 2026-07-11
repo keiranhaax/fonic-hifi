@@ -77,39 +77,37 @@ struct SearchView: View {
         }
         .navigationTitle("Search")
         .onChange(of: searchText) { _, newValue in
-            // Cancel previous search task
-            searchTask?.cancel()
-
-            // Debounce search with 300ms delay
-            searchTask = Task {
-                // Show recent searches if search is cleared
-                if newValue.isEmpty {
-                    showingRecentSearches = true
-                    searchResults = SearchResults()
-                    smartSearchViewModel.clearSearch()
-                    isSearching = false
-                    return
+            scheduleSearch(newValue)
+        }
+        .onChange(of: useSmartSearch) { _, _ in
+            guard !searchText.isEmpty else { return }
+            scheduleSearch(searchText)
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Standard Search", systemImage: "magnifyingglass") {
+                        useSmartSearch = false
+                    }
+                    Button("Smart Search", systemImage: "sparkles") {
+                        useSmartSearch = true
+                    }
+                    .disabled(!smartSearchViewModel.isSmartSearchEnabled)
+                } label: {
+                    Label("Search Mode", systemImage: useSmartSearch ? "sparkles" : "magnifyingglass")
                 }
-
-                showingRecentSearches = false
-                isSearching = true
-
-                // Wait for debounce delay
-                try? await Task.sleep(for: .milliseconds(300))
-
-                // Check if task was cancelled
-                guard !Task.isCancelled else { return }
-
-                // Perform smart or standard search
-                if useSmartSearch, let dataManager {
-                    await smartSearchViewModel.performSmartSearch(
-                        query: newValue,
-                        dataManager: dataManager
-                    )
-                    isSearching = false
-                } else {
-                    await performSearch(newValue)
-                }
+                .accessibilityValue(useSmartSearch ? "Smart Search" : "Standard Search")
+            }
+        }
+        .safeAreaInset(edge: .top) {
+            if case let .unavailable(message) = smartSearchViewModel.availabilityState {
+                Label(message, systemImage: "sparkles")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.thinMaterial)
             }
         }
         .task {
@@ -117,6 +115,31 @@ struct SearchView: View {
             await loadRecentSearches()
             // Check smart search availability
             await smartSearchViewModel.checkSmartSearchAvailability()
+        }
+    }
+
+    private func scheduleSearch(_ query: String) {
+        searchTask?.cancel()
+        searchTask = Task {
+            if query.isEmpty {
+                showingRecentSearches = true
+                searchResults = SearchResults()
+                smartSearchViewModel.clearSearch()
+                isSearching = false
+                return
+            }
+
+            showingRecentSearches = false
+            isSearching = true
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+
+            if useSmartSearch, let dataManager {
+                await smartSearchViewModel.performSmartSearch(query: query, dataManager: dataManager)
+                isSearching = false
+            } else {
+                await performSearch(query)
+            }
         }
     }
 
