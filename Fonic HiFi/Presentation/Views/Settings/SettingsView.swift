@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage("showFileExtensions") private var showExtensions = true
     @AppStorage("artworkThemingEnabled") private var artworkThemingEnabled = true
     @AppStorage("artworkThemingLightMode") private var artworkThemingLightMode = true
+    @State private var showingResetConfirmation = false
 
     @Environment(\.themePalette) private var theme
 
@@ -187,7 +188,7 @@ struct SettingsView: View {
                     }
 
                     Button(role: .destructive) {
-                        resetSettings()
+                        showingResetConfirmation = true
                     } label: {
                         SettingsRow(
                             icon: "arrow.counterclockwise",
@@ -200,6 +201,17 @@ struct SettingsView: View {
             .tint(theme.accent)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
+            .alert(
+                "Reset all settings?",
+                isPresented: $showingResetConfirmation
+            ) {
+                Button("Reset Settings", role: .destructive) {
+                    resetSettings()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Playback, appearance, haptics, file display, and artwork theme preferences return to defaults. Your music library and imported files are not deleted.")
+            }
         }
     }
 

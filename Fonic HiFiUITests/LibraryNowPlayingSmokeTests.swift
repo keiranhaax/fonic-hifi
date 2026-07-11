@@ -25,6 +25,24 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         return app.tabBars.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", title)).firstMatch
     }
 
+    private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<6 where !element.isHittable {
+            app.swipeUp()
+        }
+    }
+
+    private func setSwitch(_ element: XCUIElement, enabled: Bool) {
+        let expectedValue = enabled ? "1" : "0"
+        guard element.value as? String != expectedValue else { return }
+
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", expectedValue),
+            object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 3), .completed)
+    }
+
     func testLibraryTabAndNowPlayingSheet() throws {
         let app = launchPreviewApp()
 
@@ -82,6 +100,44 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue(searchField.waitForExistence(timeout: 5), "Search field not available")
         searchField.tap()
         searchField.typeText("test\n")
+    }
+
+    func testResetAllSettingsRequiresConfirmation() throws {
+        let app = launchPreviewApp()
+        let settingsTab = tabButton("Settings", in: app)
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10), "Settings tab not found")
+        settingsTab.tap()
+
+        let showExtensions = app.switches["Show File Extensions"]
+        reveal(showExtensions, in: app)
+        XCTAssertTrue(showExtensions.waitForExistence(timeout: 5), "File extension setting not found")
+        setSwitch(showExtensions, enabled: false)
+        XCTAssertEqual(showExtensions.value as? String, "0", "Test precondition did not disable file extensions")
+
+        let resetButton = app.buttons["Reset All Settings"]
+        reveal(resetButton, in: app)
+        XCTAssertTrue(resetButton.isHittable, "Reset button was not reachable")
+        resetButton.tap()
+
+        XCTAssertTrue(
+            app.staticTexts["Reset all settings?"].waitForExistence(timeout: 3),
+            "Reset confirmation title was not presented"
+        )
+        let preservedDataMessage = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "Your music library and imported files are not deleted.")
+        ).firstMatch
+        XCTAssertTrue(
+            preservedDataMessage.exists,
+            "Reset confirmation did not name preserved user data"
+        )
+        app.buttons["Cancel"].tap()
+
+        XCTAssertEqual(showExtensions.value as? String, "0", "Cancel changed the setting")
+
+        reveal(resetButton, in: app)
+        resetButton.tap()
+        app.buttons["Reset Settings"].tap()
+        XCTAssertEqual(showExtensions.value as? String, "1", "Confirmation did not restore the default")
     }
 
     func testLibraryTabsAndNowPlayingControls() throws {
