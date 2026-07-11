@@ -147,6 +147,28 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue((band.value as? String)?.contains("decibels") == true)
     }
 
+    func testAudioSettingsSlidersExposeLabelsAndUnits() throws {
+        let app = launchPreviewApp()
+
+        app.buttons["Settings"].tap()
+        let audioSettingsLink = app.staticTexts["Audio Engine"]
+        XCTAssertTrue(audioSettingsLink.waitForExistence(timeout: 5))
+        audioSettingsLink.tap()
+        app.swipeUp()
+
+        let bufferSize = app.sliders["BufferSizeSlider"]
+        XCTAssertTrue(bufferSize.waitForExistence(timeout: 5), "Buffer Size slider is not labeled")
+        XCTAssertEqual(bufferSize.label, "Buffer Size")
+        XCTAssertTrue((bufferSize.value as? String)?.contains("samples") == true)
+
+        let crossfade = app.sliders["CrossfadeDurationSlider"]
+        app.swipeUp()
+        XCTAssertTrue(crossfade.waitForExistence(timeout: 5), "Crossfade slider is not labeled")
+        XCTAssertEqual(crossfade.label, "Crossfade Duration")
+        let crossfadeValue = crossfade.value as? String
+        XCTAssertTrue(crossfadeValue == "Off" || crossfadeValue?.contains("seconds") == true)
+    }
+
     func testResetAllSettingsRequiresConfirmation() throws {
         let app = launchPreviewApp()
         let settingsTab = tabButton("Settings", in: app)

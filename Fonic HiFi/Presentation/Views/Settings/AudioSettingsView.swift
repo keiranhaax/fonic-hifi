@@ -54,10 +54,11 @@ struct AudioSettingsView: View {
                         Slider(
                             value: $audioBufferSize,
                             in: 64 ... 2048,
-                            step: 64,
-                        ) {
-                            Text("Buffer Size")
-                        }
+                            step: 64
+                        )
+                        .accessibilityLabel("Buffer Size")
+                        .accessibilityValue("\(Int(audioBufferSize)) samples")
+                        .accessibilityIdentifier("BufferSizeSlider")
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -100,6 +101,11 @@ struct AudioSettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                         Slider(value: $crossfadeDuration, in: 0...12, step: 1)
+                            .accessibilityLabel("Crossfade Duration")
+                            .accessibilityValue(
+                                crossfadeDuration == 0 ? "Off" : "\(Int(crossfadeDuration)) seconds"
+                            )
+                            .accessibilityIdentifier("CrossfadeDurationSlider")
                             .onChange(of: crossfadeDuration) { _, newValue in
                                 Task {
                                     await audioService?.updateCrossfadeDuration(newValue)
