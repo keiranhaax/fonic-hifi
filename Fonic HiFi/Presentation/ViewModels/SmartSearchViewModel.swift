@@ -6,6 +6,7 @@ import SwiftUI
 @MainActor
 @Observable
 public final class SmartSearchViewModel {
+    typealias SearchOperation = @MainActor (String, DataManager) async throws -> SmartSearchResult
 
     // MARK: - Types
 
@@ -33,24 +34,25 @@ public final class SmartSearchViewModel {
     /// Track IDs from the search result - use these with @Query in views
     public private(set) var resultTrackIDs: [UUID] = []
 
-    private let smartSearchService: SmartSearchService
     @ObservationIgnored private let availabilityCheck: @MainActor () async -> Bool
+    @ObservationIgnored private let searchOperation: SearchOperation
     private let logger = Log.logger(.smartSearch)
 
     // MARK: - Initialization
 
     public init() {
         let service = SmartSearchService()
-        smartSearchService = service
         availabilityCheck = { await service.isSmartSearchAvailable() }
+        searchOperation = Self.makeSearchOperation(service: service)
     }
 
     init(
         smartSearchService: SmartSearchService = SmartSearchService(),
-        availabilityCheck: @escaping @MainActor () async -> Bool
+        availabilityCheck: @escaping @MainActor () async -> Bool,
+        searchOperation: SearchOperation? = nil
     ) {
-        self.smartSearchService = smartSearchService
         self.availabilityCheck = availabilityCheck
+        self.searchOperation = searchOperation ?? Self.makeSearchOperation(service: smartSearchService)
     }
 
     // MARK: - Public Methods
@@ -84,21 +86,7 @@ public final class SmartSearchViewModel {
         searchState = .searching
 
         do {
-            // Gather context
-            let sessions = try await dataManager.trackDataActor.getListeningSessions(limit: 50)
-            let allTrackIDs = try await dataManager.trackDataActor.getAllTrackIDs(limit: 200)
-            let metadata = try await dataManager.trackDataActor.getTrackMetadataForSearch(limit: 100)
-
-            // Convert metadata to tuple format expected by service
-            let metadataTuples = metadata.map { ($0.id, $0.title, $0.artist, $0.genre) }
-
-            // Perform smart search
-            let result = await smartSearchService.smartSearch(
-                query: query,
-                sessions: sessions,
-                availableTrackIDs: allTrackIDs,
-                trackMetadata: metadataTuples
-            )
+            let result = try await searchOperation(query, dataManager)
 
             smartSearchResult = result
             resultTrackIDs = result.trackIDs
@@ -124,5 +112,20 @@ public final class SmartSearchViewModel {
         searchState = .idle
         smartSearchResult = nil
         resultTrackIDs = []
+    }
+
+    private static func makeSearchOperation(service: SmartSearchService) -> SearchOperation {
+        { query, dataManager in
+            let sessions = try await dataManager.trackDataActor.getListeningSessions(limit: 50)
+            let trackIDs = try await dataManager.trackDataActor.getAllTrackIDs(limit: 200)
+            let metadata = try await dataManager.trackDataActor.getTrackMetadataForSearch(limit: 100)
+            let tuples = metadata.map { ($0.id, $0.title, $0.artist, $0.genre) }
+            return await service.smartSearch(
+                query: query,
+                sessions: sessions,
+                availableTrackIDs: trackIDs,
+                trackMetadata: tuples
+            )
+        }
     }
 }
