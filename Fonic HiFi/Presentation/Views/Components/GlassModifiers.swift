@@ -117,34 +117,6 @@ struct GlassTransitionModifier: ViewModifier {
     }
 }
 
-private struct FrameRateControlModifier: ViewModifier {
-    let targetFrameRate: Double
-
-    @State private var actualFrameRate: Double
-    @Environment(\.scenePhase) private var scenePhase
-
-    init(targetFrameRate: Double) {
-        self.targetFrameRate = targetFrameRate
-        _actualFrameRate = State(initialValue: targetFrameRate)
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .onChange(of: scenePhase) { _, newPhase in
-                switch newPhase {
-                case .active:
-                    actualFrameRate = targetFrameRate
-                case .inactive:
-                    actualFrameRate = min(targetFrameRate, 30)
-                case .background:
-                    actualFrameRate = 15
-                @unknown default:
-                    actualFrameRate = min(targetFrameRate, 60)
-                }
-            }
-    }
-}
-
 // MARK: - Public Modifiers
 
 extension View {
@@ -159,10 +131,6 @@ extension View {
 
     func glassTransition(isActive: Bool, duration: Double = 0.6) -> some View {
         modifier(GlassTransitionModifier(isActive: isActive, duration: duration))
-    }
-
-    func preferredFrameRate(_ rate: Double) -> some View {
-        modifier(FrameRateControlModifier(targetFrameRate: rate))
     }
 }
 
