@@ -146,48 +146,6 @@ public enum PlaybackState: Sendable, Equatable, CustomStringConvertible {
         }
     }
 
-    // MARK: - Helper Methods
-
-    /// Create a new state with updated time while preserving other data
-    public func withUpdatedTime(_ newTime: TimeInterval) -> PlaybackState {
-        switch self {
-        case let .playing(_, duration):
-            .playing(currentTime: newTime, duration: duration)
-        case let .paused(_, duration):
-            .paused(currentTime: newTime, duration: duration)
-        case let .buffering(progress, _):
-            .buffering(progress: progress, currentTime: newTime)
-        case let .seeking(target, _):
-            .seeking(targetTime: target, currentTime: newTime)
-        default:
-            self
-        }
-    }
-
-    /// Create a new state with updated duration while preserving other data
-    public func withUpdatedDuration(_ newDuration: TimeInterval) -> PlaybackState {
-        switch self {
-        case let .playing(current, _):
-            .playing(currentTime: current, duration: newDuration)
-        case let .paused(current, _):
-            .paused(currentTime: current, duration: newDuration)
-        default:
-            self
-        }
-    }
-
-    /// Create a new state with updated progress while preserving other data
-    public func withUpdatedProgress(_ newProgress: Double) -> PlaybackState {
-        switch self {
-        case .loading:
-            .loading(progress: newProgress)
-        case let .buffering(_, time):
-            .buffering(progress: newProgress, currentTime: time)
-        default:
-            self
-        }
-    }
-
     private func formatTime(_ seconds: TimeInterval) -> String {
         let totalSeconds = Int(seconds)
         let hours = totalSeconds / 3600
