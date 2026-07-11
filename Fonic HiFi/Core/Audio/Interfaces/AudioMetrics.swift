@@ -249,35 +249,6 @@ public struct AudioMetrics: Sendable, Equatable {
         )
     }
 
-    /// Create metrics from basic engine data
-    public static func fromEngine(
-        cpuUsage: Float,
-        memoryUsage: Int64,
-        bufferUnderruns: Int,
-        decodingLatency: TimeInterval,
-        bufferFillLevel: Float,
-        droppedFrames: Int,
-        renderLatency: TimeInterval,
-        engineType: String,
-        sampleRate: Double,
-        bitDepth: Int,
-        audioFormat: String,
-    ) -> AudioMetrics {
-        AudioMetrics(
-            cpuUsage: cpuUsage,
-            memoryUsage: memoryUsage,
-            bufferUnderruns: bufferUnderruns,
-            decodingLatency: decodingLatency,
-            bufferFillLevel: bufferFillLevel,
-            droppedFrames: droppedFrames,
-            renderLatency: renderLatency,
-            sampleRate: sampleRate,
-            bitDepth: bitDepth,
-            engineType: engineType,
-            audioFormat: audioFormat,
-        )
-    }
-
     // MARK: - Computed Properties
 
     /// Indicates if playback performance is healthy

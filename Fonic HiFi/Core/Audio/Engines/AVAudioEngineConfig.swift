@@ -24,37 +24,6 @@ public enum AVAudioEngineConfig {
         }
     }
 
-    // MARK: - Format Configuration
-
-    /// Create optimal audio format for a given file and output
-    public static func optimalFormat(
-        for file: AVAudioFile,
-        outputFormat: AVAudioFormat,
-        configuration: AudioEngineConfiguration,
-    ) -> AVAudioFormat? {
-        let fileFormat = file.processingFormat
-
-        // If bit-perfect is enabled, try to match source format
-        if configuration.enableBitPerfect {
-            // Check if output supports the file's sample rate
-            if outputFormat.sampleRate == fileFormat.sampleRate {
-                return fileFormat
-            }
-        }
-
-        // Otherwise, create a format that matches output device
-        guard let channelLayout = fileFormat.channelLayout ?? AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_Stereo) else {
-            return nil
-        }
-
-        return AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: outputFormat.sampleRate,
-            interleaved: false,
-            channelLayout: channelLayout,
-        )
-    }
-
     // MARK: - Channel Configuration
 
     /// Get appropriate channel layout for number of channels

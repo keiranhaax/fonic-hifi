@@ -208,22 +208,6 @@ public struct AudioDevice: Sendable, Equatable, Hashable, Codable, Identifiable 
         )
     }
 
-    /// Create a generic Bluetooth audio device
-    public static func bluetoothAudio(name: String) -> AudioDevice {
-        AudioDevice(
-            id: "bluetooth-\(name.lowercased().replacingOccurrences(of: " ", with: "-"))",
-            name: name,
-            type: .bluetooth,
-            isOutput: true,
-            connectionType: .bluetooth,
-            supportedSampleRates: [44100],
-            supportedBitDepths: [16],
-            maxChannels: 2,
-            supportsBitPerfect: false,
-            qualityRating: .standard,
-        )
-    }
-
     /// Create a high-end USB DAC device
     public static func usbDAC(name: String, manufacturer: String? = nil) -> AudioDevice {
         AudioDevice(
