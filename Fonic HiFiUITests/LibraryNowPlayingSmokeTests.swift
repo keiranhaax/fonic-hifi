@@ -169,6 +169,30 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue(crossfadeValue == "Off" || crossfadeValue?.contains("seconds") == true)
     }
 
+    func testNowPlayingSlidersExposeLabelsAndUnits() throws {
+        let app = launchPreviewApp()
+
+        let miniPlayer = app.otherElements["MiniPlayer"]
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
+        miniPlayer.tap()
+
+        let volume = app.sliders["PlaybackVolumeSlider"]
+        XCTAssertTrue(volume.waitForExistence(timeout: 5), "Playback volume slider is not labeled")
+        XCTAssertEqual(volume.label, "Playback Volume")
+        XCTAssertTrue((volume.value as? String)?.contains("percent") == true)
+
+        app.buttons["More options"].tap()
+        let sleepTimer = app.buttons["Sleep Timer"]
+        XCTAssertTrue(sleepTimer.waitForExistence(timeout: 3))
+        sleepTimer.tap()
+        app.swipeUp()
+
+        let fadeDuration = app.sliders["FadeOutDurationSlider"]
+        XCTAssertTrue(fadeDuration.waitForExistence(timeout: 5), "Fade duration slider is not labeled")
+        XCTAssertEqual(fadeDuration.label, "Fade Out Duration")
+        XCTAssertTrue((fadeDuration.value as? String)?.contains("seconds") == true)
+    }
+
     func testResetAllSettingsRequiresConfirmation() throws {
         let app = launchPreviewApp()
         let settingsTab = tabButton("Settings", in: app)

@@ -113,6 +113,9 @@ struct SleepTimerSheet: View {
                             .foregroundStyle(.secondary)
                     }
                     Slider(value: $fadeOutDuration, in: 10...60, step: 5)
+                        .accessibilityLabel("Fade Out Duration")
+                        .accessibilityValue("\(Int(fadeOutDuration)) seconds")
+                        .accessibilityIdentifier("FadeOutDurationSlider")
                 }
             }
         } header: {

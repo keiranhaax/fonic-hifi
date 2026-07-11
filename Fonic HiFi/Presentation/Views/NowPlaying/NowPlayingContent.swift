@@ -531,6 +531,9 @@ struct NowPlayingContent: View {
                 in: 0 ... 1
             )
             .tint(theme.accent)
+            .accessibilityLabel("Playback Volume")
+            .accessibilityValue("\(Int((volume * 100).rounded())) percent")
+            .accessibilityIdentifier("PlaybackVolumeSlider")
 
             Image(systemName: "speaker.wave.3.fill")
                 .font(.caption)
