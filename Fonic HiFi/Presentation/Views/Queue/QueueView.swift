@@ -44,13 +44,10 @@ struct QueueView: View {
     private var upNextSection: some View {
         let queueState = audioService?.queueManager.queueState
         let remaining = queueState?.remainingTracks ?? []
-        let editingDisabled = queueState?.isShuffled ?? false
         if !remaining.isEmpty {
             Section("Up Next \u{2022} \(remaining.count) tracks") {
                 ForEach(Array(remaining.enumerated()), id: \.element.id) { _, track in
                     QueueRowView(track: track, isPlaying: false)
-                        .moveDisabled(editingDisabled)
-                        .deleteDisabled(editingDisabled)
                 }
                 .onMove(perform: moveTrack)
                 .onDelete(perform: deleteTrack)

@@ -201,8 +201,6 @@ public final class AudioQueueManager: AudioQueue {
     }
 
     public func removeRemaining(at offsets: IndexSet) {
-        guard !shuffleMode.isActive else { return }
-
         let baseIndex = currentIndex.map { $0 + 1 } ?? 0
         var remaining = Array(tracks.dropFirst(baseIndex))
         let sortedOffsets = offsets.sorted()
@@ -210,14 +208,18 @@ public final class AudioQueueManager: AudioQueue {
         guard !sortedOffsets.isEmpty,
               sortedOffsets.allSatisfy(remaining.indices.contains) else { return }
 
+        let removedIDs = Set(sortedOffsets.map { remaining[$0].id })
         for offset in sortedOffsets.reversed() {
             remaining.remove(at: offset)
         }
 
-        replaceQueue(
-            with: Array(tracks.prefix(baseIndex)) + remaining,
-            startIndex: currentIndex
-        )
+        if shuffleMode.isActive {
+            tracks = Array(tracks.prefix(baseIndex)) + remaining
+            originalOrder.removeAll { removedIDs.contains($0.id) }
+            finishShuffledRemainingEdit()
+        } else {
+            replaceQueue(with: Array(tracks.prefix(baseIndex)) + remaining, startIndex: currentIndex)
+        }
     }
 
     public func move(from fromIndex: Int, to toIndex: Int) {
@@ -257,8 +259,6 @@ public final class AudioQueueManager: AudioQueue {
     }
 
     public func moveRemaining(fromOffsets source: IndexSet, toOffset destination: Int) {
-        guard !shuffleMode.isActive else { return }
-
         let baseIndex = currentIndex.map { $0 + 1 } ?? 0
         let remaining = Array(tracks.dropFirst(baseIndex))
         let sortedOffsets = source.sorted()
@@ -277,10 +277,13 @@ public final class AudioQueueManager: AudioQueue {
         let insertionIndex = destination - removedBeforeDestination
         reorderedRemaining.insert(contentsOf: movingTracks, at: insertionIndex)
 
-        replaceQueue(
-            with: Array(tracks.prefix(baseIndex)) + reorderedRemaining,
-            startIndex: currentIndex
-        )
+        let reorderedTracks = Array(tracks.prefix(baseIndex)) + reorderedRemaining
+        if shuffleMode.isActive {
+            tracks = reorderedTracks
+            finishShuffledRemainingEdit()
+        } else {
+            replaceQueue(with: reorderedTracks, startIndex: currentIndex)
+        }
     }
 
     public func clear() {
@@ -525,6 +528,13 @@ public final class AudioQueueManager: AudioQueue {
         if let track = currentTrack {
             currentIndex = tracks.firstIndex { $0.id == track.id }
         }
+    }
+
+    private func finishShuffledRemainingEdit() {
+        shuffleSequence = Array(tracks.indices)
+        shuffleSequenceCache.removeAll()
+        markNavigationStateDirty()
+        notifyTracksChanged()
     }
 
     private func recordQueueMutation(_ action: String, extra: [String: String] = [:]) {

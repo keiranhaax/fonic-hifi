@@ -291,7 +291,7 @@ final class AudioQueueManagerTests: XCTestCase {
         XCTAssertEqual(queue.currentTrack?.id, tracks[0].id)
     }
 
-    func testRemainingEditsAreNoOpsWhileShuffleIsActive() {
+    func testRemoveRemainingWhileShuffledUpdatesTraversalAndCanonicalOrder() {
         let queue = AudioQueueManager()
         let tracks = ["A", "B", "C", "D"].map { makeTrack(title: $0) }
         queue.enqueue(tracks: tracks)
@@ -299,11 +299,40 @@ final class AudioQueueManagerTests: XCTestCase {
         queue.shuffleMode = .random
         let shuffledIDs = queue.tracks.map(\._id)
         let currentID = queue.currentTrack?.id
+        let removedID = shuffledIDs[1]
 
         queue.removeRemaining(at: IndexSet(integer: 0))
-        queue.moveRemaining(fromOffsets: IndexSet(integer: 0), toOffset: 1)
 
-        XCTAssertEqual(queue.tracks.map(\._id), shuffledIDs)
+        XCTAssertEqual(queue.tracks.map(\._id), [shuffledIDs[0]] + Array(shuffledIDs.dropFirst(2)))
+        XCTAssertEqual(queue.currentTrack?.id, currentID)
+
+        queue.restoreOrder()
+
+        XCTAssertEqual(queue.tracks.map(\._id), tracks.map(\._id).filter { $0 != removedID })
+        XCTAssertEqual(queue.currentTrack?.id, currentID)
+    }
+
+    func testMoveRemainingWhileShuffledUpdatesTraversalOnly() {
+        let queue = AudioQueueManager()
+        let tracks = ["A", "B", "C", "D", "E"].map { makeTrack(title: $0) }
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(2))
+        queue.shuffleMode = .random
+        let shuffledIDs = queue.tracks.map(\._id)
+        let currentID = queue.currentTrack?.id
+        let remaining = Array(shuffledIDs.dropFirst())
+
+        queue.moveRemaining(
+            fromOffsets: IndexSet(integer: 0),
+            toOffset: remaining.count
+        )
+
+        XCTAssertEqual(queue.tracks.map(\._id), [shuffledIDs[0]] + Array(remaining.dropFirst()) + [remaining[0]])
+        XCTAssertEqual(queue.currentTrack?.id, currentID)
+
+        queue.restoreOrder()
+
+        XCTAssertEqual(queue.tracks.map(\._id), tracks.map(\._id))
         XCTAssertEqual(queue.currentTrack?.id, currentID)
     }
 
