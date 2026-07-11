@@ -9,6 +9,7 @@ import SwiftUI
 
 @MainActor
 struct QuickActionsSection: View {
+    let isGeneratingRecommendations: Bool
     let onShuffleAll: () -> Void
     let onSurpriseMe: () -> Void
 
@@ -26,11 +27,24 @@ struct QuickActionsSection: View {
             Button {
                 onSurpriseMe()
             } label: {
-                Label("Surprise Me", systemImage: "dice")
-                    .frame(maxWidth: .infinity)
+                Group {
+                    if isGeneratingRecommendations {
+                        HStack {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Choosing…")
+                        }
+                    } else {
+                        Label("Surprise Me", systemImage: "dice")
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
             .buttonSizing(.flexible)
             .buttonStyle(.glass)
+            .disabled(isGeneratingRecommendations)
+            .accessibilityLabel("Surprise Me")
+            .accessibilityValue(isGeneratingRecommendations ? "Choosing music" : "Ready")
         }
         .padding(.horizontal)
     }
@@ -38,6 +52,7 @@ struct QuickActionsSection: View {
 
 #Preview {
     QuickActionsSection(
+        isGeneratingRecommendations: false,
         onShuffleAll: {},
         onSurpriseMe: {}
     )

@@ -9,6 +9,21 @@ import SwiftData
 import SwiftUI
 
 @MainActor
+struct SurpriseMeRequestGate {
+    private(set) var isRunning = false
+
+    mutating func begin() -> Bool {
+        guard !isRunning else { return false }
+        isRunning = true
+        return true
+    }
+
+    mutating func finish() {
+        isRunning = false
+    }
+}
+
+@MainActor
 struct HomeView: View {
     @Environment(\.dataManager) private var dataManager
     @Environment(\.audioEngine) private var audioEngine
@@ -33,7 +48,7 @@ struct HomeView: View {
     private let recommendationService = RecommendationService()
     @State private var timeBasedGreeting: TimeBasedGreeting?
     @State private var greetingTracks: [Track] = []
-    @State private var isGeneratingRecommendations = false
+    @State private var surpriseMeRequestGate = SurpriseMeRequestGate()
 
     // UI state
     @State private var isLoading = true
@@ -92,6 +107,7 @@ struct HomeView: View {
             VStack(spacing: DesignTokens.Spacing.xLarge) {
                 // Quick Actions
                 QuickActionsSection(
+                    isGeneratingRecommendations: surpriseMeRequestGate.isRunning,
                     onShuffleAll: shuffleAll,
                     onSurpriseMe: surpriseMe
                 )
@@ -259,10 +275,10 @@ struct HomeView: View {
 
     private func surpriseMe() {
         guard let dataManager, let audioEngine else { return }
+        guard surpriseMeRequestGate.begin() else { return }
 
         Task {
-            isGeneratingRecommendations = true
-            defer { isGeneratingRecommendations = false }
+            defer { surpriseMeRequestGate.finish() }
 
             do {
                 // Gather context
