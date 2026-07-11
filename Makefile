@@ -14,7 +14,7 @@ DEPLOYMENT_TARGET = 26.0
 
 # Simulator Configuration
 SIMULATOR_NAME = iPhone 17 Pro
-SIMULATOR_OS = 26.2
+SIMULATOR_OS ?= $(shell xcrun simctl list runtimes available 2>/dev/null | awk '/^iOS 26\./ { print $$2 }' | sort -V | tail -1)
 DESTINATION = platform=iOS Simulator,name=$(SIMULATOR_NAME),OS=$(SIMULATOR_OS)
 
 # Derived Data Path
