@@ -20,7 +20,7 @@ struct AudioSettingsView: View {
     private let logger = Log.logger(.audio)
 
     var body: some View {
-        NavigationStack {
+        Group {
             Form {
                 Section {
                     Picker("Audio Engine", selection: $preferredAudioEngine) {
