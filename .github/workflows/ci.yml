@@ -7,14 +7,33 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode 16.1
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app
+      - name: Select and inspect stable Xcode 26
+        shell: bash
+        run: |
+          set -euo pipefail
+          selected_xcode="$({
+            for app in /Applications/Xcode*.app; do
+              [[ -d "$app" ]] || continue
+              [[ "$app" =~ [Bb]eta|[Rr][Cc] ]] && continue
+              version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")
+              [[ "$version" == 26.* ]] || continue
+              printf '%s\t%s\n' "$version" "$app"
+            done
+          } | sort -V | tail -1 | cut -f2-)"
+          test -n "$selected_xcode"
+          sudo xcode-select -s "$selected_xcode/Contents/Developer"
+          xcode-select -p
+          xcodebuild -version
+          xcodebuild -showsdks
+          xcrun simctl list runtimes available
+          xcrun simctl list devices available
+          xcrun simctl list devices available | grep -F 'iPhone 17 Pro'
 
       - name: Install dependencies
         run: make install-deps

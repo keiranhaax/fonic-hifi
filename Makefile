@@ -29,9 +29,6 @@ APP_COVERAGE_MIN_PERCENT ?= 40
 # Detect Homebrew prefix dynamically (works on Intel and ARM Macs)
 BREW_PREFIX := $(shell brew --prefix 2>/dev/null || echo /usr/local)
 
-# Ensure Xcode.app is used instead of CommandLineTools (required for iOS SDK)
-export DEVELOPER_DIR := /Applications/Xcode.app/Contents/Developer
-
 # Tools
 XCODEBUILD = xcodebuild
 XCBEAUTIFY = $(shell command -v xcbeautify >/dev/null 2>&1 && echo xcbeautify || echo cat)
