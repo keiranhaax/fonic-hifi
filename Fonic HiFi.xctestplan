@@ -1,0 +1,35 @@
+{
+  "configurations" : [
+    {
+      "id" : "318D5D0E-10F1-4E1E-9AFB-1FB9CA564635",
+      "name" : "Default",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Fonic HiFi.xcodeproj",
+      "identifier" : "38D04CDC2DE570D80047CB93",
+      "name" : "Fonic HiFi"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Fonic HiFi.xcodeproj",
+        "identifier" : "38D04D142DE571000047CB93",
+        "name" : "Fonic HiFiTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Fonic HiFi.xcodeproj",
+        "identifier" : "38D04E052DE571500047CB93",
+        "name" : "Fonic HiFiUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
