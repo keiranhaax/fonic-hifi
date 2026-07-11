@@ -15,6 +15,9 @@ public struct QueueState: Sendable, Equatable {
     /// All tracks in the queue
     public let tracks: [AudioTrack]
 
+    /// Canonical queue order before shuffle is applied
+    public let originalTracks: [AudioTrack]?
+
     /// Current playing index
     public let currentIndex: Int?
 
@@ -107,6 +110,7 @@ public struct QueueState: Sendable, Equatable {
 
     public init(
         tracks: [AudioTrack] = [],
+        originalTracks: [AudioTrack]? = nil,
         currentIndex: Int? = nil,
         shuffleMode: QueueShuffleMode = .off,
         repeatMode: QueueRepeatMode = .none,
@@ -118,6 +122,7 @@ public struct QueueState: Sendable, Equatable {
         lastPlaybackPosition: TimeInterval = 0,
     ) {
         self.tracks = tracks
+        self.originalTracks = originalTracks
         self.currentIndex = currentIndex
         currentTrack = currentIndex.flatMap { index in
             index >= 0 && index < tracks.count ? tracks[index] : nil
@@ -245,6 +250,7 @@ public struct QueueState: Sendable, Equatable {
 
     public static func == (lhs: QueueState, rhs: QueueState) -> Bool {
         lhs.tracks.map(\.id) == rhs.tracks.map(\.id) &&
+            lhs.originalTracks?.map(\.id) == rhs.originalTracks?.map(\.id) &&
             lhs.currentIndex == rhs.currentIndex &&
             lhs.shuffleMode == rhs.shuffleMode &&
             lhs.repeatMode == rhs.repeatMode &&
@@ -261,6 +267,7 @@ public struct QueueState: Sendable, Equatable {
 extension QueueState: Codable {
     private enum CodingKeys: String, CodingKey {
         case tracks
+        case originalTracks
         case currentIndex
         case shuffleMode
         case repeatMode
@@ -279,6 +286,7 @@ extension QueueState: Codable {
         let currentIndex = try container.decodeIfPresent(Int.self, forKey: .currentIndex)
 
         self.tracks = tracks
+        originalTracks = try container.decodeIfPresent([AudioTrack].self, forKey: .originalTracks)
         self.currentIndex = currentIndex
         shuffleMode = try container.decode(QueueShuffleMode.self, forKey: .shuffleMode)
         repeatMode = try container.decode(QueueRepeatMode.self, forKey: .repeatMode)
@@ -299,6 +307,7 @@ extension QueueState: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
 
         try container.encode(tracks, forKey: .tracks)
+        try container.encodeIfPresent(originalTracks, forKey: .originalTracks)
         try container.encodeIfPresent(currentIndex, forKey: .currentIndex)
         try container.encode(shuffleMode, forKey: .shuffleMode)
         try container.encode(repeatMode, forKey: .repeatMode)
@@ -363,6 +372,9 @@ public extension QueueState {
         let validTracks = tracks.filter { track in
             FileManager.default.fileExists(atPath: track.url.path)
         }
+        let validOriginalTracks = originalTracks?.filter { track in
+            FileManager.default.fileExists(atPath: track.url.path)
+        }
 
         // Adjust current index if needed
         let validCurrentIndex: Int? = if let currentTrack,
@@ -391,6 +403,7 @@ public extension QueueState {
 
         return QueueState(
             tracks: validTracks,
+            originalTracks: validOriginalTracks,
             currentIndex: validCurrentIndex,
             shuffleMode: shuffleMode,
             repeatMode: repeatMode,

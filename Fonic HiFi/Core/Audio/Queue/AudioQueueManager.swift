@@ -96,6 +96,7 @@ public final class AudioQueueManager: AudioQueue {
         updateNavigationStateIfNeeded()
         return QueueState(
             tracks: tracks,
+            originalTracks: originalOrder,
             currentIndex: currentIndex,
             shuffleMode: shuffleMode,
             repeatMode: repeatMode,
@@ -631,6 +632,7 @@ public final class AudioQueueManager: AudioQueue {
     public func saveState(playbackPosition: TimeInterval = 0) {
         let state = QueueState(
             tracks: tracks,
+            originalTracks: originalOrder,
             currentIndex: currentIndex,
             shuffleMode: shuffleMode,
             repeatMode: repeatMode,
@@ -664,30 +666,13 @@ public final class AudioQueueManager: AudioQueue {
         // Validate loaded state
         let validatedState = state.validateForPersistence()
 
-        // Restore tracks
-        tracks = validatedState.tracks
-        originalOrder = validatedState.tracks // Store original order
-        currentIndex = validatedState.currentIndex
-
-        // Restore shuffle mode and sequence
+        // Set modes before restoring tracks so shuffle observers cannot reorder persisted traversal.
         shuffleMode = validatedState.shuffleMode
         repeatMode = validatedState.repeatMode
-
-        // Restore shuffle sequence if present
-        if let savedShuffleSequence = validatedState.shuffleSequence,
-           shuffleMode.isActive {
-            shuffleSequence = savedShuffleSequence
-
-            // Apply shuffle sequence to tracks
-            if !shuffleSequence.isEmpty {
-                let shuffledTracks = shuffleSequence.compactMap { index in
-                    tracks.indices.contains(index) ? tracks[index] : nil
-                }
-                if !shuffledTracks.isEmpty {
-                    tracks = shuffledTracks
-                }
-            }
-        }
+        tracks = validatedState.tracks
+        originalOrder = validatedState.originalTracks ?? validatedState.tracks
+        currentIndex = validatedState.currentIndex
+        shuffleSequence = shuffleMode.isActive ? Array(tracks.indices) : []
 
         // Restore history
         history = validatedState.history

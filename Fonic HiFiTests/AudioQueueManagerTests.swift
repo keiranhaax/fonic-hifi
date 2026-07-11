@@ -430,6 +430,31 @@ final class AudioQueueManagerTests: XCTestCase {
         XCTAssertFalse(empty.restoreState())
     }
 
+    func testShuffledEditsPersistTraversalAndCanonicalOrder() {
+        let queue = AudioQueueManager()
+        queue.clearSavedState()
+        defer { queue.clearSavedState() }
+
+        let tracks = ["A", "B", "C", "D"].map { makeTrack(title: $0, createFile: true) }
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(2))
+        queue.shuffleMode = .random
+        queue.moveRemaining(fromOffsets: IndexSet(integer: 0), toOffset: 3)
+        let traversalIDs = queue.tracks.map(\._id)
+        let currentID = queue.currentTrack?.id
+        queue.saveState()
+
+        let restored = AudioQueueManager()
+        XCTAssertTrue(restored.restoreState())
+        XCTAssertEqual(restored.tracks.map(\._id), traversalIDs)
+        XCTAssertEqual(restored.currentTrack?.id, currentID)
+
+        restored.restoreOrder()
+
+        XCTAssertEqual(restored.tracks.map(\._id), tracks.map(\._id))
+        XCTAssertEqual(restored.currentTrack?.id, currentID)
+    }
+
     func testDebugInfoAndValidateState() {
         let queue = AudioQueueManager()
         let tracks = [makeTrack(title: "Live"), makeTrack(title: "Archive")]
