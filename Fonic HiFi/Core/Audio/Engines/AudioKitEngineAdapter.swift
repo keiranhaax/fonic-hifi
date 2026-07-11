@@ -386,25 +386,6 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         await finishCrossfade(with: file)
     }
 
-    private func audioFormatName() -> String {
-        guard let file = currentFile else { return "Unknown" }
-        return AudioFormat.from(avAudioFormat: file.fileFormat).rawValue
-    }
-}
-
-// MARK: - Helper Functions
-
-private func getBitDepthFromFormat(_ format: AVAudioCommonFormat?) -> Double {
-    switch format {
-    case .pcmFormatFloat32:
-        32.0
-    case .pcmFormatInt16:
-        16.0
-    case .pcmFormatInt32:
-        32.0
-    default:
-        16.0
-    }
 }
 
 // MARK: - AudioFormat Extension

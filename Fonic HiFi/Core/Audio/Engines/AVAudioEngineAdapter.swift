@@ -549,12 +549,6 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         currentPlaybackRate != 1.0 || isEQEnabled
     }
 
-    private func handlePlaybackCompletion() {
-        playbackState = .stopped
-        // Progress timer is managed by AudioEngineFacade
-        completionHandler?()
-    }
-
     // Progress timer functionality moved to AudioEngineFacade's ProgressTimerManager
     // This eliminates race conditions and centralizes progress updates
 

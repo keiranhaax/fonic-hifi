@@ -533,14 +533,6 @@ actor FileImportProcessor {
         }
     }
 
-    private func scanDirectory(_ directoryURL: URL, requiresSecurityScope: Bool) async -> [DiscoveredAudioFile] {
-        var audioFiles: [DiscoveredAudioFile] = []
-        enumerateAudioFiles(in: directoryURL, requiresSecurityScope: requiresSecurityScope) { file in
-            audioFiles.append(file)
-        }
-        return audioFiles
-    }
-
     private func ensureMusicContainerExists() throws {
         let fileManager = FileManager.default
         if !fileManager.fileExists(atPath: self.musicContainerURL.path) {
@@ -551,29 +543,6 @@ actor FileImportProcessor {
             )
             self.logger.info("Created music container at: \(self.musicContainerURL.path)")
         }
-    }
-
-    private func copyFileToContainer(_ url: URL) throws -> URL {
-        let fileManager = FileManager.default
-        let filename = url.lastPathComponent
-        let destinationURL = self.musicContainerURL.appendingPathComponent(filename)
-
-        // Handle duplicates
-        var finalDestination = destinationURL
-        var counter = 1
-        while fileManager.fileExists(atPath: finalDestination.path) {
-            let nameWithoutExtension = url.deletingPathExtension().lastPathComponent
-            let ext = url.pathExtension
-            let newFilename = "\(nameWithoutExtension) (\(counter)).\(ext)"
-            finalDestination = self.musicContainerURL.appendingPathComponent(newFilename)
-            counter += 1
-        }
-
-        // Copy file
-        try fileManager.copyItem(at: url, to: finalDestination)
-
-        logger.debug("Copied file to: \(finalDestination.path)")
-        return finalDestination
     }
 
     private func bookmarkData(
