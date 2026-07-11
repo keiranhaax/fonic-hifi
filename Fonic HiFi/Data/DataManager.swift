@@ -87,39 +87,6 @@ public final class DataManager: ObservableObject {
         recentSearchesActor = RecentSearchesActor(modelContainer: container)
         logger.info("DataManager initialized\(isFallback ? " in fallback mode" : "") successfully")
     }
-
-    // MARK: - Data Export
-
-    /// Export library data to JSON for backup with pagination
-    public func exportLibraryData() async throws -> Data {
-        // Fetch all tracks in batches to avoid memory issues
-        let allTracks = try await fetchAllTracksInBatches(batchSize: 100)
-        let exportData = LibraryExportData(
-            tracks: allTracks.map { track in
-                TrackExportData(
-                    id: track.id,
-                    title: track.title,
-                    artist: track.artist,
-                    album: track.album,
-                    url: track.url,
-                    duration: track.duration,
-                    audioFormat: track.audioFormat,
-                    dateAdded: track.dateAdded,
-                    playCount: track.playCount,
-                    isFavorite: track.isFavorite,
-                )
-            },
-            exportDate: Date(),
-            version: "1.0",
-        )
-
-        do {
-            return try JSONEncoder().encode(exportData)
-        } catch {
-            logger.error("Failed to export library data: \(error.localizedDescription)")
-            throw DataManagerError.exportFailed(error)
-        }
-    }
 }
 
 // MARK: - Library Repository Factory
@@ -146,28 +113,6 @@ extension DataManager: LibraryRepositoryFactory {
     }
 }
 
-// MARK: - Supporting Types
-
-/// Data export structures
-private struct LibraryExportData: Codable {
-    let tracks: [TrackExportData]
-    let exportDate: Date
-    let version: String
-}
-
-private struct TrackExportData: Codable {
-    let id: UUID
-    let title: String
-    let artist: String
-    let album: String
-    let url: URL
-    let duration: TimeInterval
-    let audioFormat: String
-    let dateAdded: Date
-    let playCount: Int
-    let isFavorite: Bool
-}
-
 /// Data manager errors
 public enum DataManagerError: LocalizedError {
     case initializationFailed(Error)
@@ -175,7 +120,6 @@ public enum DataManagerError: LocalizedError {
     case fetchFailed(Error)
     case searchFailed(Error)
     case cleanupFailed(Error)
-    case exportFailed(Error)
     case emergencyFallbackFailed(Error)
 
     public var errorDescription: String? {
@@ -190,8 +134,6 @@ public enum DataManagerError: LocalizedError {
             "Search operation failed: \(error.localizedDescription)"
         case let .cleanupFailed(error):
             "Cleanup operation failed: \(error.localizedDescription)"
-        case let .exportFailed(error):
-            "Export operation failed: \(error.localizedDescription)"
         case let .emergencyFallbackFailed(error):
             "Emergency fallback initialization failed: \(error.localizedDescription)"
         }

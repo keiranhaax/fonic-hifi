@@ -21,18 +21,6 @@ public struct LibraryPaginationConfiguration: Sendable {
     }
 }
 
-public struct LibrarySearchRequest: Sendable {
-    public let query: String
-    public let page: Int
-    public let pageSize: Int
-
-    public init(query: String, page: Int = 0, pageSize: Int = 50) {
-        self.query = query
-        self.page = page
-        self.pageSize = pageSize
-    }
-}
-
 public protocol FetchTracksPageUseCase: Sendable {
     func tracksPage(page: Int, query: String?) async throws -> Page<TrackEntity>
 }
