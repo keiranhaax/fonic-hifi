@@ -450,7 +450,9 @@ struct NowPlayingContent: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isShuffleEnabled ? "Shuffle on" : "Shuffle off")
+            .accessibilityLabel("Shuffle")
+            .accessibilityValue(isShuffleEnabled ? "On" : "Off")
+            .accessibilityIdentifier("ShuffleButton")
 
             Spacer()
 
@@ -506,7 +508,9 @@ struct NowPlayingContent: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(repeatMode == .none ? "Repeat off" : (repeatMode == .one ? "Repeat one" : "Repeat all"))
+            .accessibilityLabel("Repeat")
+            .accessibilityValue(repeatModeAccessibilityValue)
+            .accessibilityIdentifier("RepeatButton")
         }
         .frame(height: 56)
         .padding(.horizontal, DesignTokens.Spacing.large)
@@ -552,6 +556,14 @@ struct NowPlayingContent: View {
         case .none: "repeat"
         case .all: "repeat"
         case .one: "repeat.1"
+        }
+    }
+
+    private var repeatModeAccessibilityValue: String {
+        switch repeatMode {
+        case .none: "Off"
+        case .all: "All"
+        case .one: "One"
         }
     }
 

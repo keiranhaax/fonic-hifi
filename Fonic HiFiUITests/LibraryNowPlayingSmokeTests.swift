@@ -210,6 +210,29 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(loop.frame.height, 44)
     }
 
+    func testShuffleAndRepeatExposeStateValues() throws {
+        let app = launchPreviewApp()
+        let miniPlayer = app.otherElements["MiniPlayer"]
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
+        miniPlayer.tap()
+
+        let shuffle = app.buttons["ShuffleButton"]
+        XCTAssertTrue(shuffle.waitForExistence(timeout: 5))
+        XCTAssertEqual(shuffle.label, "Shuffle")
+        if shuffle.value as? String == "On" { shuffle.tap() }
+        XCTAssertEqual(shuffle.value as? String, "Off")
+        shuffle.tap()
+        XCTAssertEqual(shuffle.value as? String, "On")
+
+        let repeatButton = app.buttons["RepeatButton"]
+        XCTAssertTrue(repeatButton.waitForExistence(timeout: 5))
+        XCTAssertEqual(repeatButton.label, "Repeat")
+        for _ in 0..<3 where repeatButton.value as? String != "Off" { repeatButton.tap() }
+        XCTAssertEqual(repeatButton.value as? String, "Off")
+        repeatButton.tap()
+        XCTAssertEqual(repeatButton.value as? String, "All")
+    }
+
     func testResetAllSettingsRequiresConfirmation() throws {
         let app = launchPreviewApp()
         let settingsTab = tabButton("Settings", in: app)
@@ -273,12 +296,12 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5), "Now Playing did not present")
 
-        let controlLabels = ["Show queue", "Previous track", "Next track", "Shuffle off", "Repeat off"]
+        let controlLabels = ["Previous track", "Next track"]
         for label in controlLabels {
             let control = app.buttons[label]
-            if control.waitForExistence(timeout: 3) {
-                control.tap()
-            }
+            XCTAssertTrue(control.waitForExistence(timeout: 3), "\(label) control is missing")
+            control.tap()
         }
+        XCTAssertTrue(app.buttons["Show queue"].waitForExistence(timeout: 3), "Show queue control is missing")
     }
 }
