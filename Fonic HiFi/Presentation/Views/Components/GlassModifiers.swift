@@ -5,7 +5,6 @@
 //  Created by Factory Droid on 10/7/25.
 //
 
-import OSLog
 import SwiftUI
 
 // MARK: - Surface Styles
@@ -132,65 +131,6 @@ extension View {
     func glassTransition(isActive: Bool, duration: Double = 0.6) -> some View {
         modifier(GlassTransitionModifier(isActive: isActive, duration: duration))
     }
-}
-
-// MARK: - Performance Utilities
-
-@MainActor
-final class GlassEffectMemoryManager: ObservableObject {
-    static let shared = GlassEffectMemoryManager()
-
-    @Published var activeEffectCount: Int = 0
-    @Published var memoryPressure: MemoryPressureLevel = .normal
-
-    private let maxActiveEffects = 12
-    private var memoryWarningObserver: NSObjectProtocol?
-    private let logger = Log.logger(.liquidGlass)
-
-    private init() {
-        observeMemoryWarnings()
-    }
-
-    func registerEffect() -> Bool {
-        guard self.activeEffectCount < self.maxActiveEffects else {
-            self.logger.error("Glass effect registration denied: too many active effects (\(self.activeEffectCount))")
-            return false
-        }
-
-        self.activeEffectCount += 1
-        self.logger.debug("Glass effect registered: \(self.activeEffectCount) active")
-        return true
-    }
-
-    func unregisterEffect() {
-        self.activeEffectCount = max(0, self.activeEffectCount - 1)
-        self.logger.debug("Glass effect unregistered: \(self.activeEffectCount) active")
-    }
-
-    private func observeMemoryWarnings() {
-        memoryWarningObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.didReceiveMemoryWarningNotification,
-            object: nil,
-            queue: .main,
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.memoryPressure = .high
-                self.logger.error("Memory warning received: adjusting glass effects")
-
-                if self.activeEffectCount > 6 {
-                    self.activeEffectCount = 6
-                }
-            }
-        }
-    }
-}
-
-enum MemoryPressureLevel {
-    case normal
-    case moderate
-    case high
-    case critical
 }
 
 extension Animation {
