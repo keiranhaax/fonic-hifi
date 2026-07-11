@@ -193,6 +193,23 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue((fadeDuration.value as? String)?.contains("seconds") == true)
     }
 
+    func testFavoriteAndLoopControlsMeetMinimumTargetSize() throws {
+        let app = launchPreviewApp()
+        let miniPlayer = app.otherElements["MiniPlayer"]
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
+        miniPlayer.tap()
+
+        let favorite = app.buttons["Add to favorites"]
+        XCTAssertTrue(favorite.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(favorite.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(favorite.frame.height, 44)
+
+        let loop = app.buttons["Set loop point A"]
+        XCTAssertTrue(loop.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(loop.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(loop.frame.height, 44)
+    }
+
     func testResetAllSettingsRequiresConfirmation() throws {
         let app = launchPreviewApp()
         let settingsTab = tabButton("Settings", in: app)

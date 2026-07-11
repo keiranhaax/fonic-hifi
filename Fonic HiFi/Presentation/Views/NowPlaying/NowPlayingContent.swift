@@ -357,6 +357,7 @@ struct NowPlayingContent: View {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
                         .font(.system(size: 20, weight: .medium))
                         .foregroundStyle(isFavorite ? .red : .white)
+                        .frame(width: 44, height: 44)
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
@@ -419,6 +420,8 @@ struct NowPlayingContent: View {
                     Image(systemName: loopButtonIcon)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(loopButtonTint)
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(loopAccessibilityLabel)
