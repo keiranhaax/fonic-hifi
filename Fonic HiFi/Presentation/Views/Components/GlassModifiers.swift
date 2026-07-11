@@ -137,62 +137,6 @@ extension View {
 // MARK: - Performance Utilities
 
 @MainActor
-final class GlassPerformanceProfiler: ObservableObject {
-    enum OptimizationHint {
-        case performance
-        case balanced
-        case quality
-    }
-
-    static let shared = GlassPerformanceProfiler()
-
-    private let logger = Log.logger(.performance)
-    private var activeProfiles: [String: Date] = [:]
-    private(set) var performanceMetrics: [String: PerformanceMetric] = [:]
-    private(set) var lastHint: OptimizationHint = .quality
-
-    private init() {}
-
-    func startProfiling(_ label: String) {
-        self.activeProfiles[label] = Date()
-        self.logger.debug("Started glass effect profiling: \(label, privacy: .public)")
-    }
-
-    func endProfiling(_ label: String) {
-        guard let startTime = self.activeProfiles.removeValue(forKey: label) else { return }
-        let duration = Date().timeIntervalSince(startTime)
-
-        let metric = PerformanceMetric(label: label, duration: duration, timestamp: Date())
-        self.performanceMetrics[label] = metric
-
-        self.logger.debug("Ended glass effect profiling: \(label, privacy: .public) (\(duration, format: .fixed(precision: 3)) seconds)")
-
-        if duration > 0.1 {
-            self.logger.warning("Glass effect performance warning: \(label, privacy: .public) took \(duration, format: .fixed(precision: 3)) seconds")
-        }
-    }
-
-    func getMetrics() -> [PerformanceMetric] {
-        Array(self.performanceMetrics.values)
-    }
-
-    func clearMetrics() {
-        self.performanceMetrics.removeAll()
-    }
-
-    func recordAdaptiveHint(_ hint: OptimizationHint) {
-        self.lastHint = hint
-    }
-}
-
-struct PerformanceMetric: Identifiable {
-    let id = UUID()
-    let label: String
-    let duration: TimeInterval
-    let timestamp: Date
-}
-
-@MainActor
 final class GlassEffectMemoryManager: ObservableObject {
     static let shared = GlassEffectMemoryManager()
 

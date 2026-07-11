@@ -3,30 +3,6 @@ import XCTest
 
 final class GlassUtilitiesTests: XCTestCase {
     @MainActor
-    func testProfilerRecordsMetrics() {
-        let profiler = GlassPerformanceProfiler.shared
-        profiler.clearMetrics()
-
-        profiler.startProfiling("unit-test")
-        profiler.endProfiling("unit-test")
-
-        let metrics = profiler.getMetrics()
-        XCTAssertEqual(metrics.count, 1)
-        XCTAssertEqual(metrics.first?.label, "unit-test")
-        XCTAssertGreaterThanOrEqual(metrics.first?.duration ?? 0, 0)
-    }
-
-    @MainActor
-    func testProfilerAdaptiveHintUpdates() {
-        let profiler = GlassPerformanceProfiler.shared
-        profiler.recordAdaptiveHint(.performance)
-        XCTAssertEqual(profiler.lastHint, .performance)
-
-        profiler.recordAdaptiveHint(.quality)
-        XCTAssertEqual(profiler.lastHint, .quality)
-    }
-
-    @MainActor
     func testMemoryManagerRegistrationLimit() {
         let manager = GlassEffectMemoryManager.shared
 
