@@ -15,7 +15,8 @@ struct StateCoordinatorTests {
         let facade = AudioEngineFacade(
             stateManager: stateManager,
             queueManager: queueManager,
-            monitor: monitor
+            monitor: monitor,
+            runtimeMonitoringEnabled: true
         )
         _ = facade
 

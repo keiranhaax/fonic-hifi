@@ -9,6 +9,16 @@
     }
   ],
   "defaultOptions" : {
+    "commandLineArgumentEntries" : [
+      {
+        "argument" : "-audioRuntimeMonitoringEnabled",
+        "enabled" : true
+      },
+      {
+        "argument" : "false",
+        "enabled" : true
+      }
+    ],
     "targetForVariableExpansion" : {
       "containerPath" : "container:Fonic HiFi.xcodeproj",
       "identifier" : "38D04CDC2DE570D80047CB93",

@@ -264,8 +264,28 @@ test: check-deps ## Run all Swift test targets
 	echo "✅ Test suite complete"
 
 # Run unit tests only
-test-unit: ## Run unit tests (alias of make test)
-	@$(MAKE) test
+test-unit: check-deps ## Run unit tests only
+	@echo "Running unit tests..."
+	@rm -rf "$(UNIT_RESULT_BUNDLE)"
+	@set -o pipefail && $(XCODEBUILD) test \
+		-project "$(PROJECT_NAME).xcodeproj" \
+		-scheme "$(SCHEME)" \
+		-configuration $(CONFIGURATION_DEBUG) \
+		-destination "$(DESTINATION)" \
+		-derivedDataPath $(BUILD_DIR) \
+		-enableCodeCoverage YES \
+		-only-testing:"Fonic HiFiTests" \
+		-resultBundlePath "$(UNIT_RESULT_BUNDLE)" \
+		2>&1 | tee .test_unit_output.tmp | $(XCBEAUTIFY); \
+	EXIT_CODE=$${PIPESTATUS[0]}; \
+	rm -f .test_unit_output.tmp; \
+	if [ $$EXIT_CODE -ne 0 ]; then \
+		echo "❌ Unit tests failed with exit code $$EXIT_CODE"; \
+		exit $$EXIT_CODE; \
+	fi; \
+	$(XCRUN) xcresulttool get test-results summary --path "$(UNIT_RESULT_BUNDLE)" --format json | \
+		python3 scripts/validate_test_results.py --label "Unit tests"; \
+	echo "✅ Unit tests complete"
 
 # Run UI tests only
 test-ui: ## Run UI tests (alias of make test)

@@ -115,8 +115,12 @@ public final class AudioEngineFacade: ObservableObject {
     private var lastHandledPreference: String?
     private var preferenceObserver: NSKeyValueObservation?
     private static let runtimeMonitoringDefaultsKey = "audioRuntimeMonitoringEnabled"
+    private let runtimeMonitoringEnabledOverride: Bool?
 
     var isRuntimeMonitoringEnabled: Bool {
+        if let runtimeMonitoringEnabledOverride {
+            return runtimeMonitoringEnabledOverride
+        }
         if UserDefaults.standard.object(forKey: Self.runtimeMonitoringDefaultsKey) != nil {
             return UserDefaults.standard.bool(forKey: Self.runtimeMonitoringDefaultsKey)
         }
@@ -140,6 +144,7 @@ public final class AudioEngineFacade: ObservableObject {
         monitor: (any AudioPerformanceMonitoring & AudioDiagnosticsReporting)? = nil,
         playbackSettingsStore: AudioPlaybackSettingsStore? = nil,
         uiStateStore: AudioUIState? = nil,
+        runtimeMonitoringEnabled: Bool? = nil,
     ) {
         self.sessionManager = sessionManager ?? AudioSessionManager()
         self.formatDetectionManager = formatDetectionManager ?? AudioFormatDetectionManager()
@@ -150,6 +155,7 @@ public final class AudioEngineFacade: ObservableObject {
         self.monitor = monitor ?? AudioMonitor()
         self.playbackSettingsStore = playbackSettingsStore ?? AudioPlaybackSettingsStore()
         self.uiStateStore = uiStateStore ?? AudioUIState()
+        runtimeMonitoringEnabledOverride = runtimeMonitoringEnabled
         engineManager = AudioEngineManager(
             configuration: configuration,
             engineFactory: self.engineFactory,
