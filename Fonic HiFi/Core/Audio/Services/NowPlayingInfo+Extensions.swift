@@ -53,20 +53,9 @@ public struct NowPlayingInfoBuilder {
         info[MPNowPlayingInfoPropertyPlaybackRate] = rate
     }
 
-    /// Set the track number
-    public mutating func setTrackNumber(_ number: Int, of total: Int) {
-        info[MPMediaItemPropertyAlbumTrackNumber] = number
-        info[MPMediaItemPropertyAlbumTrackCount] = total
-    }
-
     /// Set media type (music)
     public mutating func setMediaType() {
         info[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.audio.rawValue
-    }
-
-    /// Set whether the track is live streaming
-    public mutating func setIsLiveStream(_ isLive: Bool) {
-        info[MPNowPlayingInfoPropertyIsLiveStream] = isLive
     }
 
     /// Build the final dictionary

@@ -90,12 +90,6 @@ public final class QueueCoordinator {
         logger.info("Enqueued next: \(track.title)")
     }
 
-    /// Clear the current queue
-    public func clearQueue() {
-        queueManager.clear()
-        logger.info("Queue cleared")
-    }
-
     // MARK: - Queue Modes
 
     /// Set shuffle mode

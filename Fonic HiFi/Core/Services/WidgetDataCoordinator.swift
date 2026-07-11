@@ -173,12 +173,6 @@ public final class WidgetDataCoordinator: ObservableObject {
         logger.info("Full widget state sync completed")
     }
 
-    /// Force reload all widget timelines
-    public func forceReloadWidgets() {
-        appGroupManager.reloadAllTimelines()
-        logger.debug("Forced widget timeline reload")
-    }
-
     // MARK: - Private Helpers
 
     private func createWidgetPlaybackState(from state: PlaybackState) -> WidgetPlaybackState {
@@ -264,21 +258,4 @@ public final class WidgetDataCoordinator: ObservableObject {
         }
     }
 
-    // MARK: - Cleanup
-
-    /// Clean up orphaned artwork from cache
-    public func cleanupOrphanedArtwork() async {
-        // Get all valid track IDs from the queue
-        let validIds = Set(queueManager.queueState.tracks.map(\.id))
-        artworkCache.removeOrphanedArtwork(validTrackIds: validIds)
-    }
-
-    /// Clear all widget data
-    public func clearAllWidgetData() {
-        appGroupManager.clearAllData()
-        artworkCache.clearCache()
-        lastTrackId = nil
-        lastIsPlaying = nil
-        logger.info("All widget data cleared")
-    }
 }
