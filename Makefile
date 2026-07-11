@@ -21,6 +21,8 @@ DESTINATION = platform=iOS Simulator,name=$(SIMULATOR_NAME),OS=$(SIMULATOR_OS)
 DERIVED_DATA = $(HOME)/Library/Developer/Xcode/DerivedData
 BUILD_DIR = build
 RESULT_BUNDLE = $(BUILD_DIR)/TestResults.xcresult
+UNIT_RESULT_BUNDLE = $(BUILD_DIR)/UnitTestResults.xcresult
+UI_RESULT_BUNDLE = $(BUILD_DIR)/UITestResults.xcresult
 OVERALL_COVERAGE_THRESHOLD ?= 0
 APP_COVERAGE_THRESHOLD ?= 0
 COVERAGE_MIN_PERCENT ?= 40
@@ -257,6 +259,8 @@ test: check-deps ## Run all Swift test targets
 		echo "❌ Tests failed with exit code $$EXIT_CODE"; \
 		exit $$EXIT_CODE; \
 	fi; \
+	$(XCRUN) xcresulttool get test-results summary --path "$(RESULT_BUNDLE)" --format json | \
+		python3 scripts/validate_test_results.py --label "All tests"; \
 	echo "✅ Test suite complete"
 
 # Run unit tests only
