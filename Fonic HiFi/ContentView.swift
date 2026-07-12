@@ -58,14 +58,16 @@ struct ContentView: View {
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewBottomAccessory {
             if let audioService {
-                LiquidGlassMiniPlayer(namespace: miniPlayerNamespace)
-                    .environment(\.audioEngine, audioService)
-                    .matchedTransitionSource(id: "miniplayer", in: miniPlayerNamespace)
-                    .onTapGesture {
+                LiquidGlassMiniPlayer(
+                    namespace: miniPlayerNamespace,
+                    onOpen: {
                         showingNowPlaying = true
                         let generator = UIImpactFeedbackGenerator(style: .medium)
                         generator.impactOccurred(intensity: 0.9)
                     }
+                )
+                    .environment(\.audioEngine, audioService)
+                    .matchedTransitionSource(id: "miniplayer", in: miniPlayerNamespace)
             }
         }
         .fullScreenCover(isPresented: $showingNowPlaying) {

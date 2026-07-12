@@ -14,10 +14,19 @@ struct LiquidGlassMiniPlayer: View {
     @Environment(\.audioEngine) private var audioService
 
     let namespace: Namespace.ID
+    let onOpen: () -> Void
 
     var body: some View {
         HStack(spacing: 15) {
-            playerInfo
+            Button(action: onOpen) {
+                playerInfo
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Open Now Playing")
+            .accessibilityValue(nowPlayingAccessibilityValue)
 
             Spacer(minLength: 0)
 
@@ -50,6 +59,11 @@ struct LiquidGlassMiniPlayer: View {
                     .lineLimit(1)
             }
         }
+    }
+
+    private var nowPlayingAccessibilityValue: String {
+        guard let track = audioService?.currentTrack else { return "Not playing" }
+        return "\(track.title), \(track.artist)"
     }
 
     // MARK: - Controls
@@ -109,7 +123,7 @@ struct LiquidGlassMiniPlayer: View {
 
     VStack {
         Spacer()
-        LiquidGlassMiniPlayer(namespace: namespace)
+        LiquidGlassMiniPlayer(namespace: namespace, onOpen: {})
             .environment(\.audioEngine, audioService)
             .padding()
     }

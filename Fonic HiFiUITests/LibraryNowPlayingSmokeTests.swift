@@ -376,4 +376,23 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["Edit"].waitForExistence(timeout: 3))
     }
+
+    func testMiniPlayerExposesSeparateSemanticActions() throws {
+        let app = launchPreviewApp()
+
+        let openNowPlaying = app.buttons["Open Now Playing"]
+        XCTAssertTrue(openNowPlaying.waitForExistence(timeout: 10))
+        let play = app.buttons["Play"]
+        let next = app.buttons["Next Track"]
+        XCTAssertTrue(play.exists)
+        XCTAssertTrue(next.exists)
+
+        play.tap()
+        XCTAssertFalse(app.staticTexts["Now Playing"].exists)
+        next.tap()
+        XCTAssertFalse(app.staticTexts["Now Playing"].exists)
+
+        openNowPlaying.tap()
+        XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
+    }
 }
