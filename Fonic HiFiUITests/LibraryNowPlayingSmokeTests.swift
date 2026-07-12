@@ -534,4 +534,16 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         importMusic.tap()
         XCTAssertTrue(app.navigationBars["Import Music"].waitForExistence(timeout: 3))
     }
+
+    func testNowPlayingArtworkExposesTrackInformationAction() throws {
+        let app = launchPreviewApp()
+        let openNowPlaying = app.buttons["Open Now Playing"]
+        XCTAssertTrue(openNowPlaying.waitForExistence(timeout: 10))
+        openNowPlaying.tap()
+
+        let trackInformation = app.buttons["Track information for Impulse Response"]
+        XCTAssertTrue(trackInformation.waitForExistence(timeout: 5))
+        trackInformation.tap()
+        XCTAssertTrue(app.navigationBars["Track Details"].waitForExistence(timeout: 3))
+    }
 }

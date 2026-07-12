@@ -330,14 +330,20 @@ struct NowPlayingContent: View {
     // MARK: - Album Artwork
 
     private var albumArtworkView: some View {
-        MorphableArtwork(size: artworkSize, namespace: namespace)
-            .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
-            .onTapGesture {
-                guard let track = audioService?.currentTrack else { return }
-                trackDetailItem = TrackDetailItem(track: track)
-            }
-            .accessibilityLabel("Album artwork")
-            .accessibilityHint("Current track album artwork")
+        Button {
+            guard let track = audioService?.currentTrack else { return }
+            trackDetailItem = TrackDetailItem(track: track)
+        } label: {
+            MorphableArtwork(size: artworkSize, namespace: namespace)
+                .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
+        }
+            .buttonStyle(.plain)
+            .disabled(audioService?.currentTrack == nil)
+            .accessibilityLabel(
+                audioService?.currentTrack.map { "Track information for \($0.title)" }
+                    ?? "Track information"
+            )
+            .accessibilityHint("Shows details for the current track")
     }
 
     // MARK: - Track Info
