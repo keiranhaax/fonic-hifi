@@ -350,6 +350,21 @@ private extension FonicHiFiApp {
     static func makePreviewServices(
         performanceMonitor: PerformanceMonitor
     ) -> AppServices? {
+        if ProcessInfo.processInfo.arguments.contains("-UITestFileManagerData"),
+           let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            for filename in ["UI Test Track.mp3", "UI Test Album.flac"] {
+                let fixtureURL = documentsURL.appendingPathComponent(filename)
+                _ = FileManager.default.createFile(
+                    atPath: fixtureURL.path,
+                    contents: Data("Fonic UI test fixture".utf8)
+                )
+            }
+            try? FileManager.default.createDirectory(
+                at: documentsURL.appendingPathComponent("UI Test Folder", isDirectory: true),
+                withIntermediateDirectories: true
+            )
+        }
+
         guard let dataManager = DataManager.makePreviewDataManager()
             ?? DataManager.makeFallbackDataManager() else {
             return nil

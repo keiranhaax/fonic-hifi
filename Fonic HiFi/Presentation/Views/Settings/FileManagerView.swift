@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 struct FileManagerView: View {
     @Environment(\.dataManager) private var dataManager
     @Environment(\.importService) private var importService
+    @Environment(\.editMode) private var editMode
 
     private static let defaultDirectory: URL = {
         if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
@@ -105,9 +106,11 @@ struct FileManagerView: View {
                     ForEach(filteredContents, id: \.id) { item in
                         FileRowView(
                             item: item,
+                            isEditing: editMode?.wrappedValue.isEditing == true,
                             onTap: { handleItemTap(item) },
                             onLongPress: { showFileDetails(item) },
                         )
+                        .tag(item)
                     }
                 }
                 .refreshable {
@@ -141,6 +144,9 @@ struct FileManagerView: View {
         .navigationTitle("File Manager")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                EditButton()
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button(action: { showingFileImporter = true }) {

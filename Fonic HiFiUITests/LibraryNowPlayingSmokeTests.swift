@@ -7,9 +7,10 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    private func launchPreviewApp() -> XCUIApplication {
+    private func launchPreviewApp(arguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments.append("-UITestPreviewData")
+        app.launchArguments.append(contentsOf: arguments)
         app.launch()
         addTeardownBlock {
             app.terminate()
@@ -331,5 +332,48 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
             control.tap()
         }
         XCTAssertTrue(app.buttons["Show queue"].waitForExistence(timeout: 3), "Show queue control is missing")
+    }
+
+    func testFileManagerExposesTouchSelectionMode() throws {
+        let app = launchPreviewApp(arguments: ["-UITestFileManagerData"])
+        let settingsTab = tabButton("Settings", in: app)
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
+        settingsTab.tap()
+
+        let fileManager = app.staticTexts["File Manager"]
+        reveal(fileManager, in: app)
+        XCTAssertTrue(fileManager.waitForExistence(timeout: 5))
+        fileManager.tap()
+
+        let edit = app.buttons["Edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        edit.tap()
+        XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 3))
+
+        let fixtures = [
+            app.staticTexts["UI Test Track.mp3"],
+            app.staticTexts["UI Test Album.flac"],
+            app.staticTexts["UI Test Folder"],
+        ]
+        for fixture in fixtures {
+            XCTAssertTrue(fixture.waitForExistence(timeout: 5))
+            fixture.tap()
+        }
+
+        let importSelected = app.buttons["Import Selected"]
+        XCTAssertTrue(importSelected.waitForExistence(timeout: 3))
+        XCTAssertTrue(importSelected.isEnabled)
+        let deleteSelected = app.buttons["Delete (3)"]
+        XCTAssertTrue(deleteSelected.waitForExistence(timeout: 3))
+        deleteSelected.tap()
+        XCTAssertTrue(app.staticTexts["Delete Files"].waitForExistence(timeout: 3))
+        app.buttons["Cancel"].tap()
+
+        importSelected.tap()
+        XCTAssertFalse(importSelected.exists)
+        XCTAssertTrue(app.buttons["Done"].exists)
+
+        app.buttons["Done"].tap()
+        XCTAssertTrue(app.buttons["Edit"].waitForExistence(timeout: 3))
     }
 }

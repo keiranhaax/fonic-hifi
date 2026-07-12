@@ -9,10 +9,24 @@ import SwiftUI
 
 struct FileRowView: View {
     let item: FileItem
+    let isEditing: Bool
     let onTap: () -> Void
     let onLongPress: () -> Void
 
     var body: some View {
+        if isEditing {
+            rowContent
+        } else {
+            Button(action: onTap) {
+                rowContent
+            }
+            .buttonStyle(.plain)
+            .onLongPressGesture(perform: onLongPress)
+            .accessibilityAction(named: "Show details", onLongPress)
+        }
+    }
+
+    private var rowContent: some View {
         HStack(spacing: 12) {
             // File icon
             Image(systemName: item.fileTypeIcon)
@@ -74,12 +88,6 @@ struct FileRowView: View {
         }
         .padding(.vertical, 8)
         .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
-        }
-        .onLongPressGesture {
-            onLongPress()
-        }
     }
 
     private var iconColor: Color {
@@ -104,6 +112,7 @@ struct FileRowView: View {
                 size: 3_500_000,
                 dateModified: Date(),
             ),
+            isEditing: false,
             onTap: {},
             onLongPress: {},
         )
@@ -117,6 +126,7 @@ struct FileRowView: View {
                 size: 0,
                 dateModified: Date(),
             ),
+            isEditing: false,
             onTap: {},
             onLongPress: {},
         )
