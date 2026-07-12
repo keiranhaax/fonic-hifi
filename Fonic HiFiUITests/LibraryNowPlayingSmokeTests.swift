@@ -522,4 +522,16 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         play.tap()
         XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
     }
+
+    func testEmptyLibraryImportActionOpensImporter() throws {
+        let app = launchPreviewApp()
+        let libraryTab = tabButton("Library", in: app)
+        XCTAssertTrue(libraryTab.waitForExistence(timeout: 10))
+        libraryTab.tap()
+
+        let importMusic = app.buttons["Import Music"]
+        XCTAssertTrue(importMusic.waitForExistence(timeout: 5))
+        importMusic.tap()
+        XCTAssertTrue(app.navigationBars["Import Music"].waitForExistence(timeout: 3))
+    }
 }
