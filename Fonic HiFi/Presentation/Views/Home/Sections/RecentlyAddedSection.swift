@@ -21,10 +21,12 @@ struct RecentlyAddedSection: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(tracks) { track in
-                        RecentlyAddedCardView(track: track)
-                            .onTapGesture {
-                                onTrackTap(track)
-                            }
+                        Button { onTrackTap(track) } label: {
+                            RecentlyAddedCardView(track: track)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Play \(track.title) by \(track.artist)")
                     }
                 }
                 .padding(.horizontal)

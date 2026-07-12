@@ -21,10 +21,12 @@ struct ArtistsSection: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(artists) { artist in
-                        ArtistAvatarView(artist: artist)
-                            .onTapGesture {
-                                onArtistTap(artist)
-                            }
+                        Button { onArtistTap(artist) } label: {
+                            ArtistAvatarView(artist: artist)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Open artist \(artist.name)")
                     }
                 }
                 .padding(.horizontal)

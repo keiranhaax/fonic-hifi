@@ -26,10 +26,12 @@ struct TimeBasedGreetingSection: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 16) {
                         ForEach(tracks) { track in
-                            GreetingTrackCard(track: track)
-                                .onTapGesture {
-                                    onTrackTap(track)
-                                }
+                            Button { onTrackTap(track) } label: {
+                                GreetingTrackCard(track: track)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Play \(track.title) by \(track.artist)")
                         }
                     }
                     .padding(.horizontal)

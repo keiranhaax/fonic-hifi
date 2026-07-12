@@ -404,6 +404,10 @@ private extension FonicHiFiApp {
                 name: "Semantic Playlist",
                 playlistDescription: "Semantic test collection"
             )
+            track.genre = "Electronic"
+            track.lastPlayed = .now
+            track.playCount = 5
+            album.isFavorite = true
             track.artistRelation = artist
             track.albumRelation = album
             playlist.addTrack(track.id)

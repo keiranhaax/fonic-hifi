@@ -424,7 +424,9 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         libraryTab.tap()
 
         app.buttons["Albums"].tap()
-        let album = app.buttons["Open album Semantic Album by Semantic Artist"]
+        let album = app.buttons.matching(
+            NSPredicate(format: "label == %@", "Open album Semantic Album by Semantic Artist")
+        ).firstMatch
         XCTAssertTrue(album.waitForExistence(timeout: 5))
         album.tap()
         XCTAssertTrue(app.navigationBars["Album"].waitForExistence(timeout: 3))
@@ -478,6 +480,42 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
 
         let play = app.buttons["Play Semantic Track by Semantic Artist"]
         for _ in 0..<4 where !play.isHittable {
+            app.swipeDown()
+        }
+        XCTAssertTrue(play.isHittable)
+        play.tap()
+        XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
+    }
+
+    func testHomeBrowseSectionsExposeOnlyWorkingSemanticActions() throws {
+        let app = launchPreviewApp(arguments: ["-UITestLibraryData"])
+
+        let playActions = app.buttons.matching(
+            NSPredicate(format: "label == %@", "Play Semantic Track by Semantic Artist")
+        )
+        let play = playActions.firstMatch
+        XCTAssertTrue(play.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(playActions.count, 3)
+        let artist = app.buttons["Open artist Semantic Artist"]
+        let album = app.buttons.matching(
+            NSPredicate(format: "label == %@", "Open album Semantic Album by Semantic Artist")
+        ).firstMatch
+        XCTAssertTrue(artist.exists)
+        XCTAssertTrue(album.exists)
+        XCTAssertTrue(app.staticTexts["Electronic"].exists)
+        XCTAssertFalse(app.buttons["Electronic"].exists)
+
+        reveal(artist, in: app)
+        artist.tap()
+        XCTAssertTrue(app.navigationBars["Artist"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
+
+        reveal(album, in: app)
+        album.tap()
+        XCTAssertTrue(app.navigationBars["Semantic Album"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
+
+        for _ in 0..<6 where !play.isHittable {
             app.swipeDown()
         }
         XCTAssertTrue(play.isHittable)

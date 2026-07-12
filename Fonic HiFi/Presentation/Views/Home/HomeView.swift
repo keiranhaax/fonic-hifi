@@ -54,7 +54,6 @@ struct HomeView: View {
     @State private var isLoading = true
     @State private var hasLoadedOnce = false
     @State private var selectedArtist: Artist?
-    @State private var selectedGenre: String?
     @State private var selectedAlbum: Album?
 
     var body: some View {
@@ -146,9 +145,7 @@ struct HomeView: View {
 
                 // Browse by Genre
                 if !genres.isEmpty {
-                    GenresSection(genres: genres) { genre in
-                        selectedGenre = genre
-                    }
+                    GenresSection(genres: genres)
                 }
 
                 // Albums
@@ -165,14 +162,14 @@ struct HomeView: View {
                 // Recently Played (if user has history)
                 if !recentlyPlayed.isEmpty {
                     HomeSection(title: "Recently Played") {
-                        CarouselView(tracks: recentlyPlayed)
+                        CarouselView(tracks: recentlyPlayed, onTrackTap: playTrack)
                     }
                 }
 
                 // Most Listened (if user has history)
                 if !mostListened.isEmpty {
                     HomeSection(title: "Most Listened") {
-                        CarouselView(tracks: mostListened)
+                        CarouselView(tracks: mostListened, onTrackTap: playTrack)
                     }
                 }
 
@@ -365,12 +362,18 @@ private struct EmptyHomeView: View {
 
 private struct CarouselView: View {
     let tracks: [Track]
+    let onTrackTap: (Track) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DesignTokens.Spacing.medium) {
                 ForEach(tracks) { track in
-                    TrackCardView(track: track)
+                    Button { onTrackTap(track) } label: {
+                        TrackCardView(track: track)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Play \(track.title) by \(track.artist)")
                 }
             }
             .padding(.horizontal)
