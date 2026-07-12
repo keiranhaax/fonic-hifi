@@ -19,6 +19,9 @@ struct SearchView: View {
     @State private var isSearching = false
     @State private var recentSearches: [RecentSearchData] = []
     @State private var showingRecentSearches = true
+    @State private var selectedAlbum: Album?
+    @State private var selectedArtist: Artist?
+    @State private var selectedPlaylist: Playlist?
 
     // Smart search
     @State private var smartSearchViewModel = SmartSearchViewModel()
@@ -73,7 +76,12 @@ struct SearchView: View {
                 NoResultsView(query: searchText, isSmartSearch: false)
             } else if !searchResults.isEmpty {
                 // Show search results
-                SearchResultsListView(results: searchResults)
+                SearchResultsListView(
+                    results: searchResults,
+                    onAlbumSelected: { selectedAlbum = $0 },
+                    onArtistSelected: { selectedArtist = $0 },
+                    onPlaylistSelected: { selectedPlaylist = $0 }
+                )
             } else if isSearching || smartSearchViewModel.searchState == .searching {
                 // Show loading state
                 ProgressView(useSmartSearch ? "Searching with AI..." : "Searching...")
@@ -123,6 +131,17 @@ struct SearchView: View {
                     }
                     .background(.thinMaterial)
                 }
+            }
+        }
+        .sheet(item: $selectedAlbum) { album in
+            AlbumSheetView(album: album, onTrackTap: playTrack)
+        }
+        .sheet(item: $selectedArtist) { artist in
+            ArtistDetailView(artist: artist)
+        }
+        .sheet(item: $selectedPlaylist) { playlist in
+            NavigationStack {
+                PlaylistDetailView(playlist: playlist, showsDismissButton: true)
             }
         }
         .task {
@@ -243,21 +262,17 @@ struct SearchView: View {
 
 private struct SearchResultsListView: View {
     let results: SearchResults
+    let onAlbumSelected: (Album) -> Void
+    let onArtistSelected: (Artist) -> Void
+    let onPlaylistSelected: (Playlist) -> Void
 
     var body: some View {
         List {
             // Tracks section
             if results.hasTrackResults {
                 Section("Tracks") {
-                    ForEach(results.tracks.prefix(10)) { track in
+                    ForEach(results.tracks) { track in
                         TrackRowView(track: track)
-                    }
-                    if results.tracks.count > 10 {
-                        HStack {
-                            Text("See all \(results.tracks.count) tracks")
-                                .font(.footnote)
-                                .foregroundStyle(.tint)
-                        }
                     }
                 }
             }
@@ -266,7 +281,12 @@ private struct SearchResultsListView: View {
             if results.hasAlbumResults {
                 Section("Albums") {
                     ForEach(results.albums.prefix(5)) { album in
-                        AlbumRowView(album: album)
+                        Button { onAlbumSelected(album) } label: {
+                            AlbumRowView(album: album)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Open album \(album.title) by \(album.albumArtist)")
                     }
                 }
             }
@@ -275,7 +295,12 @@ private struct SearchResultsListView: View {
             if results.hasArtistResults {
                 Section("Artists") {
                     ForEach(results.artists.prefix(5)) { artist in
-                        SearchArtistRow(artist: artist)
+                        Button { onArtistSelected(artist) } label: {
+                            SearchArtistRow(artist: artist)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Open artist \(artist.name)")
                     }
                 }
             }
@@ -284,7 +309,12 @@ private struct SearchResultsListView: View {
             if results.hasPlaylistResults {
                 Section("Playlists") {
                     ForEach(results.playlists) { playlist in
-                        PlaylistSearchRowView(playlist: playlist)
+                        Button { onPlaylistSelected(playlist) } label: {
+                            PlaylistSearchRowView(playlist: playlist)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Open playlist \(playlist.name)")
                     }
                 }
             }

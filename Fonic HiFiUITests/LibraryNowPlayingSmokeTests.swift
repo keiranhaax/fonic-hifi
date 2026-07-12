@@ -443,4 +443,45 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         playlist.tap()
         XCTAssertTrue(app.navigationBars["Playlist"].waitForExistence(timeout: 3))
     }
+
+    func testStandardSearchResultsExposeSemanticActions() throws {
+        let app = launchPreviewApp(arguments: ["-UITestLibraryData"])
+        let searchTab = tabButton("Search", in: app)
+        XCTAssertTrue(searchTab.waitForExistence(timeout: 10))
+        searchTab.tap()
+
+        let searchField = app.searchFields.firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        searchField.tap()
+        searchField.typeText("Semantic")
+        app.keyboards.buttons["search"].tap()
+
+        XCTAssertTrue(app.buttons["Play Semantic Track by Semantic Artist"].waitForExistence(timeout: 5))
+        let album = app.buttons["Open album Semantic Album by Semantic Artist"]
+        let artist = app.buttons["Open artist Semantic Artist"]
+        let playlist = app.buttons["Open playlist Semantic Playlist"]
+        XCTAssertTrue(album.exists)
+        XCTAssertTrue(artist.exists)
+        XCTAssertTrue(playlist.exists)
+
+        album.tap()
+        XCTAssertTrue(app.navigationBars["Semantic Album"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
+
+        artist.tap()
+        XCTAssertTrue(app.navigationBars["Artist"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
+
+        playlist.tap()
+        XCTAssertTrue(app.navigationBars["Semantic Playlist"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
+
+        let play = app.buttons["Play Semantic Track by Semantic Artist"]
+        for _ in 0..<4 where !play.isHittable {
+            app.swipeDown()
+        }
+        XCTAssertTrue(play.isHittable)
+        play.tap()
+        XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
+    }
 }

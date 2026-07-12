@@ -5,6 +5,7 @@
 //  Created by Keiran on 5/27/25.
 //
 
+import AVFAudio
 import OSLog
 import SwiftData
 import SwiftUI
@@ -371,8 +372,17 @@ private extension FonicHiFiApp {
         }
 
         if ProcessInfo.processInfo.arguments.contains("-UITestLibraryData") {
+            let fixtureURL = FileManager.default.temporaryDirectory.appendingPathComponent("semantic-track.wav")
+            if let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2),
+               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 4_410) {
+                buffer.frameLength = 4_410
+                try? FileManager.default.removeItem(at: fixtureURL)
+                if let file = try? AVAudioFile(forWriting: fixtureURL, settings: format.settings) {
+                    try? file.write(from: buffer)
+                }
+            }
             let track = Track(
-                url: FileManager.default.temporaryDirectory.appendingPathComponent("semantic-track.wav"),
+                url: fixtureURL,
                 title: "Semantic Track",
                 artist: "Semantic Artist",
                 album: "Semantic Album",

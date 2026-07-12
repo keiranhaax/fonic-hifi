@@ -22,46 +22,50 @@ struct TrackRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Track number or playing indicator
-            ZStack {
-                if isCurrentlyPlaying, audioService?.isPlaying == true {
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.caption)
-                        .foregroundColor(theme.accent)
-                } else {
-                    Text("\(track.trackNumber ?? 0)")
+        Button(action: playTrack) {
+            HStack(spacing: 12) {
+                // Track number or playing indicator
+                ZStack {
+                    if isCurrentlyPlaying, audioService?.isPlaying == true {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.caption)
+                            .foregroundColor(theme.accent)
+                    } else {
+                        Text("\(track.trackNumber ?? 0)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(width: 24)
+
+                // Track info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(track.title)
+                        .font(.body)
+                        .lineLimit(1)
+
+                    Text(track.artist)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
-            }
-            .frame(width: 24)
 
-            // Track info
-            VStack(alignment: .leading, spacing: 2) {
-                Text(track.title)
-                    .font(.body)
-                    .lineLimit(1)
+                Spacer()
 
-                Text(track.artist)
+                // Duration
+                Text(formatDuration(track.duration))
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(1)
+                    .monospacedDigit()
             }
-
-            Spacer()
-
-            // Duration
-            Text(formatDuration(track.duration))
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .monospacedDigit()
+            .contentShape(Rectangle())
+            .background(isCurrentlyPlaying ? theme.subtle : Color.clear)
         }
-        .contentShape(Rectangle())
-        .background(isCurrentlyPlaying ? theme.subtle : Color.clear)
-        .onTapGesture {
-            playTrack()
-        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Play \(track.title) by \(track.artist)")
+        .accessibilityHint("Plays this track")
+        .disabled(audioService == nil)
         .opacity(audioService?.isReady == true ? 1.0 : 0.6) // Visual feedback for initialization state
     }
 
