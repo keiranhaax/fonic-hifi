@@ -67,6 +67,15 @@ struct LibraryView: View {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
 
+    static func loadingOverlayMessage(
+        selectedTab: LibraryTab,
+        loadingSection: LibraryViewModel.Section?,
+        itemCount: Int
+    ) -> String? {
+        guard loadingSection == selectedTab.section, itemCount == 0 else { return nil }
+        return selectedTab.loadingDescription
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -299,13 +308,19 @@ struct LibraryView: View {
     }
 
     private var loadingMessage: String? {
-        guard let section = viewModel.isLoadingSection else { return nil }
+        Self.loadingOverlayMessage(
+            selectedTab: selectedTab,
+            loadingSection: viewModel.isLoadingSection,
+            itemCount: selectedItemCount
+        )
+    }
 
-        switch section {
-        case .tracks: return LibraryTab.tracks.loadingDescription
-        case .albums: return LibraryTab.albums.loadingDescription
-        case .artists: return LibraryTab.artists.loadingDescription
-        case .playlists: return LibraryTab.playlists.loadingDescription
+    private var selectedItemCount: Int {
+        switch selectedTab {
+        case .tracks: viewModel.tracks.count
+        case .albums: viewModel.albums.count
+        case .artists: viewModel.artists.count
+        case .playlists: viewModel.playlists.count
         }
     }
 
