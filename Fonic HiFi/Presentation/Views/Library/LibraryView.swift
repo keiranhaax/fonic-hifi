@@ -236,10 +236,14 @@ struct LibraryView: View {
                 spacing: 20
             ) {
                 ForEach(Array(viewModel.albums.enumerated()), id: \.element.id) { index, album in
-                    AlbumEntityTile(album: album)
-                        .onTapGesture {
-                            selectedAlbum = album
-                        }
+                    Button {
+                        selectedAlbum = album
+                    } label: {
+                        AlbumEntityTile(album: album)
+                    }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Open album \(album.title) by \(album.albumArtist)")
                         .onAppear {
                             loadNextPage(for: .albums, index: index)
                         }
@@ -257,11 +261,14 @@ struct LibraryView: View {
     private var artistsSection: some View {
         List {
             ForEach(Array(viewModel.artists.enumerated()), id: \.element.id) { index, artist in
-                ArtistEntityRow(artist: artist)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedArtist = artist
-                    }
+                Button {
+                    selectedArtist = artist
+                } label: {
+                    ArtistEntityRow(artist: artist)
+                }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Open artist \(artist.name)")
                     .onAppear {
                         loadNextPage(for: .artists, index: index)
                     }
@@ -277,11 +284,14 @@ struct LibraryView: View {
     private var playlistsSection: some View {
         List {
             ForEach(Array(viewModel.playlists.enumerated()), id: \.element.id) { index, playlist in
-                PlaylistEntityRow(playlist: playlist)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedPlaylist = playlist
-                    }
+                Button {
+                    selectedPlaylist = playlist
+                } label: {
+                    PlaylistEntityRow(playlist: playlist)
+                }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Open playlist \(playlist.name)")
                     .onAppear {
                         loadNextPage(for: .playlists, index: index)
                     }

@@ -416,4 +416,31 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Semantic Track"].exists)
     }
+
+    func testLibraryCollectionsExposeSemanticDetailActions() throws {
+        let app = launchPreviewApp(arguments: ["-UITestLibraryData"])
+        let libraryTab = tabButton("Library", in: app)
+        XCTAssertTrue(libraryTab.waitForExistence(timeout: 10))
+        libraryTab.tap()
+
+        app.buttons["Albums"].tap()
+        let album = app.buttons["Open album Semantic Album by Semantic Artist"]
+        XCTAssertTrue(album.waitForExistence(timeout: 5))
+        album.tap()
+        XCTAssertTrue(app.navigationBars["Album"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
+
+        app.buttons["Artists"].tap()
+        let artist = app.buttons["Open artist Semantic Artist"]
+        XCTAssertTrue(artist.waitForExistence(timeout: 5))
+        artist.tap()
+        XCTAssertTrue(app.navigationBars["Artist"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
+
+        app.buttons["Playlists"].tap()
+        let playlist = app.buttons["Open playlist Semantic Playlist"]
+        XCTAssertTrue(playlist.waitForExistence(timeout: 5))
+        playlist.tap()
+        XCTAssertTrue(app.navigationBars["Playlist"].waitForExistence(timeout: 3))
+    }
 }

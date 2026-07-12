@@ -383,7 +383,25 @@ private extension FonicHiFiApp {
                 channels: 2,
                 isLossless: true
             )
+            let artist = Artist(name: "Semantic Artist")
+            let album = Album(
+                title: "Semantic Album",
+                albumArtist: "Semantic Artist",
+                year: 2026,
+                totalTracks: 1
+            )
+            let playlist = Playlist(
+                name: "Semantic Playlist",
+                playlistDescription: "Semantic test collection"
+            )
+            track.artistRelation = artist
+            track.albumRelation = album
+            playlist.addTrack(track.id)
+            playlist.tracks = [track]
             dataManager.container.mainContext.insert(track)
+            dataManager.container.mainContext.insert(artist)
+            dataManager.container.mainContext.insert(album)
+            dataManager.container.mainContext.insert(playlist)
             try? dataManager.container.mainContext.save()
         }
 
