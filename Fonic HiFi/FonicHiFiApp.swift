@@ -375,6 +375,7 @@ private extension FonicHiFiApp {
             channels: 2,
             isLossless: true
         )
+        previewTrack.lyrics = "Reference lyrics for accessibility testing."
         queueManager.setCurrentTrack(previewTrack.toAudioTrack())
         audioService.setCurrentTrack(previewTrack)
         let importService = LibraryImportService(

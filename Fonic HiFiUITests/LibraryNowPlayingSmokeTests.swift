@@ -233,6 +233,34 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertEqual(repeatButton.value as? String, "All")
     }
 
+    func testLyricsOverlayProvidesModalAccessibility() throws {
+        let app = launchPreviewApp()
+        let miniPlayer = app.otherElements["MiniPlayer"]
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
+        miniPlayer.tap()
+
+        app.buttons["More options"].tap()
+        let lyrics = app.buttons["Lyrics"]
+        XCTAssertTrue(lyrics.waitForExistence(timeout: 3))
+        XCTAssertTrue(lyrics.isEnabled)
+        lyrics.tap()
+
+        let lyricsModal = app.descendants(matching: .any)["LyricsModal"]
+        XCTAssertTrue(lyricsModal.waitForExistence(timeout: 3))
+        let closeLyrics = app.buttons["Close lyrics"]
+        XCTAssertTrue(closeLyrics.waitForExistence(timeout: 3))
+        XCTAssertTrue(closeLyrics.isHittable)
+        XCTAssertEqual(closeLyrics.frame.width, 44, accuracy: 0.01)
+        XCTAssertEqual(closeLyrics.frame.height, 44, accuracy: 0.01)
+        XCTAssertTrue(app.staticTexts["Reference lyrics for accessibility testing."].exists)
+        XCTAssertFalse(app.buttons["More options"].exists)
+
+        closeLyrics.tap()
+        XCTAssertFalse(lyricsModal.exists)
+        XCTAssertFalse(closeLyrics.exists)
+        XCTAssertTrue(app.buttons["More options"].waitForExistence(timeout: 3))
+    }
+
     func testResetAllSettingsRequiresConfirmation() throws {
         let app = launchPreviewApp()
         let settingsTab = tabButton("Settings", in: app)

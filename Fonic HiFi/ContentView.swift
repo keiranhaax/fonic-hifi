@@ -14,6 +14,7 @@ struct ContentView: View {
     @Environment(\.audioEngine) private var audioService
     @Environment(\.libraryRepository) private var libraryRepository
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @ObservedObject private var colorService = DominantColorService.shared
     @AppStorage("artworkThemingEnabled") private var artworkThemingEnabled = true
@@ -84,6 +85,9 @@ struct ContentView: View {
         .onChange(of: colorScheme) { _, newScheme in
             colorService.updateColorScheme(newScheme)
         }
+        .onChange(of: reduceMotion) { _, enabled in
+            colorService.updateReduceMotion(enabled)
+        }
         .onChange(of: artworkThemingEnabled) { _, enabled in
             colorService.updateThemingEnabled(enabled)
         }
@@ -91,6 +95,7 @@ struct ContentView: View {
             colorService.updateLightModeThemingEnabled(enabled)
         }
         .onAppear {
+            colorService.updateReduceMotion(reduceMotion)
             colorService.updateColorScheme(colorScheme)
             colorService.updateThemingEnabled(artworkThemingEnabled)
             colorService.updateLightModeThemingEnabled(artworkThemingLightMode)

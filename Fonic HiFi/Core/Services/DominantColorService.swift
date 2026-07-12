@@ -45,6 +45,13 @@ final class DominantColorService: ObservableObject {
     /// Animation duration for palette transitions
     private let transitionDuration: Double = 2.5
 
+    /// Whether app-authored palette transitions should be suppressed
+    private var reduceMotionEnabled = false
+
+    var paletteTransitionAnimation: Animation? {
+        reduceMotionEnabled ? nil : .easeInOut(duration: transitionDuration)
+    }
+
     // MARK: - Initialization
 
     private init() {
@@ -57,27 +64,26 @@ final class DominantColorService: ObservableObject {
     func updateColorScheme(_ colorScheme: ColorScheme) {
         guard colorScheme != currentColorScheme else { return }
         currentColorScheme = colorScheme
-        withAnimation(.easeInOut(duration: transitionDuration)) {
-            rebuildPalette()
-        }
+        publishPaletteChange()
     }
 
     /// Update whether theming is globally enabled
     func updateThemingEnabled(_ enabled: Bool) {
         guard enabled != themingEnabled else { return }
         themingEnabled = enabled
-        withAnimation(.easeInOut(duration: transitionDuration)) {
-            rebuildPalette()
-        }
+        publishPaletteChange()
     }
 
     /// Update whether theming is enabled for light mode
     func updateLightModeThemingEnabled(_ enabled: Bool) {
         guard enabled != lightModeThemingEnabled else { return }
         lightModeThemingEnabled = enabled
-        withAnimation(.easeInOut(duration: transitionDuration)) {
-            rebuildPalette()
-        }
+        publishPaletteChange()
+    }
+
+    /// Update whether palette transitions should honor Reduce Motion.
+    func updateReduceMotion(_ enabled: Bool) {
+        reduceMotionEnabled = enabled
     }
 
     /// Extract dominant color for the given track.
@@ -86,9 +92,7 @@ final class DominantColorService: ObservableObject {
         guard let track else {
             rawDominantColor = .accentColor
             currentTrackID = nil
-            withAnimation(.easeInOut(duration: transitionDuration)) {
-                rebuildPalette()
-            }
+            publishPaletteChange()
             return
         }
 
@@ -99,9 +103,7 @@ final class DominantColorService: ObservableObject {
         if let cached = colorCache[track.id] {
             rawDominantColor = cached
             currentTrackID = track.id
-            withAnimation(.easeInOut(duration: transitionDuration)) {
-                rebuildPalette()
-            }
+            publishPaletteChange()
             return
         }
 
@@ -114,9 +116,7 @@ final class DominantColorService: ObservableObject {
         guard let artworkData = track.artwork else {
             rawDominantColor = .accentColor
             currentTrackID = track.id
-            withAnimation(.easeInOut(duration: transitionDuration)) {
-                rebuildPalette()
-            }
+            publishPaletteChange()
             return
         }
 
@@ -132,9 +132,7 @@ final class DominantColorService: ObservableObject {
         // Apply with animation
         rawDominantColor = extractedColor
         currentTrackID = track.id
-        withAnimation(.easeInOut(duration: transitionDuration)) {
-            rebuildPalette()
-        }
+        publishPaletteChange()
     }
 
     /// Extract dominant color for the given album.
@@ -143,9 +141,7 @@ final class DominantColorService: ObservableObject {
         guard let album else {
             rawDominantColor = .accentColor
             currentTrackID = nil
-            withAnimation(.easeInOut(duration: transitionDuration)) {
-                rebuildPalette()
-            }
+            publishPaletteChange()
             return
         }
 
@@ -153,9 +149,7 @@ final class DominantColorService: ObservableObject {
         if let cached = colorCache[album.id] {
             rawDominantColor = cached
             currentTrackID = album.id
-            withAnimation(.easeInOut(duration: transitionDuration)) {
-                rebuildPalette()
-            }
+            publishPaletteChange()
             return
         }
 
@@ -168,9 +162,7 @@ final class DominantColorService: ObservableObject {
         guard let artworkData = album.artwork else {
             rawDominantColor = .accentColor
             currentTrackID = album.id
-            withAnimation(.easeInOut(duration: transitionDuration)) {
-                rebuildPalette()
-            }
+            publishPaletteChange()
             return
         }
 
@@ -186,9 +178,7 @@ final class DominantColorService: ObservableObject {
         // Apply with animation
         rawDominantColor = extractedColor
         currentTrackID = album.id
-        withAnimation(.easeInOut(duration: transitionDuration)) {
-            rebuildPalette()
-        }
+        publishPaletteChange()
     }
 
     /// Clear the cache and reset to default color
@@ -207,6 +197,21 @@ final class DominantColorService: ObservableObject {
     }
 
     // MARK: - Private Helpers
+
+    private func publishPaletteChange() {
+        guard let animation = paletteTransitionAnimation else {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                rebuildPalette()
+            }
+            return
+        }
+
+        withAnimation(animation) {
+            rebuildPalette()
+        }
+    }
 
     private func rebuildPalette() {
         // Check if theming should be active

@@ -46,6 +46,14 @@ final class DominantColorServiceTests: XCTestCase {
         XCTAssertFalse(sut.palette.isVibrant)
     }
 
+    func testPaletteTransitionAnimationRespectsReduceMotion() {
+        sut.updateReduceMotion(true)
+        XCTAssertNil(sut.paletteTransitionAnimation)
+
+        sut.updateReduceMotion(false)
+        XCTAssertNotNil(sut.paletteTransitionAnimation)
+    }
+
     func testResetClearsPaletteToNeutral() {
         // Reset should clear to neutral
         sut.reset()

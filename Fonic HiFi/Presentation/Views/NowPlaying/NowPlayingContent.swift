@@ -16,6 +16,7 @@ struct NowPlayingContent: View {
     @Environment(\.dataManager) private var dataManager: DataManager?
     @Environment(\.sizeCategory) private var sizeCategory
     @Environment(\.themePalette) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let namespace: Namespace.ID
     let dismiss: () -> Void
@@ -27,6 +28,7 @@ struct NowPlayingContent: View {
     @State private var showSleepTimerSheet = false
     @State private var showingLyrics = false
     @State private var playbackSpeed: Double = 1.0
+    @AccessibilityFocusState private var overflowMenuFocused: Bool
 
     // Sleep Timer
     @StateObject private var sleepTimerManager = SleepTimerManager()
@@ -47,6 +49,10 @@ struct NowPlayingContent: View {
     private var repeatMode: QueueRepeatMode {
         get { QueueRepeatMode(rawValue: repeatModeRawValue) ?? .none }
         set { repeatModeRawValue = newValue.rawValue }
+    }
+
+    static func lyricsTransitionAnimation(reduceMotion: Bool) -> Animation? {
+        reduceMotion ? nil : .easeInOut(duration: DesignTokens.Animation.quickFadeDuration)
     }
 
     // Slider state
@@ -112,15 +118,13 @@ struct NowPlayingContent: View {
             )
             .ignoresSafeArea()
         )
-        .overlay {
-            if showingLyrics {
-                LyricsView(
-                    lyrics: audioService?.currentTrack?.lyrics,
-                    isPresented: $showingLyrics
-                )
-            }
-        }
-        .animation(.easeInOut(duration: DesignTokens.Animation.quickFadeDuration), value: showingLyrics)
+        .modifier(
+            LyricsOverlayModifier(
+                lyrics: audioService?.currentTrack?.lyrics,
+                isPresented: $showingLyrics
+            )
+        )
+        .animation(Self.lyricsTransitionAnimation(reduceMotion: reduceMotion), value: showingLyrics)
         .task {
             await colorService.extractColor(for: audioService?.currentTrack)
             // Sync favorite state on appear
@@ -129,6 +133,11 @@ struct NowPlayingContent: View {
         .onChange(of: audioService?.currentTrack?.id) { _, _ in
             // Sync favorite state on track change
             isFavorite = audioService?.currentTrack?.isFavorite ?? false
+        }
+        .onChange(of: showingLyrics) { wasShowing, isShowing in
+            if wasShowing && !isShowing {
+                overflowMenuFocused = true
+            }
         }
         .sheet(item: $trackDetailItem) { item in
             NavigationStack {
@@ -314,6 +323,7 @@ struct NowPlayingContent: View {
                 .contentShape(.rect)
                 .frame(width: 44, height: 44)
         }
+        .accessibilityFocused($overflowMenuFocused)
         .accessibilityLabel(overflowMenuAccessibilityLabel)
     }
 
@@ -718,6 +728,32 @@ struct NowPlayingContent: View {
 }
 
 // MARK: - Supporting Types
+
+private struct LyricsOverlayModifier: ViewModifier {
+    let lyrics: String?
+    @Binding var isPresented: Bool
+
+    func body(content: Content) -> some View {
+        ZStack {
+            baseLayer(content)
+
+            if isPresented {
+                LyricsView(lyrics: lyrics, isPresented: $isPresented)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func baseLayer(_ content: Content) -> some View {
+        if isPresented {
+            content
+                .accessibilityElement(children: .ignore)
+                .accessibilityHidden(true)
+        } else {
+            content
+        }
+    }
+}
 
 private struct TrackDetailItem: Identifiable {
     let id: UUID

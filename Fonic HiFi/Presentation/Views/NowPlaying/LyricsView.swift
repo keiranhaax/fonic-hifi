@@ -10,6 +10,7 @@ import SwiftUI
 struct LyricsView: View {
     let lyrics: String?
     @Binding var isPresented: Bool
+    @AccessibilityFocusState private var closeFocused: Bool
 
     var body: some View {
         ZStack {
@@ -35,7 +36,10 @@ struct LyricsView: View {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title2)
                             .symbolRenderingMode(.hierarchical)
+                            .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Close lyrics")
+                    .accessibilityFocused($closeFocused)
                 }
                 .padding()
 
@@ -65,6 +69,15 @@ struct LyricsView: View {
             .padding()
         }
         .transition(.opacity)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("LyricsModal")
+        .accessibilityAddTraits(.isModal)
+        .accessibilityAction(.escape) {
+            isPresented = false
+        }
+        .onAppear {
+            closeFocused = true
+        }
     }
 }
 
