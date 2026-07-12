@@ -68,11 +68,19 @@ struct TrackListView: View {
             .padding(.vertical, 8)
 
             List(sortedTracks) { track in
-                TrackRowView(track: track)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .onTapGesture {
+                HStack(spacing: 8) {
+                    TrackRowView(track: track)
+
+                    Button {
                         selectedTrack = track
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .frame(width: 44, height: 44)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Track information for \(track.title)")
+                }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
             }
             .listStyle(.plain)
         }

@@ -61,11 +61,15 @@ struct ArtistListView: View {
             .padding(.vertical, 8)
 
             List(sortedArtists) { artist in
-                ArtistRowView(artist: artist)
+                Button {
+                    selectedArtist = artist
+                } label: {
+                    ArtistRowView(artist: artist)
+                }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Open artist \(artist.name)")
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .onTapGesture {
-                        selectedArtist = artist
-                    }
             }
             .listStyle(.plain)
         }

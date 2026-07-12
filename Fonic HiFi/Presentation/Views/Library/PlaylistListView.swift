@@ -32,11 +32,15 @@ struct PlaylistListView: View {
                 EmptyPlaylistView(showingCreatePlaylist: $showingCreatePlaylist)
             } else {
                 List(filteredPlaylists) { playlist in
-                    PlaylistRowView(playlist: playlist)
+                    Button {
+                        selectedPlaylist = playlist
+                    } label: {
+                        PlaylistRowView(playlist: playlist)
+                    }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Open playlist \(playlist.name)")
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .onTapGesture {
-                            selectedPlaylist = playlist
-                        }
                 }
                 .listStyle(.plain)
             }
