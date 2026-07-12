@@ -204,13 +204,11 @@ struct LibraryView: View {
     private var tracksSection: some View {
         List {
             ForEach(Array(viewModel.tracks.enumerated()), id: \.element.id) { index, track in
-                TrackEntityRow(track: track) {
-                    selectedTrack = track
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    playTrack(track)
-                }
+                TrackEntityRow(
+                    track: track,
+                    onPlay: { playTrack(track) },
+                    onInfo: { selectedTrack = track }
+                )
                 .onAppear {
                     loadNextPage(for: .tracks, index: index)
                 }
@@ -392,41 +390,53 @@ struct LibraryView: View {
 
 private struct TrackEntityRow: View {
     let track: TrackEntity
-    let onInfoTapped: () -> Void
+    let onPlay: () -> Void
+    let onInfo: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            LazyArtworkView(trackId: track.id, size: 56, cornerRadius: 8)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(track.title)
-                    .font(.headline)
-                    .lineLimit(2)
-
-                Text("\(track.artist) • \(track.album)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
+            Button(action: onPlay) {
                 HStack(spacing: 12) {
-                    Label(track.qualityDescription, systemImage: "waveform")
-                    Label(track.formattedDuration, systemImage: "clock")
-                    Label(track.formattedFileSize, systemImage: "internaldrive")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
+                    LazyArtworkView(trackId: track.id, size: 56, cornerRadius: 8)
 
-            Spacer()
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(track.title)
+                            .font(.headline)
+                            .lineLimit(2)
+
+                        Text("\(track.artist) • \(track.album)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+
+                        HStack(spacing: 12) {
+                            Label(track.qualityDescription, systemImage: "waveform")
+                            Label(track.formattedDuration, systemImage: "clock")
+                            Label(track.formattedFileSize, systemImage: "internaldrive")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Play \(track.title) by \(track.artist)")
+            .accessibilityHint("Plays this track")
 
             Button {
-                onInfoTapped()
+                onInfo()
             } label: {
                 Image(systemName: "info.circle")
                     .font(.title3)
                     .foregroundStyle(.secondary)
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Track information for \(track.title)")
         }
         .padding(.vertical, 6)
     }

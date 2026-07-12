@@ -370,6 +370,23 @@ private extension FonicHiFiApp {
             return nil
         }
 
+        if ProcessInfo.processInfo.arguments.contains("-UITestLibraryData") {
+            let track = Track(
+                url: FileManager.default.temporaryDirectory.appendingPathComponent("semantic-track.wav"),
+                title: "Semantic Track",
+                artist: "Semantic Artist",
+                album: "Semantic Album",
+                audioFormat: "WAV",
+                duration: 1,
+                sampleRate: 44_100,
+                bitDepth: 16,
+                channels: 2,
+                isLossless: true
+            )
+            dataManager.container.mainContext.insert(track)
+            try? dataManager.container.mainContext.save()
+        }
+
         let playbackStateManager = PlaybackStateManager()
         let audioMonitor = AudioMonitor(performanceMonitor: performanceMonitor)
         let queueManager = AudioQueueManager()
