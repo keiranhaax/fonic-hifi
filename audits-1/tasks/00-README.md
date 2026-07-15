@@ -2,15 +2,16 @@
 
 **Created:** 2026-07-15
 **Repository:** Fonic HiFi (`main`, worktree dirty with in-flight playback-error and settings work — see "Protected in-flight work" below)
-**Audited revision:** audits were taken at `459db9b`; every finding was re-validated against the current working tree on 2026-07-15.
+**Audited revision:** audits were taken at `459db9b`; normalized findings were statically re-checked against the current working tree on 2026-07-15. Runtime, CI, and physical-device claims remain verification work where the tasks say so.
 **Planning only:** no application source was modified while building this backlog.
+**Implementation use:** treat this as a planning backlog, not proof of current runtime behavior. Revalidate the selected task against `HEAD`, the live dirty worktree, and its stated verification lane immediately before editing.
 
 ## Files in this tracker
 
 | File | Contents |
 |---|---|
 | `00-README.md` | This summary, execution order, dependency map, groups |
-| `01-resolved-findings.md` | Findings already fixed in the current tree — `[DONE]` register with evidence |
+| `01-resolved-findings.md` | Findings already fixed in the current tree — `[DONE]` register plus one explicitly partial evidence row |
 | `02-security-config.md` | AUDIT-001 … AUDIT-007 |
 | `03-data-import.md` | AUDIT-008 … AUDIT-016 |
 | `04-library-data.md` | AUDIT-017 … AUDIT-019 |
@@ -18,7 +19,7 @@
 | `06-ui-ux.md` | AUDIT-036 … AUDIT-043 |
 | `07-foundation-models.md` | AUDIT-044 … AUDIT-047 |
 | `08-widget-testing-cleanup.md` | AUDIT-048 … AUDIT-055 |
-| `09-finding-disposition-map.md` | Every source finding ID → task or disposition |
+| `09-finding-disposition-map.md` | Every normalized WP1–WP5 finding ID → task or disposition; Model A is cross-referenced but not independently normalized |
 
 ## Audit Sources
 
@@ -30,17 +31,19 @@
 - **Part 2 / WP4** — Refactoring review (8 retained candidates WP4-R01…R08, 0 rejected/deferred remaining in final JSON).
 - **Part 2 / WP5** — Project cleanup (15 register entries CLN-001…015, several "keep"/negative findings).
 
+Counting note: `09-finding-disposition-map.md` contains 118 WP2 canonical rows and repeats the 8 WP1 FMA rows as routing cross-references (126 table rows across those two sections). The repeated WP1 rows are already source members of the WP2 canonical set and are not 8 additional unique findings.
+
 ## Status Summary
 
-- Canonical findings reviewed: **118** (from 147 source findings) + 8 WP4 candidates + 15 WP5 entries
+- Normalized findings reviewed: **118** WP2 canonical findings (from 147 Model B + WP1 source findings) + 8 WP4 candidates + 15 WP5 entries; Model A's 46 findings are corroborating evidence, not an additional normalized set
 - Unique implementation tasks created: **55** (AUDIT-001 … AUDIT-055)
 - `[TODO]`: **51**
-- `[DONE]` (already fixed in current tree, recorded in `01-resolved-findings.md`): **28 findings**
+- `[DONE]` (already fixed in current tree, recorded in `01-resolved-findings.md`): **27 findings**, plus 1 partial dead-code evidence row whose remaining work is AUDIT-052
 - `[BLOCKED]`: **4** (AUDIT-001 provider action; AUDIT-004 product decision; AUDIT-007 owner/policy; AUDIT-055 physical device + release owner)
-- `[UNCONFIRMED]`: **0** — every retained finding was either re-validated statically or is explicitly tracked as profile-first/reproduce-first inside its task
-- `[NOT APPLICABLE]` / no-action: **7** (WP5 CLN-010…014 "keep" findings, WP2 informational positive checks; see disposition map)
+- Standalone `[UNCONFIRMED]` dispositions: **0** — retained static defects are routed to tasks, while unmeasured runtime/device impact remains explicit profile-first, reproduce-first, or evidence-lane work
+- `[NOT APPLICABLE]` / no-action: **5** (WP5 CLN-010…014 "keep" findings; see disposition map)
 - Duplicate findings consolidated: WP2 already merged 55 source findings into 26 clusters; this backlog additionally consolidates 118 canonical findings + WP4/WP5 into 55 tasks (consolidations listed per task under "Audit finding IDs")
-- Partially-fixed findings folded into open tasks: 10 (CAN-011, CAN-022, CAN-024, AUD-RESET-001, DLP-010, DLP-014, UIUX-010, UIUX-012, A11Y-008, TRV-005)
+- Residual or partially-fixed findings folded into open tasks: 10 (CAN-011, CAN-022, CAN-024, AUD-RESET-001, DLP-010, DLP-014, UIUX-010, UIUX-012, A11Y-008, TRV-005). TRV-005 is a confirmed residual finding rather than a partially-fixed one.
 
 ## Difficulty Summary
 
@@ -103,7 +106,7 @@ Dependency order overrides difficulty order; reasons noted where a harder task p
 - **GROUP-01 — Repository hygiene & security** (AUDIT-001, 002, 003, 005): same `.gitignore`/tracked-file/CI surface; separating them causes repeated index churn and repeated secret-scan passes.
 - **GROUP-02 — Import metadata correctness** (AUDIT-008, 009): both change `MetadataExtractionService` + `TrackDataActor.applyTrackMetadata` and share one fixture set; separate PRs would edit identical lines twice.
 - **GROUP-03 — Listening sessions** (AUDIT-010, 011, 012): one schema/migration/lifecycle vertical; landing lifecycle without the schema stage crashes inserts, and migration tests are only meaningful against the new stage.
-- **GROUP-04 — Import pipeline integrity** (AUDIT-013, 014, 15): failure cleanup, cancellation, and atomic dedup all reshape the same `FileImportProcessor` flow; interleaving other work would produce conflicting rewrites.
+- **GROUP-04 — Import pipeline integrity** (AUDIT-013, 014, 015): failure cleanup, cancellation, and atomic dedup all reshape the same `FileImportProcessor` flow; interleaving other work would produce conflicting rewrites.
 - **GROUP-05 — Audio session & transitions** (AUDIT-030, 031, 032, 033, 034): one playback state machine; partial landing leaves transitions incoherent (e.g., serialized play with split session ownership regresses interruption paths).
 - **GROUP-06 — Format contract** (inside AUDIT-022): codec inspection and advertised-format pruning must ship together or the UI advertises formats the detector still misroutes.
 - **GROUP-07 — Observation & UI state ownership** (AUDIT-036, 037, 038, UI half of 021): all consume the corrected observation boundary; doing them before AUDIT-036 doubles the migration.

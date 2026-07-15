@@ -1,6 +1,6 @@
 # Finding Disposition Map
 
-Every source finding from the audit corpus, mapped to its task or disposition. Generated against the current working tree on 2026-07-15; regenerate the routing if task files are renumbered.
+Every normalized WP1–WP5 finding from the audit corpus is mapped to its task or disposition. Model A's 46 findings were not independently normalized; corroborating Model A IDs are cross-referenced where used. Generated against the current working tree on 2026-07-15; regenerate the routing if task files are renumbered.
 
 Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-findings.md` = verified fixed in the current tree (see that register for evidence); split routings list every task that carries part of the finding.
 
@@ -8,7 +8,7 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 
 | Canonical ID | Severity | Title | Member source IDs | Disposition |
 |---|---|---|---|---|
-| CAN-001 | Critical | Four live credentials and a sensitive local endpoint are committed | PCFG-001, PSR-001 | AUDIT-001 |
+| CAN-001 | Critical | Four credential values of unverified current validity and a sensitive local endpoint are committed | PCFG-001, PSR-001 | AUDIT-001 |
 | CAN-002 | Critical | App and widget lack required-reason privacy manifests | PCFG-002, PSR-002 | AUDIT-005, DONE — 01-resolved-findings.md |
 | AUD-ENG-002 | High | Play requests are not serialized or cancelled | AUD-ENG-002 | AUDIT-030 |
 | AUD-SESSION-001 | High | Audio-session ownership is split and native load deactivates after activation | AUD-SESSION-001 | AUDIT-031 |
@@ -89,7 +89,7 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 | LOC-004 | Medium | Precomposed metadata strings are not translator-reorderable for bidirectional layouts | LOC-004 | AUDIT-043 |
 | PCFG-005 | Medium | Dependency/tool resolution is only partly pinned and not enforced in CI | PCFG-005 | AUDIT-005 |
 | PCFG-006 | Medium | A mode-160000 gitlink has no `.gitmodules` mapping or available object | PCFG-006 | DONE — 01-resolved-findings.md |
-| PSR-005 | Medium | Imported audio files retain uncontrolled source protection metadata | PSR-005 | AUDIT-007 |
+| PSR-005 | Medium | Imported-audio destination protection and backup policy are implicit and unverified | PSR-005 | AUDIT-007 |
 | PSR-006 | Medium | In-app privacy disclosure omits material local data and retention/deletion behavior | PSR-006 | AUDIT-007 |
 | TRV-003 | Medium | Unit and UI commands are indistinguishable aliases | TRV-003 | DONE — 01-resolved-findings.md |
 | TRV-005 | Medium | Audio tests contain test theater and over-broad error assertions | TRV-005 | AUDIT-050 |
@@ -108,9 +108,9 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 | UIUX-018 | Medium | Every library pagination fetch presents a full-screen blocking loader | UIUX-018 | DONE — 01-resolved-findings.md |
 | CAN-007 | Low | Info.plist claims Live Activity support without an Activity configuration | PCFG-010, PSR-009 | AUDIT-004 |
 | CAN-008 | Low | The app carries an unused APNs capability | PCFG-012, PSR-008 | AUDIT-004 |
-| CP-012 | Low | Optional diagnostics retain unbounded samples and start a no-op poller | CP-012 | AUDIT-027 |
+| CP-012 | Low | Optional diagnostics start a no-op poller; sample histories are now bounded | CP-012 | AUDIT-027 |
 | CP-013 | Low | Deferred startup work is unowned and cancellation-blind | CP-013 | AUDIT-054 |
-| DCA-DEAD-001 | Low | Eighteen target-included files have no production consumer | DCA-DEAD-001 | AUDIT-052, DONE — 01-resolved-findings.md |
+| DCA-DEAD-001 | Low | Eighteen target-included files were reported without production consumers; four are removed and the remainder needs a fresh sweep | DCA-DEAD-001 | AUDIT-052, partial evidence in 01-resolved-findings.md |
 | DCA-DEAD-002 | Low | Live files contain 61 manually retained unreferenced symbol roots | DCA-DEAD-002 | AUDIT-052 |
 | DCA-PART-003 | Low | QueueCoordinator exposes three inert methods beside working manager APIs | DCA-PART-003 | DONE — 01-resolved-findings.md |
 | DCA-PART-004 | Low | Smart-search result taps only log and never invoke playback | DCA-PART-004 | DONE — 01-resolved-findings.md |
@@ -128,6 +128,8 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 | TRV-013 | Informational | Coverage gate is coarse and current evidence is not retained in the repository | TRV-013 | AUDIT-005 |
 
 ## WP1 Foundation Models findings (FMA-001…008)
+
+These eight rows are routing cross-references, not additional normalized findings. Every FMA ID below is already included among the 147 WP2 source findings and therefore represented inside the 118 WP2 canonical rows above.
 
 | WP1 ID | Disposition |
 |---|---|
