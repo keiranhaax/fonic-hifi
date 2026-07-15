@@ -87,6 +87,24 @@ final class AudioMonitoringCollectorsTests: XCTestCase {
         }
     }
 
+    func testCPUSampleMapsMachTickOrder() {
+        let sample = SystemMetricsCollector.makeCPUSample(from: (1, 2, 3, 4))
+
+        XCTAssertEqual(sample.user, 1)
+        XCTAssertEqual(sample.system, 2)
+        XCTAssertEqual(sample.idle, 3)
+        XCTAssertEqual(sample.nice, 4)
+    }
+
+    func testCPUUsageExcludesIdleTicks() throws {
+        let previous = SystemMetricsCollector.CPUSample(user: 100, system: 100, idle: 100, nice: 100)
+        let current = SystemMetricsCollector.CPUSample(user: 110, system: 120, idle: 170, nice: 100)
+
+        let usage = try XCTUnwrap(SystemMetricsCollector.cpuUsage(previous: previous, current: current))
+
+        XCTAssertEqual(usage, 30, accuracy: 0.0001)
+    }
+
     func testSystemMetricsCollectorReportsSystemAudioMetrics() async {
         let collector = SystemMetricsCollector()
         await collector.startMonitoring()

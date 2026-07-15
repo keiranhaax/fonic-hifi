@@ -83,7 +83,7 @@ public final class AppGroupManager: ObservableObject {
         if let track {
             track.save()
             lastTrackInfo = track
-            logger.debug("Track info synced: \(track.title, privacy: .public)")
+            logger.debug("Current track info synced")
         } else {
             // Skip if already cleared
             guard lastTrackInfo != nil else { return }

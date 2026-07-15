@@ -70,7 +70,7 @@ public final class ListeningSessionService {
             trackDuration: duration
         )
 
-        logger.debug("Started listening session for track: \(trackId)")
+        logger.debug("Started listening session")
     }
 
     /// End the current listening session and persist it
@@ -116,7 +116,7 @@ public final class ListeningSessionService {
             // Increment play count if user listened to enough of the track
             if completionPercentage >= playCountThreshold || wasCompleted {
                 try await dataActor.incrementPlayCount(for: session.trackId)
-                logger.debug("Incremented play count for: \(session.trackId)")
+                logger.debug("Incremented play count after listening session")
             }
 
             logger.info("Recorded session: \(Int(completionPercentage * 100))% of track, skipped=\(wasSkipped), completed=\(wasCompleted)")

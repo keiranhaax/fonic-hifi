@@ -34,7 +34,7 @@ final class AudioQueueManagerTests: XCTestCase {
         XCTAssertFalse(queue.hasPrevious)
     }
 
-    func testQueueMutationsEmitMetricsMetadata() async {
+    func testQueueMutationsEmitPrivacySafeMetricsMetadata() async {
         let recorder = QueueMetricsRecorder()
         Metrics.enable(true)
         Metrics.setSinkForTesting { counter, amount, _, metadata in
@@ -67,12 +67,8 @@ final class AudioQueueManagerTests: XCTestCase {
         if let event = events.first {
             XCTAssertEqual(event.metadata["action"], "next")
             XCTAssertEqual(event.metadata["size"], "2")
-            if let track = event.metadata["track"] {
-                XCTAssertTrue(track.hasSuffix("…"))
-                XCTAssertLessThanOrEqual(track.count, 41)
-            } else {
-                XCTFail("Expected track metadata for next action")
-            }
+            XCTAssertNil(event.metadata["track"])
+            XCTAssertFalse(event.metadata.values.contains(longTitle))
         }
 
         XCTAssertNotNil(queue.remove(at: 1))
@@ -82,12 +78,8 @@ final class AudioQueueManagerTests: XCTestCase {
             XCTAssertEqual(event.metadata["action"], "remove")
             XCTAssertEqual(event.metadata["index"], "1")
             XCTAssertEqual(event.metadata["size"], "1")
-            if let track = event.metadata["track"] {
-                XCTAssertTrue(track.hasSuffix("…"))
-                XCTAssertLessThanOrEqual(track.count, 41)
-            } else {
-                XCTFail("Expected truncated track metadata")
-            }
+            XCTAssertNil(event.metadata["track"])
+            XCTAssertFalse(event.metadata.values.contains(longTitle))
         }
 
         queue.clear()

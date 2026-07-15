@@ -85,7 +85,7 @@ struct TrackRowView: View {
         // Diagnostic logging for debugging controls issue
         let serviceID = String(describing: ObjectIdentifier(audioService))
         logger.info("""
-            Track tapped: \(track.title, privacy: .public)
+            Track selected for playback
             - audioService ID: \(serviceID, privacy: .public)
             - isReady: \(audioService.isReady)
             - isPlaying: \(audioService.isPlaying)
@@ -97,7 +97,7 @@ struct TrackRowView: View {
         Task {
             do {
                 try await audioService.play(track: track)
-                logger.info("play(track:) succeeded for \(track.title, privacy: .public)")
+                logger.info("play(track:) succeeded")
             } catch {
                 logger.error("play(track:) FAILED: \(error.localizedDescription, privacy: .public)")
                 // Clear broken state so user isn't left in non-functional UI

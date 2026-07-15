@@ -281,7 +281,7 @@ public struct AlertConfiguration: Sendable, Equatable {
 
     public init(
         cpuThreshold: Float = 80.0,
-        memoryThreshold: Int64 = 100_000_000, // 100MB
+        memoryThreshold: Int64 = PerformanceThresholds.targetMemoryUsage,
         bufferFillThreshold: Float = 0.3,
         maxBufferUnderruns: Int = 0,
         latencyThreshold: TimeInterval = 0.050, // 50ms

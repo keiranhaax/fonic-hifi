@@ -3,6 +3,10 @@ import XCTest
 
 @MainActor
 final class AudioAlertManagerTests: XCTestCase {
+    func testDefaultMemoryThresholdMatchesPerformanceTarget() {
+        XCTAssertEqual(AlertConfiguration.default.memoryThreshold, PerformanceThresholds.targetMemoryUsage)
+    }
+
     func testHighCPUUsageGeneratesCriticalAlert() {
         let manager = AudioAlertManager(configuration: AlertConfiguration(
             cpuThreshold: 80,

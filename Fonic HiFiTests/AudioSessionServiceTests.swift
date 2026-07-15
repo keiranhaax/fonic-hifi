@@ -49,6 +49,31 @@ final class AudioSessionServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testPlaybackConfigurationDoesNotUsePlayAndRecordOnlyAirPlayOption() async throws {
+        let manager = AudioSessionManager()
+
+        try await manager.configureAudioSession()
+
+        let session = AVAudioSession.sharedInstance()
+        XCTAssertEqual(session.category, .playback)
+        XCTAssertFalse(session.categoryOptions.contains(.allowAirPlay))
+    }
+
+    @MainActor
+    func testActivationAndDeactivationUpdateManagedState() async throws {
+        let manager = AudioSessionManager()
+
+        try await manager.configureAudioSession()
+        try await manager.activateAudioSession()
+        let isActive = await manager.isSessionActive
+        XCTAssertTrue(isActive)
+
+        try await manager.deactivateAudioSession()
+        let isInactive = await manager.isSessionActive
+        XCTAssertFalse(isInactive)
+    }
+
+    @MainActor
     func testUnsupportedSkipCommandsRemainDisabledWhenRemoteCommandsAreEnabled() async {
         let manager = AudioSessionManager()
         let commandCenter = MPRemoteCommandCenter.shared()

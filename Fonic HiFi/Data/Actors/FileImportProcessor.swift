@@ -646,7 +646,7 @@ actor FileImportProcessor {
         while true {
             do {
                 try fileManager.copyItem(at: sourceURL, to: destinationURL)
-                logger.debug("Copied file to: \(destinationURL.path)")
+                logger.debug("Copied imported file into app storage")
                 return destinationURL
             } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError {
                 let baseName = sourceURL.deletingPathExtension().lastPathComponent

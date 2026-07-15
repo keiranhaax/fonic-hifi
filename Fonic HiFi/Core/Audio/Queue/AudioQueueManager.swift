@@ -187,8 +187,7 @@ public final class AudioQueueManager: AudioQueue {
         notifyTracksChanged()
 
         recordQueueMutation("remove", extra: [
-            "index": "\(index)",
-            "track": LogPrivacy.truncated(removedTrack.title, limit: 40)
+            "index": "\(index)"
         ])
 
         return removedTrack
@@ -317,13 +316,7 @@ public final class AudioQueueManager: AudioQueue {
         }
 
         setCurrentIndex(index)
-        if let track = currentTrack {
-            recordQueueMutation("next", extra: [
-                "track": LogPrivacy.truncated(track.title, limit: 40)
-            ])
-        } else {
-            recordQueueMutation("next")
-        }
+        recordQueueMutation("next")
         return currentTrack
     }
 
@@ -332,13 +325,7 @@ public final class AudioQueueManager: AudioQueue {
         guard let index = previousIndex else { return nil }
 
         setCurrentIndex(index)
-        if let track = currentTrack {
-            recordQueueMutation("previous", extra: [
-                "track": LogPrivacy.truncated(track.title, limit: 40)
-            ])
-        } else {
-            recordQueueMutation("previous")
-        }
+        recordQueueMutation("previous")
         return currentTrack
     }
 

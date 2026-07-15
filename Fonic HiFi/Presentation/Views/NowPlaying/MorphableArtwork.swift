@@ -14,7 +14,14 @@ import SwiftUI
 struct MorphableArtwork: View {
     let size: CGFloat
     let namespace: Namespace.ID
+    let isSource: Bool
     @Environment(\.audioEngine) private var audioService
+
+    init(size: CGFloat, namespace: Namespace.ID, isSource: Bool = true) {
+        self.size = size
+        self.namespace = namespace
+        self.isSource = isSource
+    }
 
     /// Corner radius scales proportionally (size / 4), matching Apple Music's approach
     private var cornerRadius: CGFloat {
@@ -25,7 +32,7 @@ struct MorphableArtwork: View {
         artworkContent
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .matchedGeometryEffect(id: "artwork", in: namespace)
+            .matchedGeometryEffect(id: "artwork", in: namespace, isSource: isSource)
     }
 
     @ViewBuilder

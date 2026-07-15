@@ -334,7 +334,7 @@ struct NowPlayingContent: View {
             guard let track = audioService?.currentTrack else { return }
             trackDetailItem = TrackDetailItem(track: track)
         } label: {
-            MorphableArtwork(size: artworkSize, namespace: namespace)
+            MorphableArtwork(size: artworkSize, namespace: namespace, isSource: false)
                 .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
         }
             .buttonStyle(.plain)

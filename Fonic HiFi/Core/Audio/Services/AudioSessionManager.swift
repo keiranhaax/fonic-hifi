@@ -68,20 +68,9 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
 
     public func configureAudioSession() async throws {
         do {
-            // Set category for high-quality music playback. Avoid incompatible
-            // option combinations (OSStatus -50) – we start with a minimal
-            // configuration and layer in the optional AirPlay flag when allowed.
-            do {
-                try session.setCategory(
-                    .playback,
-                    mode: .default,
-                    options: [.allowAirPlay],
-                )
-            } catch {
-                // Some simulator/device builds reject .allowAirPlay with -50; fall
-                // back to bare playback which still routes correctly.
-                try session.setCategory(.playback, mode: .default, options: [])
-            }
+            // The playback category already supports AirPlay. The explicit
+            // allowAirPlay option is only valid with playAndRecord.
+            try session.setCategory(.playback, mode: .default, options: [])
 
             // Register for system notifications
             if !hasRegisteredForNotifications {
@@ -96,8 +85,23 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     }
 
     public func activateAudioSession() async throws {
+        guard !_isSessionActive else { return }
+
         do {
-            try session.setActive(true, options: [])
+            let didActivate: Bool
+            if #available(iOS 27.0, *) {
+                didActivate = try await session.activate(options: [])
+            } else {
+                try await Self.setSessionActiveLegacy(true, options: [])
+                didActivate = true
+            }
+
+            guard didActivate else {
+                throw AudioError.sessionConfigurationFailed(
+                    reason: "The system declined audio-session activation"
+                )
+            }
+
             _isSessionActive = true
             logger.notice(
                 """
@@ -115,8 +119,23 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     }
 
     public func deactivateAudioSession() async throws {
+        guard _isSessionActive else { return }
+
         do {
-            try session.setActive(false, options: .notifyOthersOnDeactivation)
+            let didDeactivate: Bool
+            if #available(iOS 27.0, *) {
+                didDeactivate = try await session.deactivate(options: [.notifyOthersOnDeactivation])
+            } else {
+                try await Self.setSessionActiveLegacy(false, options: .notifyOthersOnDeactivation)
+                didDeactivate = true
+            }
+
+            guard didDeactivate else {
+                throw AudioError.sessionConfigurationFailed(
+                    reason: "The system declined audio-session deactivation"
+                )
+            }
+
             _isSessionActive = false
             logger.notice("Audio session deactivated")
         } catch {
@@ -173,6 +192,9 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     // MARK: - Interruption Handling
 
     public func handleInterruption(_ interruption: AudioInterruptionType) async {
+        if case .began = interruption {
+            _isSessionActive = false
+        }
         await delegate?.audioSessionDidInterrupt(interruption)
     }
 
@@ -396,13 +418,17 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     @objc private func handleMediaServicesReset(_: Notification) {
         // Re-configure audio session after media services reset
         Task { @MainActor [weak self] in
+            guard let self else { return }
+            let shouldReactivate = self._isSessionActive
+            self._isSessionActive = false
+
             do {
-                try await self?.configureAudioSession()
-                if self?._isSessionActive == true {
-                    try await self?.activateAudioSession()
+                try await self.configureAudioSession()
+                if shouldReactivate {
+                    try await self.activateAudioSession()
                 }
             } catch {
-                self?.logger.error(
+                self.logger.error(
                     """
                     Failed to reconfigure audio session after media services reset:
                     \(String(describing: error), privacy: .public)
@@ -410,6 +436,14 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                 )
             }
         }
+    }
+
+    @concurrent
+    private static func setSessionActiveLegacy(
+        _ active: Bool,
+        options: AVAudioSession.SetActiveOptions
+    ) async throws {
+        try AVAudioSession.sharedInstance().setActive(active, options: options)
     }
 
     private func audioDeviceType(from portType: AVAudioSession.Port) -> AudioDeviceType {

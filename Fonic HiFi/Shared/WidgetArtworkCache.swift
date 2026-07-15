@@ -39,7 +39,7 @@ public final class WidgetArtworkCache {
         do {
             try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
             cacheURL = url
-            logger.info("Widget artwork cache initialized at: \(url.path, privacy: .public)")
+            logger.info("Widget artwork cache initialized")
 
             // Load access dates from disk
             loadAccessDates()
@@ -64,7 +64,7 @@ public final class WidgetArtworkCache {
         guard let thumbnail = image.resized(to: CGSize(width: thumbnailSize, height: thumbnailSize)),
               let data = thumbnail.jpegData(compressionQuality: WidgetConstants.ArtworkCache.compressionQuality)
         else {
-            logger.error("Failed to create thumbnail for track: \(trackId)")
+            logger.error("Failed to create widget artwork thumbnail")
             return nil
         }
 
@@ -78,7 +78,7 @@ public final class WidgetArtworkCache {
                 await enforceCacheLimit()
             }
 
-            logger.debug("Stored artwork for track: \(trackId)")
+            logger.debug("Stored widget artwork")
             return key
         } catch {
             logger.error("Failed to write artwork: \(error.localizedDescription)")
@@ -90,7 +90,7 @@ public final class WidgetArtworkCache {
     @discardableResult
     public func storeArtworkData(_ data: Data, forTrackId trackId: UUID) -> String? {
         guard let image = UIImage(data: data) else {
-            logger.error("Failed to create image from data for track: \(trackId)")
+            logger.error("Failed to decode widget artwork data")
             return nil
         }
         return storeArtwork(image, forTrackId: trackId)

@@ -1,16 +1,6 @@
 import Foundation
 import OSLog
 
-struct DetectionRequestContext: Sendable {
-    let identifier: UUID
-    let url: URL
-
-    init(url: URL) {
-        identifier = UUID()
-        self.url = url
-    }
-}
-
 actor FormatDetectionCoordinator {
     enum CoordinatorError: Error {
         case timeout
@@ -27,23 +17,16 @@ actor FormatDetectionCoordinator {
     }
 
     func performDetection(
-        for url: URL,
+        for _: URL,
         operation: @escaping @Sendable () async throws -> AudioFileInfo,
     ) async throws -> AudioFileInfo {
         try Task.checkCancellation()
-        let context = DetectionRequestContext(url: url)
         let waitBegan = ContinuousClock.now
 
         await semaphore.acquire()
         let waitDuration = waitBegan.duration(to: .now)
-        let identifier = context.identifier.uuidString
-        let fileName = context.url.lastPathComponent
         logger.debug(
-            """
-            detection.start id=\(identifier, privacy: .public) \
-            url=\(fileName, privacy: .public) \
-            wait_ms=\(milliseconds(waitDuration), privacy: .public)
-            """
+            "detection.start wait_ms=\(milliseconds(waitDuration), privacy: .public)"
         )
 
         let detectionBegan = ContinuousClock.now
@@ -77,30 +60,18 @@ actor FormatDetectionCoordinator {
 
             let detectionDuration = detectionBegan.duration(to: .now)
             logger.debug(
-                """
-                detection.success id=\(identifier, privacy: .public) \
-                url=\(fileName, privacy: .public) \
-                duration_ms=\(milliseconds(detectionDuration), privacy: .public)
-                """
+                "detection.success duration_ms=\(milliseconds(detectionDuration), privacy: .public)"
             )
             return result
         } catch is CancellationError {
-            logger.info(
-                "detection.cancelled id=\(context.identifier.uuidString, privacy: .public) url=\(context.url.lastPathComponent, privacy: .public)"
-            )
+            logger.info("detection.cancelled")
             throw CancellationError()
         } catch CoordinatorError.timeout {
-            logger.error(
-                "detection.timeout id=\(context.identifier.uuidString, privacy: .public) url=\(context.url.lastPathComponent, privacy: .public)"
-            )
+            logger.error("detection.timeout")
             throw DetectionError.timeout
         } catch {
             logger.error(
-                """
-                detection.failure id=\(identifier, privacy: .public) \
-                url=\(fileName, privacy: .public) \
-                error=\(error.localizedDescription, privacy: .public)
-                """
+                "detection.failure error_type=\(String(describing: type(of: error)), privacy: .public)"
             )
             throw error
         }

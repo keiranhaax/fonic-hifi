@@ -35,7 +35,7 @@ public protocol InterruptionStatsTracking: Sendable {
 
 @MainActor
 public final class SystemMetricsCollector: SystemMetricsCollecting {
-    private struct CPUSample {
+    struct CPUSample {
         let user: UInt32
         let system: UInt32
         let idle: UInt32
@@ -76,6 +76,27 @@ public final class SystemMetricsCollector: SystemMetricsCollecting {
     #endif
 
     public init() {}
+
+    static func makeCPUSample(from ticks: (UInt32, UInt32, UInt32, UInt32)) -> CPUSample {
+        CPUSample(
+            user: ticks.0,
+            system: ticks.1,
+            idle: ticks.2,
+            nice: ticks.3
+        )
+    }
+
+    static func cpuUsage(previous: CPUSample, current: CPUSample) -> Float? {
+        let user = Double(current.user &- previous.user)
+        let system = Double(current.system &- previous.system)
+        let nice = Double(current.nice &- previous.nice)
+        let idle = Double(current.idle &- previous.idle)
+        let total = user + system + nice + idle
+        guard total > 0 else { return nil }
+
+        let active = user + system + nice
+        return max(0, min(Float((active / total) * 100), 100))
+    }
 
     public func startMonitoring() async {
         previousCpuSample = captureCPUSample()
@@ -315,21 +336,13 @@ private extension SystemMetricsCollector {
             return 0
         }
 
-        let user = Double(currentSample.user &- previousSample.user)
-        let system = Double(currentSample.system &- previousSample.system)
-        let nice = Double(currentSample.nice &- previousSample.nice)
-        let idle = Double(currentSample.idle &- previousSample.idle)
-        let total = user + system + nice + idle
-        guard total > 0 else {
+        guard let usage = Self.cpuUsage(previous: previousSample, current: currentSample) else {
             cachedCPUUsage = (cachedCPUUsage?.value ?? 0, now)
             return cachedCPUUsage?.value ?? 0
         }
 
-        let active = user + system + nice
-        let usage = Float((active / total) * 100)
-        let clamped = max(0, min(usage, 100))
-        cachedCPUUsage = (clamped, now)
-        return clamped
+        cachedCPUUsage = (usage, now)
+        return usage
     }
 
     func currentMemoryUsage() -> Int64 {
@@ -424,12 +437,7 @@ private extension SystemMetricsCollector {
         }
 
         if result == KERN_SUCCESS {
-            return CPUSample(
-                user: info.cpu_ticks.0,
-                system: info.cpu_ticks.2,
-                idle: info.cpu_ticks.3,
-                nice: info.cpu_ticks.1
-            )
+            return Self.makeCPUSample(from: info.cpu_ticks)
         }
         #endif
 

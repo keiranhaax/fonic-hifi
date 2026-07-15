@@ -260,7 +260,7 @@ public actor TrackDataActor {
     /// - Returns: PersistentIdentifier of the created Track
     /// - Throws: TrackDataError if creation fails
     public func createTrack(from metadata: TrackMetadata) throws -> PersistentIdentifier {
-        logger.info("Creating track: \(metadata.title)")
+        logger.info("Creating imported track record")
 
         let resolvedArtist = resolvedArtistName(metadata.artist)
         let resolvedAlbum = resolvedAlbumTitle(metadata.album)
@@ -727,7 +727,7 @@ public actor TrackDataActor {
 
         do {
             try modelContext.save()
-            logger.debug("Updated playback stats for track: \(track.title)")
+            logger.debug("Updated track playback stats")
         } catch {
             logger.error("Failed to update playback stats: \(error.localizedDescription)")
             throw TrackDataError.updateFailed(error)
@@ -749,7 +749,7 @@ public actor TrackDataActor {
 
         do {
             try modelContext.save()
-            logger.debug("Updated user data for track: \(track.title)")
+            logger.debug("Updated track user data")
         } catch {
             logger.error("Failed to update user data: \(error.localizedDescription)")
             throw TrackDataError.updateFailed(error)
@@ -799,7 +799,7 @@ public actor TrackDataActor {
 
         do {
             try modelContext.save()
-            logger.debug("Recorded listening session for track: \(trackId)")
+            logger.debug("Recorded listening session")
         } catch {
             logger.error("Failed to record listening session: \(error.localizedDescription)")
             throw TrackDataError.insertFailed(error)
@@ -877,7 +877,7 @@ public actor TrackDataActor {
         descriptor.fetchLimit = 1
 
         guard let track = try modelContext.fetch(descriptor).first else {
-            logger.warning("Track not found for play count increment: \(trackId)")
+            logger.warning("Track not found for play count increment")
             return
         }
 
@@ -886,7 +886,7 @@ public actor TrackDataActor {
 
         do {
             try modelContext.save()
-            logger.debug("Incremented play count for: \(track.title) (now \(track.playCount))")
+            logger.debug("Incremented track play count to \(track.playCount, privacy: .public)")
         } catch {
             logger.error("Failed to increment play count: \(error.localizedDescription)")
             throw TrackDataError.updateFailed(error)

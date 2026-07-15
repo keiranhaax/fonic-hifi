@@ -337,7 +337,7 @@ public final class AudioEngineFacade: ObservableObject {
     public func play(track: Track) async throws {
         assertMainThread()
         guard isReady else { throw AudioError.engineInitializationFailed(reason: "Engine not ready") }
-        logger.info("Playing track: \(track.title, privacy: .public)")
+        logger.info("Starting selected-track playback")
         try await playbackController.play(track: track)
 
         // Start listening session after successful play

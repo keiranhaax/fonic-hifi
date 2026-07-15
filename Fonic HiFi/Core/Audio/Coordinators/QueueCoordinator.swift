@@ -87,7 +87,7 @@ public final class QueueCoordinator {
     /// - Parameter track: Track to play next
     public func enqueueNext(_ track: Track) {
         queueManager.enqueueNext(tracks: [track.toAudioTrack()])
-        logger.info("Enqueued next: \(track.title)")
+        logger.info("Enqueued selected track to play next")
     }
 
     // MARK: - Queue Modes
