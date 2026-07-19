@@ -1,0 +1,33 @@
+{
+  "directFoundationModelsImports": [
+    "Fonic HiFi/Core/AI/Recommendations/RecommendationSchemas.swift",
+    "Fonic HiFi/Core/AI/Recommendations/RecommendationService.swift",
+    "Fonic HiFi/Core/AI/Search/SmartSearchService.swift"
+  ],
+  "facts": {
+    "Foundation Models tools in direct code": 0,
+    "Generable schemas": 4,
+    "HTTP literals in direct code": 0,
+    "LanguageModelSession constructions": 2,
+    "URLSession in direct code": 0,
+    "availability checks": 2,
+    "cached session properties": 2,
+    "exact-count array guides": 3,
+    "isResponding guards in product": 0,
+    "locale-support preflight in product": 0,
+    "respond calls": 3,
+    "supportedLanguages preflight in product": 0
+  },
+  "failures": [],
+  "repositoryClean": true,
+  "repositoryCommit": "459db9bfd18d17960e8fd2ff8defc4701085532e",
+  "result": "PASS",
+  "scope": "source-structure only; not a compile or runtime check",
+  "sourceHashes": {
+    "Fonic HiFi/Core/AI/Recommendations/RecommendationSchemas.swift": "36e4283e985f61eca0270fc616090d911fab8c7fa4d2f1f90cfe57a6cbc0ad10",
+    "Fonic HiFi/Core/AI/Recommendations/RecommendationService.swift": "a83465e005462b96e22bb7c12dbdad4b625b91ddc2a113b3f3fbbd565dd57a4e",
+    "Fonic HiFi/Core/AI/Search/SmartSearchService.swift": "ac3f3b0458c3d6084500d0cf2746689588a86e946c1765f903c056d2791f1492"
+  },
+  "trackedFiles": 594,
+  "trackedProductSwiftFiles": 197
+}

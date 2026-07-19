@@ -1,0 +1,326 @@
+path,lines,type_declarations,function_declarations,state_wrappers,task_spawns,try_optional,catch_blocks,on_change,on_receive,filemanager_default,userdefaults_standard
+Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics/PlaybackDiagnosticModels.swift,1252,60,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Actors/TrackDataActor.swift,1218,7,39,0,0,0,18,0,0,1,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitoringService.swift,910,34,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Library/LibraryView.swift,818,14,8,21,4,1,1,3,1,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitorInsights.swift,777,1,35,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift,759,1,36,1,0,0,1,0,0,0,0
+Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift,720,2,10,18,11,0,5,2,0,0,0
+Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift,707,2,29,0,5,0,3,0,0,0,0
+Fonic HiFi/Data/Actors/FileImportProcessor.swift,697,7,28,0,5,1,7,0,0,7,0
+Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift,691,2,42,4,2,0,4,0,0,0,4
+Fonic HiFi/Presentation/Views/Components/GlassModifiers.swift,583,17,34,12,1,0,0,2,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidationResult.swift,580,10,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/SystemMetricsCollector.swift,544,10,25,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/DACCompatibilityInfo.swift,533,8,5,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Interfaces/AudioMetrics.swift,525,4,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Library/PlaylistListView.swift,517,5,13,7,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift,514,2,25,0,10,0,6,0,0,0,0
+Fonic HiFiTests/AudioMonitorInsightsTests.swift,508,4,11,0,0,0,0,0,0,0,0
+Fonic HiFiTests/PlaybackDiagnosticsTests.swift,496,2,9,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Services/ImportSession.swift,490,10,22,0,1,3,5,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitor.swift,482,1,28,0,2,0,0,0,0,0,0
+Fonic HiFiTests/AudioMonitorTests.swift,474,8,35,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Services/MetadataExtractionService.swift,471,5,15,0,2,2,2,0,0,2,0
+Fonic HiFi/FonicHiFiApp.swift,471,4,8,3,3,3,5,0,0,0,1
+Fonic HiFi/Presentation/Views/Settings/FileManagerView.swift,470,3,13,12,7,0,4,0,0,7,0
+Fonic HiFi/Data/Models/Playlist.swift,461,7,15,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Components/AccessibilityEnhancements.swift,458,10,14,3,1,1,0,1,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidationEngine.swift,457,1,9,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidatorService.swift,457,19,14,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioQueueManagerTests.swift,455,4,26,0,1,1,0,0,0,2,1
+Fonic HiFi/Core/Audio/Interfaces/AudioDevice.swift,451,4,10,0,0,0,0,0,0,0,0
+Fonic HiFiTests/PlaybackControllerTests.swift,437,8,51,0,0,0,0,0,0,0,0
+Fonic HiFiTests/ImportPipelineTests.swift,436,7,24,0,2,6,0,0,0,15,0
+Fonic HiFi/Core/Audio/Queue/QueueState.swift,428,2,8,0,0,0,1,0,0,2,3
+Fonic HiFi/Core/Audio/Engines/AudioKitEngineAdapter.swift,423,1,28,4,2,3,4,0,0,0,0
+Fonic HiFi/Data/DataManager+Initialization.swift,421,2,10,0,0,5,11,0,0,2,0
+Fonic HiFi/Presentation/Views/Home/HomeView.swift,413,6,4,20,4,0,4,0,0,0,0
+Fonic HiFi/Presentation/Views/Search/SearchView.swift,412,8,4,8,3,4,2,1,0,0,0
+Fonic HiFi/Core/Audio/Interfaces/AudioSessionInterruption.swift,393,5,5,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Playback/PlaybackStateManager.swift,393,4,19,2,0,0,0,0,0,0,0
+Fonic HiFiTests/BitPerfectValidatorTests.swift,387,4,19,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Interfaces/BitPerfectFailureReason.swift,382,2,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/TrackDataActorTests.swift,376,2,18,0,0,1,0,0,0,4,0
+Fonic HiFi/Data/Models/Album.swift,371,4,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Models/Track.swift,366,2,4,0,0,1,0,0,0,0,0
+Fonic HiFi/Data/Services/LibraryImportService.swift,366,4,8,7,2,1,1,0,0,1,0
+Fonic HiFi/Core/Audio/Engine/PlaybackController.swift,364,2,19,0,1,1,1,0,0,0,0
+Fonic HiFi/Core/Audio/Queue/QueueShuffleMode.swift,352,1,8,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitorReporter.swift,342,1,13,0,0,2,0,0,0,0,1
+Fonic HiFiTests/AudioMonitorRuntimeTests.swift,338,5,17,0,0,1,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/PerformanceMonitor.swift,337,9,29,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Interfaces/AudioFileInfo.swift,334,2,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Components/ErrorView.swift,332,2,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/BitPerfectDeviceManager.swift,330,2,26,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AVAudioEngineAdapterTests.swift,330,2,29,0,0,0,4,0,0,0,0
+Fonic HiFi/Core/Audio/Playback/PlaybackState.swift,323,1,5,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Settings/FileDetailsView.swift,323,5,3,4,1,0,1,0,0,0,0
+Fonic HiFi/Presentation/Views/Components/LiquidGlassRail.swift,316,5,2,6,0,0,0,0,0,0,0
+Fonic HiFi/Data/Services/SearchCache.swift,311,7,11,0,2,1,0,0,0,0,0
+Fonic HiFi/Shared/WidgetArtworkCache.swift,304,1,14,0,1,9,6,0,0,1,0
+Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift,300,1,12,0,0,2,2,0,0,1,0
+Fonic HiFi/Presentation/Views/Library/AlbumGridView.swift,294,5,0,3,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioEngineFacadeOrchestratorTests.swift,290,3,35,0,0,0,0,0,0,0,1
+Fonic HiFi/Core/Services/WidgetDataCoordinator.swift,284,1,13,2,4,2,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Library/ArtistListView.swift,281,7,0,4,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Settings/SettingsView.swift,267,2,3,8,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Playback/PlaybackStateStore.swift,261,3,8,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/Views/LargeWidgetView.swift,260,1,2,2,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Factory/AudioEngineFactory.swift,257,3,11,0,0,0,1,0,0,0,1
+Fonic HiFiTests/AudioMonitoringCollectorsTests.swift,256,2,21,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Services/DominantColorService.swift,255,1,10,2,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitoringTypes.swift,241,8,14,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Interfaces/AudioEngineConfiguration.swift,240,3,5,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/ViewModels/Library/LibraryViewModel.swift,235,4,8,7,0,0,2,0,0,0,0
+Fonic HiFi/Domain/Entities/LibraryEntities.swift,234,4,1,0,0,0,0,0,0,0,0
+Fonic HiFiTests/FileImportProcessorTests.swift,233,5,14,0,1,1,0,0,0,3,0
+Fonic HiFi/ContentView.swift,231,3,6,10,0,0,0,3,0,0,0
+Fonic HiFi/Core/Audio/Coordinators/StateCoordinator.swift,230,1,7,1,1,5,0,0,0,0,0
+Fonic HiFi/Core/Audio/Queue/QueueRepeatMode.swift,230,1,6,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Queue/AudioQueue.swift,229,2,36,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Services/AudioSessionService.swift,228,6,15,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Settings/EqualizerView.swift,228,2,2,4,1,0,0,3,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioPerformanceProfiler.swift,224,1,10,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioMetricsTests.swift,224,1,7,0,0,0,0,0,0,0,0
+sample/CustomToolBottomBar/CustomToolBottomBar/ContentView.swift,220,3,2,3,0,0,0,1,0,0,0
+Fonic HiFi/Core/Audio/Cache/TrackCache.swift,216,4,9,0,0,0,0,0,0,0,0
+Fonic HiFiTests/LibraryImportServiceTests.swift,215,3,9,0,0,0,0,0,0,1,1
+Fonic HiFiTests/AudioEngineFacadeSettingsTests.swift,213,2,19,0,0,0,0,0,0,0,1
+Fonic HiFiTests/QueueStateTests.swift,212,1,10,0,0,1,0,0,0,3,0
+sample/AppleMusicMiniPlayer/AppleMusicMiniPlayer/View/ExpandableMusicPlayer.swift,211,1,4,4,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitorRuntime.swift,209,1,14,0,1,0,0,0,0,0,0
+Fonic HiFiTests/AudioEngineManagerCoverageAdditionsTests.swift,209,4,29,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/BitPerfectRecommendationEngine.swift,205,2,13,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Coordinators/QueueCoordinator.swift,204,1,11,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/DataManager+Search.swift,204,0,8,0,0,0,6,0,0,0,0
+Fonic HiFi/Data/Migration/RecentSearchMigrationPlan.swift,203,4,1,0,0,1,0,0,0,0,0
+Fonic HiFi Widget/Views/StandByAdaptive.swift,201,6,3,4,0,0,0,0,0,0,0
+Fonic HiFiTests/FormatDetectionServiceConcurrencyTests.swift,200,3,9,0,5,1,8,0,0,8,0
+Fonic HiFi/Data/DataManager.swift,199,4,3,1,1,0,1,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/AlbumSheetView.swift,199,2,0,1,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Components/BottomSearchBar.swift,197,2,4,5,2,2,0,2,2,0,0
+Fonic HiFi/Data/Models/Artist.swift,195,3,3,0,0,2,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Import/FileImportView.swift,192,3,2,4,1,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Settings/AppSettingsView.swift,192,4,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/AI/Recommendations/RecommendationService.swift,191,1,6,0,0,0,3,0,0,0,0
+Fonic HiFi/Data/DataManager+Recent.swift,189,0,14,0,0,0,7,0,0,0,0
+Fonic HiFiTests/Support/ImportTestFixtures.swift,189,3,12,0,0,3,0,0,0,5,0
+Fonic HiFi/Presentation/Views/Import/ImportProgressView.swift,188,4,0,4,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioEngineManagerTests.swift,187,4,21,0,1,0,0,0,0,0,1
+Fonic HiFi/Core/Audio/Engines/AVAudioEngineConfig.swift,186,1,9,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/AI/Search/SmartSearchService.swift,185,1,5,0,0,0,2,0,0,0,0
+Fonic HiFi/Data/Models/AudioFormatType.swift,185,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Repositories/SwiftDataLibraryRepository.swift,185,1,10,0,0,0,0,0,0,0,0
+Fonic HiFiTests/LibraryViewModelTests.swift,184,3,13,0,0,0,0,0,0,0,0
+Fonic HiFiTests/MetadataExtractionServiceTests.swift,184,3,16,0,0,0,2,0,0,2,0
+Fonic HiFi/Core/Audio/Diagnostics/BitPerfectValidator.swift,177,1,16,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Library/TrackListView.swift,175,4,0,3,0,0,0,0,0,0,0
+Fonic HiFi Widget/Views/MediumWidgetView.swift,174,1,1,2,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioMonitorMetricsCollectorTests.swift,174,4,7,0,0,0,0,0,0,0,0
+Fonic HiFiTests/DataManagerRecentTests.swift,174,1,11,0,0,1,0,0,0,3,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioSessionAnalytics.swift,173,1,15,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Settings/EQCurveView.swift,171,1,7,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Shared/LazyArtworkView.swift,171,1,1,3,0,0,0,0,0,0,0
+Fonic HiFiTests/ImportSessionTests.swift,171,3,9,0,0,2,2,0,0,6,0
+Fonic HiFi/Core/Audio/Services/FormatDetectionService.swift,167,4,6,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Settings/AudioSettingsView.swift,167,1,2,8,4,0,0,3,0,0,0
+Fonic HiFi/Shared/AppGroupManager.swift,167,1,10,2,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Components/LiquidGlassTabBar.swift,166,3,1,5,0,0,0,0,0,0,0
+Fonic HiFiTests/AppGroupManagerTests.swift,166,1,8,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Engine/AudioEngineManager.swift,165,1,7,0,1,0,3,0,0,0,0
+Fonic HiFiTests/ImportPlaybackIntegrationTests.swift,165,3,16,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioAlertManager.swift,162,2,10,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Interfaces/AudioEngineService.swift,158,1,22,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Services/ArtworkService.swift,158,2,9,0,0,3,0,0,0,0,0
+Fonic HiFiTests/BitPerfectCollaboratorsTests.swift,156,1,6,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitorMetricsCollector.swift,155,1,5,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics/PlaybackDiagnosticsCore.swift,155,1,0,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/Shared/WidgetTrackInfo.swift,154,1,5,0,0,4,0,0,0,0,0
+Fonic HiFi/Shared/WidgetTrackInfo.swift,154,1,5,0,0,4,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitoringReportBuilder.swift,153,1,10,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/NowPlaying/DiagnosticsDetailView.swift,153,1,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/ArtworkServiceTests.swift,153,1,8,0,0,1,0,0,0,3,0
+Fonic HiFiTests/StateCoordinatorTests.swift,153,2,18,0,0,0,0,0,0,0,0
+sample/CustomGlassTabBar/CustomGlassTabBar/ContentView.swift,153,2,2,1,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioKitEngineAdapterTests.swift,152,1,9,0,0,0,1,0,0,0,0
+Fonic HiFi/Presentation/Views/Components/CustomProgressSlider.swift,151,1,0,3,0,0,0,0,0,0,0
+sample/AppleMusicBottomBar/AppleMusicBottomBar/ContentView.swift,151,1,3,2,0,0,0,0,0,0,0
+Fonic HiFi/Data/Services/LibraryStatisticsAggregator.swift,150,4,6,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/DataManager+LibraryMetrics.swift,149,1,4,0,0,0,3,0,0,0,0
+Fonic HiFi/Presentation/Views/NowPlaying/SleepTimerSheet.swift,148,1,2,4,0,0,0,0,0,0,0
+Fonic HiFiTests/QueueCoordinatorTests.swift,145,4,8,0,0,1,0,0,0,0,0
+Fonic HiFi Widget/Shared/WidgetPlaybackState.swift,142,1,3,0,0,2,0,0,0,0,0
+Fonic HiFi/Shared/WidgetPlaybackState.swift,142,1,3,0,0,2,0,0,0,0,0
+Fonic HiFiTests/DataManagerPaginationTests.swift,140,1,5,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioFileInfoTests.swift,139,1,7,0,0,0,0,0,0,0,0
+sample/AppleMusicMiniPlayer/AppleMusicMiniPlayer/Helpers/UniversalOverlay.swift,139,6,5,4,0,0,0,1,0,0,0
+Fonic HiFiTests/AudioEngineFactoryTests.swift,138,2,14,0,0,0,0,0,0,0,2
+Fonic HiFiTests/SearchCacheTests.swift,138,1,8,0,0,2,0,0,0,0,0
+Fonic HiFi/Core/Audio/Analytics/ListeningSessionService.swift,135,3,5,0,1,0,1,0,0,0,0
+Fonic HiFi/Presentation/Views/Search/SmartSearchResultsView.swift,134,2,1,3,0,1,0,0,0,0,0
+Fonic HiFiTests/WidgetTrackInfoTests.swift,134,1,9,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Interfaces/AudioError.swift,133,1,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Environment/AudioEnvironment.swift,133,5,9,0,0,0,0,0,0,0,0
+Fonic HiFiTests/QueueShuffleModeTests.swift,129,2,8,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/DSP/EqualizerConfiguration.swift,128,2,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Components/GlassControls.swift,128,4,1,1,0,0,0,1,0,0,0
+Fonic HiFi/Presentation/Views/Library/TrackRowView.swift,127,1,3,3,1,0,1,0,0,0,0
+Fonic HiFiTests/WidgetPlaybackStateTests.swift,127,1,6,0,0,0,0,0,0,0,0
+sample/CustomMenu/CustomMenu/ContentView.swift,127,2,0,3,0,0,0,0,0,0,0
+Fonic HiFiTests/TrackCacheTests.swift,126,1,8,0,0,1,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Settings/FileRowView.swift,124,1,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioMonitorEngineHooksTests.swift,124,2,16,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/Views/AccessoryRectangularView.swift,122,1,0,2,0,0,0,0,0,0,0
+Fonic HiFi/Data/Models/ListeningSession.swift,121,2,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioDeviceTests.swift,121,1,6,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioAlertManagerTests.swift,120,1,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioPerformanceAdvisorTests.swift,120,1,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/BitPerfectProcessingAnalyzer.swift,119,4,3,0,0,0,0,0,0,0,0
+Fonic HiFiUITests/LibraryNowPlayingSmokeTests.swift,118,1,6,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioPerformanceAdvisor.swift,117,1,3,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioSessionInterruptionTests.swift,117,1,5,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift,116,1,2,2,2,2,0,0,0,0,0
+Fonic HiFi Widget/NowPlayingEntry.swift,115,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Interfaces/AudioFormat.swift,115,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Extensions/SwiftDataPagination.swift,115,2,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Utils/ArtworkCompressor.swift,115,1,2,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/NowPlayingWidget.swift,113,2,0,1,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Services/FormatDetectionCoordinator.swift,113,3,2,0,2,0,3,0,0,0,0
+Fonic HiFiTests/Integration/AIRecommendationsIntegrationTests.swift,113,1,5,0,0,0,0,0,0,0,0
+Fonic HiFiTests/LibraryFilterTests.swift,110,1,5,0,0,0,0,0,0,0,0
+Fonic HiFiTests/WidgetArtworkCacheTests.swift,110,1,9,0,0,0,0,0,0,1,0
+Fonic HiFi/Core/AI/Recommendations/RecommendationSchemas.swift,108,4,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/AI/Recommendations/ListeningPatternAnalyzer.swift,107,2,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioPerformanceProfilerTests.swift,106,1,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/ListeningSessionServiceTests.swift,106,2,6,0,0,0,0,0,0,0,0
+Fonic HiFiTests/MetricsTests.swift,106,1,7,0,0,0,0,0,0,0,4
+Fonic HiFi Widget/Views/AccessoryCircularView.swift,104,2,0,3,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/ViewModels/SmartSearchViewModel.swift,104,2,3,1,0,0,1,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitorDiagnosticsBuilder.swift,103,2,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Services/NowPlayingInfo+Extensions.swift,103,1,12,0,0,0,0,0,0,0,0
+Fonic HiFiTests/PlaybackStateManagerTests.swift,102,1,5,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics/PlaybackDiagnosticFormatters.swift,100,0,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Engine/AudioPlaybackSettingsStore.swift,100,3,11,0,0,2,0,0,0,0,0
+Fonic HiFi/Core/Audio/Factory/AudioEngineType.swift,98,2,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMonitorEngineHooks.swift,97,1,8,0,1,0,1,0,0,0,0
+Fonic HiFi/Core/Services/SleepTimerManager.swift,96,1,3,2,2,2,0,0,0,0,0
+Fonic HiFi/Utils/Logging/Log.swift,94,2,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Services/ThemePalette.swift,93,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Actors/RecentSearchesActor.swift,92,1,5,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioPlaybackSettingsStoreTests.swift,91,1,6,0,0,0,0,0,0,0,0
+Fonic HiFiTests/SwiftDataPaginationTests.swift,91,1,6,0,0,0,0,0,0,0,0
+Fonic HiFiTests/Core/Audio/DSP/EqualizerConfigurationTests.swift,90,1,10,0,0,0,0,0,0,0,0
+Fonic HiFiTests/LibraryStatisticsPerformanceTests.swift,88,1,3,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/Views/SmallWidgetView.swift,86,1,0,2,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Interfaces/TrackProtocol.swift,86,2,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/ThemePaletteTests.swift,86,1,9,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Search/SearchPlaylistResultsView.swift,85,2,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Domain/UseCases/LibraryUseCases.swift,84,8,10,0,0,0,0,0,0,0,0
+Fonic HiFiTests/LibraryStatisticsCacheTests.swift,84,1,5,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/Shared/WidgetConstants.swift,82,5,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/ArtistsSection.swift,82,2,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Shared/WidgetConstants.swift,82,5,0,0,0,0,0,0,0,0,0
+sample/CustomMenu/CustomMenu/Helpers/CustomMenuView.swift,82,3,1,3,0,1,0,0,0,0,0
+Fonic HiFi Widget/WidgetArtworkLoader.swift,81,2,2,1,0,1,0,0,0,2,0
+Fonic HiFi/Presentation/Views/NowPlaying/MorphableArtwork.swift,81,1,0,3,0,0,0,0,0,0,0
+sample/CustomGlassTabBar/CustomGlassTabBar/Helpers/CustomTabBar.swift,80,2,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/Core/Services/AudioSettingsServiceTests.swift,78,1,5,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/NowPlaying/LyricsView.swift,76,1,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Queue/QueueRowView.swift,76,1,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/SleepTimerManagerTests.swift,76,1,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Queue/QueueView.swift,74,1,2,2,0,0,0,0,0,0,0
+Fonic HiFiTests/BitPerfectFailureReasonTests.swift,73,1,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Domain/Repositories/LibraryRepository.swift,72,4,7,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/TimeBasedGreetingSection.swift,72,2,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/Integration/SmartSearchIntegrationTests.swift,72,1,3,0,1,0,0,0,0,0,0
+Fonic HiFiTests/PlaybackStateStoreTests.swift,70,1,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/RediscoverSection.swift,69,2,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioErrorTests.swift,69,1,3,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/Intents/WidgetIntents.swift,68,4,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics/PlaybackDiagnosticAnalyzers.swift,68,0,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/ContinueListeningSection.swift,68,2,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/RecentSearchesActorTests.swift,67,1,6,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioMonitoringReportBuilderTests.swift,65,1,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/AudioMetricsScheduler.swift,63,1,7,0,1,1,0,0,0,0,0
+Fonic HiFi/Core/Intents/IntentDependencyProvider.swift,63,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Components/RecoveryComponents.swift,62,2,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Utils/Logging/Metrics.swift,62,2,4,0,0,0,0,0,0,0,2
+sample/CustomGlassTabBar/CustomGlassTabBar/Helpers/CustomTabBar2.swift,62,2,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/RecentlyAddedSection.swift,61,2,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/ImportValidationScenarioTests.swift,61,1,2,0,0,1,0,0,0,0,0
+Fonic HiFi/Core/Audio/Services/UIImage+ColorExtraction.swift,60,0,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Services/ImportMetrics.swift,60,1,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/Core/AI/RecommendationSchemasTests.swift,60,1,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/ExpandableAlbumCardTests.swift,60,1,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/DominantColorServiceTests.swift,56,1,5,0,0,0,0,0,0,0,0
+Fonic HiFiTests/ListeningSessionTests.swift,56,1,2,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/Views/AccessoryInlineView.swift,55,1,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioFormatTypeTests.swift,55,1,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/Core/AI/ListeningPatternAnalyzerTests.swift,55,1,4,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/NowPlayingTimelineProvider.swift,54,1,3,0,0,0,0,0,0,0,0
+Fonic HiFiTests/GlassUtilitiesTests.swift,54,1,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/EngineMetricsCollector.swift,53,2,2,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/GenresSection.swift,53,2,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/TimedCacheEntryTests.swift,53,1,4,0,2,0,0,0,0,0,0
+sample/AppleMusicMiniPlayer/AppleMusicMiniPlayer/View/Home.swift,53,1,0,2,0,0,0,0,0,0,0
+Fonic HiFi/Data/DataManager+Maintenance.swift,52,0,2,0,0,0,2,0,0,0,2
+Fonic HiFiTests/MigrationPlanTests.swift,52,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Intents/PlayPauseIntent.swift,49,1,1,0,0,0,1,0,0,0,0
+Fonic HiFi/Core/Intents/SkipNextIntent.swift,49,1,1,0,0,0,1,0,0,0,0
+Fonic HiFi/Core/Intents/SkipPreviousIntent.swift,49,1,1,0,0,0,1,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/ExpandableAlbumCard.swift,49,1,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AVAudioEngineConfigTests.swift,49,1,5,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioSessionServiceTests.swift,49,1,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Models/RecentSearch.swift,48,2,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Search/SearchResults.swift,48,1,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/Support/AudioTestUtilities.swift,46,0,1,0,0,1,0,0,0,3,0
+Fonic HiFi/Core/Audio/Diagnostics/PlaybackDiagnostics/PlaybackDiagnosticUtilities.swift,45,0,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/QuickActionsSection.swift,45,1,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/QueueRepeatModeTests.swift,45,1,5,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Intents/ToggleShuffleIntent.swift,44,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Repositories/PaginatedFetch.swift,44,2,2,0,0,0,0,0,0,0,0
+Fonic HiFiTests/Core/AI/RecommendationServiceTests.swift,44,1,3,0,0,0,0,0,0,0,0
+Fonic HiFiTests/Core/AI/SmartSearchServiceTests.swift,44,1,3,0,0,0,0,0,0,0,0
+Fonic HiFiTests/SearchCacheStatisticsTests.swift,44,1,3,0,0,2,0,0,0,0,0
+sample/AppleMusicMiniPlayer/AppleMusicMiniPlayer/Helpers/PanGesture.swift,44,2,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Home/Sections/AlbumsSection.swift,43,1,0,0,0,0,0,0,0,0,0
+Fonic HiFiTests/SearchResultsTests.swift,42,1,2,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Services/AudioSettingsService.swift,41,1,4,1,0,0,0,0,0,0,0
+Fonic HiFiTests/Presentation/SmartSearchViewModelTests.swift,41,1,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Utils/MainActorHelpers.swift,40,0,3,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioEngineTypeTests.swift,40,1,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/ImportMetricsTests.swift,40,1,2,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Services/AsyncSemaphore.swift,38,1,2,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/DiagnosticsStatus.swift,37,2,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/ViewModels/Library/LibraryFilter.swift,36,1,4,0,0,0,0,0,0,0,0
+Fonic HiFiTests/AudioMetricsSchedulerTests.swift,36,1,2,0,0,1,0,0,0,0,0
+Fonic HiFi/Core/Audio/Playback/ABLoopState.swift,35,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Constants/DesignTokens.swift,35,5,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Engine/AudioUIState.swift,32,1,1,3,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Environment/ThemePaletteEnvironment.swift,32,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/Protocols/AudioPerformanceMonitoring.swift,31,1,10,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Engine/ProgressTimerManager.swift,31,1,2,0,1,1,0,0,0,0,0
+Fonic HiFiTests/AudioFormatTests.swift,29,1,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Views/Components/AirPlayRouteButton.swift,27,1,2,0,0,0,0,0,0,0,0
+Fonic HiFiTests/LogPrivacyTests.swift,26,1,4,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/Protocols/AudioHealthMonitoring.swift,24,1,6,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Extensions/URL+SourceIdentifier.swift,23,0,2,0,0,0,0,0,0,0,0
+Fonic HiFi/Presentation/Environment/NowPlayingEnvironment.swift,20,1,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Utils/Logging/LogPrivacy.swift,20,1,3,0,0,0,0,0,0,0,0
+sample/AppleMusicMiniPlayer/AppleMusicMiniPlayer/AppleMusicMiniPlayerApp.swift,20,1,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/DataManager+SmartSearch.swift,18,0,1,0,0,0,0,0,0,0,0
+Fonic HiFiTests/LogCategoryTests.swift,18,1,1,0,0,0,0,0,0,0,0
+Fonic HiFiTests/MainActorHelpersTests.swift,18,1,3,0,0,0,0,0,0,0,0
+sample/AppleMusicMiniPlayer/AppleMusicMiniPlayer/ContentView.swift,18,1,0,0,0,0,0,0,0,0,0
+Fonic HiFi Widget/FonicWidgetBundle.swift,17,1,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/Protocols/AudioDiagnosticsReporting.swift,17,1,4,0,0,0,0,0,0,0,0
+sample/AppleMusicBottomBar/AppleMusicBottomBar/AppleMusicBottomBarApp.swift,17,1,0,0,0,0,0,0,0,0,0
+sample/CustomGlassTabBar/CustomGlassTabBar/CustomGlassTabBarApp.swift,17,1,0,0,0,0,0,0,0,0,0
+sample/CustomMenu/CustomMenu/CustomMenuApp.swift,17,1,0,0,0,0,0,0,0,0,0
+sample/CustomToolBottomBar/CustomToolBottomBar/CustomToolBottomBarApp.swift,17,1,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Utils/Extensions/UserDefaults+KVO.swift,16,0,0,0,0,0,0,0,0,0,0
+Fonic HiFi/Core/Audio/Diagnostics/Protocols/AudioSessionMonitoring.swift,15,1,3,0,0,0,0,0,0,0,0
+Fonic HiFi/Utils/Cache/TimedCacheEntry.swift,15,1,1,0,0,0,0,0,0,0,0
+Fonic HiFi/Data/Extensions/Data+Hashing.swift,9,0,1,0,0,0,0,0,0,0,0
+Fonic HiFiTests/Support/UserDefaults+Sendable.swift,1,0,0,0,0,0,0,0,0,0,0

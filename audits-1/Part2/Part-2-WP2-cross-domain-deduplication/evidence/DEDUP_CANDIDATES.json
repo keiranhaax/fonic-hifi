@@ -1,0 +1,3311 @@
+{
+  "schemaVersion": 1,
+  "sourceFindingCount": 147,
+  "candidatePairCount": 169,
+  "method": "cross-domain title, remediation, impact, location, and explicit-related similarity; candidates require manual source-section review",
+  "pairs": [
+    {
+      "leftID": "PCFG-001",
+      "rightID": "PSR-001",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "Four plaintext credentials are committed in local tool configuration",
+      "rightTitle": "Four live credentials and a sensitive endpoint are committed in tracked local configuration",
+      "scores": {
+        "combined": 0.4936,
+        "title": 0.4545,
+        "remediation": 0.2947,
+        "impact": 0.3143,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".claude/settings.local.json",
+        ".kilocode/mcp.json"
+      ]
+    },
+    {
+      "leftID": "PCFG-012",
+      "rightID": "PSR-008",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "The app claims an unused APNs capability, increasing signing scope without product code",
+      "rightTitle": "The app claims APNs without a product implementation",
+      "scores": {
+        "combined": 0.4801,
+        "title": 0.4,
+        "remediation": 0.3095,
+        "impact": 0.3191,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Fonic HiFi/Fonic_HiFi.entitlements",
+        "Fonic HiFi/Info.plist"
+      ]
+    },
+    {
+      "leftID": "PCFG-004",
+      "rightID": "TRV-002",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "No versioned shared scheme or test plan defines what CI builds and tests",
+      "rightTitle": "No shared scheme or test plan defines the release test action",
+      "scores": {
+        "combined": 0.461,
+        "title": 0.4545,
+        "remediation": 0.2195,
+        "impact": 0.25,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Fonic HiFi.xcodeproj/xcuserdata/keiran.xcuserdatad/xcschemes/xcschememanagement.plist",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "PCFG-002",
+      "rightID": "PSR-002",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "App and widget lack required-reason privacy manifests despite direct covered API use",
+      "rightTitle": "App and widget lack privacy manifests despite first-party Required Reason API use",
+      "scores": {
+        "combined": 0.4094,
+        "title": 0.5714,
+        "remediation": 0.2923,
+        "impact": 0.0923,
+        "locations": 0.5833
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi Widget/Shared/WidgetConstants.swift",
+        "Fonic HiFi/Core/Audio/Diagnostics/SystemMetricsCollector.swift",
+        "Fonic HiFi/Core/Audio/Engine/AudioPlaybackSettingsStore.swift",
+        "Fonic HiFi/Data/Services/MetadataExtractionService.swift",
+        "Fonic HiFi/Presentation/Views/Settings/FileManagerView.swift",
+        "Fonic HiFi/Shared/WidgetConstants.swift",
+        "PrivacyInfo.xcprivacy"
+      ]
+    },
+    {
+      "leftID": "PCFG-008",
+      "rightID": "PSR-007",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "User-specific Xcode state, raw logs, a stale PBX backup, and local settings are tracked",
+      "rightTitle": "Local settings, build logs, Xcode user state, and a stale project backup are committed",
+      "scores": {
+        "combined": 0.3829,
+        "title": 0.4667,
+        "remediation": 0.1273,
+        "impact": 0.1216,
+        "locations": 0.8333
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".claude/settings.local.json",
+        ".kilocode/mcp.json",
+        "Fonic HiFi.xcodeproj/project.xcworkspace/xcuserdata/keiran.xcuserdatad/IDEFindNavigatorScopes.plist",
+        "Fonic HiFi.xcodeproj/xcuserdata/keiran.xcuserdatad/xcschemes/xcschememanagement.plist",
+        "Fonic HiFi.xcodeproj/xcuserdata/willy.xcuserdatad/xcschemes/xcschememanagement.plist"
+      ]
+    },
+    {
+      "leftID": "DLP-004",
+      "rightID": "DCA-PART-001",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Listening history is never wired into the production audio service",
+      "rightTitle": "Listening-session tracking is implemented but never configured",
+      "scores": {
+        "combined": 0.3826,
+        "title": 0.0833,
+        "remediation": 0.0571,
+        "impact": 0.1013,
+        "locations": 1.0
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift",
+        "Fonic HiFi/FonicHiFiApp.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-005",
+      "rightID": "DLP-006",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Import failure after copy leaks managed audio files",
+      "rightTitle": "Concurrent deduplication is not an atomic claim",
+      "scores": {
+        "combined": 0.3515,
+        "title": 0.0,
+        "remediation": 0.0577,
+        "impact": 0.0854,
+        "locations": 1.0
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-010",
+      "rightID": "PSR-009",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "Info.plist advertises Live Activity support without an Activity configuration",
+      "rightTitle": "Info.plist claims Live Activity support without an ActivityKit configuration",
+      "scores": {
+        "combined": 0.3392,
+        "title": 0.625,
+        "remediation": 0.2,
+        "impact": 0.1707,
+        "locations": 0.2
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Info.plist"
+      ]
+    },
+    {
+      "leftID": "DLP-021",
+      "rightID": "CP-002",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Import cancellation is not propagated to the stream producer",
+      "rightTitle": "Import cancellation does not reach AsyncStream producers",
+      "scores": {
+        "combined": 0.3283,
+        "title": 0.25,
+        "remediation": 0.0784,
+        "impact": 0.1188,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift",
+        "Fonic HiFi/Data/Services/LibraryImportService.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-005",
+      "rightID": "UIUX-006",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Full-screen Now Playing has no visible dismissal control",
+      "rightTitle": "Now Playing has no height-adaptive scrolling contract for landscape or large text",
+      "scores": {
+        "combined": 0.3254,
+        "title": 0.1667,
+        "remediation": 0.0312,
+        "impact": 0.037,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-012",
+      "rightID": "CP-014",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Pagination computes counts by hydrating every matching model on every page",
+      "rightTitle": "Pagination implements total count by fetching all models on every page",
+      "scores": {
+        "combined": 0.3221,
+        "title": 0.1667,
+        "remediation": 0.1562,
+        "impact": 0.1205,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Extensions/SwiftDataPagination.swift",
+        "Fonic HiFi/Data/Repositories/PaginatedFetch.swift",
+        "Fonic HiFi/Data/Repositories/SwiftDataLibraryRepository.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-003",
+      "rightID": "TRV-010",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "The declared migration plan is only a fallback after an unplanned open",
+      "rightTitle": "Persistent-store and migration behavior is not exercised",
+      "scores": {
+        "combined": 0.3154,
+        "title": 0.1,
+        "remediation": 0.0526,
+        "impact": 0.0741,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/DataManager+Initialization.swift",
+        "Fonic HiFiTests/MigrationPlanTests.swift"
+      ]
+    },
+    {
+      "leftID": "FMA-003",
+      "rightID": "FMA-005",
+      "leftDomain": "Foundation Models",
+      "rightDomain": "Foundation Models",
+      "leftTitle": "Canceled Smart Search work can be converted into a fallback result and overwrite newer state",
+      "rightTitle": "Smart Search’s documented standard-search fallback returns an empty AI result without handing off",
+      "scores": {
+        "combined": 0.3004,
+        "title": 0.25,
+        "remediation": 0.0323,
+        "impact": 0.0353,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/AI/Search/SmartSearchService.swift",
+        "Fonic HiFi/Presentation/ViewModels/SmartSearchViewModel.swift",
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "PSR-003",
+      "rightID": "TRV-001",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "CI cannot validate the current iOS 26 release toolchain",
+      "rightTitle": "CI toolchain selection cannot satisfy the declared iOS 26 build",
+      "scores": {
+        "combined": 0.2981,
+        "title": 0.25,
+        "remediation": 0.1429,
+        "impact": 0.1286,
+        "locations": 0.75
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "PCFG-005",
+      "rightID": "PCFG-007",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "Dependency/tool resolution is only partly pinned and not enforced in CI",
+      "rightTitle": "CI never builds/analyzes Release and has no distribution-signing verification contract",
+      "scores": {
+        "combined": 0.2911,
+        "title": 0.0,
+        "remediation": 0.027,
+        "impact": 0.075,
+        "locations": 0.75
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "DLP-005",
+      "rightID": "DLP-021",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Import failure after copy leaks managed audio files",
+      "rightTitle": "Import cancellation is not propagated to the stream producer",
+      "scores": {
+        "combined": 0.2884,
+        "title": 0.0909,
+        "remediation": 0.0698,
+        "impact": 0.1,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-020",
+      "rightID": "A11Y-002",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "The 10-band EQ is a gesture-only fixed-width control",
+      "rightTitle": "The 10-band EQ is drag-only and has no adjustable, focus, or keyboard semantics",
+      "scores": {
+        "combined": 0.2842,
+        "title": 0.1111,
+        "remediation": 0.0984,
+        "impact": 0.1047,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Settings/EqualizerView.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-007",
+      "rightID": "PSR-003",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "CI never builds/analyzes Release and has no distribution-signing verification contract",
+      "rightTitle": "CI cannot validate the current iOS 26 release toolchain",
+      "scores": {
+        "combined": 0.2786,
+        "title": 0.1111,
+        "remediation": 0.1167,
+        "impact": 0.0455,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile",
+        "project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "DLP-019",
+      "rightID": "DLP-020",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Track transitions omit or race the replacement listening session",
+      "rightTitle": "Playback position is mistaken for time actually listened",
+      "scores": {
+        "combined": 0.2773,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.1333,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Analytics/ListeningSessionService.swift",
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-015",
+      "rightID": "A11Y-001",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Active tap targets use raw gestures instead of semantic controls",
+      "rightTitle": "Core library and mini-player actions use raw tap gestures instead of semantic controls",
+      "scores": {
+        "combined": 0.2758,
+        "title": 0.5385,
+        "remediation": 0.1452,
+        "impact": 0.1308,
+        "locations": 0.1429
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Library/LibraryView.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-003",
+      "rightID": "UIUX-004",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "The mini player is always shown, including with no track",
+      "rightTitle": "The iOS 26 tab accessory never adapts to inline placement",
+      "scores": {
+        "combined": 0.2754,
+        "title": 0.0,
+        "remediation": 0.0417,
+        "impact": 0.058,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-003",
+      "rightID": "TRV-001",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "CI selects Xcode 16.1 for an Xcode/iOS 26 project, and the Makefile overrides that selection",
+      "rightTitle": "CI toolchain selection cannot satisfy the declared iOS 26 build",
+      "scores": {
+        "combined": 0.2691,
+        "title": 0.1667,
+        "remediation": 0.2105,
+        "impact": 0.2969,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "UIUX-011",
+      "rightID": "FMA-003",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Foundation Models",
+      "leftTitle": "Smart Search is effectively unreachable from the active Search states",
+      "rightTitle": "Canceled Smart Search work can be converted into a fallback result and overwrite newer state",
+      "scores": {
+        "combined": 0.2649,
+        "title": 0.1429,
+        "remediation": 0.0577,
+        "impact": 0.075,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-001",
+      "rightID": "TRV-014",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "CI toolchain selection cannot satisfy the declared iOS 26 build",
+      "rightTitle": "Release configuration and release-only failure modes are not gated",
+      "scores": {
+        "combined": 0.2606,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0405,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "PCFG-008",
+      "rightID": "DCA-ART-001",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "User-specific Xcode state, raw logs, a stale PBX backup, and local settings are tracked",
+      "rightTitle": "Fourteen machine/generated/backup artifacts are tracked despite ignore intent",
+      "scores": {
+        "combined": 0.2596,
+        "title": 0.1111,
+        "remediation": 0.1667,
+        "impact": 0.0843,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/xcuserdata/keiran.xcuserdatad/xcschemes/xcschememanagement.plist"
+      ]
+    },
+    {
+      "leftID": "PSR-001",
+      "rightID": "PSR-007",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "Four live credentials and a sensitive endpoint are committed in tracked local configuration",
+      "rightTitle": "Local settings, build logs, Xcode user state, and a stale project backup are committed",
+      "scores": {
+        "combined": 0.2525,
+        "title": 0.1111,
+        "remediation": 0.0787,
+        "impact": 0.0337,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".claude/settings.local.json",
+        ".kilocode/mcp.json"
+      ]
+    },
+    {
+      "leftID": "AUD-DSP-001",
+      "rightID": "DCA-PART-002",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "DSP capability and persistence silently diverge by engine",
+      "rightTitle": "Persisted EQ is neither restored nor reapplied after engine creation/switch",
+      "scores": {
+        "combined": 0.2522,
+        "title": 0.0769,
+        "remediation": 0.1356,
+        "impact": 0.1928,
+        "locations": 0.1667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-002",
+      "rightID": "DLP-003",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "`ListeningSession` is absent from the schema that its actor uses",
+      "rightTitle": "The declared migration plan is only a fallback after an unplanned open",
+      "scores": {
+        "combined": 0.2493,
+        "title": 0.0,
+        "remediation": 0.0244,
+        "impact": 0.125,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/DataManager+Initialization.swift",
+        "Fonic HiFi/Data/Migration/RecentSearchMigrationPlan.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-008",
+      "rightID": "DLP-009",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "ReplayGain metadata is extracted and then discarded",
+      "rightTitle": "Track/disc tuple parsing uses wrong offsets and drops parsed totals",
+      "scores": {
+        "combined": 0.2487,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.1594,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/TrackDataActor.swift",
+        "Fonic HiFi/Data/Services/MetadataExtractionService.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-011",
+      "rightID": "FMA-005",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Foundation Models",
+      "leftTitle": "Smart Search is effectively unreachable from the active Search states",
+      "rightTitle": "Smart Search’s documented standard-search fallback returns an empty AI result without handing off",
+      "scores": {
+        "combined": 0.2472,
+        "title": 0.1429,
+        "remediation": 0.0,
+        "impact": 0.0667,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-013",
+      "rightID": "TRV-014",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "Coverage gate is coarse and current evidence is not retained in the repository",
+      "rightTitle": "Release configuration and release-only failure modes are not gated",
+      "scores": {
+        "combined": 0.246,
+        "title": 0.0,
+        "remediation": 0.0833,
+        "impact": 0.0147,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "DLP-006",
+      "rightID": "DLP-021",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Concurrent deduplication is not an atomic claim",
+      "rightTitle": "Import cancellation is not propagated to the stream producer",
+      "scores": {
+        "combined": 0.2428,
+        "title": 0.0,
+        "remediation": 0.0377,
+        "impact": 0.0682,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-011",
+      "rightID": "DCA-PART-004",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Smart Search is effectively unreachable from the active Search states",
+      "rightTitle": "Smart-search result taps only log and never invoke playback",
+      "scores": {
+        "combined": 0.2424,
+        "title": 0.0,
+        "remediation": 0.0286,
+        "impact": 0.08,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "A11Y-001",
+      "rightID": "A11YTEST-001",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Core library and mini-player actions use raw tap gestures instead of semantic controls",
+      "rightTitle": "Accessibility, Dynamic Type, locale, RTL, and widget accessibility have no automated coverage",
+      "scores": {
+        "combined": 0.2403,
+        "title": 0.0,
+        "remediation": 0.0455,
+        "impact": 0.042,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-005",
+      "rightID": "DLP-018",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Import failure after copy leaks managed audio files",
+      "rightTitle": "Imported-audio backup policy is implicit and unverified",
+      "scores": {
+        "combined": 0.2398,
+        "title": 0.0,
+        "remediation": 0.0508,
+        "impact": 0.0309,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-SLEEP-001",
+      "rightID": "UIUX-007",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Sleep timer is view-scoped and its fade assumes full volume",
+      "rightTitle": "Sleep-timer ownership is transient and its volume baseline is hard-coded",
+      "scores": {
+        "combined": 0.239,
+        "title": 0.0833,
+        "remediation": 0.1316,
+        "impact": 0.1324,
+        "locations": 0.75
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Services/SleepTimerManager.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/SleepTimerSheet.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-BIT-002",
+      "rightID": "AUD-DIAG-001",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "“Bit-perfect” is asserted without observing the active engine signal path",
+      "rightTitle": "Engine metrics are synthetic while native monitoring overhead is unconditional",
+      "scores": {
+        "combined": 0.2377,
+        "title": 0.0769,
+        "remediation": 0.0267,
+        "impact": 0.0225,
+        "locations": 0.4
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engines/AudioKitEngineAdapter.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/DiagnosticsDetailView.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-SESSION-001",
+      "rightID": "AUD-SEEK-001",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "Audio-session ownership is split and native load deactivates after activation",
+      "rightTitle": "Native seek loses absolute offset; A-B loop is coarse and failure-blind",
+      "scores": {
+        "combined": 0.2374,
+        "title": 0.0667,
+        "remediation": 0.0323,
+        "impact": 0.0316,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/PlaybackController.swift",
+        "Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-004",
+      "rightID": "PCFG-007",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "No versioned shared scheme or test plan defines what CI builds and tests",
+      "rightTitle": "CI never builds/analyzes Release and has no distribution-signing verification contract",
+      "scores": {
+        "combined": 0.2368,
+        "title": 0.0714,
+        "remediation": 0.0147,
+        "impact": 0.0469,
+        "locations": 0.4
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "UIUX-001",
+      "rightID": "UIUX-003",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "The app-wide audio model is injected as an unobserved environment value",
+      "rightTitle": "The mini player is always shown, including with no track",
+      "scores": {
+        "combined": 0.2359,
+        "title": 0.0,
+        "remediation": 0.0256,
+        "impact": 0.0485,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-001",
+      "rightID": "PCFG-008",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "Four plaintext credentials are committed in local tool configuration",
+      "rightTitle": "User-specific Xcode state, raw logs, a stale PBX backup, and local settings are tracked",
+      "scores": {
+        "combined": 0.2354,
+        "title": 0.0588,
+        "remediation": 0.0471,
+        "impact": 0.0122,
+        "locations": 0.4
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".claude/settings.local.json",
+        ".kilocode/mcp.json"
+      ]
+    },
+    {
+      "leftID": "UIUX-019",
+      "rightID": "FMA-001",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Foundation Models",
+      "leftTitle": "“Surprise Me” has tracked loading state that the UI never renders",
+      "rightTitle": "A shared session can receive overlapping recommendation requests",
+      "scores": {
+        "combined": 0.2349,
+        "title": 0.0,
+        "remediation": 0.0204,
+        "impact": 0.051,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Home/HomeView.swift",
+        "Fonic HiFi/Presentation/Views/Home/Sections/QuickActionsSection.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-003",
+      "rightID": "PCFG-005",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "CI selects Xcode 16.1 for an Xcode/iOS 26 project, and the Makefile overrides that selection",
+      "rightTitle": "Dependency/tool resolution is only partly pinned and not enforced in CI",
+      "scores": {
+        "combined": 0.233,
+        "title": 0.0,
+        "remediation": 0.0328,
+        "impact": 0.0211,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "DLP-010",
+      "rightID": "DLP-011",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "The exposed playlist feature has no complete mutation path",
+      "rightTitle": "Repository-backed library state is not refreshed after writes",
+      "scores": {
+        "combined": 0.2317,
+        "title": 0.0,
+        "remediation": 0.0625,
+        "impact": 0.0787,
+        "locations": 0.4
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Library/LibraryView.swift",
+        "Fonic HiFi/Presentation/Views/Library/PlaylistListView.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-FORMAT-001",
+      "rightID": "AUD-FORMAT-002",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "M4A container is always reported as ALAC/lossless",
+      "rightTitle": "Import UI exposes formats the playback detector cannot represent",
+      "scores": {
+        "combined": 0.2297,
+        "title": 0.0,
+        "remediation": 0.0192,
+        "impact": 0.0241,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Interfaces/AudioFormat.swift",
+        "Fonic HiFi/Core/Audio/Services/AudioFormatDetectionManager.swift"
+      ]
+    },
+    {
+      "leftID": "CP-006",
+      "rightID": "CP-009",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Widget synchronization polls the queue every 500 ms even when idle",
+      "rightTitle": "Widget artwork processing and file maintenance run on the MainActor",
+      "scores": {
+        "combined": 0.2278,
+        "title": 0.0769,
+        "remediation": 0.0253,
+        "impact": 0.044,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Services/WidgetDataCoordinator.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-004",
+      "rightID": "DLP-019",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Listening history is never wired into the production audio service",
+      "rightTitle": "Track transitions omit or race the replacement listening session",
+      "scores": {
+        "combined": 0.2255,
+        "title": 0.0769,
+        "remediation": 0.027,
+        "impact": 0.1209,
+        "locations": 0.25
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-003",
+      "rightID": "PCFG-007",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "CI selects Xcode 16.1 for an Xcode/iOS 26 project, and the Makefile overrides that selection",
+      "rightTitle": "CI never builds/analyzes Release and has no distribution-signing verification contract",
+      "scores": {
+        "combined": 0.2241,
+        "title": 0.0,
+        "remediation": 0.0656,
+        "impact": 0.0,
+        "locations": 0.4286
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "DLP-012",
+      "rightID": "DLP-013",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Pagination computes counts by hydrating every matching model on every page",
+      "rightTitle": "Page mapping dereferences to-many relationships per album/artist",
+      "scores": {
+        "combined": 0.2228,
+        "title": 0.0714,
+        "remediation": 0.0541,
+        "impact": 0.1299,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Repositories/SwiftDataLibraryRepository.swift"
+      ]
+    },
+    {
+      "leftID": "CP-012",
+      "rightID": "DCA-PART-005",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Optional diagnostics retain unbounded samples and start a no-op poller",
+      "rightTitle": "AudioKit diagnostics return fixed zero metrics while an empty collector is polled",
+      "scores": {
+        "combined": 0.2217,
+        "title": 0.0625,
+        "remediation": 0.0526,
+        "impact": 0.0476,
+        "locations": 0.2857
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Diagnostics/AudioMonitorEngineHooks.swift",
+        "Fonic HiFi/Core/Audio/Engines/AudioKitEngineAdapter.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-SESSION-002",
+      "rightID": "AUD-REMOTE-001",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "Interruption intent and route-loss safety are not preserved",
+      "rightTitle": "Skip commands are enabled but discarded",
+      "scores": {
+        "combined": 0.22,
+        "title": 0.0,
+        "remediation": 0.0469,
+        "impact": 0.0385,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Coordinators/StateCoordinator.swift",
+        "Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-001",
+      "rightID": "TRV-002",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "CI toolchain selection cannot satisfy the declared iOS 26 build",
+      "rightTitle": "No shared scheme or test plan defines the release test action",
+      "scores": {
+        "combined": 0.22,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0,
+        "locations": 0.5
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "DLP-014",
+      "rightID": "DLP-015",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Search bypasses the repository and silently truncates results",
+      "rightTitle": "Repeated recent searches create duplicate persistence rows and duplicate SwiftUI IDs",
+      "scores": {
+        "combined": 0.2178,
+        "title": 0.0,
+        "remediation": 0.0488,
+        "impact": 0.0972,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "PSR-007",
+      "rightID": "DCA-ART-001",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Local settings, build logs, Xcode user state, and a stale project backup are committed",
+      "rightTitle": "Fourteen machine/generated/backup artifacts are tracked despite ignore intent",
+      "scores": {
+        "combined": 0.2162,
+        "title": 0.0526,
+        "remediation": 0.0962,
+        "impact": 0.1,
+        "locations": 0.1667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/xcuserdata/keiran.xcuserdatad/xcschemes/xcschememanagement.plist"
+      ]
+    },
+    {
+      "leftID": "DLP-004",
+      "rightID": "DLP-020",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Listening history is never wired into the production audio service",
+      "rightTitle": "Playback position is mistaken for time actually listened",
+      "scores": {
+        "combined": 0.2146,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.1549,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-DIAG-001",
+      "rightID": "DCA-PART-005",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Engine metrics are synthetic while native monitoring overhead is unconditional",
+      "rightTitle": "AudioKit diagnostics return fixed zero metrics while an empty collector is polled",
+      "scores": {
+        "combined": 0.2145,
+        "title": 0.0667,
+        "remediation": 0.0702,
+        "impact": 0.0676,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engines/AudioKitEngineAdapter.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-007",
+      "rightID": "DLP-013",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Startup cleanup converts temporary unavailability into permanent library deletion",
+      "rightTitle": "Page mapping dereferences to-many relationships per album/artist",
+      "scores": {
+        "combined": 0.2135,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0753,
+        "locations": 0.4
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Models/Album.swift",
+        "Fonic HiFi/Data/Models/Artist.swift"
+      ]
+    },
+    {
+      "leftID": "A11Y-005",
+      "rightID": "A11Y-008",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Favorite and A-B loop controls have visible hit regions below 44×44 points",
+      "rightTitle": "Shuffle-on and repeat-all states rely on opacity/color when their symbols do not change",
+      "scores": {
+        "combined": 0.2126,
+        "title": 0.0,
+        "remediation": 0.0286,
+        "impact": 0.0256,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "PSR-008",
+      "rightID": "PSR-010",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "The app claims APNs without a product implementation",
+      "rightTitle": "Export classification is not encoded and needs final-archive determination",
+      "scores": {
+        "combined": 0.2119,
+        "title": 0.0,
+        "remediation": 0.0196,
+        "impact": 0.0357,
+        "locations": 0.4
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Fonic HiFi/Info.plist"
+      ]
+    },
+    {
+      "leftID": "TRV-001",
+      "rightID": "TRV-013",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "CI toolchain selection cannot satisfy the declared iOS 26 build",
+      "rightTitle": "Coverage gate is coarse and current evidence is not retained in the repository",
+      "scores": {
+        "combined": 0.2098,
+        "title": 0.0,
+        "remediation": 0.0263,
+        "impact": 0.0137,
+        "locations": 0.4
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "UIUX-001",
+      "rightID": "UIUX-004",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "The app-wide audio model is injected as an unobserved environment value",
+      "rightTitle": "The iOS 26 tab accessory never adapts to inline placement",
+      "scores": {
+        "combined": 0.2088,
+        "title": 0.0,
+        "remediation": 0.0606,
+        "impact": 0.0288,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-002",
+      "rightID": "DLP-017",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "`ListeningSession` is absent from the schema that its actor uses",
+      "rightTitle": "Listening-session persistence has no retention bound",
+      "scores": {
+        "combined": 0.208,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.1184,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/TrackDataActor.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-005",
+      "rightID": "TRV-001",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "Dependency/tool resolution is only partly pinned and not enforced in CI",
+      "rightTitle": "CI toolchain selection cannot satisfy the declared iOS 26 build",
+      "scores": {
+        "combined": 0.2069,
+        "title": 0.0,
+        "remediation": 0.0179,
+        "impact": 0.0105,
+        "locations": 1.0
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "PSR-008",
+      "rightID": "PSR-009",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "The app claims APNs without a product implementation",
+      "rightTitle": "Info.plist claims Live Activity support without an ActivityKit configuration",
+      "scores": {
+        "combined": 0.2056,
+        "title": 0.0909,
+        "remediation": 0.0244,
+        "impact": 0.0435,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Info.plist"
+      ]
+    },
+    {
+      "leftID": "CP-002",
+      "rightID": "CP-004",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Import cancellation does not reach AsyncStream producers",
+      "rightTitle": "Concurrent imports can pass duplicate checks before either commits",
+      "scores": {
+        "combined": 0.2048,
+        "title": 0.0,
+        "remediation": 0.0172,
+        "impact": 0.0741,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-SESSION-002",
+      "rightID": "AUD-RESET-001",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "Interruption intent and route-loss safety are not preserved",
+      "rightTitle": "Media-services reset does not rebuild invalid audio objects",
+      "scores": {
+        "combined": 0.2041,
+        "title": 0.0,
+        "remediation": 0.0484,
+        "impact": 0.0215,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-001",
+      "rightID": "TRV-003",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "CI toolchain selection cannot satisfy the declared iOS 26 build",
+      "rightTitle": "Unit and UI commands are indistinguishable aliases",
+      "scores": {
+        "combined": 0.2034,
+        "title": 0.0,
+        "remediation": 0.0286,
+        "impact": 0.0484,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "DLP-001",
+      "rightID": "DLP-003",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Persistent-store failure is masked by a normal-mode in-memory store",
+      "rightTitle": "The declared migration plan is only a fallback after an unplanned open",
+      "scores": {
+        "combined": 0.2034,
+        "title": 0.0,
+        "remediation": 0.0465,
+        "impact": 0.1134,
+        "locations": 0.25
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/DataManager+Initialization.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-008",
+      "rightID": "UIUX-016",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Settings exposes inert controls/actions that do not change the claimed feature",
+      "rightTitle": "“Reset All Settings” executes immediately without confirmation",
+      "scores": {
+        "combined": 0.2031,
+        "title": 0.0833,
+        "remediation": 0.0526,
+        "impact": 0.0,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Settings/SettingsView.swift"
+      ]
+    },
+    {
+      "leftID": "DCA-SAMPLE-001",
+      "rightID": "DCA-DUP-001",
+      "leftDomain": "Dead, Partial, and Artifacts",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Three undocumented sample app fragments have no build container",
+      "rightTitle": "Three app/widget shared-data contracts are manually duplicated",
+      "scores": {
+        "combined": 0.2023,
+        "title": 0.1667,
+        "remediation": 0.0545,
+        "impact": 0.0575,
+        "locations": 0.0
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": []
+    },
+    {
+      "leftID": "A11Y-002",
+      "rightID": "LOC-003",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "The 10-band EQ is drag-only and has no adjustable, focus, or keyboard semantics",
+      "rightTitle": "User-visible technical values bypass locale-aware number and measurement formatting",
+      "scores": {
+        "combined": 0.2009,
+        "title": 0.0,
+        "remediation": 0.0441,
+        "impact": 0.0104,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Settings/EqualizerView.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-001",
+      "rightID": "DLP-002",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Persistent-store failure is masked by a normal-mode in-memory store",
+      "rightTitle": "`ListeningSession` is absent from the schema that its actor uses",
+      "scores": {
+        "combined": 0.2004,
+        "title": 0.0,
+        "remediation": 0.0513,
+        "impact": 0.0889,
+        "locations": 0.25
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/DataManager+Initialization.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-018",
+      "rightID": "DLP-021",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Imported-audio backup policy is implicit and unverified",
+      "rightTitle": "Import cancellation is not propagated to the stream producer",
+      "scores": {
+        "combined": 0.1995,
+        "title": 0.0,
+        "remediation": 0.0333,
+        "impact": 0.0194,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-004",
+      "rightID": "TRV-012",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "UI smoke tests skip or ignore missing core behavior",
+      "rightTitle": "Accessibility verification is absent",
+      "scores": {
+        "combined": 0.1984,
+        "title": 0.0,
+        "remediation": 0.0645,
+        "impact": 0.0571,
+        "locations": 0.25
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFiUITests/LibraryNowPlayingSmokeTests.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-002",
+      "rightID": "TRV-003",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "No shared scheme or test plan defines the release test action",
+      "rightTitle": "Unit and UI commands are indistinguishable aliases",
+      "scores": {
+        "combined": 0.1976,
+        "title": 0.0,
+        "remediation": 0.0286,
+        "impact": 0.0161,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "PCFG-007",
+      "rightID": "PCFG-012",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "CI never builds/analyzes Release and has no distribution-signing verification contract",
+      "rightTitle": "The app claims an unused APNs capability, increasing signing scope without product code",
+      "scores": {
+        "combined": 0.1976,
+        "title": 0.0,
+        "remediation": 0.0938,
+        "impact": 0.1,
+        "locations": 0.1667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "CP-011",
+      "rightID": "CP-016",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "SwiftUI bodies materialize arrays during every library/queue evaluation",
+      "rightTitle": "Render paths rebuild formatters and full sort/filter results",
+      "scores": {
+        "combined": 0.1967,
+        "title": 0.0,
+        "remediation": 0.0526,
+        "impact": 0.122,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Library/LibraryView.swift"
+      ]
+    },
+    {
+      "leftID": "A11Y-003",
+      "rightID": "A11Y-007",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "The lyrics overlay lacks an accessible close name and modal focus management",
+      "rightTitle": "Active palette and lyrics transitions do not honor Reduce Motion",
+      "scores": {
+        "combined": 0.1966,
+        "title": 0.0667,
+        "remediation": 0.0,
+        "impact": 0.022,
+        "locations": 0.25
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "A11Y-004",
+      "rightID": "LOC-003",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Volume, crossfade, and fade-out sliders do not expose purpose-specific labels/values",
+      "rightTitle": "User-visible technical values bypass locale-aware number and measurement formatting",
+      "scores": {
+        "combined": 0.1966,
+        "title": 0.0667,
+        "remediation": 0.0426,
+        "impact": 0.0112,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Settings/AudioSettingsView.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-DSP-001",
+      "rightID": "AUD-RESET-001",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "DSP capability and persistence silently diverge by engine",
+      "rightTitle": "Media-services reset does not rebuild invalid audio objects",
+      "scores": {
+        "combined": 0.1966,
+        "title": 0.0,
+        "remediation": 0.0882,
+        "impact": 0.0659,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-RECOVERY-001",
+      "rightID": "DCA-PART-003",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Queue resume position is dropped and shuffled order is restored incorrectly",
+      "rightTitle": "QueueCoordinator exposes three inert methods beside working manager APIs",
+      "scores": {
+        "combined": 0.1958,
+        "title": 0.0,
+        "remediation": 0.0179,
+        "impact": 0.0227,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-006",
+      "rightID": "CP-004",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Concurrent deduplication is not an atomic claim",
+      "rightTitle": "Concurrent imports can pass duplicate checks before either commits",
+      "scores": {
+        "combined": 0.1955,
+        "title": 0.1,
+        "remediation": 0.0926,
+        "impact": 0.1975,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-002",
+      "rightID": "TRV-009",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "No shared scheme or test plan defines the release test action",
+      "rightTitle": "Shared process/sandbox state breaks test isolation",
+      "scores": {
+        "combined": 0.1936,
+        "title": 0.1667,
+        "remediation": 0.0455,
+        "impact": 0.0235,
+        "locations": 0.0
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": []
+    },
+    {
+      "leftID": "DLP-020",
+      "rightID": "DCA-PART-001",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Playback position is mistaken for time actually listened",
+      "rightTitle": "Listening-session tracking is implemented but never configured",
+      "scores": {
+        "combined": 0.1931,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0357,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-001",
+      "rightID": "UIUX-010",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "The app-wide audio model is injected as an unobserved environment value",
+      "rightTitle": "Import progress is unobserved; picker errors are invisible; presentation depends on a race",
+      "scores": {
+        "combined": 0.1928,
+        "title": 0.0667,
+        "remediation": 0.04,
+        "impact": 0.1053,
+        "locations": 0.1
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Environment/AudioEnvironment.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-011",
+      "rightID": "UIUX-012",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Smart Search is effectively unreachable from the active Search states",
+      "rightTitle": "Multiple browse affordances have no destination or action",
+      "scores": {
+        "combined": 0.1925,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0326,
+        "locations": 0.3333
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-003",
+      "rightID": "PCFG-004",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "CI selects Xcode 16.1 for an Xcode/iOS 26 project, and the Makefile overrides that selection",
+      "rightTitle": "No versioned shared scheme or test plan defines what CI builds and tests",
+      "scores": {
+        "combined": 0.1923,
+        "title": 0.0,
+        "remediation": 0.037,
+        "impact": 0.0263,
+        "locations": 0.2857
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "CP-003",
+      "rightID": "CP-011",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Queue mutations synchronously persist the full queue on the MainActor",
+      "rightTitle": "SwiftUI bodies materialize arrays during every library/queue evaluation",
+      "scores": {
+        "combined": 0.1919,
+        "title": 0.0769,
+        "remediation": 0.0,
+        "impact": 0.0319,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Queue/QueueState.swift"
+      ]
+    },
+    {
+      "leftID": "LOC-001",
+      "rightID": "A11YTEST-001",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "There is no localization resource pipeline despite extensive English UI and accessibility copy",
+      "rightTitle": "Accessibility, Dynamic Type, locale, RTL, and widget accessibility have no automated coverage",
+      "scores": {
+        "combined": 0.1884,
+        "title": 0.0625,
+        "remediation": 0.05,
+        "impact": 0.045,
+        "locations": 0.125
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-TRANSITION-001",
+      "rightID": "AUD-DSP-001",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "Gapless/native crossfade controls do not produce seamless transitions",
+      "rightTitle": "DSP capability and persistence silently diverge by engine",
+      "scores": {
+        "combined": 0.1863,
+        "title": 0.0,
+        "remediation": 0.1045,
+        "impact": 0.0472,
+        "locations": 0.1429
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Interfaces/AudioEngineService.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-019",
+      "rightID": "DCA-PART-001",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Track transitions omit or race the replacement listening session",
+      "rightTitle": "Listening-session tracking is implemented but never configured",
+      "scores": {
+        "combined": 0.1861,
+        "title": 0.0,
+        "remediation": 0.0192,
+        "impact": 0.0594,
+        "locations": 0.25
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift"
+      ]
+    },
+    {
+      "leftID": "FMA-004",
+      "rightID": "FMA-005",
+      "leftDomain": "Foundation Models",
+      "rightDomain": "Foundation Models",
+      "leftTitle": "Availability, runtime asset loss, locale failure, and model errors collapse into booleans or generic fallback",
+      "rightTitle": "Smart Search’s documented standard-search fallback returns an empty AI result without handing off",
+      "scores": {
+        "combined": 0.1848,
+        "title": 0.0476,
+        "remediation": 0.0455,
+        "impact": 0.0326,
+        "locations": 0.75
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/AI/Search/SmartSearchService.swift",
+        "Fonic HiFi/Presentation/ViewModels/SmartSearchViewModel.swift",
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-012",
+      "rightID": "UIUX-019",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Multiple browse affordances have no destination or action",
+      "rightTitle": "“Surprise Me” has tracked loading state that the UI never renders",
+      "scores": {
+        "combined": 0.1841,
+        "title": 0.0,
+        "remediation": 0.0286,
+        "impact": 0.0341,
+        "locations": 0.25
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Home/HomeView.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-RECOVERY-001",
+      "rightID": "UIUX-013",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Queue resume position is dropped and shuffled order is restored incorrectly",
+      "rightTitle": "Queue edit controls are undiscoverable and displayed offsets are translated incorrectly",
+      "scores": {
+        "combined": 0.1836,
+        "title": 0.1429,
+        "remediation": 0.0,
+        "impact": 0.0093,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift",
+        "Fonic HiFi/Core/Audio/Queue/QueueState.swift"
+      ]
+    },
+    {
+      "leftID": "FMA-003",
+      "rightID": "FMA-004",
+      "leftDomain": "Foundation Models",
+      "rightDomain": "Foundation Models",
+      "leftTitle": "Canceled Smart Search work can be converted into a fallback result and overwrite newer state",
+      "rightTitle": "Availability, runtime asset loss, locale failure, and model errors collapse into booleans or generic fallback",
+      "scores": {
+        "combined": 0.1824,
+        "title": 0.0476,
+        "remediation": 0.026,
+        "impact": 0.0494,
+        "locations": 0.75
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/AI/Search/SmartSearchService.swift",
+        "Fonic HiFi/Presentation/ViewModels/SmartSearchViewModel.swift",
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-004",
+      "rightID": "UIUX-006",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "The iOS 26 tab accessory never adapts to inline placement",
+      "rightTitle": "Now Playing has no height-adaptive scrolling contract for landscape or large text",
+      "scores": {
+        "combined": 0.1817,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0649,
+        "locations": 0.25
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-011",
+      "rightID": "UIUX-018",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Repository-backed library state is not refreshed after writes",
+      "rightTitle": "Every library pagination fetch presents a full-screen blocking loader",
+      "scores": {
+        "combined": 0.1813,
+        "title": 0.0909,
+        "remediation": 0.0476,
+        "impact": 0.0208,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/ViewModels/Library/LibraryViewModel.swift",
+        "Fonic HiFi/Presentation/Views/Library/LibraryView.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-007",
+      "rightID": "TRV-014",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "CI never builds/analyzes Release and has no distribution-signing verification contract",
+      "rightTitle": "Release configuration and release-only failure modes are not gated",
+      "scores": {
+        "combined": 0.1803,
+        "title": 0.0909,
+        "remediation": 0.1132,
+        "impact": 0.0984,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "PCFG-010",
+      "rightID": "PCFG-011",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "Info.plist advertises Live Activity support without an Activity configuration",
+      "rightTitle": "Widget asset build settings name color sets that do not exist in the widget target",
+      "scores": {
+        "combined": 0.1795,
+        "title": 0.0,
+        "remediation": 0.0417,
+        "impact": 0.0435,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi Widget/NowPlayingWidget.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-ENG-001",
+      "rightID": "AUD-DSP-001",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "AVAudioEngine preference is ignored",
+      "rightTitle": "DSP capability and persistence silently diverge by engine",
+      "scores": {
+        "combined": 0.1779,
+        "title": 0.0,
+        "remediation": 0.0357,
+        "impact": 0.044,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Factory/AudioEngineFactory.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-005",
+      "rightID": "UIUX-007",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Full-screen Now Playing has no visible dismissal control",
+      "rightTitle": "Sleep-timer ownership is transient and its volume baseline is hard-coded",
+      "scores": {
+        "combined": 0.1777,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0429,
+        "locations": 0.25
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "CP-015",
+      "rightID": "UIUX-017",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "UI and UX",
+      "leftTitle": "File Manager uses synchronous UI-context I/O and an uncancellable detached copy",
+      "rightTitle": "File Manager's multi-select actions have no touch-only edit-mode entry",
+      "scores": {
+        "combined": 0.1755,
+        "title": 0.1538,
+        "remediation": 0.0566,
+        "impact": 0.0408,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Settings/FileManagerView.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-RECOVERY-001",
+      "rightID": "CP-003",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Queue resume position is dropped and shuffled order is restored incorrectly",
+      "rightTitle": "Queue mutations synchronously persist the full queue on the MainActor",
+      "scores": {
+        "combined": 0.1743,
+        "title": 0.0769,
+        "remediation": 0.0286,
+        "impact": 0.0381,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift",
+        "Fonic HiFi/Core/Audio/Queue/QueueState.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-005",
+      "rightID": "PCFG-009",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "Dependency/tool resolution is only partly pinned and not enforced in CI",
+      "rightTitle": "SwiftLint excludes all widget and UI-test source",
+      "scores": {
+        "combined": 0.1739,
+        "title": 0.0,
+        "remediation": 0.0408,
+        "impact": 0.0506,
+        "locations": 0.1667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "UIUX-009",
+      "rightID": "UIUX-019",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Playback and browse failures are logged but surfaced as silence or false emptiness",
+      "rightTitle": "“Surprise Me” has tracked loading state that the UI never renders",
+      "scores": {
+        "combined": 0.1738,
+        "title": 0.0,
+        "remediation": 0.0526,
+        "impact": 0.0316,
+        "locations": 0.1667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Home/HomeView.swift"
+      ]
+    },
+    {
+      "leftID": "PSR-003",
+      "rightID": "PSR-008",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "CI cannot validate the current iOS 26 release toolchain",
+      "rightTitle": "The app claims APNs without a product implementation",
+      "scores": {
+        "combined": 0.1738,
+        "title": 0.0,
+        "remediation": 0.0196,
+        "impact": 0.0833,
+        "locations": 0.1667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "UIUX-002",
+      "rightID": "UIUX-007",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Now Playing duplicates authoritative shuffle, repeat, and speed state",
+      "rightTitle": "Sleep-timer ownership is transient and its volume baseline is hard-coded",
+      "scores": {
+        "combined": 0.1728,
+        "title": 0.0,
+        "remediation": 0.0323,
+        "impact": 0.0581,
+        "locations": 0.1667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-016",
+      "rightID": "DCA-DUP-001",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Widget state freezes progress and can remain “playing” after becoming stale",
+      "rightTitle": "Three app/widget shared-data contracts are manually duplicated",
+      "scores": {
+        "combined": 0.1705,
+        "title": 0.0714,
+        "remediation": 0.0,
+        "impact": 0.0345,
+        "locations": 0.1
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi Widget/Shared/WidgetPlaybackState.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-009",
+      "rightID": "UIUX-011",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Playback and browse failures are logged but surfaced as silence or false emptiness",
+      "rightTitle": "Smart Search is effectively unreachable from the active Search states",
+      "scores": {
+        "combined": 0.1693,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0515,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-015",
+      "rightID": "TRV-016",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "Conditional skips are not a failing release signal",
+      "rightTitle": "No physical-device media acceptance lane covers the product's highest-risk behavior",
+      "scores": {
+        "combined": 0.1677,
+        "title": 0.0,
+        "remediation": 0.0909,
+        "impact": 0.0,
+        "locations": 0.1111
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "leftID": "PCFG-007",
+      "rightID": "TRV-001",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "CI never builds/analyzes Release and has no distribution-signing verification contract",
+      "rightTitle": "CI toolchain selection cannot satisfy the declared iOS 26 build",
+      "scores": {
+        "combined": 0.1675,
+        "title": 0.0,
+        "remediation": 0.0536,
+        "impact": 0.0141,
+        "locations": 0.75
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "TRV-004",
+      "rightID": "TRV-015",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "UI smoke tests skip or ignore missing core behavior",
+      "rightTitle": "Conditional skips are not a failing release signal",
+      "scores": {
+        "combined": 0.1668,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0375,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFiUITests/LibraryNowPlayingSmokeTests.swift"
+      ]
+    },
+    {
+      "leftID": "DCA-DEAD-002",
+      "rightID": "DCA-PART-005",
+      "leftDomain": "Dead, Partial, and Artifacts",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Live files contain 61 manually retained unreferenced symbol roots",
+      "rightTitle": "AudioKit diagnostics return fixed zero metrics while an empty collector is polled",
+      "scores": {
+        "combined": 0.1651,
+        "title": 0.0,
+        "remediation": 0.0286,
+        "impact": 0.0211,
+        "locations": 0.1667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engines/AudioKitEngineAdapter.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-014",
+      "rightID": "CP-008",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Search bypasses the repository and silently truncates results",
+      "rightTitle": "Home and Search execute synchronous SwiftData work on the MainActor",
+      "scores": {
+        "combined": 0.1645,
+        "title": 0.0833,
+        "remediation": 0.0769,
+        "impact": 0.0814,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/DataManager+Search.swift",
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-DIAG-001",
+      "rightID": "DCA-DEAD-002",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Engine metrics are synthetic while native monitoring overhead is unconditional",
+      "rightTitle": "Live files contain 61 manually retained unreferenced symbol roots",
+      "scores": {
+        "combined": 0.1636,
+        "title": 0.0,
+        "remediation": 0.0247,
+        "impact": 0.0189,
+        "locations": 0.1667
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engines/AudioKitEngineAdapter.swift"
+      ]
+    },
+    {
+      "leftID": "CP-007",
+      "rightID": "CP-012",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "AudioKit creates a MainActor task every 100 ms in addition to centralized polling",
+      "rightTitle": "Optional diagnostics retain unbounded samples and start a no-op poller",
+      "scores": {
+        "combined": 0.1626,
+        "title": 0.0,
+        "remediation": 0.0139,
+        "impact": 0.0562,
+        "locations": 0.1429
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engines/AudioKitEngineAdapter.swift"
+      ]
+    },
+    {
+      "leftID": "PSR-004",
+      "rightID": "PSR-007",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "Release logging marks user library content and diagnostic details public",
+      "rightTitle": "Local settings, build logs, Xcode user state, and a stale project backup are committed",
+      "scores": {
+        "combined": 0.1625,
+        "title": 0.0526,
+        "remediation": 0.0278,
+        "impact": 0.0319,
+        "locations": 0.0556
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "A11Y-007",
+      "rightID": "A11YTEST-001",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Active palette and lyrics transitions do not honor Reduce Motion",
+      "rightTitle": "Accessibility, Dynamic Type, locale, RTL, and widget accessibility have no automated coverage",
+      "scores": {
+        "combined": 0.1619,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0103,
+        "locations": 0.2
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift"
+      ]
+    },
+    {
+      "leftID": "PSR-003",
+      "rightID": "PSR-010",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "CI cannot validate the current iOS 26 release toolchain",
+      "rightTitle": "Export classification is not encoded and needs final-archive determination",
+      "scores": {
+        "combined": 0.1616,
+        "title": 0.0,
+        "remediation": 0.037,
+        "impact": 0.0147,
+        "locations": 0.1429
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "PSR-003",
+      "rightID": "TRV-014",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "CI cannot validate the current iOS 26 release toolchain",
+      "rightTitle": "Release configuration and release-only failure modes are not gated",
+      "scores": {
+        "combined": 0.1614,
+        "title": 0.1111,
+        "remediation": 0.0667,
+        "impact": 0.0278,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "PCFG-005",
+      "rightID": "PSR-003",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "Dependency/tool resolution is only partly pinned and not enforced in CI",
+      "rightTitle": "CI cannot validate the current iOS 26 release toolchain",
+      "scores": {
+        "combined": 0.1604,
+        "title": 0.0,
+        "remediation": 0.0156,
+        "impact": 0.0333,
+        "locations": 0.75
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "PSR-005",
+      "rightID": "PSR-010",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "Imported audio files retain uncontrolled source protection metadata",
+      "rightTitle": "Export classification is not encoded and needs final-archive determination",
+      "scores": {
+        "combined": 0.1603,
+        "title": 0.0,
+        "remediation": 0.0161,
+        "impact": 0.0597,
+        "locations": 0.125
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Info.plist"
+      ]
+    },
+    {
+      "leftID": "AUD-TRANSITION-001",
+      "rightID": "AUD-SEEK-001",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "Gapless/native crossfade controls do not produce seamless transitions",
+      "rightTitle": "Native seek loses absolute offset; A-B loop is coarse and failure-blind",
+      "scores": {
+        "combined": 0.1601,
+        "title": 0.0667,
+        "remediation": 0.1017,
+        "impact": 0.0495,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/PlaybackController.swift",
+        "Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-004",
+      "rightID": "PCFG-008",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "No versioned shared scheme or test plan defines what CI builds and tests",
+      "rightTitle": "User-specific Xcode state, raw logs, a stale PBX backup, and local settings are tracked",
+      "scores": {
+        "combined": 0.1576,
+        "title": 0.0,
+        "remediation": 0.0323,
+        "impact": 0.0,
+        "locations": 0.1429
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/xcuserdata/keiran.xcuserdatad/xcschemes/xcschememanagement.plist"
+      ]
+    },
+    {
+      "leftID": "UIUX-012",
+      "rightID": "UIUX-015",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Multiple browse affordances have no destination or action",
+      "rightTitle": "Active tap targets use raw gestures instead of semantic controls",
+      "scores": {
+        "combined": 0.1562,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0426,
+        "locations": 0.1429
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Home/Sections/GenresSection.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-013",
+      "rightID": "TRV-015",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "Coverage gate is coarse and current evidence is not retained in the repository",
+      "rightTitle": "Conditional skips are not a failing release signal",
+      "scores": {
+        "combined": 0.154,
+        "title": 0.0,
+        "remediation": 0.0233,
+        "impact": 0.0139,
+        "locations": 0.125
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "leftID": "UIUX-004",
+      "rightID": "A11Y-001",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "The iOS 26 tab accessory never adapts to inline placement",
+      "rightTitle": "Core library and mini-player actions use raw tap gestures instead of semantic controls",
+      "scores": {
+        "combined": 0.1538,
+        "title": 0.0,
+        "remediation": 0.0545,
+        "impact": 0.0288,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-002",
+      "rightID": "PCFG-007",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "App and widget lack required-reason privacy manifests despite direct covered API use",
+      "rightTitle": "CI never builds/analyzes Release and has no distribution-signing verification contract",
+      "scores": {
+        "combined": 0.1514,
+        "title": 0.0,
+        "remediation": 0.0526,
+        "impact": 0.0,
+        "locations": 0.0833
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "A11Y-001",
+      "rightID": "LOC-001",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Core library and mini-player actions use raw tap gestures instead of semantic controls",
+      "rightTitle": "There is no localization resource pipeline despite extensive English UI and accessibility copy",
+      "scores": {
+        "combined": 0.1505,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0308,
+        "locations": 0.125
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-005",
+      "rightID": "A11Y-007",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Full-screen Now Playing has no visible dismissal control",
+      "rightTitle": "Active palette and lyrics transitions do not honor Reduce Motion",
+      "scores": {
+        "combined": 0.1496,
+        "title": 0.0,
+        "remediation": 0.0256,
+        "impact": 0.0506,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "AUD-TRANSITION-002",
+      "rightID": "CP-007",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Cancelling an AudioKit crossfade leaves split playback state",
+      "rightTitle": "AudioKit creates a MainActor task every 100 ms in addition to centralized polling",
+      "scores": {
+        "combined": 0.1488,
+        "title": 0.0714,
+        "remediation": 0.0441,
+        "impact": 0.0676,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engines/AudioKitEngineAdapter.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-005",
+      "rightID": "CP-002",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Import failure after copy leaks managed audio files",
+      "rightTitle": "Import cancellation does not reach AsyncStream producers",
+      "scores": {
+        "combined": 0.1486,
+        "title": 0.0909,
+        "remediation": 0.0185,
+        "impact": 0.0693,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-002",
+      "rightID": "TRV-016",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "No shared scheme or test plan defines the release test action",
+      "rightTitle": "No physical-device media acceptance lane covers the product's highest-risk behavior",
+      "scores": {
+        "combined": 0.1486,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0,
+        "locations": 0.1429
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "PSR-002",
+      "rightID": "PSR-010",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "App and widget lack privacy manifests despite first-party Required Reason API use",
+      "rightTitle": "Export classification is not encoded and needs final-archive determination",
+      "scores": {
+        "combined": 0.1485,
+        "title": 0.0,
+        "remediation": 0.0143,
+        "impact": 0.0508,
+        "locations": 0.0769
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "PCFG-005",
+      "rightID": "TRV-014",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "Dependency/tool resolution is only partly pinned and not enforced in CI",
+      "rightTitle": "Release configuration and release-only failure modes are not gated",
+      "scores": {
+        "combined": 0.1476,
+        "title": 0.0,
+        "remediation": 0.0364,
+        "impact": 0.0225,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        ".github/workflows/ci.yml",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "CP-011",
+      "rightID": "UIUX-013",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "UI and UX",
+      "leftTitle": "SwiftUI bodies materialize arrays during every library/queue evaluation",
+      "rightTitle": "Queue edit controls are undiscoverable and displayed offsets are translated incorrectly",
+      "scores": {
+        "combined": 0.1476,
+        "title": 0.0667,
+        "remediation": 0.0682,
+        "impact": 0.0323,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Queue/QueueState.swift",
+        "Fonic HiFi/Presentation/Views/Queue/QueueView.swift"
+      ]
+    },
+    {
+      "leftID": "PSR-002",
+      "rightID": "PSR-003",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "App and widget lack privacy manifests despite first-party Required Reason API use",
+      "rightTitle": "CI cannot validate the current iOS 26 release toolchain",
+      "scores": {
+        "combined": 0.1476,
+        "title": 0.0,
+        "remediation": 0.0143,
+        "impact": 0.0455,
+        "locations": 0.0769
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "DLP-014",
+      "rightID": "UIUX-011",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Search bypasses the repository and silently truncates results",
+      "rightTitle": "Smart Search is effectively unreachable from the active Search states",
+      "scores": {
+        "combined": 0.1468,
+        "title": 0.0909,
+        "remediation": 0.027,
+        "impact": 0.046,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-001",
+      "rightID": "UIUX-002",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "The app-wide audio model is injected as an unobserved environment value",
+      "rightTitle": "Now Playing duplicates authoritative shuffle, repeat, and speed state",
+      "scores": {
+        "combined": 0.1466,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0242,
+        "locations": 0.1111
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift"
+      ]
+    },
+    {
+      "leftID": "PSR-004",
+      "rightID": "PSR-005",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "Release logging marks user library content and diagnostic details public",
+      "rightTitle": "Imported audio files retain uncontrolled source protection metadata",
+      "scores": {
+        "combined": 0.1435,
+        "title": 0.0,
+        "remediation": 0.0125,
+        "impact": 0.046,
+        "locations": 0.0588
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-004",
+      "rightID": "A11YTEST-001",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "The iOS 26 tab accessory never adapts to inline placement",
+      "rightTitle": "Accessibility, Dynamic Type, locale, RTL, and widget accessibility have no automated coverage",
+      "scores": {
+        "combined": 0.1428,
+        "title": 0.0,
+        "remediation": 0.0189,
+        "impact": 0.023,
+        "locations": 0.6667
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-014",
+      "rightID": "UIUX-016",
+      "leftDomain": "UI and UX",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Audio Settings nests a second navigation stack inside the Settings stack",
+      "rightTitle": "“Reset All Settings” executes immediately without confirmation",
+      "scores": {
+        "combined": 0.1426,
+        "title": 0.0909,
+        "remediation": 0.0417,
+        "impact": 0.0,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Settings/SettingsView.swift"
+      ]
+    },
+    {
+      "leftID": "PSR-004",
+      "rightID": "PSR-010",
+      "leftDomain": "Privacy, Security, and Release",
+      "rightDomain": "Privacy, Security, and Release",
+      "leftTitle": "Release logging marks user library content and diagnostic details public",
+      "rightTitle": "Export classification is not encoded and needs final-archive determination",
+      "scores": {
+        "combined": 0.1403,
+        "title": 0.0,
+        "remediation": 0.0278,
+        "impact": 0.0,
+        "locations": 0.0625
+      },
+      "explicitlyRelated": true,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj"
+      ]
+    },
+    {
+      "leftID": "AUD-SESSION-001",
+      "rightID": "AUD-TRANSITION-001",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "Audio Reliability",
+      "leftTitle": "Audio-session ownership is split and native load deactivates after activation",
+      "rightTitle": "Gapless/native crossfade controls do not produce seamless transitions",
+      "scores": {
+        "combined": 0.1386,
+        "title": 0.0769,
+        "remediation": 0.0143,
+        "impact": 0.0467,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Engine/PlaybackController.swift",
+        "Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-005",
+      "rightID": "A11Y-005",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Full-screen Now Playing has no visible dismissal control",
+      "rightTitle": "Favorite and A-B loop controls have visible hit regions below 44×44 points",
+      "scores": {
+        "combined": 0.1359,
+        "title": 0.0714,
+        "remediation": 0.0333,
+        "impact": 0.0125,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "CP-003",
+      "rightID": "UIUX-013",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Queue mutations synchronously persist the full queue on the MainActor",
+      "rightTitle": "Queue edit controls are undiscoverable and displayed offsets are translated incorrectly",
+      "scores": {
+        "combined": 0.1358,
+        "title": 0.0769,
+        "remediation": 0.0161,
+        "impact": 0.0283,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift",
+        "Fonic HiFi/Core/Audio/Queue/QueueState.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-007",
+      "rightID": "A11Y-004",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Sleep-timer ownership is transient and its volume baseline is hard-coded",
+      "rightTitle": "Volume, crossfade, and fade-out sliders do not expose purpose-specific labels/values",
+      "scores": {
+        "combined": 0.1284,
+        "title": 0.0769,
+        "remediation": 0.0,
+        "impact": 0.0123,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/SleepTimerSheet.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-005",
+      "rightID": "A11Y-008",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Full-screen Now Playing has no visible dismissal control",
+      "rightTitle": "Shuffle-on and repeat-all states rely on opacity/color when their symbols do not change",
+      "scores": {
+        "combined": 0.1271,
+        "title": 0.0,
+        "remediation": 0.0606,
+        "impact": 0.0563,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-015",
+      "rightID": "UIUX-011",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Repeated recent searches create duplicate persistence rows and duplicate SwiftUI IDs",
+      "rightTitle": "Smart Search is effectively unreachable from the active Search states",
+      "scores": {
+        "combined": 0.1212,
+        "title": 0.0,
+        "remediation": 0.0513,
+        "impact": 0.038,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Search/SearchView.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-006",
+      "rightID": "CP-002",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Concurrent deduplication is not an atomic claim",
+      "rightTitle": "Import cancellation does not reach AsyncStream producers",
+      "scores": {
+        "combined": 0.121,
+        "title": 0.0,
+        "remediation": 0.0492,
+        "impact": 0.0404,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-019",
+      "rightID": "FMA-008",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Foundation Models",
+      "leftTitle": "“Surprise Me” has tracked loading state that the UI never renders",
+      "rightTitle": "Initial Home rendering waits for a full model response",
+      "scores": {
+        "combined": 0.1198,
+        "title": 0.0,
+        "remediation": 0.0476,
+        "impact": 0.0357,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Home/HomeView.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-005",
+      "rightID": "CP-004",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Import failure after copy leaks managed audio files",
+      "rightTitle": "Concurrent imports can pass duplicate checks before either commits",
+      "scores": {
+        "combined": 0.119,
+        "title": 0.0,
+        "remediation": 0.0204,
+        "impact": 0.0737,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-004",
+      "rightID": "PCFG-005",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Project Configuration",
+      "leftTitle": "No versioned shared scheme or test plan defines what CI builds and tests",
+      "rightTitle": "Dependency/tool resolution is only partly pinned and not enforced in CI",
+      "scores": {
+        "combined": 0.1169,
+        "title": 0.0,
+        "remediation": 0.0308,
+        "impact": 0.046,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "AUD-SLEEP-001",
+      "rightID": "UIUX-005",
+      "leftDomain": "Audio Reliability",
+      "rightDomain": "UI and UX",
+      "leftTitle": "Sleep timer is view-scoped and its fade assumes full volume",
+      "rightTitle": "Full-screen Now Playing has no visible dismissal control",
+      "scores": {
+        "combined": 0.1159,
+        "title": 0.0,
+        "remediation": 0.0488,
+        "impact": 0.0127,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-020",
+      "rightID": "CP-005",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Playback position is mistaken for time actually listened",
+      "rightTitle": "Old session teardown can clear a newly started listening session",
+      "scores": {
+        "combined": 0.1153,
+        "title": 0.0,
+        "remediation": 0.0364,
+        "impact": 0.0282,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Core/Audio/Analytics/ListeningSessionService.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-003",
+      "rightID": "A11Y-001",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "The mini player is always shown, including with no track",
+      "rightTitle": "Core library and mini-player actions use raw tap gestures instead of semantic controls",
+      "scores": {
+        "combined": 0.1151,
+        "title": 0.0,
+        "remediation": 0.0161,
+        "impact": 0.0588,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift"
+      ]
+    },
+    {
+      "leftID": "A11Y-003",
+      "rightID": "A11Y-008",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "The lyrics overlay lacks an accessible close name and modal focus management",
+      "rightTitle": "Shuffle-on and repeat-all states rely on opacity/color when their symbols do not change",
+      "scores": {
+        "combined": 0.1145,
+        "title": 0.0,
+        "remediation": 0.0364,
+        "impact": 0.0241,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "CP-011",
+      "rightID": "LOC-002",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "SwiftUI bodies materialize arrays during every library/queue evaluation",
+      "rightTitle": "Count-bearing strings bypass plural rules",
+      "scores": {
+        "combined": 0.1138,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0769,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/Library/LibraryView.swift",
+        "Fonic HiFi/Presentation/Views/Queue/QueueView.swift"
+      ]
+    },
+    {
+      "leftID": "A11Y-003",
+      "rightID": "A11Y-005",
+      "leftDomain": "Accessibility and Localization",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "The lyrics overlay lacks an accessible close name and modal focus management",
+      "rightTitle": "Favorite and A-B loop controls have visible hit regions below 44×44 points",
+      "scores": {
+        "combined": 0.113,
+        "title": 0.0,
+        "remediation": 0.0392,
+        "impact": 0.0111,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "TRV-003",
+      "rightID": "TRV-014",
+      "leftDomain": "Testing and Release Verification",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "Unit and UI commands are indistinguishable aliases",
+      "rightTitle": "Release configuration and release-only failure modes are not gated",
+      "scores": {
+        "combined": 0.1111,
+        "title": 0.0,
+        "remediation": 0.0286,
+        "impact": 0.0169,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "DLP-017",
+      "rightID": "CP-004",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Listening-session persistence has no retention bound",
+      "rightTitle": "Concurrent imports can pass duplicate checks before either commits",
+      "scores": {
+        "combined": 0.1105,
+        "title": 0.0,
+        "remediation": 0.0175,
+        "impact": 0.0309,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/TrackDataActor.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-006",
+      "rightID": "DLP-018",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Data, Library, and Persistence",
+      "leftTitle": "Concurrent deduplication is not an atomic claim",
+      "rightTitle": "Imported-audio backup policy is implicit and unverified",
+      "scores": {
+        "combined": 0.1099,
+        "title": 0.0,
+        "remediation": 0.0143,
+        "impact": 0.0326,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-004",
+      "rightID": "TRV-001",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "No versioned shared scheme or test plan defines what CI builds and tests",
+      "rightTitle": "CI toolchain selection cannot satisfy the declared iOS 26 build",
+      "scores": {
+        "combined": 0.1081,
+        "title": 0.0,
+        "remediation": 0.0204,
+        "impact": 0.0132,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "CP-006",
+      "rightID": "CP-013",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Widget synchronization polls the queue every 500 ms even when idle",
+      "rightTitle": "Deferred startup work is unowned and cancellation-blind",
+      "scores": {
+        "combined": 0.1064,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0357,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/FonicHiFiApp.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-003",
+      "rightID": "A11YTEST-001",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "The mini player is always shown, including with no track",
+      "rightTitle": "Accessibility, Dynamic Type, locale, RTL, and widget accessibility have no automated coverage",
+      "scores": {
+        "combined": 0.1062,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0345,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift"
+      ]
+    },
+    {
+      "leftID": "PCFG-005",
+      "rightID": "TRV-002",
+      "leftDomain": "Project Configuration",
+      "rightDomain": "Testing and Release Verification",
+      "leftTitle": "Dependency/tool resolution is only partly pinned and not enforced in CI",
+      "rightTitle": "No shared scheme or test plan defines the release test action",
+      "scores": {
+        "combined": 0.105,
+        "title": 0.0,
+        "remediation": 0.0179,
+        "impact": 0.0,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi.xcodeproj/project.pbxproj",
+        "Makefile"
+      ]
+    },
+    {
+      "leftID": "CP-013",
+      "rightID": "DCA-PART-001",
+      "leftDomain": "Concurrency and Performance",
+      "rightDomain": "Dead, Partial, and Artifacts",
+      "leftTitle": "Deferred startup work is unowned and cancellation-blind",
+      "rightTitle": "Listening-session tracking is implemented but never configured",
+      "scores": {
+        "combined": 0.1022,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0122,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/FonicHiFiApp.swift"
+      ]
+    },
+    {
+      "leftID": "UIUX-006",
+      "rightID": "A11Y-007",
+      "leftDomain": "UI and UX",
+      "rightDomain": "Accessibility and Localization",
+      "leftTitle": "Now Playing has no height-adaptive scrolling contract for landscape or large text",
+      "rightTitle": "Active palette and lyrics transitions do not honor Reduce Motion",
+      "scores": {
+        "combined": 0.102,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0111,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/ContentView.swift",
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift"
+      ]
+    },
+    {
+      "leftID": "DLP-004",
+      "rightID": "CP-013",
+      "leftDomain": "Data, Library, and Persistence",
+      "rightDomain": "Concurrency and Performance",
+      "leftTitle": "Listening history is never wired into the production audio service",
+      "rightTitle": "Deferred startup work is unowned and cancellation-blind",
+      "scores": {
+        "combined": 0.1,
+        "title": 0.0,
+        "remediation": 0.0,
+        "impact": 0.0,
+        "locations": 0.5
+      },
+      "explicitlyRelated": false,
+      "sharedLocationPaths": [
+        "Fonic HiFi/FonicHiFiApp.swift"
+      ]
+    }
+  ]
+}

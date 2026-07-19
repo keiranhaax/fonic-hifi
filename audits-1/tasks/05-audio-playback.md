@@ -2,7 +2,7 @@
 
 ## AUDIT-020 — Normalize engine-preference handling (AVAudioEngine choice ignored)
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (AUD-ENG-001)
 - Audit finding IDs: AUD-ENG-001
@@ -17,9 +17,9 @@
 - Blocks: — (precedes AUDIT-021, same surface)
 - Related tasks: AUDIT-021
 - Affected features: engine selection
-- Affected files or symbols: `AudioEngineFactory.swift:95-103` (switch handles `"AudioKit"`, `"AudioKitEngine"`, falls through for `"AVAudioEngine"`), `AudioSettingsView.swift:12,27` (stores exactly `"AVAudioEngine"`)
-- Validation status: Confirmed (revalidated 2026-07-15)
-- Validation evidence: cited lines
+- Affected files or symbols: `AudioEnginePreference`, `AudioEngineFactory.preferredEngineType(for:)`, `AudioSettingsView.preferredAudioEngine`
+- Validation status: Completed (2026-07-18)
+- Validation evidence: typed preference decoding in `AudioEnginePreference`; factory selection and legacy-value migration coverage in `AudioEngineFactoryTests`; simulator navigation through Audio Settings in `LibraryNowPlayingSmokeTests`
 
 ### Problem
 Choosing AVAudioEngine in Settings is ignored: the stored string is not matched by the factory, so selection silently falls through to default logic.
@@ -34,8 +34,8 @@ Replace raw strings with one typed enum shared by settings and factory (single s
 Do not change engine capability logic or format routing — only preference decoding. Preserve existing preference keys (migrate values, don't rename keys).
 
 ### Acceptance Criteria
-- [ ] Every stored choice selects the requested capable engine (test per value incl. legacy strings)
-- [ ] Unknown values fall back with a visible/logged typed result
+- [x] Every stored choice selects the requested capable engine (test per value incl. legacy strings)
+- [x] Unknown values fall back with a visible/logged typed result
 
 ### Suggested Verification
 `AudioEngineFactoryTests` extension; focused run.
@@ -47,10 +47,10 @@ Persisted values from existing installs — include migration mapping test.
 Ledger M-15 (first slice).
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-18
+- Completed: 2026-07-18
+- Commit: Not requested
+- Verification result: Red regression reproduced the ignored AVAudioEngine preference before implementation. `AudioEngineFactoryTests` passed 13/13; `LibraryNowPlayingSmokeTests/testAudioSettingsSlidersExposeLabelsAndUnits` passed 1/1 on iPhone 17 Pro (iOS 27.0); full `Fonic HiFiTests` passed 447/447; focused SwiftLint and `git diff --check` passed. SwiftFormat remains unavailable, so its check is unverified.
 
 ## AUDIT-021 — Wire or remove the remaining inert audio settings
 
@@ -356,7 +356,7 @@ Ledger X-05 slice.
 - Commit:
 - Verification result:
 
-## AUDIT-027 — Diagnostics honesty: report unavailable as unavailable, bound sample buffers
+## AUDIT-027 — Diagnostics honesty: report unavailable as unavailable and inject metrics ownership
 
 - Status: [TODO]
 - Priority: P2
@@ -372,25 +372,25 @@ Ledger X-05 slice.
 - Depends on: —
 - Related tasks: AUDIT-028
 - Affected features: audio diagnostics UI
-- Affected files or symbols: `AudioKitEngineAdapter.swift:240-253` (hard-coded zero metrics, empty `collectMetrics()`), `AudioMonitorEngineHooks.swift:69-83` (polls the empty collector), diagnostics history buffers (unbounded, CP-012), `AVAudioEngineAdapter` direct Mach queries (WP4-R07)
-- Validation status: Confirmed (revalidated 2026-07-15)
-- Validation evidence: cited lines
+- Affected files or symbols: `AudioKitEngineAdapter.swift:240-253` (hard-coded zero metrics, empty `collectMetrics()`), `AudioMonitorEngineHooks.swift:69-83` (polls the empty collector), `AVAudioEngineAdapter` direct Mach queries (WP4-R07); history is already bounded by `AudioSessionAnalytics.maxEntries` and `AudioPerformanceProfiler.maxSamples`
+- Validation status: Partially stale — synthetic metrics, no-op polling, and direct process-metric ownership remain; the prior unbounded-history member is already fixed (revalidated 2026-07-15)
+- Validation evidence: cited lines; `AudioSessionAnalytics.swift:5-24`, `AudioPerformanceProfiler.swift:35-57`
 
 ### Problem
-Diagnostics show synthetic zeros as real measurements for the AudioKit engine, retain unbounded sample history, and query Mach APIs directly from the adapter.
+Diagnostics show synthetic zeros as real measurements for the AudioKit engine, poll an empty collector, and query Mach APIs directly from the adapter.
 
 ### Likely Root Cause
 Diagnostics scaffolding landed before real collection; per-engine capability differences never modeled.
 
 ### Recommended Implementation
-Represent unavailable metrics as an explicit unavailable state (never zeros); bound history buffers; inject a narrow `ProcessMetricsProviding` boundary (WP4-R07) and remove direct Mach queries from the adapter; only implement measurements with real evidence.
+Represent unavailable metrics as an explicit unavailable state (never zeros); stop polling unsupported/no-op collection paths; inject a narrow `ProcessMetricsProviding` boundary (WP4-R07) and remove direct Mach queries from the adapter; preserve the existing history bounds and only implement measurements with real evidence.
 
 ### Implementation Boundaries
 No new measurement claims. UI may show "not available for this engine".
 
 ### Acceptance Criteria
 - [ ] No synthetic zero is presented as data (test per engine)
-- [ ] Buffers bounded (test)
+- [ ] Unsupported engines do not start a no-op metrics poll (test)
 - [ ] Metrics provider injectable and mocked in tests
 
 ### Suggested Verification

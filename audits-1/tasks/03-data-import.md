@@ -2,7 +2,7 @@
 
 ## AUDIT-008 — Persist extracted ReplayGain metadata
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (DLP-008)
 - Audit finding IDs: DLP-008
@@ -17,44 +17,44 @@
 - Blocks: — (future replay-gain DSP work consumes it)
 - Related tasks: AUDIT-009, AUDIT-021
 - Affected features: import, replay gain
-- Affected files or symbols: `MetadataExtractionService.swift:82-83,108-109` (extraction), `TrackDataActor.swift:79-90` (`applyTrackMetadata` never assigns gain/peak)
-- Validation status: Confirmed (revalidated 2026-07-15)
-- Validation evidence: `applyTrackMetadata` assigns trackNumber/bitrate etc. but no ReplayGain fields
+- Affected files or symbols: `MetadataExtractionService.swift:82-83,108-109` (track/album gain extraction), `TrackDataActor.swift:79-101` (`applyTrackMetadata` never assigns either gain)
+- Validation status: Completed (2026-07-18)
+- Validation evidence: ReplayGain tag fixtures are parsed, persisted to the existing Track fields, and survive save/re-fetch
 
 ### Problem
-ReplayGain gain/peak values are extracted during import and then discarded, so the visible replay-gain playback setting can never act on real data.
+ReplayGain track and album gain values are extracted during import and then discarded, so the visible replay-gain playback setting cannot act on imported gain metadata.
 
 ### Likely Root Cause
 `applyTrackMetadata` was never extended when extraction gained ReplayGain support.
 
 ### Recommended Implementation
-Assign all extracted gain/peak fields to the Track model in `applyTrackMetadata` (model fields exist or need adding — verify; if a schema change is needed, coordinate with AUDIT-010's schema stage rather than creating a separate one).
+Assign the extracted `replayGainTrack` and `replayGainAlbum` values to the existing Track model fields in `applyTrackMetadata`.
 
 ### Implementation Boundaries
-No DSP behavior change; persistence only. If a schema change is required, it must ride the AUDIT-010 versioned schema.
+No DSP behavior or schema change; persistence of the two existing fields only. Peak-tag extraction/modeling is separate future scope.
 
 ### Acceptance Criteria
-- [ ] Import of a fixture with ReplayGain tags persists all four values
-- [ ] Values survive save/re-fetch (focused test, red before green)
+- [x] Import of a fixture with ReplayGain tags persists both track and album gain values
+- [x] Values survive save/re-fetch (focused test, red before green)
 
 ### Suggested Verification
 Focused metadata-to-model round-trip test; `RunSomeTests` on the import/metadata suite.
 
 ### Risks and Regression Areas
-Schema coupling — check whether Track already has the fields before assuming.
+Preserve the current optional-field semantics when tags are absent or malformed.
 
 ### Notes
 Ledger E-10.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-18
+- Completed: 2026-07-18
+- Commit: Not requested
+- Verification result: ReplayGain tag fixture and persistence round-trip passed; focused suites 32/32 and full `Fonic HiFiTests` target 442/442 passed; focused SwiftLint passed. `make check-deps` remains UNVERIFIED because SwiftFormat is unavailable.
 
 ## AUDIT-009 — Fix track/disc tuple byte offsets and persist parsed totals
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (DLP-009)
 - Audit finding IDs: DLP-009
@@ -70,8 +70,8 @@ Ledger E-10.
 - Related tasks: AUDIT-008
 - Affected features: import metadata (track/disc numbering)
 - Affected files or symbols: `MetadataExtractionService.swift:327-348` (`load(fromByteOffset:)` offsets), `TrackMetadata` (totals dropped), `TrackDataActor.swift:1061-1062`
-- Validation status: Confirmed (revalidated 2026-07-15)
-- Validation evidence: inconsistent offsets 6/0 for UInt16 loads; parsed trackCount/discCount never enter `TrackMetadata`
+- Validation status: Completed (2026-07-18)
+- Validation evidence: AAC-M4A and ALAC-M4A fixtures parse `3/12` and `2/3`; totals persist through `TrackDataActor`
 
 ### Problem
 Track/disc tuples in MP4-style metadata are read from wrong byte offsets and the parsed totals are dropped, so numbering can be wrong and "track N of M" is impossible.
@@ -86,8 +86,8 @@ Correct the big-endian tuple offsets (verify against the MP4 `trkn`/`disk` atom 
 Metadata parsing and persistence only; no UI changes here.
 
 ### Acceptance Criteria
-- [ ] Fixture files with known track/disc tuples parse to exact expected values (test red before fix)
-- [ ] Totals persisted and retrievable
+- [x] Fixture files with known track/disc tuples parse to exact expected values (test red before fix)
+- [x] Totals persisted and retrievable
 
 ### Suggested Verification
 Fixture-based unit tests with at least AAC-M4A and ALAC-M4A files; focused test run.
@@ -99,10 +99,10 @@ Existing imported libraries keep old values; consider whether a re-scan path is 
 Fixture-first (ledger routes this under M-14/H-13 fixtures). Group with AUDIT-008 — same files.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-18
+- Completed: 2026-07-18
+- Commit: Not requested
+- Verification result: AAC-M4A and ALAC-M4A production extraction fixtures passed; focused suites 32/32 and full `Fonic HiFiTests` target 442/442 passed; focused SwiftLint passed. `make check-deps` remains UNVERIFIED because SwiftFormat is unavailable.
 
 ## AUDIT-010 — Add ListeningSession to a new versioned schema and use the migration plan on first open
 

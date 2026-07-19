@@ -1,15 +1,15 @@
-# Resolved Findings Register — `[DONE]`
+# Resolved Findings Register — `[DONE]` + Partial Evidence
 
-Findings demonstrably fixed in the current working tree (validated 2026-07-15). No implementation task is created for these; residual verification, where any, is routed to the named task. Evidence cites current file:line.
+This register contains 27 findings demonstrably fixed in the current working tree and one explicitly partial dead-code evidence row (validated 2026-07-15). No implementation task is created for fully resolved rows; residual verification or remaining work is routed to the named task. Evidence cites current file:line.
 
 | # | Finding ID(s) | Title | Evidence of fix | Residual |
 |---|---|---|---|---|
 | 1 | CAN-002 (PCFG-002, PSR-002 / WP3-002) | Missing privacy manifests | `Fonic HiFi/PrivacyInfo.xcprivacy` and `Fonic HiFi Widget/PrivacyInfo.xcprivacy` exist and are tracked | Archive-time validation → AUDIT-005 |
-| 2 | CAN-003 (PCFG-003, PSR-003, TRV-001 / WP3-003) | CI selected impossible iOS 26 toolchain | `.github/workflows/ci.yml:10-37` runs on `macos-26` and dynamically selects the newest stable Xcode 26.x | Green-run evidence → AUDIT-005 |
+| 2 | CAN-003 (PCFG-003, PSR-003, TRV-001 / WP3-003) | CI selected an impossible toolchain | The failing hosted workflow is intentionally absent by owner decision under AUDIT-057 | Any future CI contract and green-run evidence → AUDIT-005 |
 | 3 | CAN-004 (PCFG-004, TRV-002) | No shared scheme/test plan | Tracked `Fonic HiFi.xcodeproj/xcshareddata/xcschemes/Fonic HiFi.xcscheme` and `Fonic HiFi.xctestplan` | — |
-| 4 | CAN-005 (PCFG-007, TRV-014) | No Release/analyze gates | `ci.yml` has `make build-release` and `make analyze` steps | Signed archive lane → AUDIT-055 |
-| 5 | PCFG-006 / CLN-002 | Orphan mode-160000 gitlink | `git ls-files -s | awk '$1==160000'` returns nothing | — |
-| 6 | DCA-PART-003 | QueueCoordinator inert methods | `rg removeFromQueue|moveInQueue|insertInQueue` in Core/Audio returns nothing (ledger E-06 verified) | — |
+| 4 | CAN-005 (PCFG-007, TRV-014) | No Release/analyze gates | Temporarily accepted while hosted CI is intentionally disabled; local `make build-release` and `make analyze` recipes remain available | Restore gates when CI is reintroduced → AUDIT-005; signed archive lane → AUDIT-055 |
+| 5 | PCFG-006 / CLN-002 | Orphan mode-160000 gitlink | `git ls-files -s \| awk '$1==160000'` returns nothing | — |
+| 6 | DCA-PART-003 | QueueCoordinator inert methods | `rg removeFromQueue\|moveInQueue\|insertInQueue` in Core/Audio returns nothing (ledger E-06 verified) | — |
 | 7 | AUD-REMOTE-001 | Skip commands enabled but discarded | `AudioSessionManager.swift:266-286` keeps `skipForward/Backward` disabled and targets removed (ledger E-08) | — |
 | 8 | AUD-RECOVERY-001 | Queue resume position dropped, shuffle restored wrong | `AudioQueueManager.swift:656-662` restores persisted traversal; `AudioEngineFacade.swift:328-332,426-430` seeks restored position on first play | — |
 | 9 | CAN-014 (AUD-QUEUE-001, UIUX-013) | Queue edit offsets translated wrong | `QueueView.swift:46-64` passes visible offsets to manager-owned translation; `AudioQueueManager.swift:203-221,261-285` computes `baseIndex` atomically, incl. shuffled edits (ledger E-07 + later work) | — |
@@ -28,7 +28,7 @@ Findings demonstrably fixed in the current working tree (validated 2026-07-15). 
 | 22 | A11Y-007 | Reduce Motion not honored | `NowPlayingContent.swift:19,54-55` gates animation on `reduceMotion` | — |
 | 23 | CAN-021 (UIUX-019, FMA-001) | Surprise Me lacked single-flight gate | `HomeView.swift:51,108-111,273-278` `SurpriseMeRequestGate.begin()` + `defer` release | — |
 | 24 | DCA-PART-004 | Smart-search taps only logged | `SmartSearchResultsView.swift:65-70` → `SearchView.swift:49-61` routes taps to `playTrack(track)` | — |
-| 25 | DCA-DEAD-001 (partial evidence) | 18 unreferenced production files | Spot-check: `TrackCache.swift`, `PlaybackStateStore.swift`, `AudioSettingsService.swift`, `PlaybackDiagnosticFormatters.swift` no longer exist under the production root | Remaining-file sweep folded into AUDIT-052 |
+| 25 | DCA-DEAD-001 (partial evidence) | Four files from the 18-file dead-code inventory removed | Spot-check: `TrackCache.swift`, `PlaybackStateStore.swift`, `AudioSettingsService.swift`, `PlaybackDiagnosticFormatters.swift` no longer exist under the production root | Remaining-file sweep folded into AUDIT-052; the full finding is not DONE |
 | 26 | DCA-SAMPLE-001 / CLN-005 | Sample fragments without build containers | `sample/AppleMusicBottomBar`, `sample/CustomMenu`, `sample/CustomToolBottomBar` each have `.xcodeproj` containers | — |
 | 27 | PCFG-009 | SwiftLint excluded widget/UI-test roots | `.swiftlint.yml:1-7` explicitly includes all four target roots | — |
 | 28 | TRV-003 | test-unit/test-ui were aliases | `Makefile:267-309` uses distinct `-only-testing:` filters and result bundles | — |

@@ -1,62 +1,62 @@
 # Security, Privacy & Configuration — AUDIT-001 … AUDIT-007
 
-## AUDIT-001 — Rotate exposed credentials and untrack local tool configuration
+## AUDIT-001 — Remove retired Kilo Code configuration
 
-- Status: [BLOCKED]
+- Status: [DONE]
 - Priority: P0
 - Audit sources: Model B (PCFG-001, PSR-001), Model A (A-C03), WP3-001, WP5 (CLN-001 part)
 - Audit finding IDs: CAN-001
 - Category: Security
 - Severity: High (WP3 recalibrated from Critical; validity of credentials unverified, exposure confirmed)
 - Difficulty: Easy
-- Risk: Low (repo-side); rotation itself is external
+- Risk: Low
 - Scope: Localized
 - Estimated effort: S
 - Implementation group: GROUP-01
-- Depends on: provider-side rotation (user/provider action)
-- Blocks: AUDIT-002 (final removal of the two config files)
+- Depends on: —
+- Blocks: —
 - Related tasks: AUDIT-002
 - Affected features: none (tooling config)
-- Affected files or symbols: `.claude/settings.local.json`, `.kilocode/mcp.json`, `.gitignore`
-- Validation status: Confirmed — both files remain tracked (`git ls-files`, 2026-07-15); repository is public per prior ledger evidence
-- Validation evidence: `git ls-files | grep settings.local` returns both paths; WP3-001 evidence package (redacted)
+- Affected files or symbols: `.kilocode/**`, `.gitignore`
+- Validation status: Completed 2026-07-16 — the owner retired Kilo Code and directed removal of the entire configuration folder
+- Validation evidence: `.kilocode` is absent; `git ls-files --deleted -- .kilocode` reports all 9 formerly tracked paths; `.gitignore` covers `.kilocode/`
 
 ### Problem
-Credential/endpoint-bearing local tool configuration is tracked in a public repository (and its history). Until rotated, the values must be treated as compromised.
+The retired Kilo Code configuration, including credential-bearing local MCP settings, remained tracked in the repository and its history.
 
 ### Likely Root Cause
-Local tool configs were committed before ignore rules covered them.
+The Kilo Code folder was committed before the tool was retired; the prior ignore rule covered only `mcp.json` rather than the complete tool directory.
 
 ### Recommended Implementation
-1. (External, owner) Rotate/revoke every exposed value at each provider; verify replacement works via environment/keychain injection. 2. `git rm --cached` both files, confirm ignore rules cover them, and (only if needed) add redacted templates. 3. Decide separately whether to rewrite history (requires explicit authorization — ledger SEC-03).
+Delete `.kilocode/` completely and ignore the entire directory so obsolete local configuration cannot be reintroduced. Do not create a replacement template because the tool will no longer be used.
 
 ### Implementation Boundaries
-Do not print or copy credential values anywhere. Do not rewrite history without explicit authorization. Do not delete users' local copies of the files.
+Do not print or copy credential values anywhere. Do not rewrite history without explicit authorization. Preserve unrelated local-tool configuration and user changes.
 
 ### Acceptance Criteria
-- [ ] Provider dashboards confirm old values revoked, replacements active
-- [ ] `git ls-files` returns neither path; local tooling still starts
-- [ ] Two independent secret scanners pass on the prospective commit
-- [ ] No credential value appears in any commit message, doc, or template
+- [x] `.kilocode/` is physically absent from the working tree
+- [x] All 9 formerly tracked `.kilocode` paths are recorded as deleted
+- [x] `.gitignore` covers the entire `.kilocode/` directory
+- [x] No credential value appears in task documentation or command output
 
 ### Suggested Verification
-`git ls-files | grep -E "settings.local|mcp.json"` empty; secret scan (e.g. gitleaks) on staged diff; tool smoke start.
+`test ! -e .kilocode`; `git ls-files --deleted -- .kilocode`; `git check-ignore --no-index -v .kilocode/probe`; `git diff --check`.
 
 ### Risks and Regression Areas
-Local tooling breakage if env/keychain injection is not set up before untracking.
+Deletion does not revoke historical provider credentials or erase existing Git history. Provider-side revocation remains prudent even though Kilo Code is retired.
 
 ### Notes
-BLOCKED on user/provider rotation (ledger SEC-01). The repo-side untracking (SEC-02) can be prepared but should land after rotation.
+The owner explicitly scoped completion to full `.kilocode/` removal on 2026-07-16. `.claude/settings.local.json` was untracked by AUDIT-002 and its local copy was removed with the broader AUDIT-056 Claude purge.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-16
+- Completed: 2026-07-16
+- Commit: Not requested
+- Verification result: MATCH — `.kilocode` absent; 9 tracked paths deleted; directory-wide ignore rule matched; scoped `git diff --check` passed
 
 ## AUDIT-002 — Purge remaining tracked artifacts and duplicate documents
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (PCFG-008, PSR-007, DCA-ART-001), WP5 (CLN-001 residual, CLN-007, CLN-009), Model A (A-C07/C09)
 - Audit finding IDs: CAN-006 (residual)
@@ -67,13 +67,13 @@ BLOCKED on user/provider rotation (ledger SEC-01). The repo-side untracking (SEC
 - Scope: Localized
 - Estimated effort: XS
 - Implementation group: GROUP-01
-- Depends on: AUDIT-001 (only for the two credential configs; the rest can proceed now)
+- Depends on: —
 - Blocks: —
-- Related tasks: AUDIT-052, AUDIT-053
+- Related tasks: AUDIT-052, AUDIT-053, AUDIT-056
 - Affected features: none
-- Affected files or symbols: `sample/**/xcuserdata/*.plist` (3), `CLAUDE copy.md`, `docs/plans/2025-12-06-home-screen-discovery-design copy.md`, `log.md`, `EQ.md`, `Files-analysis.md`, `summary.md` (assess), `.AGENTS.md.backup.md` (untracked — leave), legacy empty AppIcon set (CLN-009)
-- Validation status: Confirmed partial — main-project `xcuserdata`, backup pbxproj, and build logs already removed (ledger E-02, commits `b64b89d`, `814bf5e`); the listed paths remain tracked as of 2026-07-15
-- Validation evidence: `git ls-files` output 2026-07-15 shows the 3 sample `xcuserdata` plists, both `copy` docs, and `log.md` still tracked
+- Affected files or symbols: `.claude/settings.local.json`, `sample/**/xcuserdata/*.plist` (3), `CLAUDE copy.md`, `docs/plans/2025-12-06-home-screen-discovery-design copy.md`, `log.md`, `EQ.md`, `Files-analysis.md`, `summary.md` (assess), `.AGENTS.md.backup.md` (untracked — leave), legacy empty AppIcon set (CLN-009)
+- Validation status: Completed 2026-07-16 — eight scoped index removals staged; local copies of machine-local files preserved; duplicates and empty AppIcon set removed from disk
+- Validation evidence: staged `D` for exactly 8 paths; local keep confirmed for `settings.local.json`, `log.md`, and 3 sample `xcuserdata` plists; ignore rules still match those paths; canonical home-design plan and `Fonic.icon/icon.json` present; acceptance scan empty for settings/log/copy/main AppIcon/sample xcuserdata
 
 ### Problem
 Machine-local state, raw logs, and stale document copies remain tracked, defeating hygiene and confusing future readers.
@@ -82,34 +82,34 @@ Machine-local state, raw logs, and stale document copies remain tracked, defeati
 Cleanup batches E-01/E-02 intentionally stopped at the main project; sample projects and docs were out of scope.
 
 ### Recommended Implementation
-`git rm --cached` the sample `xcuserdata` plists and `log.md`; reconcile unique content from the two `copy` docs into their canonical files, then remove copies; assess `EQ.md`/`summary.md`/`Files-analysis.md` for archival under `docs/`; remove the empty legacy AppIcon set only after an archive build validates the `Fonic.icon` path (CLN-009 gate).
+After ownership review, untrack `.claude/settings.local.json` without deleting its local copy. `git rm --cached` the sample `xcuserdata` plists and `log.md`; reconcile unique content from the two `copy` docs into their canonical files, then remove copies; assess `EQ.md`/`summary.md`/`Files-analysis.md` for archival under `docs/`; remove the empty legacy AppIcon set only after an archive build validates the `Fonic.icon` path (CLN-009 gate).
 
 ### Implementation Boundaries
 One category per commit. Do not touch `Files/` (intentional historical archive, CLN-014). Do not delete local copies of removed files.
 
 ### Acceptance Criteria
-- [ ] `git ls-files` returns no `xcuserdata`, raw-log, or `copy` doc paths
-- [ ] Unique content from removed copies preserved in canonical docs
-- [ ] Build still succeeds after AppIcon-set removal (if performed)
+- [x] `git ls-files` returns no local-config (`settings.local.json`), sample `xcuserdata`, raw-log (`log.md`), or `copy` doc / main AppIcon paths (staged removal; commit not requested)
+- [x] Canonical docs retain the current content; removed copies contained only superseded guidance/design text
+- [x] Release device build succeeds after AppIcon-set removal and compiles `Fonic.icon` as `--app-icon Fonic`
 
 ### Suggested Verification
-`git ls-files | grep -E "xcuserdata|copy|^log\.md"` empty; `git diff --check`; simulator build after asset removal.
+`git ls-files | grep -E "xcuserdata|copy|^log\.md"` empty for AUDIT-002 classes; `git diff --cached --check`; local presence of untracked machine-local files.
 
 ### Risks and Regression Areas
 Accidental deletion of a doc with unique content — diff each copy against canonical first.
 
 ### Notes
-`.AGENTS.md.backup.md` and `music-file/` are untracked user files; leave them alone.
+`.AGENTS.md.backup.md` and `music-file/` are untracked user files and were left alone. `EQ.md`, `Files-analysis.md`, and `summary.md` remain tracked because AUDIT-053 explicitly owns their validation/indexing. Full tracked `.claude/` tree, root `CLAUDE.md`, and sample `.claude` are **not** in this task; they are routed to AUDIT-056. Nested untracked `AGENTS.md` files can still block an unmodified Release build (duplicate bundle resources); prior asset validation used `EXCLUDED_SOURCE_FILE_NAMES=AGENTS.md` only as a command-line override.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-16
+- Completed: 2026-07-16
+- Commit: Not requested (8 paths remain staged)
+- Verification result: MATCH — staged deletions/untracks for 8 AUDIT-002 paths; machine-local files still on disk and ignored; copies and empty AppIcon absent; `Fonic.icon` present; `git diff --cached --check` clean
 
 ## AUDIT-003 — Fix widget AccentColor build-setting / asset mismatch
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (PCFG-011)
 - Audit finding IDs: PCFG-011
@@ -124,9 +124,9 @@ Accidental deletion of a doc with unique content — diff each copy against cano
 - Blocks: —
 - Related tasks: AUDIT-048 (widget builds)
 - Affected features: Widget appearance
-- Affected files or symbols: `Fonic HiFi.xcodeproj/project.pbxproj:717-720,749-752` (`ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor` for the widget target); widget target has no `.xcassets` colorset
-- Validation status: Confirmed (revalidated 2026-07-15)
-- Validation evidence: pbxproj lines cited; no widget colorset exists under the widget synchronized root
+- Affected files or symbols: `Fonic HiFi.xcodeproj/project.pbxproj` widget Debug/Release build settings
+- Validation status: Completed 2026-07-16 — the stale widget-only AccentColor setting was removed from both configurations
+- Validation evidence: live build settings retain `AccentColor` on the app target but not the widget; fresh Debug and Release app+extension builds pass; the installed widget renders in light and dark appearances
 
 ### Problem
 The widget target names an accent colorset that does not exist in its own asset catalogs; tint falls back silently and the setting is misleading.
@@ -135,14 +135,14 @@ The widget target names an accent colorset that does not exist in its own asset 
 Setting copied from the app target when the widget was created.
 
 ### Recommended Implementation
-Either add an `AccentColor` colorset to a widget asset catalog (matching the app palette) or clear the widget-target setting. Prefer adding the asset for visual parity.
+Clear the widget-target setting in Debug and Release. The app's existing `AccentColor` colorset contains no custom color, so adding a duplicate empty widget catalog would not change appearance.
 
 ### Implementation Boundaries
 Widget target only; do not alter app-target asset settings or the shared palette definitions.
 
 ### Acceptance Criteria
-- [ ] Widget builds with no missing-asset warning
-- [ ] Widget tint matches app accent in light/dark snapshots
+- [x] Widget builds with no missing-asset warning
+- [x] Widget tint matches the app's default accent behavior in light/dark screenshots
 
 ### Suggested Verification
 Build app + extension; widget snapshot in light/dark.
@@ -151,13 +151,13 @@ Build app + extension; widget snapshot in light/dark.
 None significant.
 
 ### Notes
-Requires editing `project.pbxproj` — a genuine build-setting change, permitted by repo rules for this purpose.
+The initial unmodified build was blocked by duplicate untracked nested `AGENTS.md` resources. Validation used the existing command-line-only `EXCLUDED_SOURCE_FILE_NAMES=AGENTS.md` workaround; no project setting was added for that separate issue. Xcode 27's Device Hub was used for light/dark widget screenshots after the Xcode IDE preview bridge timed out.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-16
+- Completed: 2026-07-16
+- Commit: Not requested
+- Verification result: MATCH — pbxproj parses; widget AccentColor setting absent in Debug/Release while app setting remains; fresh Debug and Release builds succeeded on iPhone 17 Pro (iOS 26.5); light/dark widget screenshots passed
 
 ## AUDIT-004 — Decide and reconcile APNs and Live Activity declarations
 
@@ -213,7 +213,7 @@ BLOCKED on product decision (ledger E-05).
 
 ## AUDIT-005 — Close CI/config residuals: green-run evidence, dependency pinning, manifest and coverage checks
 
-- Status: [TODO]
+- Status: [BLOCKED]
 - Priority: P1
 - Audit sources: Model B (PCFG-005, TRV-013), WP3-002/003 residuals
 - Audit finding IDs: PCFG-005, TRV-013, CAN-002 (residual), CAN-003 (residual)
@@ -221,42 +221,43 @@ BLOCKED on product decision (ledger E-05).
 - Severity: Medium
 - Difficulty: Easy
 - Risk: Low
-- Scope: Multi-file (workflow, Makefile, docs)
+- Scope: Future multi-file work (workflow, Makefile, docs)
 - Estimated effort: S
 - Implementation group: GROUP-01
-- Depends on: —
+- Depends on: owner decision to reintroduce CI; supported Xcode 27 runner/toolchain
 - Blocks: —
-- Related tasks: AUDIT-050, AUDIT-055
-- Affected features: CI pipeline
-- Affected files or symbols: `.github/workflows/ci.yml`, `Makefile` (`install-deps`, `coverage-check`), `Package.resolved`
-- Validation status: Partially fixed — CI workflow was rebuilt (stable Xcode 26 selection, split unit/UI, Release+analyze gates all present); pin enforcement and a recorded green run remain open
-- Validation evidence: `ci.yml:10-80` (2026-07-15); prior ledger noted 20 consecutive failed runs *before* the rework — no post-rework green run is recorded in the repo
+- Related tasks: AUDIT-050, AUDIT-055, AUDIT-057
+- Affected features: future CI pipeline
+- Affected files or symbols: future `.github/workflows/ci.yml`; `Makefile` (`install-deps`, `coverage-check`); `Package.resolved`
+- Validation status: Blocked 2026-07-18 — the owner directed removal of the failing Xcode 27 beta workflow until further notice
+- Validation evidence: AUDIT-057 records the owner decision and verifies that no hosted workflow is active; local Makefile validation remains available
 
 ### Problem
-The rebuilt CI is unproven (no recorded green run), dependency/tool resolution is not fully pin-enforced (PCFG-005), and coverage evidence is not retained in-repo (TRV-013).
+Hosted CI is intentionally disabled because the available runner/toolchain contract has not reliably supported the project's Xcode 27 beta baseline. Dependency pin enforcement, deterministic tool versions, coverage behavior, and green-run evidence remain requirements for any future workflow.
 
 ### Likely Root Cause
-CI rework landed recently; enforcement and evidence steps were not part of it.
+The attempted hosted workflow depended on an unavailable or unreliable Xcode 27 beta runner contract. Repeated failures did not provide trustworthy project evidence.
 
 ### Recommended Implementation
-1. Trigger CI and record the run result; fix any residual workflow break. 2. Enforce `Package.resolved` (e.g. `-disableAutomaticPackageResolution` or resolved-file check step). 3. Verify `make install-deps` in CI is deterministic and doesn't drift tool versions. 4. Retain coverage summary artifacts and document thresholds.
+Take no implementation action until the owner explicitly reintroduces CI. At that point: select a supported runner and Xcode 27 toolchain; enforce `Package.resolved`; pin development-tool versions; retain distinct unit/UI, Release, analyze, and coverage gates; then record a representative green run and artifact evidence.
 
 ### Implementation Boundaries
-No dependency updates. Do not change test content. Do not weaken coverage thresholds.
+Do not recreate a workflow speculatively. No dependency updates, test-content changes, weakened coverage thresholds, or external CI writes without explicit scope.
 
 ### Acceptance Criteria
-- [ ] One green CI run on `main` recorded (link/ID in ledger)
+- [ ] Owner explicitly authorizes CI reintroduction and names the supported runner/toolchain
 - [ ] CI fails if `Package.resolved` would change during resolution
-- [ ] Coverage artifacts retained per run; threshold behavior documented
+- [ ] Unit/UI, Release, analyze, privacy-manifest, and coverage gates run with deterministic tool versions
+- [ ] One green run and its coverage/test artifacts are recorded
 
 ### Suggested Verification
-Push a trivial docs commit or manually dispatch the workflow; inspect run logs for the selected Xcode line and per-step exit codes.
+When unblocked, validate the workflow syntax locally, inspect the selected runner/Xcode lines, and review every gate's exit status and uploaded artifacts. No push or dispatch is authorized by this task alone.
 
 ### Risks and Regression Areas
-`make install-deps` requires Homebrew installs — CI-only; do not run locally without approval.
+Runner availability can regress independently of repository code. `make install-deps` performs package-manager writes and must not run locally without approval.
 
 ### Notes
-CAN-003's core fix is DONE (register #2); this task carries only the evidence/enforcement tail.
+The earlier workflow repair is historical evidence only. AUDIT-057 intentionally retires hosted CI; this task is the blocked reintroduction/evidence contract.
 
 ### Implementation Record
 - Started:
@@ -266,7 +267,7 @@ CAN-003's core fix is DONE (register #2); this task carries only the evidence/en
 
 ## AUDIT-006 — Remove `.public` logging of user library content and paths
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (PSR-004), WP3-023
 - Audit finding IDs: PSR-004
@@ -281,9 +282,9 @@ CAN-003's core fix is DONE (register #2); this task carries only the evidence/en
 - Blocks: —
 - Related tasks: AUDIT-007
 - Affected features: logging/diagnostics
-- Affected files or symbols: ~17 sites incl. `FileManagerView.swift:238-276,340-392`, `MetadataExtractionService.swift:142-170`, `FileImportProcessor.swift:368-400,587`
-- Validation status: Confirmed (revalidated 2026-07-15, ~17 remaining `.public` user-data sites)
-- Validation evidence: rg sweep by validation agent, examples cited above
+- Affected files or symbols: confirmed sites include `FileManagerView.swift:238-276,340-392`, `MetadataExtractionService.swift:142-170`, `FileImportProcessor.swift:368-400,587`, and other user-content logging call sites found by the acceptance scan
+- Validation status: Completed 2026-07-16 — content-bearing public interpolations were redacted while operational fields remained public
+- Validation evidence: two independent static probes found zero prohibited content-bearing `.public` interpolations; focused tests and the full unit target passed; Debug app+widget build passed
 
 ### Problem
 Release-reachable os.Logger calls mark file paths, filenames, folder names, and metadata `.public`, defeating OSLog privacy redaction for user library content.
@@ -298,9 +299,9 @@ One module per batch: replace `.public` on user-data interpolations with `.priva
 Do not delete log statements or change log levels/taxonomy; only privacy annotations. Follow `Log.logger(_:)` conventions (AGENTS.md §5).
 
 ### Acceptance Criteria
-- [ ] Static scan finds zero `.public` annotations on paths/titles/queries/filenames
-- [ ] Logs remain useful (operational fields still public)
-- [ ] No `print()` introduced
+- [x] Static scan finds zero `.public` annotations on paths/titles/queries/filenames
+- [x] Logs remain useful (operational counts, durations, booleans, formats, and state/type values remain public)
+- [x] No `print()` introduced
 
 ### Suggested Verification
 `rg "privacy: \.public" "Fonic HiFi"` review; build + focused tests of touched modules.
@@ -312,10 +313,10 @@ Over-redaction can hamper support diagnostics — keep counts/codes public.
 Ledger M-21. Batch by module to keep diffs reviewable.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-16
+- Completed: 2026-07-16
+- Commit: Not requested
+- Verification result: MATCH — two independent prohibited-content scans returned no matches; focused suites executed 39 tests with 0 failures; full `Fonic HiFiTests` executed 437 tests with 0 failures and 0 skips; Debug app+widget build succeeded; SwiftLint remains unavailable locally
 
 ## AUDIT-007 — Privacy disclosure, data map, backup/protection policy, export classification
 

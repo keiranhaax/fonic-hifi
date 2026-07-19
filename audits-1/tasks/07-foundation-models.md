@@ -83,7 +83,7 @@ CancellationError not rethrown; fallback designed as a placeholder.
 Rethrow/propagate cancellation (never convert to results); add request identity/generation in the view model so only the latest request commits; on model unavailability/failure, hand off to the deterministic standard search pipeline and label the results accordingly.
 
 ### Implementation Boundaries
-Preserve `LanguageModelSession` single-request serialization. Deterministic fallback must never block normal search (AGENTS.md).
+Add an explicit single-request gate around each shared `LanguageModelSession` (or use an independent session per request); the current services cache sessions without serialization. Deterministic fallback must never block normal search (AGENTS.md).
 
 ### Acceptance Criteria
 - [ ] Cancelled generation commits no state (test)
@@ -97,7 +97,7 @@ Async view-model tests with controlled generation stubs; UI check of fallback la
 Search debounce/cancellation flow in `SmartSearchViewModel`; ensure fallback handoff cannot double-run standard search alongside a late AI completion.
 
 ### Notes
-FMA-005 was previously masked by unreachable smart search (UIUX-011) — now reachable, so this defect is user-visible.
+FMA-005 was previously masked by unreachable smart search (UIUX-011) — now reachable, so this defect is user-visible. Apple documents that a `LanguageModelSession` handles one request at a time and errors on a concurrent request: `https://developer.apple.com/documentation/foundationmodels/generating-content-and-performing-tasks-with-foundation-models`.
 
 ### Implementation Record
 - Started:
@@ -126,7 +126,7 @@ FMA-005 was previously masked by unreachable smart search (UIUX-011) — now rea
 - Validation evidence: cited lines
 
 ### Problem
-Home's entire content — including non-AI sections — waits for a Foundation Models response before first paint; on slow/unavailable models the home screen stalls.
+Home's entire content — including non-AI sections — waits for greeting generation or its deterministic fallback before first paint; generation latency can therefore stall the home screen, while the unavailable-model path currently returns a fallback.
 
 ### Likely Root Cause
 Single loading flag spanning AI and non-AI content.
@@ -183,7 +183,7 @@ AI tests exercise only fallbacks with vacuous assertions; the generation path, i
 No injection seam for the session/generation layer.
 
 ### Recommended Implementation
-Introduce a narrow generation-provider seam (protocol around session use, preserving single-request serialization); test matrix: unavailable, generation error, malformed output, duplicate/out-of-set IDs, over-limit, cancellation mid-generation, locale failure; plus one guarded on-device supported-path test (skipped with explicit reason elsewhere, per repo skip policy).
+Introduce a narrow generation-provider seam (protocol around session use) plus an explicit single-request gate for each shared session; test matrix: unavailable, generation error, malformed output, duplicate/out-of-set IDs, over-limit, cancellation mid-generation, locale failure; plus one guarded on-device supported-path test (skipped with explicit reason elsewhere, per repo skip policy).
 
 ### Implementation Boundaries
 Test seams must not weaken production isolation. Simulator success is not Apple Intelligence hardware proof — record that limit.

@@ -124,12 +124,12 @@ Poll interval comments in code ("5x slower than 100ms") show the loop is a worka
 - Blocks: — (conventions consumed by AUDIT-011, 024, 047, 051)
 - Related tasks: AUDIT-051, AUDIT-047, AUDIT-005 (CI gates)
 - Affected features: test suite reliability
-- Affected files or symbols: `AudioKitEngineAdapterTests.swift:9,24,41,72,88,108,126,140` (eight `XCTSkip("AudioKit engine failed to initialize…")` converting failures into green skips), `LibraryNowPlayingSmokeTests.swift:28-45,64-84,87-117` (skips on missing prerequisites), `SleepTimerManagerTests.swift:26,47,66` (1.5–2.5 s real sleeps), `PlaybackStateManagerTests.swift:27,48,79,97` (100 ms sleeps), `QueueState.swift:314-357` / `AudioQueueManager.swift:655-665` (tests share real UserDefaults/sandbox state)
+- Affected files or symbols: `Fonic HiFiTests/AudioKitEngineAdapterTests.swift:9,24,41,72,88,108,126,140` (eight `XCTSkip("AudioKit engine failed to initialize…")` converting failures into green skips), `Fonic HiFiTests/SleepTimerManagerTests.swift:26,47,66` (1.5–2.5 s real sleeps), `Fonic HiFiTests/PlaybackStateManagerTests.swift:27,48,79,97` (100 ms sleeps), `QueueState.swift:327-365` / `AudioQueueManager.swift:655-665` (tests share real UserDefaults/sandbox state)
 - Validation status: Confirmed (revalidated 2026-07-15)
 - Validation evidence: cited lines
 
 ### Problem
-Three compounding defects make the suite slow and untrustworthy: environment failures become passing skips (a broken AudioKit init produces a green run), real sleeps make timer/async tests scheduler-dependent and add seconds per test, and tests mutate shared process state (real UserDefaults suite) so order affects results.
+Three compounding defects make the suite slow and untrustworthy: environment failures become passing skips (a broken AudioKit init produces a green run), real sleeps make timer/async tests scheduler-dependent and add seconds per test, and tests mutate shared process state (real UserDefaults suite) so order can affect results.
 
 ### Likely Root Cause
 No injectable clock; no per-test defaults isolation; skips used as a shortcut for unavailable prerequisites.
@@ -285,9 +285,9 @@ Deliberately last-priority: zero user value, nonzero regression risk. Do not run
 - Blocks: —
 - Related tasks: AUDIT-002 (removes the duplicate-copy docs; this task organizes what remains)
 - Affected features: none (docs)
-- Affected files or symbols: 207 tracked docs across competing roots (`.factory/docs` 27, `docs/plans` 10, `Files/**` 98, root 9); `CLAUDE.md:46-53` links four `docs/references/` targets that exist locally but are **untracked** (broken for any fresh clone — decide with the user whether to track them); `summary.md` reports a stale 172-file architecture (current tree has 200+ Swift files); `Files-analysis.md`, `EQ.md` unindexed at root
-- Validation status: Confirmed structurally (roots re-checked 2026-07-15; `docs/references/` link targets exist untracked — audit claim partially outdated)
-- Validation evidence: WP5 CLN-008 evidence block; directory listing
+- Affected files or symbols: 215 tracked Markdown docs across competing roots (`.factory/docs` 27, `docs/plans` 11, `Files/**` 98, root 9); `CLAUDE.md:46-53` links four `docs/references/` targets that exist locally but are **untracked** (broken for any fresh clone — decide with the user whether to track them); `summary.md` reports a stale 172-file architecture (the four target roots currently contain 288 Swift files); `Files-analysis.md`, `EQ.md` unindexed at root
+- Validation status: Confirmed structurally (tracked-document and target-root counts re-checked 2026-07-15; `docs/references/` link targets exist untracked)
+- Validation evidence: `git ls-files` scoped counts, target-root `rg --files -g '*.swift'`, and WP5 CLN-008 evidence block
 
 ### Problem
 Documentation is fragmented across five roots with contradictory or stale content and broken links, so agents and humans revalidate everything from scratch (AGENTS.md already mandates distrust of `README.md`/`STATUS.md`/`Files/` claims — this task reduces why).
@@ -391,20 +391,20 @@ Explicitly an umbrella: decompose into per-phase tasks after Phase 0 ranks the w
 - Implementation group: —
 - Depends on: implementations it verifies — notably AUDIT-026 (media reset), AUDIT-028 (bit-perfect claims), AUDIT-031/032 (session/route), AUDIT-034 (gapless); consumes AUDIT-047's on-device AI check
 - Blocks: any "release-ready", "gapless", or "bit-perfect" claim
-- Related tasks: AUDIT-004/007 (release configuration/privacy answers), AUDIT-005 (CI evidence)
+- Related tasks: AUDIT-004/007 (release configuration/privacy answers), AUDIT-005 (future CI evidence, blocked), AUDIT-057 (CI retirement)
 - Affected features: none directly (verification lane)
-- Affected files or symbols: `Makefile:15-18,248-255`, `.github/workflows/ci.yml:8-57` (simulator-only lanes; no device matrix)
+- Affected files or symbols: `Makefile` simulator-only lanes; no active hosted workflow or device matrix
 - Validation status: Confirmed — no device lane exists; AGENTS.md §7 requires device evidence for exactly these behaviors
 - Validation evidence: cited config; repo verification matrix
 
 ### Problem
-The product's highest-risk behaviors — background audio, interruptions, route changes (Bluetooth/USB DAC/AirPlay), gapless and high-resolution output, bit-perfect claims, Apple Intelligence features, VoiceOver/Dynamic Type/locale behavior, widget on device — have no verification lane at all; every current claim about them is simulator-derived or static.
+The product's highest-risk behaviors — background audio, interruptions, route changes (Bluetooth/USB DAC/AirPlay), gapless and high-resolution output, bit-perfect claims, Apple Intelligence features, VoiceOver/Dynamic Type/locale behavior, widget on device — have no recorded physical-device verification lane. The repository provides simulator/static checks but no device evidence establishing these behaviors.
 
 ### Likely Root Cause
 No physical-device test program was ever established.
 
 ### Recommended Implementation
-Define a repeatable acceptance matrix (owner + device set required): interruption/route/background scenarios per AGENTS.md §7; consecutive real-track gapless capture; digital-output capture for any bit-perfect wording (with AUDIT-028's eligibility rename); Apple Intelligence supported-path checks (AUDIT-047); VoiceOver/Dynamic Type/RTL/locale pass (CAN-020); widget timeline/stale-data behavior on device. Record results as release evidence artifacts; wire summary reporting into CI where feasible.
+Define a repeatable acceptance matrix (owner + device set required): interruption/route/background scenarios per AGENTS.md §7; consecutive real-track gapless capture; digital-output capture for any bit-perfect wording (with AUDIT-028's eligibility rename); Apple Intelligence supported-path checks (AUDIT-047); VoiceOver/Dynamic Type/RTL/locale pass (CAN-020); widget timeline/stale-data behavior on device. Record results as release evidence artifacts; wire summary reporting into CI only if CI is intentionally reintroduced.
 
 ### Implementation Boundaries
 Evidence and process only — findings feed back as new tasks, not ad-hoc fixes inside this lane.

@@ -1,0 +1,132 @@
+{
+  "status": "PASS",
+  "checkCount": 18,
+  "failureCount": 0,
+  "checks": [
+    {
+      "check": "normalized source count",
+      "result": "PASS",
+      "detail": 147
+    },
+    {
+      "check": "normalized source IDs unique",
+      "result": "PASS",
+      "detail": 147
+    },
+    {
+      "check": "normalized parser field gaps",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "check": "decision cluster count",
+      "result": "PASS",
+      "detail": 26
+    },
+    {
+      "check": "merged member IDs unique",
+      "result": "PASS",
+      "detail": 55
+    },
+    {
+      "check": "merged member IDs exist",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "check": "near-duplicate non-merge decisions documented",
+      "result": "PASS",
+      "detail": 16
+    },
+    {
+      "check": "canonical summary counts",
+      "result": "PASS",
+      "detail": {
+        "sourceFindingCount": 147,
+        "sourceUniqueIDCount": 147,
+        "mergedClusterCount": 26,
+        "mergedSourceFindingCount": 55,
+        "standaloneCanonicalCount": 92,
+        "canonicalFindingCount": 118,
+        "deduplicatedRecordReduction": 29,
+        "deduplicatedRecordReductionPercent": 19.73,
+        "sourceSeverityCounts": {
+          "Critical": 4,
+          "High": 23,
+          "Informational": 7,
+          "Low": 17,
+          "Medium": 96
+        },
+        "canonicalHighestSeverityCounts": {
+          "Critical": 2,
+          "High": 21,
+          "Informational": 6,
+          "Low": 14,
+          "Medium": 75
+        }
+      }
+    },
+    {
+      "check": "canonical build status",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "check": "source-to-canonical coverage",
+      "result": "PASS",
+      "detail": 147
+    },
+    {
+      "check": "canonical row count",
+      "result": "PASS",
+      "detail": 118
+    },
+    {
+      "check": "every source record preserved byte-for-byte as JSON data",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "check": "accepted clusters have a connected source-location or explicit-related anchor graph",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "check": "source severity counts preserved",
+      "result": "PASS",
+      "detail": {
+        "Critical": 4,
+        "High": 23,
+        "Informational": 7,
+        "Low": 17,
+        "Medium": 96
+      }
+    },
+    {
+      "check": "canonical severity counts computed from highest member severity",
+      "result": "PASS",
+      "detail": {
+        "Critical": 2,
+        "High": 21,
+        "Informational": 6,
+        "Low": 14,
+        "Medium": 75
+      }
+    },
+    {
+      "check": "non-merge references resolve",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "check": "repository revision unchanged",
+      "result": "PASS",
+      "detail": "459db9bfd18d17960e8fd2ff8defc4701085532e"
+    },
+    {
+      "check": "repository worktree clean",
+      "result": "PASS",
+      "detail": ""
+    }
+  ]
+}

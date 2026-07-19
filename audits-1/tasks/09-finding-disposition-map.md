@@ -2,18 +2,18 @@
 
 Every normalized WP1–WP5 finding from the audit corpus is mapped to its task or disposition. Model A's 46 findings were not independently normalized; corroborating Model A IDs are cross-referenced where used. Generated against the current working tree on 2026-07-15; regenerate the routing if task files are renumbered.
 
-Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-findings.md` = verified fixed in the current tree (see that register for evidence); split routings list every task that carries part of the finding.
+Legend: `AUDIT-###` = task in files `02`–`10`; `DONE — 01-resolved-findings.md` = verified fixed or explicitly owner-dispositioned in the current tree (see that register for evidence); split routings list every task that carries part of the finding.
 
 ## WP2 canonical findings (118) → disposition
 
 | Canonical ID | Severity | Title | Member source IDs | Disposition |
 |---|---|---|---|---|
-| CAN-001 | Critical | Four credential values of unverified current validity and a sensitive local endpoint are committed | PCFG-001, PSR-001 | AUDIT-001 |
+| CAN-001 | Critical | Four credential values of unverified current validity and a sensitive local endpoint are committed | PCFG-001, PSR-001 | AUDIT-001 (worktree removal), AUDIT-061 (provider/history disposition) |
 | CAN-002 | Critical | App and widget lack required-reason privacy manifests | PCFG-002, PSR-002 | AUDIT-005, DONE — 01-resolved-findings.md |
 | AUD-ENG-002 | High | Play requests are not serialized or cancelled | AUD-ENG-002 | AUDIT-030 |
 | AUD-SESSION-001 | High | Audio-session ownership is split and native load deactivates after activation | AUD-SESSION-001 | AUDIT-031 |
 | AUD-SESSION-002 | High | Interruption intent and route-loss safety are not preserved | AUD-SESSION-002 | AUDIT-032 |
-| CAN-003 | High | CI selects an impossible and internally conflicting iOS 26 toolchain | PCFG-003, PSR-003, TRV-001 | AUDIT-005, DONE — 01-resolved-findings.md |
+| CAN-003 | High | CI selects an impossible and internally conflicting iOS 26 toolchain | PCFG-003, PSR-003, TRV-001 | AUDIT-057 (workflow retired), AUDIT-005 (reintroduction blocked), DONE — 01-resolved-findings.md |
 | CAN-009 | High | Listening-session tracking exists but is never wired into production | DLP-004, DCA-PART-001 | AUDIT-011 |
 | CAN-010 | High | Concurrent import deduplication has a check-to-insert race | DLP-006, CP-004 | AUDIT-014 |
 | CAN-013 | High | Import cancellation does not propagate to AsyncStream producers | DLP-021, CP-002 | AUDIT-015 |
@@ -27,7 +27,7 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 | DLP-003 | High | The declared migration plan is only a fallback after an unplanned open | DLP-003 | AUDIT-010 |
 | DLP-005 | High | Import failure after copy leaks managed audio files | DLP-005 | AUDIT-013 |
 | DLP-007 | High | Startup cleanup converts temporary unavailability into permanent library deletion | DLP-007 | AUDIT-016 |
-| PSR-004 | High | Release logging marks user library content and diagnostic details public | PSR-004 | AUDIT-006 |
+| PSR-004 | High | Release logging marks user library content and diagnostic details public | PSR-004 | AUDIT-006 (confirmed `.public` content fixed), AUDIT-065 (explicit-privacy residual) |
 | UIUX-001 | High | The app-wide audio model is injected as an unobserved environment value | UIUX-001 | AUDIT-036 |
 | UIUX-002 | High | Now Playing duplicates authoritative shuffle, repeat, and speed state | UIUX-002 | AUDIT-037 |
 | UIUX-010 | High | Import progress is unobserved; picker errors are invisible; presentation depends on a race | UIUX-010 | AUDIT-038 |
@@ -38,7 +38,7 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 | A11Y-008 | Medium | Shuffle-on and repeat-all states rely on opacity/color when their symbols do not change | A11Y-008 | AUDIT-040 |
 | AUD-BIT-001 | Medium | Bit-perfect cache is not keyed by track or route | AUD-BIT-001 | AUDIT-028 |
 | AUD-BIT-002 | Medium | “Bit-perfect” is asserted without observing the active engine signal path | AUD-BIT-002 | AUDIT-028 |
-| AUD-ENG-001 | Medium | AVAudioEngine preference is ignored | AUD-ENG-001 | AUDIT-020 |
+| AUD-ENG-001 | Medium | AVAudioEngine preference is ignored | AUD-ENG-001 | AUDIT-020 (DONE) |
 | AUD-FORMAT-001 | Medium | M4A container is always reported as ALAC/lossless | AUD-FORMAT-001 | AUDIT-022 |
 | AUD-FORMAT-002 | Medium | Import UI exposes formats the playback detector cannot represent | AUD-FORMAT-002 | AUDIT-022 |
 | AUD-QUEUE-002 | Medium | Repeat-one also repeats manual Next/Previous | AUD-QUEUE-002 | AUDIT-025 |
@@ -50,7 +50,7 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 | AUD-TRANSITION-002 | Medium | Cancelling an AudioKit crossfade leaves split playback state | AUD-TRANSITION-002 | AUDIT-033 |
 | CAN-004 | Medium | No committed shared scheme or test plan defines the CI test action | PCFG-004, TRV-002 | DONE — 01-resolved-findings.md |
 | CAN-005 | Medium | Release, analyzer, archive, and distribution-signing behavior is not gated | PCFG-007, TRV-014 | DONE — 01-resolved-findings.md |
-| CAN-006 | Medium | Tracked local, generated, user-state, log, and backup artifacts defeat repository hygiene | PCFG-008, PSR-007, DCA-ART-001 | AUDIT-002; full Claude tree residual → AUDIT-056 (DONE) |
+| CAN-006 | Medium | Tracked local, generated, user-state, log, and backup artifacts defeat repository hygiene | PCFG-008, PSR-007, DCA-ART-001 | AUDIT-002 (DONE); full Claude tree residual → AUDIT-056 (DONE) |
 | CAN-011 | Medium | Every pagination request hydrates the full result set to compute an unused count | DLP-012, CP-014 | AUDIT-017 |
 | CAN-012 | Medium | Listening-session replacement is unsequenced and can clear the new session | DLP-019, CP-005 | AUDIT-011 |
 | CAN-014 | Medium | Queue edit callbacks translate visible offsets to the wrong absolute indices | AUD-QUEUE-001, UIUX-013 | DONE — 01-resolved-findings.md |
@@ -69,8 +69,8 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 | CP-011 | Medium | SwiftUI bodies materialize arrays during every library/queue evaluation | CP-011 | AUDIT-054 |
 | CP-015 | Medium | File Manager uses synchronous UI-context I/O and an uncancellable detached copy | CP-015 | AUDIT-042 |
 | CP-016 | Medium | Render paths rebuild formatters and full sort/filter results | CP-016 | AUDIT-054 |
-| DLP-008 | Medium | ReplayGain metadata is extracted and then discarded | DLP-008 | AUDIT-008 |
-| DLP-009 | Medium | Track/disc tuple parsing uses wrong offsets and drops parsed totals | DLP-009 | AUDIT-009 |
+| DLP-008 | Medium | ReplayGain metadata is extracted and then discarded | DLP-008 | AUDIT-008 (DONE) |
+| DLP-009 | Medium | Track/disc tuple parsing uses wrong offsets and drops parsed totals | DLP-009 | AUDIT-009 (DONE) |
 | DLP-010 | Medium | The exposed playlist feature has no complete mutation path | DLP-010 | AUDIT-019 |
 | DLP-011 | Medium | Repository-backed library state is not refreshed after writes | DLP-011 | AUDIT-017 |
 | DLP-013 | Medium | Page mapping dereferences to-many relationships per album/artist | DLP-013 | AUDIT-017 |
@@ -117,7 +117,7 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 | DCA-SAMPLE-001 | Low | Three undocumented sample app fragments have no build container | DCA-SAMPLE-001 | DONE — 01-resolved-findings.md |
 | FMA-006 | Low | User queries and imported metadata are inserted into prompts without explicit untrusted-data boundaries | FMA-006 | AUDIT-044 |
 | PCFG-009 | Low | SwiftLint excludes all widget and UI-test source | PCFG-009 | DONE — 01-resolved-findings.md |
-| PCFG-011 | Low | Widget asset build settings name color sets that do not exist in the widget target | PCFG-011 | AUDIT-003 |
+| PCFG-011 | Low | Widget asset build settings name color sets that do not exist in the widget target | PCFG-011 | AUDIT-003 (DONE) |
 | UIUX-014 | Low | Audio Settings nests a second navigation stack inside the Settings stack | UIUX-014 | DONE — 01-resolved-findings.md |
 | UIUX-016 | Low | “Reset All Settings” executes immediately without confirmation | UIUX-016 | DONE — 01-resolved-findings.md |
 | CAN-020 | Informational | Accessibility, Dynamic Type, locale, RTL, and widget behavior lack a real verification lane | A11YTEST-001, TRV-012 | AUDIT-055 |
@@ -148,9 +148,9 @@ WP3 re-verified Critical/High clusters and recalibrated severities; each cluster
 
 | WP3 ID | Member(s) | Disposition |
 |---|---|---|
-| WP3-001 | PCFG-001, PSR-001 (CAN-001) | AUDIT-001 |
+| WP3-001 | PCFG-001, PSR-001 (CAN-001) | AUDIT-001 + provider/history residual in AUDIT-061 |
 | WP3-002 | PCFG-002, PSR-002 (CAN-002) | DONE (manifests exist) + residual CI check in AUDIT-005 |
-| WP3-003 | PCFG-003, PSR-003, TRV-001 (CAN-003) | DONE (ci.yml fixed) + residual green-run evidence in AUDIT-005 |
+| WP3-003 | PCFG-003, PSR-003, TRV-001 (CAN-003) | Workflow intentionally retired in AUDIT-057; reintroduction/evidence blocked in AUDIT-005 |
 | WP3-004 | AUD-ENG-002 | AUDIT-030 |
 | WP3-005 | AUD-SESSION-001 | AUDIT-031 |
 | WP3-006 | AUD-SESSION-002 | AUDIT-032 |
@@ -170,7 +170,7 @@ WP3 re-verified Critical/High clusters and recalibrated severities; each cluster
 | WP3-020 | UIUX-010 | AUDIT-038 |
 | WP3-021 | A11Y-001 (CAN-018) | DONE — semantic Buttons present; runtime VoiceOver pass deferred to AUDIT-055 |
 | WP3-022 | A11Y-002 (CAN-019) | DONE — adjustable EQ semantics present; device pass deferred to AUDIT-055 |
-| WP3-023 | PSR-004 | AUDIT-006 |
+| WP3-023 | PSR-004 | AUDIT-006 (DONE) |
 
 ## WP4 retained refactoring candidates (R01…R08)
 
@@ -189,15 +189,15 @@ WP3 re-verified Critical/High clusters and recalibrated severities; each cluster
 
 | WP5 ID | Disposition |
 |---|---|
-| CLN-001 | AUDIT-001 (credential-bearing configs) + AUDIT-002 (remaining artifacts); full Claude tree residual → AUDIT-056 (DONE) |
+| CLN-001 | AUDIT-001 (credential-bearing configs) + AUDIT-002 (remaining artifacts, DONE); full Claude tree residual → AUDIT-056 (DONE) |
 | CLN-002 | DONE — orphan gitlink no longer present (`git ls-files -s` shows no mode-160000 entries) |
 | CLN-003 | AUDIT-052 |
 | CLN-004 | AUDIT-052 |
 | CLN-005 | DONE — sample roots now have `.xcodeproj` containers; tracked `xcuserdata` residue handled in AUDIT-002 |
 | CLN-006 | AUDIT-048 |
-| CLN-007 | AUDIT-002 |
+| CLN-007 | AUDIT-002 (DONE) |
 | CLN-008 | AUDIT-053 |
-| CLN-009 | AUDIT-002 (empty AppIcon set, archive-gated) |
+| CLN-009 | AUDIT-002 (DONE — empty AppIcon set removed; `Fonic.icon` remains) |
 | CLN-010 | NOT APPLICABLE — keep AudioKit (negative finding) |
 | CLN-011 | NOT APPLICABLE — negative finding; scheme/test-plan gap covered by CAN-004 (now DONE) |
 | CLN-012 | NOT APPLICABLE — corrected false positive; keep assets |

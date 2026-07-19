@@ -1,0 +1,359 @@
+{
+  "schemaVersion": 1,
+  "workPackage": 4,
+  "repository": "https://github.com/keiranhaax/fonic-hifi",
+  "branch": "main",
+  "commit": "459db9bfd18d17960e8fd2ff8defc4701085532e",
+  "reviewMode": "read-only-static-review-and-planning",
+  "sourceChanges": [],
+  "summary": {
+    "retained": 8,
+    "rejected": 4,
+    "deferred": 2,
+    "merged": 0,
+    "downgraded": 0
+  },
+  "retained": [
+    {
+      "id": "WP4-R01",
+      "title": "Consolidate the SwiftUI audio presentation-state boundary",
+      "priority": "P0",
+      "value": "very-high",
+      "risk": "high",
+      "effort": "large",
+      "confidence": "confirmed-static-evidence",
+      "approvalRequiredBeforeImplementation": true,
+      "evidence": [
+        "Fonic HiFi/FonicHiFiApp.swift:103-110",
+        "Fonic HiFi/Presentation/Environment/AudioEnvironment.swift:14-23,88-96",
+        "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift:40-45,64-69,555-569",
+        "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift:23-50,250-280,439-507,660-699",
+        "Fonic HiFi/Presentation/Views/Queue/QueueView.swift:11,31-49"
+      ],
+      "recommendation": "Establish one MainActor observable presentation model, migrate views one state slice at a time, and remove local/defaults mirrors only after all consumers and tests use the authoritative owner.",
+      "preserve": [
+        "playback commands and engine behavior",
+        "queue and settings persistence",
+        "App Intent and widget controls",
+        "current UI structure, copy, appearance, transitions, and accessibility"
+      ],
+      "doNotTouch": [
+        "audio graph",
+        "engine selection",
+        "EQ",
+        "gapless and crossfade",
+        "widget payload schema",
+        "visual design"
+      ],
+      "verification": [
+        "external intent changes update Now Playing",
+        "restored repeat and rate match controls",
+        "queue mutations update QueueView and mini-player",
+        "SwiftUI Cause and Effect validates update scope",
+        "device playback, interruption, route, and restore tests"
+      ],
+      "unverified": "SwiftUI invalidation and runtime behavior need Xcode, simulator, and device checks."
+    },
+    {
+      "id": "WP4-R02",
+      "title": "Separate queue mutation from notification and persistence side effects",
+      "priority": "P0",
+      "value": "very-high",
+      "risk": "medium",
+      "effort": "medium-large",
+      "confidence": "confirmed-static-evidence",
+      "approvalRequiredBeforeImplementation": true,
+      "evidence": [
+        "Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift:326-343,570-665",
+        "Fonic HiFi/Core/Audio/Queue/QueueState.swift:321-326,359-405",
+        "Fonic HiFiTests/AudioQueueManagerTests.swift:157-188,292-311"
+      ],
+      "recommendation": "Inject QueueStatePersisting and finalize each logical mutation once: recalculate, notify changed values, create one snapshot, and request persistence once.",
+      "preserve": [
+        "queue order and index behavior",
+        "shuffle and repeat semantics",
+        "delegate event meaning",
+        "persistence key and Codable payload",
+        "restore behavior"
+      ],
+      "doNotTouch": [
+        "playback engine",
+        "crossfade and gapless",
+        "App Intents",
+        "widget schema",
+        "UI layout"
+      ],
+      "verification": [
+        "one persistence request per logical mutation",
+        "characterized delegate event order",
+        "persistence failure leaves memory state usable",
+        "device Time Profiler and File Activity at queue scale",
+        "force-quit restore"
+      ],
+      "unverified": "Latency magnitude needs Instruments and device checks."
+    },
+    {
+      "id": "WP4-R03",
+      "title": "Give each Library section explicit request ownership and load phase",
+      "priority": "P0",
+      "value": "high",
+      "risk": "medium",
+      "effort": "medium",
+      "confidence": "confirmed-static-evidence",
+      "approvalRequiredBeforeImplementation": true,
+      "evidence": [
+        "Fonic HiFi/Presentation/ViewModels/Library/LibraryViewModel.swift:33-44,66-79,98-188",
+        "Fonic HiFi/Presentation/Views/Library/LibraryView.swift:140-177,195-310,336-369",
+        "Fonic HiFiTests/LibraryViewModelTests.swift:6-98"
+      ],
+      "recommendation": "Store per-section request task or generation, set stored loading before suspension, reject stale responses, and model initial loading separately from pagination.",
+      "preserve": [
+        "four tabs and search behavior",
+        "page size and prefetch threshold",
+        "item identity",
+        "import and create actions",
+        "error text and visual layout"
+      ],
+      "doNotTouch": [
+        "repository query semantics",
+        "SwiftData schema",
+        "navigation design",
+        "library styling"
+      ],
+      "verification": [
+        "out-of-order query completion",
+        "duplicate threshold trigger suppression",
+        "independent section loading",
+        "cancellation on tab and query change",
+        "initial versus pagination UI behavior"
+      ],
+      "unverified": "Request timing and cancellation require executable Xcode async tests."
+    },
+    {
+      "id": "WP4-R04",
+      "title": "Move filesystem operations and state out of FileManagerView",
+      "priority": "P1",
+      "value": "high",
+      "risk": "medium",
+      "effort": "medium",
+      "confidence": "confirmed-static-evidence",
+      "approvalRequiredBeforeImplementation": true,
+      "evidence": [
+        "Fonic HiFi/Presentation/Views/Settings/SettingsView.swift:112-123",
+        "Fonic HiFi/Presentation/Views/Settings/FileManagerView.swift:25-55,195-233,265-275,303-395",
+        "No tracked Fonic HiFiTests reference to FileManagerView"
+      ],
+      "recommendation": "Introduce a filesystem service or actor and observable FileManagerViewModel; keep the view presentation-only and replace UIKit root-controller alert presentation with SwiftUI-owned state.",
+      "preserve": [
+        "Settings route",
+        "root directory",
+        "sort and filter behavior",
+        "file importer types",
+        "selection, confirmation, unique-copy naming, and visible copy"
+      ],
+      "doNotTouch": [
+        "library import architecture",
+        "managed music-container naming",
+        "navigation design",
+        "visual design"
+      ],
+      "verification": [
+        "temporary-directory list, sort, search, and root-bound tests",
+        "create, copy collision, delete partial failure, and cancellation tests",
+        "security-scope balance",
+        "folder prompt and delete UI tests"
+      ],
+      "unverified": "File-provider and security-scope behavior need simulator and device checks."
+    },
+    {
+      "id": "WP4-R05",
+      "title": "Create one TrackDataActor insertion kernel before splitting responsibilities",
+      "priority": "P1",
+      "value": "high",
+      "risk": "medium",
+      "effort": "medium",
+      "confidence": "confirmed-static-evidence",
+      "approvalRequiredBeforeImplementation": true,
+      "evidence": [
+        "Fonic HiFi/Data/Actors/TrackDataActor.swift:12-18,262-370,475-980,1007-1218",
+        "Fonic HiFiTests/TrackDataActorTests.swift:6-186"
+      ],
+      "recommendation": "Create one private actor-isolated no-save insertion helper used by single and batch creation; preserve save boundaries, then move only pure support concerns after parity tests pass.",
+      "preserve": [
+        "single and batch save semantics",
+        "relationship caching",
+        "persistent identifiers and source hashes",
+        "metadata fields",
+        "error mapping"
+      ],
+      "doNotTouch": [
+        "SwiftData schema and migration",
+        "cleanup behavior",
+        "listening-session schema",
+        "public API signatures"
+      ],
+      "verification": [
+        "parameterized single/batch parity",
+        "unknown artist and album normalization",
+        "existing relationship reuse",
+        "artwork and source identity",
+        "save failure error parity"
+      ],
+      "unverified": "ModelActor macro expansion and strict concurrency need Xcode compilation."
+    },
+    {
+      "id": "WP4-R06",
+      "title": "Own AsyncStream producer lifetime and cancellation in FileImportProcessor",
+      "priority": "P1",
+      "value": "high",
+      "risk": "medium",
+      "effort": "medium",
+      "confidence": "confirmed-static-evidence",
+      "approvalRequiredBeforeImplementation": true,
+      "evidence": [
+        "Fonic HiFi/Data/Actors/FileImportProcessor.swift:102-105,143-155,237-338",
+        "Fonic HiFi/Data/Services/LibraryImportService.swift:49,90-105,193-237",
+        "Fonic HiFiTests/FileImportProcessorTests.swift:6-149",
+        "Fonic HiFiTests/LibraryImportServiceTests.swift:17-151",
+        "Apple AsyncStream.Continuation.onTermination documentation"
+      ],
+      "recommendation": "Retain producer task handles, cancel them from continuation.onTermination, stop on terminated yields, and check cancellation before scheduling or committing work.",
+      "preserve": [
+        "stream element and result types",
+        "completion ordering",
+        "concurrency limit",
+        "duplicate result semantics",
+        "security-scope balancing and metrics"
+      ],
+      "doNotTouch": [
+        "file naming policy",
+        "SwiftData schema",
+        "metadata extraction",
+        "duplicate identity rules"
+      ],
+      "verification": [
+        "early consumer termination",
+        "cancellation during discovery and full concurrency",
+        "no new post-cancel work",
+        "no post-cancel track commit",
+        "all security scopes stopped"
+      ],
+      "unverified": "Cancellation timing through SwiftData and file-provider I/O needs Xcode and device validation."
+    },
+    {
+      "id": "WP4-R07",
+      "title": "Use one injectable process-metrics provider",
+      "priority": "P1",
+      "value": "medium-high",
+      "risk": "low-medium",
+      "effort": "small",
+      "confidence": "confirmed-static-evidence",
+      "approvalRequiredBeforeImplementation": true,
+      "evidence": [
+        "Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift:404-417,585-634",
+        "Fonic HiFi/Core/Audio/Diagnostics/SystemMetricsCollector.swift:301-350",
+        "Fonic HiFiTests/AVAudioEngineAdapterTests.swift:109-117",
+        "Fonic HiFiTests/AudioMonitoringCollectorsTests.swift:74-105"
+      ],
+      "recommendation": "Inject a narrow ProcessMetricsProviding boundary backed by the existing collector and remove direct Mach queries from AVAudioEngineAdapter.",
+      "preserve": [
+        "AudioEngineService.getMetrics signature",
+        "AudioMetrics fields and units",
+        "buffer-underrun accounting",
+        "timestamp and all audio behavior"
+      ],
+      "doNotTouch": [
+        "AVAudioEngine graph",
+        "player nodes",
+        "EQ",
+        "gapless scheduling",
+        "session behavior"
+      ],
+      "verification": [
+        "deterministic injected CPU and memory values",
+        "real collector smoke tests",
+        "no Mach calls in adapter",
+        "full adapter and audio tests"
+      ],
+      "unverified": "Real metric fidelity needs device comparison with Instruments."
+    },
+    {
+      "id": "WP4-R08",
+      "title": "Compile one canonical app/widget shared-data contract",
+      "priority": "P1",
+      "value": "high",
+      "risk": "medium",
+      "effort": "medium",
+      "confidence": "confirmed-static-evidence",
+      "approvalRequiredBeforeImplementation": true,
+      "evidence": [
+        "Fonic HiFi/Shared/WidgetConstants.swift and Fonic HiFi Widget/Shared/WidgetConstants.swift",
+        "Fonic HiFi/Shared/WidgetPlaybackState.swift and Fonic HiFi Widget/Shared/WidgetPlaybackState.swift",
+        "Fonic HiFi/Shared/WidgetTrackInfo.swift and Fonic HiFi Widget/Shared/WidgetTrackInfo.swift",
+        "Fonic HiFi.xcodeproj/project.pbxproj:79-104,183-185,236-248",
+        "evidence/03_WIDGET_CONTRACT_COMPARISON.md"
+      ],
+      "recommendation": "Compile one neutral shared source in both targets or use a tiny local package; until then, add semantic-diff CI and bidirectional fixtures.",
+      "preserve": [
+        "App Group identifier",
+        "UserDefaults keys",
+        "widget kind",
+        "Codable fields, defaults, and date strategy",
+        "legacy payload compatibility"
+      ],
+      "doNotTouch": [
+        "widget design",
+        "timeline policy",
+        "App Intents and Live Activity",
+        "artwork cache policy",
+        "bundle identifiers"
+      ],
+      "verification": [
+        "app encode to widget decode",
+        "widget encode to app decode",
+        "legacy fixture decode",
+        "clean app and widget builds",
+        "no duplicate symbols"
+      ],
+      "unverified": "Target membership and extension compilation need Xcode."
+    }
+  ],
+  "screenedCandidates": [
+    {
+      "id": "RC-01",
+      "title": "Split largest diagnostics model files",
+      "status": "rejected",
+      "reason": "Size-only declaration aggregations with no executable, state, task, or I/O coupling."
+    },
+    {
+      "id": "RC-02",
+      "title": "Broadly decompose AVAudioEngineAdapter",
+      "status": "rejected",
+      "reason": "Audio graph and device-sensitive behavior make broad static-only decomposition unsafe; only metrics extraction was retained."
+    },
+    {
+      "id": "RC-03",
+      "title": "Move LibraryView private types into separate files",
+      "status": "rejected",
+      "reason": "Navigation-only churn without solving ownership or testability; permitted only inside WP4-R03."
+    },
+    {
+      "id": "RC-04",
+      "title": "Extract smart-playlist evaluator now",
+      "status": "deferred-to-wp5",
+      "reason": "Containing presentation path appears orphaned; cleanup/reachability decision comes first."
+    },
+    {
+      "id": "RC-05",
+      "title": "Consolidate ImportSession and FileImportProcessor",
+      "status": "deferred-to-wp5",
+      "reason": "ImportSession has no production constructor call and appears test-only; retention decision comes first."
+    },
+    {
+      "id": "RC-06",
+      "title": "Split GlassModifiers.swift",
+      "status": "rejected",
+      "reason": "Large aggregation of small named modifiers without high-value ownership or coupling evidence."
+    }
+  ]
+}

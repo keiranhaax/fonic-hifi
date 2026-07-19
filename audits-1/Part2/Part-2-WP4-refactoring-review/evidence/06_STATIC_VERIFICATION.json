@@ -1,0 +1,122 @@
+{
+  "baselineCommit": "459db9bfd18d17960e8fd2ff8defc4701085532e",
+  "checks": [
+    {
+      "name": "repository commit",
+      "status": "PASS",
+      "detail": "459db9bfd18d17960e8fd2ff8defc4701085532e"
+    },
+    {
+      "name": "repository worktree clean",
+      "status": "PASS",
+      "detail": "entries=0"
+    },
+    {
+      "name": "input archive hash",
+      "status": "PASS",
+      "detail": "aeba8b0f4ada6a99ff2e76ae0d9f60d118c6147a56ff1cb7c8fc882b64fe6a9e"
+    },
+    {
+      "name": "Swift file count",
+      "status": "PASS",
+      "detail": "325"
+    },
+    {
+      "name": "Swift line count",
+      "status": "PASS",
+      "detail": "60262"
+    },
+    {
+      "name": "widget body parity: WidgetConstants.swift",
+      "status": "PASS",
+      "detail": "appLines=82 widgetLines=82"
+    },
+    {
+      "name": "widget body parity: WidgetPlaybackState.swift",
+      "status": "PASS",
+      "detail": "appLines=142 widgetLines=142"
+    },
+    {
+      "name": "widget body parity: WidgetTrackInfo.swift",
+      "status": "PASS",
+      "detail": "appLines=154 widgetLines=154"
+    },
+    {
+      "name": "custom audio environment key present",
+      "status": "PASS",
+      "detail": "AudioEnvironment.swift"
+    },
+    {
+      "name": "facade mixes computed and published presentation state",
+      "status": "PASS",
+      "detail": "AudioEngineFacade.swift"
+    },
+    {
+      "name": "Now Playing mirrors authoritative settings",
+      "status": "PASS",
+      "detail": "NowPlayingContent.swift"
+    },
+    {
+      "name": "replaceQueue emits both notifications",
+      "status": "PASS",
+      "detail": "AudioQueueManager.replaceQueue"
+    },
+    {
+      "name": "both queue notification helpers persist",
+      "status": "PASS",
+      "detail": "saveState() tokens=2"
+    },
+    {
+      "name": "queue persistence performs synchronous validation and UserDefaults write",
+      "status": "PASS",
+      "detail": "QueueState.swift"
+    },
+    {
+      "name": "library fetch owns only local in-flight state",
+      "status": "PASS",
+      "detail": "LibraryViewModel.swift"
+    },
+    {
+      "name": "FileManagerView contains direct filesystem mutations",
+      "status": "PASS",
+      "detail": "FileManagerView.swift"
+    },
+    {
+      "name": "FileManagerView has no direct tracked test reference",
+      "status": "PASS",
+      "detail": "Fonic HiFiTests"
+    },
+    {
+      "name": "single and batch creation paths both map and insert tracks",
+      "status": "PASS",
+      "detail": "applyTrackMetadata calls=2"
+    },
+    {
+      "name": "FileImportProcessor lacks stream termination ownership",
+      "status": "PASS",
+      "detail": "AsyncStream tokens=13 Task spawns=5"
+    },
+    {
+      "name": "adapter and collector both probe task_info",
+      "status": "PASS",
+      "detail": "adapter=2 collector=1"
+    },
+    {
+      "name": "ImportSession has no production constructor call",
+      "status": "PASS",
+      "detail": "refs="
+    },
+    {
+      "name": "PlaylistListView has no external constructor call",
+      "status": "PASS",
+      "detail": "refs="
+    },
+    {
+      "name": "candidate evidence files exist",
+      "status": "PASS",
+      "detail": "missing="
+    }
+  ],
+  "passed": 23,
+  "failed": 0
+}

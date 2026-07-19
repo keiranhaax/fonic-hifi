@@ -1,0 +1,485 @@
+{
+  "repositoryCommit": "459db9bfd18d17960e8fd2ff8defc4701085532e",
+  "method": "Read-only deterministic source assertions; no Xcode or runtime behavior inferred",
+  "summary": {
+    "total": 29,
+    "passed": 29,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "id": "BASE-001",
+      "description": "Repository is pinned to the checkpoint commit",
+      "status": "PASS",
+      "evidence": [
+        {
+          "actual": "459db9bfd18d17960e8fd2ff8defc4701085532e",
+          "expected": "459db9bfd18d17960e8fd2ff8defc4701085532e"
+        }
+      ]
+    },
+    {
+      "id": "BASE-002",
+      "description": "Repository index and worktree are clean",
+      "status": "PASS",
+      "evidence": [
+        {
+          "porcelainEntryCount": 0
+        }
+      ]
+    },
+    {
+      "id": "BASE-003",
+      "description": "Baseline extraction contains all 27 Critical/High report records",
+      "status": "PASS",
+      "evidence": [
+        {
+          "total": 27,
+          "critical": 4,
+          "high": 23
+        }
+      ]
+    },
+    {
+      "id": "CFG-001",
+      "description": "Tracked local configuration contains four non-placeholder credential records and one sensitive non-public address",
+      "status": "PASS",
+      "evidence": [
+        {
+          "credentialRecords": 4,
+          "sensitiveAddressRecords": 1,
+          "trackedPaths": {
+            ".kilocode/mcp.json": true,
+            ".claude/settings.local.json": true
+          }
+        }
+      ],
+      "note": "Raw values were never emitted or authenticated."
+    },
+    {
+      "id": "CFG-002",
+      "description": "No first-party PrivacyInfo.xcprivacy file exists in the repository tree",
+      "status": "PASS",
+      "evidence": [
+        {
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "CFG-003",
+      "description": "Active app and widget source directly use covered Required Reason API categories",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Core/Audio/Engine/AudioPlaybackSettingsStore.swift",
+          "line": 19,
+          "excerpt": "public init(defaults: UserDefaults = .standard)"
+        },
+        {
+          "file": "Fonic HiFi/Shared/WidgetPlaybackState.swift",
+          "line": 121,
+          "excerpt": "defaults.set(data, forKey: WidgetConstants.Keys.playbackState)"
+        },
+        {
+          "file": "Fonic HiFi Widget/Shared/WidgetPlaybackState.swift",
+          "line": 129,
+          "excerpt": "defaults.data(forKey: WidgetConstants.Keys.playbackState)"
+        },
+        {
+          "file": "Fonic HiFi/Data/Services/MetadataExtractionService.swift",
+          "line": 60,
+          "excerpt": "attributesOfItem(atPath: url.path)"
+        },
+        {
+          "file": "Fonic HiFi/Core/Audio/Diagnostics/SystemMetricsCollector.swift",
+          "line": 302,
+          "excerpt": "ProcessInfo.processInfo.systemUptime"
+        }
+      ]
+    },
+    {
+      "id": "CFG-004",
+      "description": "Project defines separate app and widget executable targets",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi.xcodeproj/project.pbxproj",
+          "applicationLine": 192,
+          "extensionLine": 252
+        }
+      ]
+    },
+    {
+      "id": "CI-001",
+      "description": "Workflow selects Xcode 16.1 while Make exports the unversioned Xcode.app developer directory",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "line": 17,
+          "excerpt": "sudo xcode-select -s /Applications/Xcode_16.1.app"
+        },
+        {
+          "file": "Makefile",
+          "line": 33,
+          "excerpt": "export DEVELOPER_DIR := /Applications/Xcode.app/Contents/Developer"
+        }
+      ]
+    },
+    {
+      "id": "CI-002",
+      "description": "Project and destination require iOS 26 while CI selects an iOS 18-era Xcode",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi.xcodeproj/project.pbxproj",
+          "deploymentTargetOccurrences": 10
+        },
+        {
+          "file": "Makefile",
+          "line": 17,
+          "excerpt": "SIMULATOR_OS = 26.2"
+        }
+      ]
+    },
+    {
+      "id": "AUD-001",
+      "description": "Track selection launches an unowned task and clears shared state on late failure without request identity",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Presentation/Views/Library/TrackRowView.swift",
+          "taskLine": 93,
+          "playLine": 95,
+          "clearLine": 100
+        }
+      ]
+    },
+    {
+      "id": "AUD-002",
+      "description": "Native playback uses a singleton session manager while the facade creates another manager, and load deactivates after controller activation",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift",
+          "line": 144
+        },
+        {
+          "file": "Fonic HiFi/Core/Audio/Factory/AudioEngineFactory.swift",
+          "line": 163
+        },
+        {
+          "file": "Fonic HiFi/Core/Audio/Engines/AVAudioEngineAdapter.swift",
+          "defaultManagerLine": 110,
+          "stopDuringLoadLine": 175,
+          "deactivateLine": 298
+        }
+      ]
+    },
+    {
+      "id": "AUD-003",
+      "description": "Interruption option parsing uses equality, no prior-play intent is stored, and old-device-unavailable only logs",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Core/Audio/Services/AudioSessionManager.swift",
+          "line": 384
+        },
+        {
+          "file": "Fonic HiFi/Core/Audio/Coordinators/StateCoordinator.swift",
+          "line": 196
+        }
+      ]
+    },
+    {
+      "id": "DLP-001",
+      "description": "Fourth container attempt is in-memory read-only but is returned to the normal initializer as non-fallback",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Data/DataManager+Initialization.swift",
+          "normalInitLine": 61,
+          "minimalMemoryLine": 165,
+          "minimalReadOnlyLine": 166
+        }
+      ]
+    },
+    {
+      "id": "DLP-002",
+      "description": "ListeningSession is omitted from SchemaV2 but live actor code inserts and fetches it",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Data/Migration/RecentSearchMigrationPlan.swift",
+          "schemaLine": 15
+        },
+        {
+          "file": "Fonic HiFi/Data/Actors/TrackDataActor.swift",
+          "insertLine": 787,
+          "fetchLine": 813
+        }
+      ]
+    },
+    {
+      "id": "DLP-003",
+      "description": "Normal production open omits the migration plan and tries the declared plan only after failure",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Data/DataManager+Initialization.swift",
+          "unplannedOpenLine": 130,
+          "plannedFallbackLine": 146
+        }
+      ]
+    },
+    {
+      "id": "DLP-004",
+      "description": "Session tracking has one declaration and no production call site",
+      "status": "PASS",
+      "evidence": [
+        {
+          "sourceOccurrenceCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DLP-005",
+      "description": "Import copies before metadata and persistence and has no compensating removal of the created destination",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Data/Actors/FileImportProcessor.swift",
+          "copyLine": 622,
+          "metadataLine": 628,
+          "createLine": 634,
+          "rollbackRemovalPresent": false
+        }
+      ]
+    },
+    {
+      "id": "DLP-007",
+      "description": "Startup performs one-sample file existence cleanup that deletes missing track records",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/FonicHiFiApp.swift",
+          "sleepLine": 200,
+          "cleanupLine": 202
+        },
+        {
+          "file": "Fonic HiFi/Data/Actors/TrackDataActor.swift",
+          "existenceLine": 697,
+          "deleteLine": 616
+        }
+      ]
+    },
+    {
+      "id": "CP-002",
+      "description": "AsyncStream discovery and processing spawn unowned producers without onTermination cancellation",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Data/Actors/FileImportProcessor.swift",
+          "discoveryProducerLine": 104,
+          "processingProducerLine": 145,
+          "onTerminationCount": 0
+        },
+        {
+          "file": "Fonic HiFi/Data/Services/LibraryImportService.swift",
+          "cancelLine": 99
+        }
+      ]
+    },
+    {
+      "id": "CP-003",
+      "description": "MainActor queue notifications synchronously validate, encode, and rewrite the full queue",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Core/Audio/Queue/AudioQueueManager.swift",
+          "mainActorLine": 13,
+          "saveCallCount": 2
+        },
+        {
+          "file": "Fonic HiFi/Core/Audio/Queue/QueueState.swift",
+          "fileCheckLine": 364,
+          "encodeLine": 323,
+          "writeLine": 326
+        }
+      ]
+    },
+    {
+      "id": "CP-004",
+      "description": "Concurrent import children receive cache snapshots before results update the coordinator cache",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Data/Actors/FileImportProcessor.swift",
+          "snapshotLine": 281,
+          "cacheUpdateLine": 303,
+          "databaseCheckLine": 193
+        }
+      ]
+    },
+    {
+      "id": "UI-001",
+      "description": "Combine ObservableObject audio facade is passed through a plain custom environment value without ObservableObject subscription",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Presentation/Environment/AudioEnvironment.swift",
+          "keyLine": 14
+        },
+        {
+          "file": "Fonic HiFi/Presentation/Views/NowPlaying/LiquidGlassMiniPlayer.swift",
+          "environmentLine": 14,
+          "titleLine": 41
+        },
+        {
+          "file": "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift",
+          "observableObjectLine": 23
+        }
+      ]
+    },
+    {
+      "id": "UI-002",
+      "description": "Now Playing mirrors shuffle, repeat, and speed instead of rendering authoritative engine state",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Presentation/Views/NowPlaying/NowPlayingContent.swift",
+          "speedLine": 29,
+          "shuffleLine": 39,
+          "repeatLine": 40
+        },
+        {
+          "file": "Fonic HiFi/Core/Intents/ToggleShuffleIntent.swift",
+          "authoritativeReadLine": 32
+        }
+      ]
+    },
+    {
+      "id": "UI-008",
+      "description": "Visible settings include controls or actions with no runtime feature consumer",
+      "status": "PASS",
+      "evidence": [
+        {
+          "symbolOccurrenceCounts": {
+            "darkModeEnabled": 4,
+            "showNowPlayingAnimation": 1,
+            "enableHapticFeedback": 1,
+            "showFileExtensions": 1,
+            "enableBitPerfectPlayback": 5,
+            "audioBufferSize": 5
+          }
+        },
+        {
+          "file": "Fonic HiFi/Presentation/Views/Settings/SettingsView.swift",
+          "exportLogLine": 217
+        },
+        {
+          "file": "Fonic HiFi/Presentation/Views/Settings/AudioSettingsView.swift",
+          "testLogLine": 149
+        }
+      ]
+    },
+    {
+      "id": "UI-009",
+      "description": "Audio, Home, standard search, Smart Search, and file-manager failures are logged or collapsed without distinct user-facing error state",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/FonicHiFiApp.swift",
+          "catchLine": 180
+        },
+        {
+          "file": "Fonic HiFi/Presentation/Views/Home/HomeView.swift",
+          "silentCatchLine": 234
+        },
+        {
+          "file": "Fonic HiFi/Presentation/Views/Search/SearchView.swift",
+          "emptyOnErrorLine": 149
+        },
+        {
+          "file": "Fonic HiFi/Presentation/ViewModels/SmartSearchViewModel.swift",
+          "errorStateLine": 92
+        },
+        {
+          "file": "Fonic HiFi/Presentation/Views/Settings/FileManagerView.swift",
+          "logOnlyLine": 232
+        }
+      ]
+    },
+    {
+      "id": "UI-010",
+      "description": "Import progress service is unobserved and picker-to-progress presentation relies on task/sheet timing",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Data/Services/LibraryImportService.swift",
+          "observableLine": 16
+        },
+        {
+          "file": "Fonic HiFi/Presentation/Views/Import/FileImportView.swift",
+          "environmentLine": 14,
+          "startLine": 46,
+          "dismissLine": 38
+        },
+        {
+          "file": "Fonic HiFi/Presentation/Views/Library/LibraryView.swift",
+          "onChangeLine": 156
+        }
+      ]
+    },
+    {
+      "id": "A11Y-001",
+      "description": "Core library and mini-player primary actions use raw tap gestures instead of semantic controls",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Presentation/Views/Library/LibraryView.swift",
+          "tapGestureCount": 4,
+          "firstTapLine": 202
+        },
+        {
+          "file": "Fonic HiFi/ContentView.swift",
+          "miniPlayerTapLine": 63
+        }
+      ]
+    },
+    {
+      "id": "A11Y-002",
+      "description": "Ten-band EQ uses a 30-point drag-only custom control without adjustable or focus semantics",
+      "status": "PASS",
+      "evidence": [
+        {
+          "file": "Fonic HiFi/Presentation/Views/Settings/EqualizerView.swift",
+          "dragLine": 205,
+          "widthLine": 220,
+          "adjustableActionPresent": false,
+          "focusablePresent": false
+        }
+      ]
+    },
+    {
+      "id": "PSR-004",
+      "description": "Release-reachable source explicitly marks content-bearing log values public",
+      "status": "PASS",
+      "evidence": [
+        {
+          "publicInterpolationCount": 125,
+          "fileCount": 28
+        },
+        {
+          "file": "Fonic HiFi/Core/Audio/Engine/AudioEngineFacade.swift",
+          "trackTitleLine": 334
+        },
+        {
+          "file": "Fonic HiFi/Shared/WidgetArtworkCache.swift",
+          "pathLine": 42
+        }
+      ]
+    }
+  ]
+}
