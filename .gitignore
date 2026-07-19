@@ -120,3 +120,6 @@ log.md
 
 # Local test media (user-owned; never commit)
 /music-file/
+
+# Local embedded skill checkouts
+/.agents/skills/ios-simulator-skill/
