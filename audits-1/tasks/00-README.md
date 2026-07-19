@@ -18,7 +18,7 @@
 | `05-audio-playback.md` | AUDIT-020 … AUDIT-035 |
 | `06-ui-ux.md` | AUDIT-036 … AUDIT-043 |
 | `07-foundation-models.md` | AUDIT-044 … AUDIT-047 |
-| `08-widget-testing-cleanup.md` | AUDIT-048 … AUDIT-055 |
+| `08-widget-testing-cleanup.md` | AUDIT-048 … AUDIT-056 |
 | `09-finding-disposition-map.md` | Every normalized WP1–WP5 finding ID → task or disposition; Model A is cross-referenced but not independently normalized |
 
 ## Audit Sources
@@ -36,19 +36,19 @@ Counting note: `09-finding-disposition-map.md` contains 118 WP2 canonical rows a
 ## Status Summary
 
 - Normalized findings reviewed: **118** WP2 canonical findings (from 147 Model B + WP1 source findings) + 8 WP4 candidates + 15 WP5 entries; Model A's 46 findings are corroborating evidence, not an additional normalized set
-- Unique implementation tasks created: **55** (AUDIT-001 … AUDIT-055)
+- Unique implementation tasks created: **56** (AUDIT-001 … AUDIT-056)
 - `[TODO]`: **51**
-- `[DONE]` (already fixed in current tree, recorded in `01-resolved-findings.md`): **27 findings**, plus 1 partial dead-code evidence row whose remaining work is AUDIT-052
+- `[DONE]` implementation tasks: **1** (AUDIT-056), plus **27 resolved findings** recorded in `01-resolved-findings.md` and 1 partial dead-code evidence row whose remaining work is AUDIT-052
 - `[BLOCKED]`: **4** (AUDIT-001 provider action; AUDIT-004 product decision; AUDIT-007 owner/policy; AUDIT-055 physical device + release owner)
 - Standalone `[UNCONFIRMED]` dispositions: **0** — retained static defects are routed to tasks, while unmeasured runtime/device impact remains explicit profile-first, reproduce-first, or evidence-lane work
 - `[NOT APPLICABLE]` / no-action: **5** (WP5 CLN-010…014 "keep" findings; see disposition map)
-- Duplicate findings consolidated: WP2 already merged 55 source findings into 26 clusters; this backlog additionally consolidates 118 canonical findings + WP4/WP5 into 55 tasks (consolidations listed per task under "Audit finding IDs")
+- Duplicate findings consolidated: WP2 already merged 55 source findings into 26 clusters; this backlog additionally consolidates 118 canonical findings + WP4/WP5 into 56 tasks (consolidations listed per task under "Audit finding IDs")
 - Residual or partially-fixed findings folded into open tasks: 10 (CAN-011, CAN-022, CAN-024, AUD-RESET-001, DLP-010, DLP-014, UIUX-010, UIUX-012, A11Y-008, TRV-005). TRV-005 is a confirmed residual finding rather than a partially-fixed one.
 
 ## Difficulty Summary
 
 - Trivial: 2 (AUDIT-002, 003)
-- Easy: 12 (AUDIT-001, 004, 005, 006, 008, 009, 020, 025, 039, 044, 048, 053)
+- Easy: 13 (AUDIT-001, 004, 005, 006, 008, 009, 020, 025, 039, 044, 048, 053, 056)
 - Moderate: 25 (AUDIT-007, 010, 012, 013, 016, 018, 019, 021, 022, 023, 024, 026, 027, 028, 029, 037, 038, 040, 042, 045, 046, 047, 050, 051, 052)
 - Hard: 12 (AUDIT-011, 014, 015, 017, 030, 031, 032, 033, 035, 041, 049, 054)
 - Complex: 4 (AUDIT-034, 036, 043, 055)
@@ -67,7 +67,7 @@ Dependency order overrides difficulty order; reasons noted where a harder task p
 3. **AUDIT-006** — easy, batched logging-privacy fix; independent.
 4. **GROUP-02: AUDIT-008, AUDIT-009** — easy metadata-correctness pair in one service; do together before more import work churns the same files.
 5. **AUDIT-020** — easy engine-preference fix; do before AUDIT-021 (same settings surface).
-6. **AUDIT-025, AUDIT-039, AUDIT-044, AUDIT-048, AUDIT-053** — remaining easy, independent tasks.
+6. **AUDIT-025, AUDIT-039, AUDIT-044, AUDIT-048, AUDIT-053** — remaining easy, independent tasks. **AUDIT-056 is DONE**.
 7. **AUDIT-010** *(harder before easier — foundational)* — schema V-next + migration ordering blocks all listening-session work and real migration tests.
 8. **GROUP-03: AUDIT-012, AUDIT-011** — migration tests immediately after AUDIT-010, then session lifecycle.
 9. **AUDIT-013** then **GROUP-04: AUDIT-015, AUDIT-014** — import-pipeline integrity; AUDIT-015 (cancellation + semaphore) before AUDIT-014 (atomic dedup) because dedup redesign builds on the same actor kernel (WP4-R05/R06).
@@ -90,6 +90,7 @@ Dependency order overrides difficulty order; reasons noted where a harder task p
 ## Dependency Map
 
 - AUDIT-001 → blocks AUDIT-002 (final removal of the two credential-bearing configs must follow rotation)
+- AUDIT-002 → related-precedes AUDIT-056 (full Claude agent-tree purge)
 - AUDIT-010 → blocks AUDIT-011 and AUDIT-012
 - AUDIT-015 → related-precedes AUDIT-014 (shared FileImportProcessor/TrackDataActor kernel, WP4-R05/R06)
 - AUDIT-020 → related-precedes AUDIT-021 (same settings/engine-selection surface)
@@ -103,7 +104,7 @@ Dependency order overrides difficulty order; reasons noted where a harder task p
 
 ## Implementation Groups
 
-- **GROUP-01 — Repository hygiene & security** (AUDIT-001, 002, 003, 005): same `.gitignore`/tracked-file/CI surface; separating them causes repeated index churn and repeated secret-scan passes.
+- **GROUP-01 — Repository hygiene & security** (AUDIT-001, 002, 003, 005; AUDIT-056 is related post-002 cleanup): same `.gitignore`/tracked-file/CI surface; separating them causes repeated index churn and repeated secret-scan passes.
 - **GROUP-02 — Import metadata correctness** (AUDIT-008, 009): both change `MetadataExtractionService` + `TrackDataActor.applyTrackMetadata` and share one fixture set; separate PRs would edit identical lines twice.
 - **GROUP-03 — Listening sessions** (AUDIT-010, 011, 012): one schema/migration/lifecycle vertical; landing lifecycle without the schema stage crashes inserts, and migration tests are only meaningful against the new stage.
 - **GROUP-04 — Import pipeline integrity** (AUDIT-013, 014, 015): failure cleanup, cancellation, and atomic dedup all reshape the same `FileImportProcessor` flow; interleaving other work would produce conflicting rewrites.

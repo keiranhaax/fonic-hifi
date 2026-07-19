@@ -50,7 +50,7 @@ Legend: `AUDIT-###` = open task in files `02`–`08`; `DONE — 01-resolved-find
 | AUD-TRANSITION-002 | Medium | Cancelling an AudioKit crossfade leaves split playback state | AUD-TRANSITION-002 | AUDIT-033 |
 | CAN-004 | Medium | No committed shared scheme or test plan defines the CI test action | PCFG-004, TRV-002 | DONE — 01-resolved-findings.md |
 | CAN-005 | Medium | Release, analyzer, archive, and distribution-signing behavior is not gated | PCFG-007, TRV-014 | DONE — 01-resolved-findings.md |
-| CAN-006 | Medium | Tracked local, generated, user-state, log, and backup artifacts defeat repository hygiene | PCFG-008, PSR-007, DCA-ART-001 | AUDIT-002 |
+| CAN-006 | Medium | Tracked local, generated, user-state, log, and backup artifacts defeat repository hygiene | PCFG-008, PSR-007, DCA-ART-001 | AUDIT-002; full Claude tree residual → AUDIT-056 (DONE) |
 | CAN-011 | Medium | Every pagination request hydrates the full result set to compute an unused count | DLP-012, CP-014 | AUDIT-017 |
 | CAN-012 | Medium | Listening-session replacement is unsequenced and can clear the new session | DLP-019, CP-005 | AUDIT-011 |
 | CAN-014 | Medium | Queue edit callbacks translate visible offsets to the wrong absolute indices | AUD-QUEUE-001, UIUX-013 | DONE — 01-resolved-findings.md |
@@ -189,7 +189,7 @@ WP3 re-verified Critical/High clusters and recalibrated severities; each cluster
 
 | WP5 ID | Disposition |
 |---|---|
-| CLN-001 | AUDIT-001 (credential-bearing configs) + AUDIT-002 (remaining artifacts) |
+| CLN-001 | AUDIT-001 (credential-bearing configs) + AUDIT-002 (remaining artifacts); full Claude tree residual → AUDIT-056 (DONE) |
 | CLN-002 | DONE — orphan gitlink no longer present (`git ls-files -s` shows no mode-160000 entries) |
 | CLN-003 | AUDIT-052 |
 | CLN-004 | AUDIT-052 |

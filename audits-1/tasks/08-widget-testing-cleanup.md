@@ -1,4 +1,4 @@
-# Widget, Testing, Cleanup & Cross-Cutting Programs — AUDIT-048 … AUDIT-055
+# Widget, Testing, Cleanup & Cross-Cutting Programs — AUDIT-048 … AUDIT-056
 
 ## AUDIT-048 — Guard the app/widget shared-contract mirror against drift
 
@@ -429,3 +429,60 @@ None to code; the risk is organizational (unowned lane → stale evidence).
 - Completed:
 - Commit:
 - Verification result:
+
+## AUDIT-056 — Untrack or remove the full Claude agent tree
+
+- Status: [DONE]
+- Priority: P3
+- Audit sources: Owner follow-up after AUDIT-002 (broader than CAN-006 residual)
+- Audit finding IDs: —
+- Category: Repository hygiene
+- Severity: Low
+- Difficulty: Easy
+- Risk: Low
+- Scope: Localized
+- Estimated effort: S
+- Implementation group: GROUP-01 (related post-002 cleanup)
+- Depends on: AUDIT-002 (DONE — `settings.local.json` already untracked)
+- Blocks: —
+- Related tasks: AUDIT-002, AUDIT-053
+- Affected features: none (agent tooling docs only)
+- Affected files or symbols: root `CLAUDE.md`; tracked `.claude/**` (commands, reference, skills); `sample/AppleMusicBottomBar/.claude/**`; `.gitignore` Claude rules. The active `.agents/skills/ios-simulator-skill/CLAUDE.md` bundle documentation is explicitly preserved.
+- Validation status: Completed 2026-07-16 — local deletion and index removal are staged
+- Validation evidence: root `.claude/`, sample `.claude/`, and root `CLAUDE.md` are absent from disk and the index; the active `.agents` skill-bundle guide remains
+
+### Problem
+AUDIT-002 only untracked machine-local Claude settings, not the project’s tracked Claude agent documentation tree. That tree is still in the index and can confuse readers who want a Claude-free repository, or reintroduce machine-local churn if ignore rules stay partial.
+
+### Likely Root Cause
+AUDIT-002 was intentionally scoped to CAN-006 residual artifacts (settings, logs, xcuserdata, stale copies, empty AppIcon), not a full agent-tooling retirement.
+
+### Recommended Implementation
+1. Chosen: untrack-and-delete-local for `.claude/**`, root `CLAUDE.md`, and the sample `.claude`; preserve the active `.agents` skill-bundle guide.
+2. Ensure any still-needed project guidance already lives under `AGENTS.md` / `docs/references` before removing Claude-specific docs.
+3. Stage `git rm --cached` (or full `git rm`) for the chosen paths; expand `.gitignore` to cover `.claude/` wholesale if local tooling will remain.
+4. Leave AUDIT-053 files (`EQ.md`, `Files-analysis.md`, `summary.md`) and the `Files/` archive alone.
+
+### Implementation Boundaries
+No app/source behavior changes. Do not rewrite history. Do not touch AUDIT-053 or `Files/`. Prefer index-only removal when local Claude tooling is still useful.
+
+### Acceptance Criteria
+- [x] Chosen scope is recorded (delete locally and remove from tracking; preserve `.agents` skill documentation)
+- [x] `git ls-files` returns no remaining in-scope Claude agent paths
+- [x] Needed project guidance remains available via `AGENTS.md` / `docs/references`
+- [x] `.gitignore` excludes `.claude/` directories and root `CLAUDE.md`
+
+### Suggested Verification
+`git ls-files | rg -i 'claude'`; `git check-ignore -v .claude/probe`; `git diff --cached --check`.
+
+### Risks and Regression Areas
+Historical Claude-specific guidance leaves the working tree; current project guidance remains in `AGENTS.md` and `docs/references`. The active `.agents` skill bundle is preserved.
+
+### Notes
+Created 2026-07-16 when finishing AUDIT-002 under owner choice: “strict AUDIT-002 now; open a separate follow-up task for full Claude purge later.” Local deletion and scoped staging were approved and completed the same day.
+
+### Implementation Record
+- Started: 2026-07-16
+- Completed: 2026-07-16
+- Commit: Not requested
+- Verification result: MATCH — requested files absent from disk and index; directory-wide ignore rules match; active `.agents` skill documentation preserved; staged and unstaged diff checks pass

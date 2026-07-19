@@ -113,7 +113,7 @@ build_errors.log
 build_verify.log
 log.md
 
-# Machine-local tool configuration
-.claude/settings.local.json
-.claude/skills/ios-simulator-skill/
+# Retired Claude configuration
+.claude/
+/CLAUDE.md
 .kilocode/mcp.json
