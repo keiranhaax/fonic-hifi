@@ -19,7 +19,7 @@ struct FileManagerView: View {
         }
 
         let fallback = FileManager.default.temporaryDirectory
-        Log.logger(.presentation).error("Documents directory unavailable; using temporary directory fallback at \(fallback.path, privacy: .public)")
+        Log.logger(.presentation).error("Documents directory unavailable; using temporary directory fallback at \(fallback.path, privacy: .private)")
         return fallback
     }()
 
@@ -235,7 +235,10 @@ struct FileManagerView: View {
             }
 
         } catch {
-            logger.error("Failed to load directory contents for \(currentDirectory.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            let directoryName = currentDirectory.lastPathComponent
+            logger.error(
+                "Failed to load directory contents for \(directoryName, privacy: .private(mask: .hash)): \(error.localizedDescription, privacy: .private)"
+            )
         }
     }
 
@@ -273,7 +276,7 @@ struct FileManagerView: View {
             do {
                 try FileManager.default.removeItem(at: item.url)
             } catch {
-                logger.error("Failed to delete file \(item.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                logger.error("Failed to delete file \(item.name, privacy: .private(mask: .hash)): \(error.localizedDescription, privacy: .private)")
             }
         }
 
@@ -302,7 +305,7 @@ struct FileManagerView: View {
                 await loadDirectoryContents()
             }
         case let .failure(error):
-            logger.error("File import failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("File import failed: \(error.localizedDescription, privacy: .private)")
         }
     }
 
@@ -337,12 +340,12 @@ struct FileManagerView: View {
                 do {
                     let fm = FileManager.default
                     if fm.fileExists(atPath: targetURL.path) {
-                        logger.info("Destination exists at \(targetURL.lastPathComponent, privacy: .public); skipping copy")
+                        logger.info("Destination exists at \(targetURL.lastPathComponent, privacy: .private(mask: .hash)); skipping copy")
                         return
                     }
                     try fm.copyItem(at: sourceURL, to: targetURL)
                 } catch {
-                    logger.error("Failed to copy file \(sourceURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    logger.error("Failed to copy file \(sourceURL.lastPathComponent, privacy: .private(mask: .hash)): \(error.localizedDescription, privacy: .private)")
                 }
             }
         }
@@ -389,7 +392,7 @@ struct FileManagerView: View {
                     await loadDirectoryContents()
                 }
             } catch {
-                logger.error("Failed to create folder \(folderName, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                logger.error("Failed to create folder \(folderName, privacy: .private(mask: .hash)): \(error.localizedDescription, privacy: .private)")
             }
         })
 

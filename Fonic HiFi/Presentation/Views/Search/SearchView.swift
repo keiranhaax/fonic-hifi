@@ -211,7 +211,7 @@ struct SearchView: View {
                 }
             }
         } catch {
-            logger.error("Search failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("Search failed: \(error.localizedDescription, privacy: .private)")
             await MainActor.run {
                 searchResults = SearchResults()
                 isSearching = false
@@ -239,7 +239,7 @@ struct SearchView: View {
         do {
             recentSearches = try await dataManager.getRecentSearches()
         } catch {
-            logger.error("Failed to load recent searches: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to load recent searches: \(error.localizedDescription, privacy: .private)")
             recentSearches = []
         }
     }

@@ -86,7 +86,7 @@ struct TrackRowView: View {
         let serviceID = String(describing: ObjectIdentifier(audioService))
         logger.info("""
             Track selected for playback
-            - audioService ID: \(serviceID, privacy: .public)
+            - audioService ID: \(serviceID, privacy: .private(mask: .hash))
             - isReady: \(audioService.isReady)
             - isPlaying: \(audioService.isPlaying)
             """)
@@ -99,7 +99,7 @@ struct TrackRowView: View {
                 try await audioService.play(track: track)
                 logger.info("play(track:) succeeded")
             } catch {
-                logger.error("play(track:) FAILED: \(error.localizedDescription, privacy: .public)")
+                logger.error("play(track:) FAILED: \(error.localizedDescription, privacy: .private)")
                 // Clear broken state so user isn't left in non-functional UI
                 audioService.setCurrentTrack(nil)
                 showingNowPlaying.wrappedValue = false

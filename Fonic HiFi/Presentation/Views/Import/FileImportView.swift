@@ -65,7 +65,7 @@ struct FileImportView: View {
         case let .success(urls):
             selectedURLs.append(contentsOf: urls)
         case let .failure(error):
-            logger.error("File selection failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("File selection failed: \(error.localizedDescription, privacy: .private)")
         }
     }
 

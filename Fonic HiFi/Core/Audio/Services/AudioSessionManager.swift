@@ -162,7 +162,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                 """
             )
         } catch {
-            logger.warning("Failed to set preferred sample rate: \(error.localizedDescription, privacy: .public)")
+            logger.warning("Failed to set preferred sample rate: \(error.localizedDescription, privacy: .private)")
         }
     }
 
@@ -431,7 +431,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                 self.logger.error(
                     """
                     Failed to reconfigure audio session after media services reset:
-                    \(String(describing: error), privacy: .public)
+                    \(String(describing: error), privacy: .private)
                     """
                 )
             }

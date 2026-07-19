@@ -69,7 +69,7 @@ actor FileImportProcessor {
         self.logger.error(
             """
             Documents directory unavailable; using temporary directory fallback at:
-            \(fallback.path, privacy: .public)
+            \(fallback.path, privacy: .private)
             """
         )
         return fallback
@@ -365,7 +365,7 @@ actor FileImportProcessor {
         let urlString = file.originalURL.absoluteString
 
         if hashCache.contains(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString) {
-            logger.notice("Duplicate import skipped (cache hit): \(file.originalURL.lastPathComponent, privacy: .public)")
+            logger.notice("Duplicate import skipped (cache hit): \(file.originalURL.lastPathComponent, privacy: .private(mask: .hash))")
             return ProcessedFileResult(
                 file: file,
                 identifier: nil,
@@ -396,8 +396,8 @@ actor FileImportProcessor {
             let errorDescription = error.localizedDescription
             logger.error(
                 """
-                File import failed for \(filename, privacy: .public):
-                \(errorDescription, privacy: .public)
+                File import failed for \(filename, privacy: .private(mask: .hash)):
+                \(errorDescription, privacy: .private)
                 """
             )
             return ProcessedFileResult(
@@ -584,7 +584,7 @@ actor FileImportProcessor {
         defer { stopAccess() }
 
         if try await trackDataActor.trackExists(for: file.originalURL, bookmark: file.securityScopedBookmark) != nil {
-            logger.notice("Duplicate import skipped for: \(file.originalURL.lastPathComponent, privacy: .public)")
+            logger.notice("Duplicate import skipped for: \(file.originalURL.lastPathComponent, privacy: .private(mask: .hash))")
             throw ProcessedFileError(message: "Duplicate file already exists")
         }
 

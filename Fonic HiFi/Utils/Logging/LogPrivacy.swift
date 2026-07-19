@@ -1,8 +1,8 @@
 import Foundation
 
 /// Utility helpers for redacting or truncating information before it is
-/// emitted to logs or metrics metadata. Only surface non-sensitive fragments
-/// such as filenames instead of full paths when reporting on file activity.
+/// emitted to logs or metrics metadata. Returned fragments are still user
+/// content and must remain private when interpolated into logs or metadata.
 enum LogPrivacy {
     static func filename(_ url: URL) -> String {
         url.lastPathComponent

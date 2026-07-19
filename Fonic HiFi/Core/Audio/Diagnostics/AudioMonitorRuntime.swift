@@ -178,7 +178,7 @@ private extension AudioMonitorRuntime {
 
         for alert in alerts {
             publishAlert(alert)
-            logger.warning("Alert triggered: \(alert.type.rawValue, privacy: .public) - \(alert.message, privacy: .public)")
+            logger.warning("Alert triggered: \(alert.type.rawValue, privacy: .public) - \(alert.message, privacy: .private)")
         }
     }
 

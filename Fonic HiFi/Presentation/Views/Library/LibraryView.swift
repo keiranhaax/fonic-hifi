@@ -379,7 +379,7 @@ struct LibraryView: View {
             do {
                 try await audioEngine.play(track: playableTrack)
             } catch {
-                Log.logger(.library).error("Failed to play track: \(error.localizedDescription, privacy: .public)")
+                Log.logger(.library).error("Failed to play track: \(error.localizedDescription, privacy: .private)")
             }
         }
     }

@@ -242,7 +242,7 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
             )
 
         } catch {
-            logger.error("avasset.load_failed url=\(url.lastPathComponent, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+            logger.error("avasset.load_failed url=\(url.lastPathComponent, privacy: .private(mask: .hash)) error=\(error.localizedDescription, privacy: .private)")
             throw DetectionError.assetLoadingFailed(error)
         }
     }

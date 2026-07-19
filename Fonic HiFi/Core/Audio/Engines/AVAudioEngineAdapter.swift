@@ -297,7 +297,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         do {
             try await sessionManager.activateSession(false)
         } catch {
-            logger.error("Failed to deactivate audio session: \(String(describing: error), privacy: .public)")
+            logger.error("Failed to deactivate audio session: \(String(describing: error), privacy: .private)")
         }
     }
 

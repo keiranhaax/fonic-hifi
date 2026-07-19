@@ -353,7 +353,7 @@ public extension QueueState {
             }
         } catch {
             logger.error(
-                "Failed to decode queue state: \(error.localizedDescription, privacy: .public)",
+                "Failed to decode queue state: \(error.localizedDescription, privacy: .private)",
             )
         }
 

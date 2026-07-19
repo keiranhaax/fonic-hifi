@@ -40,7 +40,7 @@ enum Metrics {
             sink(counter, amount, meta, metadata)
         }
 
-        logger(for: counter).log("metric=\(counter.rawValue, privacy: .public) delta=\(amount) \(meta, privacy: .public)")
+        logger(for: counter).log("metric=\(counter.rawValue, privacy: .public) delta=\(amount) \(meta, privacy: .private)")
     }
 
     private static func logger(for counter: MetricsCounter) -> Logger {

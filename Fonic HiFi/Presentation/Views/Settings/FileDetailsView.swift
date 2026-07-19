@@ -174,7 +174,7 @@ struct FileDetailsView: View {
                 )
             }
         } catch {
-            logger.error("Failed to load audio metadata for \(file.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to load audio metadata for \(file.name, privacy: .private(mask: .hash)): \(error.localizedDescription, privacy: .private)")
             await MainActor.run {
                 audioMetadata = AudioMetadata(
                     duration: nil,

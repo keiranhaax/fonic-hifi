@@ -637,7 +637,7 @@ public final class AudioQueueManager: AudioQueue {
             try validatedState.save()
         } catch {
             logger.error(
-                "Failed to save queue state: \(error.localizedDescription, privacy: .public)",
+                "Failed to save queue state: \(error.localizedDescription, privacy: .private)",
             )
         }
     }
