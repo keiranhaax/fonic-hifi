@@ -116,4 +116,7 @@ log.md
 # Retired Claude configuration
 .claude/
 /CLAUDE.md
-.kilocode/mcp.json
+.kilocode/
+
+# Local test media (user-owned; never commit)
+/music-file/
