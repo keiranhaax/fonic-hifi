@@ -1,0 +1,51 @@
+{
+  "mcpServers": {
+    "xcodebuildmcp": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/xcodebuildmcp",
+      "args": ["mcp"],
+      "env": {
+        "DEVELOPER_DIR": "${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}",
+        "PATH": "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "XCODEBUILDMCP_ARCH": "arm64",
+        "XCODEBUILDMCP_BUNDLE_ID": "ai.keiranlabs.Fonic-HiFi",
+        "XCODEBUILDMCP_CONFIGURATION": "Debug",
+        "XCODEBUILDMCP_DERIVED_DATA_PATH": "${FACTORY_PROJECT_DIR:-.}/build/DerivedData",
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "simulator,device,ui-automation,debugging,coverage,xcode-ide",
+        "XCODEBUILDMCP_PLATFORM": "iOS Simulator",
+        "XCODEBUILDMCP_PREFER_XCODEBUILD": "true",
+        "XCODEBUILDMCP_PROJECT_PATH": "${FACTORY_PROJECT_DIR:-.}/Fonic HiFi.xcodeproj",
+        "XCODEBUILDMCP_SCHEME": "Fonic HiFi",
+        "XCODEBUILDMCP_SENTRY_DISABLED": "true",
+        "XCODEBUILDMCP_SIMULATOR_NAME": "iPhone 17 Pro",
+        "XCODEBUILDMCP_SIMULATOR_PLATFORM": "iOS Simulator",
+        "XCODEBUILDMCP_SUPPRESS_WARNINGS": "false",
+        "XCODEBUILDMCP_USE_LATEST_OS": "true"
+      },
+      "disabled": false,
+      "timeoutMs": 600000
+    },
+    "xcodemcp": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/npx",
+      "args": ["-y", "xcodemcp@2.1.4", "--sidekick-only"],
+      "env": {
+        "DEVELOPER_DIR": "${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}",
+        "LOG_LEVEL": "WARN",
+        "PATH": "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "XCODE_MCP_PREFERRED_SCHEME": "Fonic HiFi",
+        "XCODE_MCP_PREFERRED_XCODEPROJ": "${FACTORY_PROJECT_DIR:-.}/Fonic HiFi.xcodeproj"
+      },
+      "disabledTools": [
+        "xcode_build",
+        "xcode_build_and_run",
+        "xcode_clean",
+        "xcode_debug",
+        "xcode_stop",
+        "xcode_test"
+      ],
+      "disabled": false,
+      "timeoutMs": 120000
+    }
+  }
+}
