@@ -42,7 +42,7 @@ Delete the workflow until further notice, preserve the Makefile's local build/te
 
 - Started: 2026-07-18
 - Completed: 2026-07-18
-- Commit: Not requested
+- Commit: `b15f330`
 - Verification result: MATCH — workflow absent by filesystem and workflow-directory probes; active instructions record intentional retirement; AUDIT-005 is blocked; scoped diff check passed
 
 ## AUDIT-058 — Preserve the local agent contract across the malformed upstream rewrite
@@ -84,7 +84,7 @@ Re-read `AGENTS.md`; compare its required section headings with the pre-cleanup 
 
 - Started: 2026-07-18
 - Completed: 2026-07-18
-- Commit: Not requested
+- Commit: `3ed799c`
 - Verification result: MATCH — nine project guides remain; all seven required root sections remain; branch `main`, HEAD `4fab020`, upstream divergence `0 1`, and staged-diff checksum are unchanged
 
 ## AUDIT-059 — Retain the audit corpus and project references as intentional evidence
@@ -126,7 +126,7 @@ List each root, count its files, run `git check-ignore --no-index` probes, and v
 
 - Started: 2026-07-18
 - Completed: 2026-07-18
-- Commit: Not requested
+- Commit: `09943b4`
 - Verification result: MATCH — the three roots contain 109 files in aggregate, all exist and remain unignored, and the tracker README identifies their reference role
 
 ## AUDIT-060 — Ignore local test-song media
@@ -168,7 +168,7 @@ Record only aggregate file count and size before/after; run `git check-ignore --
 
 - Started: 2026-07-18
 - Completed: 2026-07-18
-- Commit: Not requested
+- Commit: `b15f330`
 - Verification result: MATCH — three files and 97,996 KiB remained on disk; the root-scoped ignore rule matched; normal status no longer enumerates the media directory
 
 ## AUDIT-061 — Review historical MCP credentials and choose provider-side action
