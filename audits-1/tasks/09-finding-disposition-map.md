@@ -78,7 +78,7 @@ Legend: `AUDIT-###` = task in files `02`–`10`; `DONE — 01-resolved-findings.
 | DLP-015 | Medium | Repeated recent searches create duplicate persistence rows and duplicate SwiftUI IDs | DLP-015 | DONE — 01-resolved-findings.md |
 | DLP-017 | Medium | Listening-session persistence has no retention bound | DLP-017 | AUDIT-011 |
 | DLP-020 | Medium | Playback position is mistaken for time actually listened | DLP-020 | AUDIT-011 |
-| FMA-002 | Medium | Generated track UUIDs are structurally typed but not checked against the offered set | FMA-002 | AUDIT-044 |
+| FMA-002 | Medium | Generated track UUIDs are structurally typed but not checked against the offered set | FMA-002 | AUDIT-044 (DONE) |
 | FMA-003 | Medium | Canceled Smart Search work can be converted into a fallback result and overwrite newer state | FMA-003 | AUDIT-045 |
 | FMA-005 | Medium | Smart Search’s documented standard-search fallback returns an empty AI result without handing off | FMA-005 | AUDIT-045 |
 | FMA-007 | Medium | Tests do not deterministically exercise the live model path or its failure matrix | FMA-007 | AUDIT-047 |
@@ -115,7 +115,7 @@ Legend: `AUDIT-###` = task in files `02`–`10`; `DONE — 01-resolved-findings.
 | DCA-PART-003 | Low | QueueCoordinator exposes three inert methods beside working manager APIs | DCA-PART-003 | DONE — 01-resolved-findings.md |
 | DCA-PART-004 | Low | Smart-search result taps only log and never invoke playback | DCA-PART-004 | DONE — 01-resolved-findings.md |
 | DCA-SAMPLE-001 | Low | Three undocumented sample app fragments have no build container | DCA-SAMPLE-001 | DONE — 01-resolved-findings.md |
-| FMA-006 | Low | User queries and imported metadata are inserted into prompts without explicit untrusted-data boundaries | FMA-006 | AUDIT-044 |
+| FMA-006 | Low | User queries and imported metadata are inserted into prompts without explicit untrusted-data boundaries | FMA-006 | AUDIT-044 (DONE) |
 | PCFG-009 | Low | SwiftLint excludes all widget and UI-test source | PCFG-009 | DONE — 01-resolved-findings.md |
 | PCFG-011 | Low | Widget asset build settings name color sets that do not exist in the widget target | PCFG-011 | AUDIT-003 (DONE) |
 | UIUX-014 | Low | Audio Settings nests a second navigation stack inside the Settings stack | UIUX-014 | DONE — 01-resolved-findings.md |
@@ -134,11 +134,11 @@ These eight rows are routing cross-references, not additional normalized finding
 | WP1 ID | Disposition |
 |---|---|
 | FMA-001 | DONE — merged into CAN-021 (Surprise Me single-flight), fixed; see 01-resolved-findings.md |
-| FMA-002 | AUDIT-044 |
+| FMA-002 | AUDIT-044 (DONE) |
 | FMA-003 | AUDIT-045 |
 | FMA-004 | AUDIT-038 (merged into CAN-022 failure-silence cluster) |
 | FMA-005 | AUDIT-045 |
-| FMA-006 | AUDIT-044 |
+| FMA-006 | AUDIT-044 (DONE) |
 | FMA-007 | AUDIT-047 |
 | FMA-008 | AUDIT-046 |
 

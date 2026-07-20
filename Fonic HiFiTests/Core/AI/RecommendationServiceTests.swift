@@ -41,4 +41,52 @@ struct RecommendationServiceTests {
         let isAvailable = await service.isFoundationModelsAvailable()
         #expect(isAvailable == true || isAvailable == false)
     }
+
+    @Test("Generated recommendations reject malformed, duplicate, out-of-offer, and excess IDs")
+    @MainActor
+    func generatedRecommendationsValidateTrackIDs() {
+        let offeredTrackIDs = (0 ..< 8).map { _ in UUID() }
+        let outOfOfferTrackID = UUID()
+        var generatedGreeting = TimeBasedGreeting(
+            greeting: "Good Morning",
+            trackIDs: [],
+            moodDescription: "Morning mix"
+        )
+        generatedGreeting.trackIDStrings = [
+            offeredTrackIDs[0].uuidString,
+            "not-a-uuid",
+            outOfOfferTrackID.uuidString,
+            offeredTrackIDs[1].uuidString,
+            offeredTrackIDs[0].uuidString,
+            offeredTrackIDs[2].uuidString,
+            offeredTrackIDs[3].uuidString,
+            offeredTrackIDs[4].uuidString,
+            offeredTrackIDs[5].uuidString,
+        ]
+
+        let greeting = RecommendationService.validated(
+            generatedGreeting,
+            offeredTrackIDs: offeredTrackIDs
+        )
+
+        #expect(greeting.trackIDs == Array(offeredTrackIDs.prefix(5)))
+
+        var generatedMix = SurpriseMixResult(
+            greeting: "Surprise",
+            trackIDs: [],
+            mixTheme: "Unexpected"
+        )
+        generatedMix.trackIDStrings = [
+            outOfOfferTrackID.uuidString,
+            offeredTrackIDs[0].uuidString,
+            offeredTrackIDs[0].uuidString,
+        ] + offeredTrackIDs.dropFirst().map(\.uuidString)
+
+        let mix = RecommendationService.validated(
+            generatedMix,
+            offeredTrackIDs: offeredTrackIDs
+        )
+
+        #expect(mix.trackIDs == Array(offeredTrackIDs.prefix(7)))
+    }
 }

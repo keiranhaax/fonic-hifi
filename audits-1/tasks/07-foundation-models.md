@@ -2,7 +2,7 @@
 
 ## AUDIT-044 — Validate generated track IDs against the offered set; add untrusted-data prompt boundaries
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: WP1 (FMA-002, FMA-006)
 - Audit finding IDs: FMA-002, FMA-006
@@ -17,9 +17,9 @@
 - Blocks: AUDIT-047 (the test matrix locks in this behavior)
 - Related tasks: AUDIT-045, AUDIT-047
 - Affected features: recommendations, Smart Search
-- Affected files or symbols: `RecommendationService.swift:66-72,124-130` and `SmartSearchService.swift:89-95` (`response.content` returned without intersecting with `availableTrackIDs`), `SmartSearchService.swift:67-87,145-155,166-179` (query + library metadata interpolated into prompts without boundaries)
-- Validation status: Confirmed both (revalidated 2026-07-15)
-- Validation evidence: cited lines
+- Affected files or symbols: `GeneratedTrackIDValidator`, `AIUntrustedData`, `RecommendationService.validated`, `SmartSearchService.validated`, `SmartSearchService.makePrompt`
+- Validation status: Completed (2026-07-20)
+- Validation evidence: focused hostile-output and prompt-boundary tests; complete unit target; Debug simulator build
 
 ### Problem
 Guided output is trusted: generated UUIDs are not checked against the candidate set (out-of-set IDs flow onward), and untrusted user/library text is interpolated directly into prompts — both violate the repo's AI invariants.
@@ -34,9 +34,9 @@ After generation: intersect IDs with the offered candidate set, deduplicate, enf
 On-device only; no schema or session-lifecycle changes here. Deterministic fallback untouched.
 
 ### Acceptance Criteria
-- [ ] Out-of-set, duplicate, and over-limit IDs are rejected/trimmed (tests with stubbed output)
-- [ ] Prompts structurally separate instructions from data (snapshot test)
-- [ ] Malicious metadata (e.g. a title containing instructions) does not alter behavior (test)
+- [x] Out-of-set, duplicate, and over-limit IDs are rejected/trimmed (tests with stubbed output)
+- [x] Prompts structurally separate instructions from data (snapshot test)
+- [x] Malicious metadata (e.g. a title containing instructions) does not alter behavior (test)
 
 ### Suggested Verification
 Unit tests with malformed/hostile stub outputs; existing AI suite.
@@ -48,10 +48,10 @@ Legitimate results must not be over-filtered — validate against the candidate 
 AGENTS.md Foundation Models rules make this mandatory, not optional hardening.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-20
+- Completed: 2026-07-20
+- Commit: This commit (`fix(ai): enforce model trust boundaries`)
+- Verification result: Generated recommendation and search IDs are now parsed, intersected with the per-request offered set, deduplicated in model order, and capped at 5/7/15 before callers re-fetch authoritative `Track` values. Query, listening, and library text is escaped inside explicit untrusted-data sections while role rules remain in session instructions. Focused AI suites passed 10/10; full `Fonic HiFiTests` passed 456/456; the Debug iPhone 17 Pro simulator build succeeded; SwiftLint reported 0 violations in 289 files; repository-wide `git diff --check` passed. SwiftFormat 0.62.1 passes the new trust-boundary file; the four existing service/test files retain their pre-existing whole-file formatting findings, with no formatter-proposed changes in the new validation or prompt code.
 
 ## AUDIT-045 — Distinguish cancellation from failure; hand off to standard search on fallback
 

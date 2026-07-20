@@ -39,9 +39,9 @@ Counting note: `09-finding-disposition-map.md` contains 118 WP2 canonical rows a
 
 - Normalized findings reviewed: **118** WP2 canonical findings (from 147 Model B + WP1 source findings) + 8 WP4 candidates + 15 WP5 entries; Model A's 46 findings are corroborating evidence, not an additional normalized set
 - Unique implementation tasks created: **66** (AUDIT-001 … AUDIT-066)
-- `[TODO]`: **48**
+- `[TODO]`: **47**
 - `[IN PROGRESS]`: **0**
-- `[DONE]` implementation tasks: **13** (AUDIT-001, AUDIT-002, AUDIT-003, AUDIT-006, AUDIT-008, AUDIT-009, AUDIT-020, AUDIT-039, AUDIT-056, AUDIT-057, AUDIT-058, AUDIT-059, AUDIT-060), plus **27 resolved/owner-dispositioned findings** recorded in `01-resolved-findings.md` and 1 partial dead-code evidence row whose remaining work is AUDIT-052
+- `[DONE]` implementation tasks: **14** (AUDIT-001, AUDIT-002, AUDIT-003, AUDIT-006, AUDIT-008, AUDIT-009, AUDIT-020, AUDIT-039, AUDIT-044, AUDIT-056, AUDIT-057, AUDIT-058, AUDIT-059, AUDIT-060), plus **27 resolved/owner-dispositioned findings** recorded in `01-resolved-findings.md` and 1 partial dead-code evidence row whose remaining work is AUDIT-052
 - `[BLOCKED]`: **5** (AUDIT-004 product decision; AUDIT-005 CI reintroduction; AUDIT-007 owner/policy; AUDIT-055 physical device + release owner; AUDIT-061 provider/history disposition)
 - Standalone `[UNCONFIRMED]` dispositions: **0** — retained static defects are routed to tasks, while unmeasured runtime/device impact remains explicit profile-first, reproduce-first, or evidence-lane work
 - `[NOT APPLICABLE]` / no-action: **5** (WP5 CLN-010…014 "keep" findings; see disposition map)
@@ -70,7 +70,7 @@ Dependency order overrides difficulty order; reasons noted where a harder task p
 3. **AUDIT-006 — DONE** — confirmed content-bearing public log interpolations redacted; broader explicit-privacy policy work remains AUDIT-065.
 4. **GROUP-02: AUDIT-008, AUDIT-009 — DONE** — ReplayGain and MP4 numbering metadata now parse and persist with AAC/ALAC fixture coverage.
 5. **AUDIT-020 — DONE** — typed engine preferences now select every capable stored choice, migrate the legacy AudioKit value, and log deterministic fallbacks.
-6. **AUDIT-039 — DONE** — Home genre pills now open labeled, genre-filtered track destinations. **AUDIT-025 — NEXT**, then **AUDIT-044, AUDIT-048, AUDIT-053, AUDIT-065** — remaining bounded independent tasks. **AUDIT-056 … AUDIT-060 are DONE**.
+6. **AUDIT-039, AUDIT-044 — DONE** — Home genre pills open labeled, genre-filtered track destinations; generated AI IDs are constrained to offered tracks and prompt data is explicitly bounded. **AUDIT-025 — NEXT**, then **AUDIT-048, AUDIT-053, AUDIT-065** — remaining bounded independent tasks. **AUDIT-056 … AUDIT-060 are DONE**.
 7. **AUDIT-010** *(harder before easier — foundational)* — schema V-next + migration ordering blocks all listening-session work and real migration tests.
 8. **GROUP-03: AUDIT-012, AUDIT-011** — migration tests immediately after AUDIT-010, then session lifecycle.
 9. **AUDIT-013** then **GROUP-04: AUDIT-015, AUDIT-014** — import-pipeline integrity; AUDIT-015 (cancellation + semaphore) before AUDIT-014 (atomic dedup) because dedup redesign builds on the same actor kernel (WP4-R05/R06).
