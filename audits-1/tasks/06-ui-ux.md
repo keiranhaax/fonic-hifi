@@ -158,7 +158,7 @@ Ledger M-12.
 
 ## AUDIT-039 — Wire genre pill destinations
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (UIUX-012)
 - Audit finding IDs: UIUX-012 (residual)
@@ -172,9 +172,9 @@ Ledger M-12.
 - Depends on: —
 - Related tasks: AUDIT-038
 - Affected features: Home browse
-- Affected files or symbols: `GenresSection.swift:22-23,35-40` (`GenrePillView` inert)
-- Validation status: Partially fixed — album/artist cards now navigate (commits `98f4263…`); genre pills remain inert (2026-07-15)
-- Validation evidence: cited lines
+- Affected files or symbols: `GenresSection`, `GenreTracksView`, `HomeView.selectedGenre`
+- Validation status: Completed (2026-07-20)
+- Validation evidence: focused Home UI regression plus a Debug iPhone 17 Pro (iOS 27.0) simulator build
 
 ### Problem
 Genre pills look tappable but do nothing — the last remaining dead browse affordance.
@@ -189,8 +189,8 @@ Make pills semantic buttons navigating to a genre-filtered library/track list (r
 No new navigation patterns; follow the album/artist card wiring just landed.
 
 ### Acceptance Criteria
-- [ ] Tapping a genre shows that genre's tracks
-- [ ] Pills are buttons with labels (VoiceOver activatable)
+- [x] Tapping a genre shows that genre's tracks
+- [x] Pills are buttons with labels (VoiceOver activatable)
 
 ### Suggested Verification
 UI test activating a pill by label; navigation postcondition.
@@ -199,10 +199,10 @@ UI test activating a pill by label; navigation postcondition.
 Ledger M-10 residue.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-20
+- Completed: 2026-07-20
+- Commit: This commit (`fix(ui): wire genre destinations`)
+- Verification result: Red UI regression failed because the seeded `Electronic` genre was not a button. The focused Home UI test then passed 1/1, activating the labeled 44-point genre button and verifying the `Electronic` destination showed exactly its seeded track; the Debug simulator build succeeded; SwiftLint reported 0 violations in 288 files; `git diff --check` passed. SwiftFormat 0.62.1 passed `GenresSection.swift`; `HomeView.swift` and the shared UI-test file retain only the same pre-existing formatting findings reproduced from `HEAD`, with no new task-introduced findings.
 
 ## AUDIT-040 — Adaptive Now Playing layout and non-color state differentiation
 

@@ -487,7 +487,7 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
     }
 
-    func testHomeBrowseSectionsExposeOnlyWorkingSemanticActions() throws {
+    func testHomeBrowseSectionsExposeWorkingSemanticActions() throws {
         let app = launchPreviewApp(arguments: ["-UITestLibraryData"])
 
         let playActions = app.buttons.matching(
@@ -500,14 +500,29 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         let album = app.buttons.matching(
             NSPredicate(format: "label == %@", "Open album Semantic Album by Semantic Artist")
         ).firstMatch
+        let genre = app.buttons["Electronic"]
         XCTAssertTrue(artist.exists)
         XCTAssertTrue(album.exists)
-        XCTAssertTrue(app.staticTexts["Electronic"].exists)
-        XCTAssertFalse(app.buttons["Electronic"].exists)
+        XCTAssertTrue(genre.exists)
 
         reveal(artist, in: app)
         artist.tap()
         XCTAssertTrue(app.navigationBars["Artist"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
+
+        reveal(genre, in: app)
+        let miniPlayer = app.otherElements["MiniPlayer"]
+        for _ in 0 ..< 6 where genre.frame.maxY > miniPlayer.frame.minY {
+            app.swipeUp()
+        }
+        XCTAssertTrue(genre.isHittable)
+        XCTAssertLessThanOrEqual(genre.frame.maxY, miniPlayer.frame.minY)
+        XCTAssertGreaterThanOrEqual(genre.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(genre.frame.height, 44)
+        genre.tap()
+        XCTAssertTrue(app.navigationBars["Electronic"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["1 tracks"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Play Semantic Track by Semantic Artist"].exists)
         app.buttons["Done"].tap()
 
         reveal(album, in: app)

@@ -103,7 +103,7 @@ Legend: `AUDIT-###` = task in files `02`–`10`; `DONE — 01-resolved-findings.
 | UIUX-004 | Medium | The iOS 26 tab accessory never adapts to inline placement | UIUX-004 | AUDIT-037 |
 | UIUX-005 | Medium | Full-screen Now Playing has no visible dismissal control | UIUX-005 | AUDIT-037 |
 | UIUX-011 | Medium | Smart Search is effectively unreachable from the active Search states | UIUX-011 | AUDIT-045, DONE — 01-resolved-findings.md |
-| UIUX-012 | Medium | Multiple browse affordances have no destination or action | UIUX-012 | AUDIT-039 |
+| UIUX-012 | Medium | Multiple browse affordances have no destination or action | UIUX-012 | AUDIT-039 (DONE) |
 | UIUX-017 | Medium | File Manager's multi-select actions have no touch-only edit-mode entry | UIUX-017 | DONE — 01-resolved-findings.md |
 | UIUX-018 | Medium | Every library pagination fetch presents a full-screen blocking loader | UIUX-018 | DONE — 01-resolved-findings.md |
 | CAN-007 | Low | Info.plist claims Live Activity support without an Activity configuration | PCFG-010, PSR-009 | AUDIT-004 |

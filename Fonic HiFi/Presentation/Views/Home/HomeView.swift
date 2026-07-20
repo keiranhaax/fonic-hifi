@@ -55,6 +55,7 @@ struct HomeView: View {
     @State private var hasLoadedOnce = false
     @State private var selectedArtist: Artist?
     @State private var selectedAlbum: Album?
+    @State private var selectedGenre: GenreSelection?
 
     var body: some View {
         NavigationStack {
@@ -90,6 +91,9 @@ struct HomeView: View {
                         playTrack(track)
                     }
                 )
+            }
+            .sheet(item: $selectedGenre) { selection in
+                GenreTracksView(genre: selection.name)
             }
         }
     }
@@ -145,7 +149,9 @@ struct HomeView: View {
 
                 // Browse by Genre
                 if !genres.isEmpty {
-                    GenresSection(genres: genres)
+                    GenresSection(genres: genres) { genre in
+                        selectedGenre = GenreSelection(name: genre)
+                    }
                 }
 
                 // Albums
@@ -324,6 +330,14 @@ struct HomeView: View {
         }
     }
 
+}
+
+private struct GenreSelection: Identifiable {
+    let name: String
+
+    var id: String {
+        name
+    }
 }
 
 // MARK: - Supporting Views
