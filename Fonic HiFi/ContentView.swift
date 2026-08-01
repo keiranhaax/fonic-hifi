@@ -10,11 +10,11 @@ import SwiftUI
 @MainActor
 struct ContentView: View {
     @Environment(\.dataManager) private var dataManager
-    @Environment(\.importService) private var importService
-    @Environment(\.audioEngine) private var audioService
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.libraryRepository) private var libraryRepository
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @ObservedObject private var colorService = DominantColorService.shared
     @AppStorage("artworkThemingEnabled") private var artworkThemingEnabled = true
@@ -26,38 +26,45 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            Tab("Home", systemImage: "house.fill") {
+            Tab {
                 HomeView()
                     .environment(\.showingNowPlaying, $showingNowPlaying)
+            } label: {
+                tabLabel("Home", systemImage: "house.fill")
             }
 
-            Tab("Library", systemImage: "music.note.list") {
+            Tab {
                 if let repository = libraryRepository {
                     LibraryView(viewModel: LibraryViewModel(repository: repository))
                         .environment(\.showingNowPlaying, $showingNowPlaying)
                 } else {
                     LibraryUnavailableView()
                 }
+            } label: {
+                tabLabel("Library", systemImage: "music.note.list")
             }
 
-            Tab("Settings", systemImage: "gear") {
+            Tab {
                 SettingsView()
+            } label: {
+                tabLabel("Settings", systemImage: "gear")
             }
 
-            Tab("Search", systemImage: "magnifyingglass", role: .search) {
+            Tab(role: .search) {
                 NavigationStack {
                     SearchView(searchText: $searchText)
                         .searchable(text: $searchText, placement: .toolbar, prompt: Text("Search Library"))
                         .environment(\.showingNowPlaying, $showingNowPlaying)
-                        .environment(\.audioEngine, audioService)
-                        .environment(\.importService, importService)
+                        .audioEngine(audioService)
                 }
+            } label: {
+                tabLabel("Search", systemImage: "magnifyingglass")
             }
         }
         .preferredColorScheme(.dark)
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewBottomAccessory {
-            if let audioService {
+            if audioService.currentTrack != nil {
                 LiquidGlassMiniPlayer(
                     namespace: miniPlayerNamespace,
                     onOpen: {
@@ -66,10 +73,15 @@ struct ContentView: View {
                         generator.impactOccurred(intensity: 0.9)
                     }
                 )
-                    .environment(\.audioEngine, audioService)
-                    .matchedTransitionSource(id: "miniplayer", in: miniPlayerNamespace)
+                .audioEngine(audioService)
+                .matchedTransitionSource(id: "miniplayer", in: miniPlayerNamespace)
             }
         }
+        .playbackErrorOverlay(
+            audioService.playbackError,
+            accessibilityIdentifier: "RootPlaybackErrorBanner",
+            dismiss: { id in audioService.dismissPlaybackControlError(id: id) }
+        )
         .fullScreenCover(isPresented: $showingNowPlaying) {
             ScrollView {}
                 .safeAreaInset(edge: .top, spacing: 0) {
@@ -77,7 +89,7 @@ struct ContentView: View {
                         namespace: miniPlayerNamespace,
                         dismiss: { showingNowPlaying = false }
                     )
-                    .environment(\.audioEngine, audioService)
+                    .audioEngine(audioService)
                     .navigationTransition(.zoom(sourceID: "miniplayer", in: miniPlayerNamespace))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -101,6 +113,18 @@ struct ContentView: View {
             colorService.updateColorScheme(colorScheme)
             colorService.updateThemingEnabled(artworkThemingEnabled)
             colorService.updateLightModeThemingEnabled(artworkThemingLightMode)
+        }
+    }
+
+    @ViewBuilder
+    private func tabLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            Label(title, systemImage: systemImage)
+                .labelStyle(.iconOnly)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(title))
+        } else {
+            Label(title, systemImage: systemImage)
         }
     }
 }
@@ -231,8 +255,6 @@ private struct PreviewLibraryRepository: LibraryRepository {
             .audioEngine(AudioEngineFacade())
             .libraryRepository(PreviewLibraryRepository())
     } else {
-        ContentView()
-            .audioEngine(AudioEngineFacade())
-            .libraryRepository(PreviewLibraryRepository())
+        Text("Preview unavailable")
     }
 }

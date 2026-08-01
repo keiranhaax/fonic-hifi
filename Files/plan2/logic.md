@@ -2025,7 +2025,7 @@ Best practices document warns:
    - **Status**: No infrastructure
 
 7. **CarPlay Integration**
-   - **Critical**: Requires CarPlay Simulator.app (separate download)
+   - **Critical**: Requires the legacy standalone CarPlay Simulator tool (separate download; revalidate against current Device Hub support)
    - **NOT**: Xcode's built-in CarPlay window (severe limitations)
    - **Status**: No evidence of CarPlay support
 
@@ -2361,7 +2361,7 @@ NSCompoundPredicate(andPredicateWithSubpredicates: [
 - [ ] No energy spikes during import
 
 **CarPlay (If Supported):**
-- [ ] CarPlay Simulator.app testing (NOT Xcode built-in window)
+- [ ] Legacy standalone CarPlay Simulator testing (NOT Xcode's built-in window; revalidate against current Device Hub support)
 - [ ] USB-connected iPhone required
 - [ ] Now Playing template displays automatically
 - [ ] Playback controls work from car interface

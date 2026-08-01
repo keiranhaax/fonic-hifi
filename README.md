@@ -1,11 +1,11 @@
 # Fonic HiFi 🎵
 
-![iOS 26+](https://img.shields.io/badge/iOS-26%2B-blue)
-![Swift 6.2](https://img.shields.io/badge/Swift-6.2-orange)
-![SwiftUI iOS 26](https://img.shields.io/badge/SwiftUI-iOS%2026-green)
+![iOS 27+](https://img.shields.io/badge/iOS-27%2B-blue)
+![Swift 6](https://img.shields.io/badge/Swift-6-orange)
+![SwiftUI iOS 27](https://img.shields.io/badge/SwiftUI-iOS%2027-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-A sophisticated iOS 26 audiophile music player built with Swift 6.2, SwiftUI, and AudioKit, focusing on bit-perfect playback and format versatility.
+A sophisticated iOS 27 audiophile music player built with Swift 6, SwiftUI, and AudioKit, focusing on bit-perfect playback and format versatility.
 
 ## Features
 
@@ -24,8 +24,8 @@ A sophisticated iOS 26 audiophile music player built with Swift 6.2, SwiftUI, an
 - **Extensible**: Architecture-ready for additional formats via adapters
 
 ### 🎨 Modern SwiftUI Interface
-- Native iOS 26 Liquid Glass design using `.glassEffect()` surfaces
-- Adaptive layouts tuned for iPhone 16 Pro and larger displays
+- Native iOS 27 Liquid Glass design using `.glassEffect()` surfaces
+- Adaptive layouts tuned for iPhone 17 Pro and larger displays
 - Smooth animations with matched geometry effects and timeline scrubbing
 - Dark mode-first visuals for OLED panels
 - Full VoiceOver, Dynamic Type, and reduced motion accommodations
@@ -38,8 +38,8 @@ A sophisticated iOS 26 audiophile music player built with Swift 6.2, SwiftUI, an
 
 ## Architecture
 
-### Swift 6.2 Concurrency
-The app opts into Swift 6.2's main-actor-by-default tooling while isolating persistence and playback work behind actors:
+### Swift 6 Concurrency
+The app uses Swift 6 language mode and complete strict-concurrency checking while isolating persistence and playback work behind actors:
 
 ```swift
 @MainActor: UI components, view models, AudioEngineFacade
@@ -65,9 +65,9 @@ AudioEngineFacade (Main coordinator)
 
 ## Requirements
 
-- iOS 26.0+ deployment target (iPhone 16 Pro simulator default)
-- iPhone 16 Pro or newer hardware for on-device validation
-- Xcode 16.4+ with the Swift 6.2 toolchain
+- iOS 27.0+ deployment target (iPhone 17 Pro simulator default)
+- iPhone 17 Pro or newer hardware for on-device validation
+- Xcode 27+ with Swift 6 language mode
 - Homebrew toolchain via `make install-deps` (SwiftLint, SwiftFormat, xcbeautify)
 
 ## Installation
@@ -84,7 +84,7 @@ make open
 ```
 
 ### Build and Run
-1. Run `make run` to build and launch on the iPhone 16 Pro (iOS 26) simulator.
+1. Run `make run` to build and launch on the iPhone 17 Pro using the latest installed iOS 27 runtime.
 2. Grant file access permissions when prompted.
 3. Connect an external DAC before launch if you want to validate bit-perfect playback.
 
@@ -93,15 +93,22 @@ make open
 ### Build & Test Commands
 
 ```bash
-make build        # Debug build for iPhone 16 Pro (iOS 26)
+make build        # Unsigned Debug build for iPhone 17 Pro (iOS 27)
 make test-unit    # Unit + integration test suites
 make test-ui      # End-to-end UI flows
-make coverage     # Generates coverage report (xccov JSON + HTML bundle)
+make coverage     # Runs fresh tests and writes xccov JSON + summary
 make coverage-check  # Fails if overall/app targets drop below configured thresholds
 make lint         # SwiftLint quality checks
 make format       # SwiftFormat auto-formatting
-make clean        # Reset derived data and build artifacts
+make clean        # Delete only repository-local build artifacts
 ```
+
+### Agent Tooling
+
+- Use `make` for the repository's canonical lint, build, test, coverage, artifact, and cleanup behavior.
+- `.factory/mcp.json` gives XcodeBuildMCP explicit defaults for this project, scheme, iOS 27 simulator, and `build/DerivedData`.
+- XcodeMCP is restricted to Xcode project state and XCResult inspection so it does not duplicate XcodeBuildMCP's build and test controls.
+- Native Xcode tools require the project to be open and **Allow external agents to use Xcode tools** enabled in Xcode Settings > Intelligence.
 
 ### Project Structure
 
@@ -138,7 +145,7 @@ Contributions are welcome! Please follow these guidelines:
 5. Open a Pull Request
 
 ### Code Style
-- Swift 6.2 approachable concurrency with main-actor-by-default mode
+- Swift 6 language mode with complete strict-concurrency checking
 - SwiftUI best practices
 - Comprehensive documentation for public APIs
 - Unit tests for business logic

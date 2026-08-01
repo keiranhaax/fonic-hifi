@@ -1,0 +1,1274 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    " " : {
+
+    },
+    "-12 dB" : {
+
+    },
+    "%@ — %@" : {
+      "comment" : "Artist and album metadata; translators may reorder placeholders and punctuation",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ — %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "%@ • %@" : {
+      "comment" : "Track title and artist metadata; translators may reorder placeholders and punctuation",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ • %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ • %2$@"
+          }
+        }
+      }
+    },
+    "%@ dB" : {
+      "comment" : "Equalizer gain. The placeholder is a signed locale-formatted number.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ dB"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ dB"
+          }
+        }
+      }
+    },
+    "%@ decibels" : {
+      "comment" : "VoiceOver value for an equalizer gain control",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ decibels"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ décibels"
+          }
+        }
+      }
+    },
+    "%@ does not support equalizer processing. Your setting is saved and will be reapplied when a compatible engine is used." : {
+      "comment" : "Equalizer limitation. The placeholder is an audio engine name.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ does not support equalizer processing. Your setting is saved and will be reapplied when a compatible engine is used."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ne prend pas en charge l’égaliseur. Votre réglage est enregistré et sera réappliqué avec un moteur compatible."
+          }
+        }
+      }
+    },
+    "%@ Hz" : {
+      "comment" : "Audio sample rate. The placeholder is a locale-formatted number.\nEqualizer band frequency. The placeholder is a locale-formatted number.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Hz"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Hz"
+          }
+        }
+      }
+    },
+    "%@, by %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, by %2$@"
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld albums" : {
+      "comment" : "Album count shown in library summaries",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld album"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld albums"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld album"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld albums"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld Albums" : {
+
+    },
+    "%lld artists" : {
+
+    },
+    "%lld files failed to import" : {
+      "comment" : "Summary of files that could not be imported",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld file failed to import"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files failed to import"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Échec de l’importation de %lld fichier"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Échec de l’importation de %lld fichiers"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld items selected" : {
+
+    },
+    "%lld percent" : {
+
+    },
+    "%lld seconds" : {
+      "comment" : "Crossfade duration value announced by VoiceOver",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld second"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld seconds"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld seconde"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld secondes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld tracks" : {
+      "comment" : "Track count shown in library summaries",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld track"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tracks"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld piste"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pistes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld Tracks" : {
+
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "%lld%%" : {
+
+    },
+    "•" : {
+
+    },
+    "+12 dB" : {
+
+    },
+    "0 dB" : {
+
+    },
+    "10-band parametric EQ" : {
+
+    },
+    "About" : {
+
+    },
+    "About Fonic HiFi" : {
+
+    },
+    "Actions" : {
+
+    },
+    "Active Timer" : {
+
+    },
+    "Add Files & Folders" : {
+
+    },
+    "Add More" : {
+
+    },
+    "Add to favorites" : {
+
+    },
+    "Add Tracks" : {
+
+    },
+    "Add tracks from the library to populate this playlist." : {
+
+    },
+    "Adds this track to the playlist" : {
+
+    },
+    "Adjust your rules or add more music to see results." : {
+
+    },
+    "Advanced" : {
+
+    },
+    "Album" : {
+
+    },
+    "Albums" : {
+
+    },
+    "All app data, including your music library metadata and preferences, is stored locally on your device.\nThis data is not shared with third parties." : {
+
+    },
+    "Appearance" : {
+
+    },
+    "Are you sure you want to delete %lld files? This action cannot be undone." : {
+      "comment" : "Confirmation before permanently deleting the selected files",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Are you sure you want to delete %lld file? This action cannot be undone."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Are you sure you want to delete %lld files? This action cannot be undone."
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Voulez-vous vraiment supprimer %lld fichier ? Cette action est irréversible."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Voulez-vous vraiment supprimer %lld fichiers ? Cette action est irréversible."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Artist" : {
+
+    },
+    "Artists" : {
+
+    },
+    "Artwork Theming" : {
+
+    },
+    "Audio Engine" : {
+
+    },
+    "Audio Information" : {
+
+    },
+    "Audio Settings" : {
+
+    },
+    "AudioKit Engine" : {
+      "comment" : "AudioKit engine name shown in Settings"
+    },
+    "Back" : {
+
+    },
+    "Bass Boost" : {
+
+    },
+    "Bit-Perfect Eligibility" : {
+
+    },
+    "Browse and manage imported files" : {
+
+    },
+    "Browse by Genre" : {
+
+    },
+    "By using Fonic HiFi, you agree to these terms." : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancel Import" : {
+
+    },
+    "Cancel Timer" : {
+
+    },
+    "Checks configuration; physical output is not measured" : {
+
+    },
+    "Choose the audio engine for playback. Different engines may provide different audio quality and compatibility." : {
+
+    },
+    "Choose your preferred audio backend" : {
+
+    },
+    "Choosing music" : {
+
+    },
+    "Choosing…" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Close lyrics" : {
+
+    },
+    "Continue Listening" : {
+
+    },
+    "Create" : {
+
+    },
+    "Create playlists to organize your music" : {
+
+    },
+    "Crossfade" : {
+
+    },
+    "Crossfade Duration" : {
+
+    },
+    "Dark Mode" : {
+
+    },
+    "Data Collection" : {
+
+    },
+    "Date Modified" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete %lld files" : {
+      "comment" : "Destructive action label for the selected file count",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Delete %lld files"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Supprimer %lld fichier"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Supprimer %lld fichiers"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Delete Files" : {
+
+    },
+    "Description (optional)" : {
+
+    },
+    "Dismiss" : {
+
+    },
+    "Dismiss Now Playing" : {
+
+    },
+    "Dismiss playback error" : {
+
+    },
+    "Done" : {
+
+    },
+    "DSP Active" : {
+
+    },
+    "Duration" : {
+
+    },
+    "Empty playlist" : {
+
+    },
+    "Empty Playlist" : {
+
+    },
+    "Enable Equalizer" : {
+
+    },
+    "Enabling the equalizer makes playback ineligible for bit-perfect output." : {
+
+    },
+    "Engine and playback settings" : {
+
+    },
+    "Enter a name for the new folder." : {
+
+    },
+    "Equalizer" : {
+
+    },
+    "Equalizer Unavailable" : {
+
+    },
+    "Every library track is already in this playlist." : {
+
+    },
+    "Export Settings" : {
+
+    },
+    "Fade Out" : {
+
+    },
+    "Fade Out Duration" : {
+
+    },
+    "Features" : {
+
+    },
+    "File actions" : {
+
+    },
+    "File Details" : {
+
+    },
+    "File Information" : {
+
+    },
+    "File Management" : {
+
+    },
+    "File Manager" : {
+
+    },
+    "File Operation Failed" : {
+
+    },
+    "Find tracks, albums, artists, and playlists" : {
+
+    },
+    "Flat" : {
+
+    },
+    "Folder Name" : {
+
+    },
+    "Fonic HiFi" : {
+      "shouldTranslate" : false
+    },
+    "Fonic HiFi could not access the library repository." : {
+
+    },
+    "Fonic HiFi Could Not Start" : {
+
+    },
+    "Fonic HiFi is a high-fidelity music player designed for audiophiles who demand the best possible sound quality from their digital music collection." : {
+
+    },
+    "Fonic HiFi is intended for personal use with legally obtained music files.\nUsers are responsible for ensuring they have the right to play the music files they import." : {
+
+    },
+    "Fonic HiFi only accesses your music files with your explicit permission.\nWe do not collect, store, or transmit any personal data or music files to external servers." : {
+
+    },
+    "Frequency Bands" : {
+
+    },
+    "Frequency Response" : {
+
+    },
+    "Gapless eliminates silence between tracks. Crossfade smoothly transitions between tracks. Replay Gain normalizes volume across your library." : {
+
+    },
+    "Gapless Playback" : {
+
+    },
+    "Genre" : {
+
+    },
+    "Gradually reduce volume before pausing." : {
+
+    },
+    "Haptic Feedback" : {
+
+    },
+    "High-Resolution Support" : {
+
+    },
+    "Home" : {
+
+    },
+    "Import" : {
+
+    },
+    "Import Errors" : {
+
+    },
+    "Import Files" : {
+
+    },
+    "Import Music" : {
+
+    },
+    "Import music to get started" : {
+
+    },
+    "Import music to see your library here" : {
+
+    },
+    "Import Selected" : {
+
+    },
+    "Import Settings" : {
+
+    },
+    "Import to Library" : {
+
+    },
+    "Import Your Music" : {
+
+    },
+    "Importing Music" : {
+
+    },
+    "Initialization Issue" : {
+
+    },
+    "Its tracks are managed automatically by playlist rules." : {
+
+    },
+    "Liability" : {
+
+    },
+    "Library" : {
+
+    },
+    "Library Unavailable" : {
+
+    },
+    "Library View" : {
+
+    },
+    "Loading metadata..." : {
+
+    },
+    "Loading playlist…" : {
+
+    },
+    "Loading your music..." : {
+
+    },
+    "Loading..." : {
+
+    },
+    "Local Storage" : {
+
+    },
+    "Lyrics" : {
+
+    },
+    "Modified" : {
+
+    },
+    "Multiple Audio Engines" : {
+
+    },
+    "Name" : {
+
+    },
+    "Native Audio Engine" : {
+      "comment" : "Apple AVAudioEngine name shown in Settings"
+    },
+    "New Folder" : {
+
+    },
+    "New Playlist" : {
+
+    },
+    "Next track" : {
+
+    },
+    "Next Track" : {
+
+    },
+    "No lyrics available" : {
+
+    },
+    "No matching tracks yet" : {
+
+    },
+    "No metadata available" : {
+
+    },
+    "No Playlists" : {
+
+    },
+    "No results for \"%@\"" : {
+
+    },
+    "No Tracks to Add" : {
+
+    },
+    "Not bit-perfect eligible" : {
+
+    },
+    "Now Playing" : {
+
+    },
+    "Now Playing Animation" : {
+
+    },
+    "Off" : {
+
+    },
+    "OK" : {
+
+    },
+    "On" : {
+
+    },
+    "Open album %@ by %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open album %1$@ by %2$@"
+          }
+        }
+      }
+    },
+    "Open artist %@" : {
+
+    },
+    "Open Now Playing" : {
+
+    },
+    "Open playlist %@" : {
+
+    },
+    "Operation Cancelled" : {
+
+    },
+    "Organize your music collection" : {
+
+    },
+    "Path" : {
+
+    },
+    "Pause" : {
+
+    },
+    "Play" : {
+
+    },
+    "Play %@ by %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Play %1$@ by %2$@"
+          }
+        }
+      }
+    },
+    "Play or Pause" : {
+
+    },
+    "Playback" : {
+
+    },
+    "Playback Features" : {
+
+    },
+    "Playback progress" : {
+
+    },
+    "Playback Speed" : {
+
+    },
+    "Playback Volume" : {
+
+    },
+    "Playback will pause when the timer ends." : {
+
+    },
+    "Playback, appearance, haptics, file display, and artwork theme preferences return to defaults. Your music library and imported files are not deleted." : {
+
+    },
+    "Playlist Name" : {
+
+    },
+    "Playlist storage is unavailable." : {
+
+    },
+    "Playlist Unavailable" : {
+
+    },
+    "Playlists" : {
+
+    },
+    "Plays this track" : {
+
+    },
+    "Preset" : {
+
+    },
+    "Previous track" : {
+
+    },
+    "Privacy Policy" : {
+
+    },
+    "Queue" : {
+
+    },
+    "Ready" : {
+
+    },
+    "Recent Searches" : {
+
+    },
+    "Recently Added" : {
+
+    },
+    "Rediscover" : {
+
+    },
+    "Refresh" : {
+
+    },
+    "Remove from favorites" : {
+
+    },
+    "Repeat" : {
+
+    },
+    "Replay Gain" : {
+
+    },
+    "Reset All Settings" : {
+
+    },
+    "Reset all settings?" : {
+
+    },
+    "Reset Settings" : {
+
+    },
+    "Reset to Defaults" : {
+
+    },
+    "Reset to Flat" : {
+
+    },
+    "Results" : {
+
+    },
+    "Rock" : {
+
+    },
+    "Search" : {
+
+    },
+    "Search %@" : {
+
+    },
+    "Search files..." : {
+
+    },
+    "Search Library" : {
+
+    },
+    "Search Mode" : {
+
+    },
+    "Search Mode, Smart Search" : {
+
+    },
+    "Search Mode, Standard Search" : {
+
+    },
+    "Search your library" : {
+
+    },
+    "Searching with AI..." : {
+
+    },
+    "Searching..." : {
+
+    },
+    "Select AirPlay device" : {
+      "comment" : "AirPlay route picker"
+    },
+    "Select audio files or folders to import into your library" : {
+
+    },
+    "Set Timer" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Share File" : {
+
+    },
+    "Show details" : {
+
+    },
+    "Show File Extensions" : {
+
+    },
+    "Show queue" : {
+
+    },
+    "Shows details for the current track" : {
+
+    },
+    "Shows tracks in this genre" : {
+
+    },
+    "Shuffle" : {
+
+    },
+    "Shuffle All" : {
+
+    },
+    "Size" : {
+
+    },
+    "Skip to Next Track" : {
+
+    },
+    "Skip to Previous Track" : {
+
+    },
+    "Skip to the next track in the queue." : {
+
+    },
+    "Skip to the previous track in the queue." : {
+
+    },
+    "Sleep Timer" : {
+
+    },
+    "Smart Playlist" : {
+
+    },
+    "Smart playlists automatically update based on rules you define" : {
+
+    },
+    "Smart Search" : {
+
+    },
+    "Smart Search Failed" : {
+
+    },
+    "Sort" : {
+
+    },
+    "Sort by" : {
+
+    },
+    "Sort by:" : {
+
+    },
+    "Sort files" : {
+
+    },
+    "Standard Search" : {
+
+    },
+    "Storage" : {
+
+    },
+    "Surprise Me" : {
+
+    },
+    "Technical Details" : {
+
+    },
+    "Terms of Service" : {
+
+    },
+    "The app encountered an issue during startup and is running with limited functionality." : {
+
+    },
+    "The app is provided 'as is' without warranties.\nWe are not liable for any data loss or damage resulting from the use of this app." : {
+
+    },
+    "The current audio engine" : {
+      "comment" : "Fallback audio engine name shown in Settings"
+    },
+    "The file operation could not be completed." : {
+
+    },
+    "The file operation was cancelled." : {
+
+    },
+    "The file picker could not complete the import request. Try again." : {
+
+    },
+    "The file picker could not complete your selection. Try again." : {
+
+    },
+    "The playlist could not be loaded." : {
+
+    },
+    "Theme in Light Mode" : {
+
+    },
+    "Time Remaining" : {
+
+    },
+    "Title" : {
+
+    },
+    "Toggle playback of the current track." : {
+
+    },
+    "Toggle Shuffle" : {
+
+    },
+    "Toggle shuffle mode for the playback queue." : {
+
+    },
+    "Track" : {
+
+    },
+    "Track Details" : {
+
+    },
+    "Track Info" : {
+
+    },
+    "Track information" : {
+
+    },
+    "Track information for %@" : {
+
+    },
+    "Tracks" : {
+
+    },
+    "Treble Boost" : {
+
+    },
+    "Try a different description or switch to standard search" : {
+
+    },
+    "Try Again" : {
+
+    },
+    "Try descriptive queries like \"upbeat songs\" or \"chill evening music\"" : {
+
+    },
+    "Try searching for" : {
+
+    },
+    "Try searching for something else" : {
+
+    },
+    "Type" : {
+
+    },
+    "Unable to Create Playlist" : {
+
+    },
+    "Unable to Import Files" : {
+
+    },
+    "Unable to Load Library" : {
+
+    },
+    "Unable to Select Files" : {
+
+    },
+    "Unable to Update Playlist" : {
+
+    },
+    "Up Next · %lld tracks" : {
+      "comment" : "Queue section heading followed by the number of upcoming tracks",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Up Next · %lld track"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Up Next · %lld tracks"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "À suivre · %lld piste"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "À suivre · %lld pistes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Up to 192kHz/24-bit audio" : {
+
+    },
+    "Usage" : {
+
+    },
+    "Use Add Tracks to choose music from your library." : {
+
+    },
+    "Version %@ (%@)" : {
+      "comment" : "App version followed by the build number",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version %1$@ (%2$@)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version %1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "View Details" : {
+
+    },
+    "View Mode" : {
+
+    },
+    "Vocal" : {
+
+    },
+    "Welcome to Fonic HiFi" : {
+
+    },
+    "Year" : {
+
+    },
+    "You haven't played these in a while" : {
+
+    },
+    "Your Artists" : {
+
+    },
+    "Your Library is Empty" : {
+
+    },
+    "Your privacy is important to us. This policy explains how we handle your data." : {
+
+    }
+  },
+  "version" : "1.3"
+}

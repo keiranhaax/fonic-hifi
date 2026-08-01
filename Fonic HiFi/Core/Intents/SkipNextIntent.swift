@@ -38,7 +38,7 @@ struct SkipNextIntent: AudioPlaybackIntent, LiveActivityIntent {
             try await engine.playNext()
             Self.logger.info("SkipNextIntent: Skipped to next track")
         } catch {
-            Self.logger.error("SkipNextIntent: Failed to skip - \(error.localizedDescription)")
+            Self.logger.error("SkipNextIntent: Failed to skip - \(error.localizedDescription, privacy: .private)")
         }
 
         // Sync widget state after track change

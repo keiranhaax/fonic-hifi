@@ -3,14 +3,14 @@ import XCTest
 
 @MainActor
 final class AudioMonitoringCollectorsTests: XCTestCase {
-    func testEngineMetricsCollectorReturnsDefaultWhenEngineMissing() async {
+    func testEngineMetricsCollectorReportsUnavailableWhenEngineMissing() async {
         let collector = EngineMetricsCollector()
 
         let metrics = await collector.metrics(for: nil)
 
         XCTAssertEqual(metrics.bufferUnderruns, 0)
         XCTAssertFalse(metrics.isBitPerfect)
-        XCTAssertEqual(metrics.bufferFillLevel, 1.0, accuracy: 0.0001)
+        XCTAssertEqual(metrics.availability, .unavailable)
     }
 
     func testEngineMetricsCollectorMapsAudioMetrics() async {
@@ -69,6 +69,7 @@ final class AudioMonitoringCollectorsTests: XCTestCase {
         XCTAssertEqual(metrics.threadUtilization.audioThreadCPU, expected.threadUtilization.audioThreadCPU)
         XCTAssertEqual(metrics.recoverySuccessRate, expected.recoverySuccessRate, accuracy: 0.0001)
         XCTAssertEqual(metrics.lastRecoveryTime, expected.lastRecoveryTime)
+        XCTAssertEqual(metrics.availability, .available)
     }
 
     func testSystemMetricsCollectorProvidesRuntimeValues() async {
@@ -257,6 +258,7 @@ private final class StubAudioEngine: AudioEngineService {
     var isPlaying: Bool { get async { false } }
     var volume: Float { get async { 1 } }
     var audioFormat: AudioFormat? { get async { nil } }
+    var metricsAvailability: AudioMetricsAvailability { .available }
 
     func load(url _: URL) async throws {}
     func play() async throws {}
@@ -267,7 +269,7 @@ private final class StubAudioEngine: AudioEngineService {
     func configure(with _: AudioEngineConfiguration) async throws {}
     func prepareNext(url _: URL) async {}
     func crossfade(to _: URL, duration _: TimeInterval, playbackRate _: Double, gainDB _: Float) async throws {}
-    func getMetrics() async -> AudioMetrics { storedMetrics }
+    func availableMetrics() async -> AudioMetrics? { storedMetrics }
     func collectMetrics() async {}
     func setPlaybackRate(_: Double) async {}
     func applyReplayGain(_: Float) async {}

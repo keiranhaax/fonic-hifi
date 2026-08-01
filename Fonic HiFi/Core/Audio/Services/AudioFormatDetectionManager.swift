@@ -89,10 +89,10 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
     public func isFormatSupported(_ format: AudioFormat) -> Bool {
         // Check if AVAsset supports it or we have an adapter
         switch format {
-        case .mp3, .aac, .alac, .wav, .aiff:
+        case .mp3, .aac, .alac, .flac, .wav, .aiff:
             true // AVAsset supports these
-        case .flac, .ape, .dsd:
-            findAdapter(for: format) != nil
+        case .ape, .dsd:
+            false
         case .unknown:
             false
         }
@@ -224,7 +224,11 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
 
             let sampleRate = Int(audioDescription?.pointee.mSampleRate ?? 44100)
             let channels = Int(audioDescription?.pointee.mChannelsPerFrame ?? 2)
-            let bitDepth = estimateBitDepth(from: audioDescription, format: format)
+            let detectedFormat = detectCodec(
+                from: audioDescription,
+                extensionFormat: format,
+            )
+            let bitDepth = estimateBitDepth(from: audioDescription, format: detectedFormat)
 
             // Calculate bitrate if possible
             let bitrate = try? await calculateBitrate(from: audioTrack, duration: duration, fileSize: fileSize)
@@ -232,18 +236,42 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
 
             return AudioFileInfo(
                 url: url,
-                format: format,
+                format: detectedFormat,
                 duration: duration.seconds,
                 bitDepth: UInt16(bitDepth),
                 sampleRate: Double(sampleRate),
                 channels: UInt8(channels),
                 fileSize: UInt64(fileSize),
                 bitrate: normalizedBitrate,
+                codec: detectedFormat.displayName,
+                container: url.pathExtension.lowercased(),
             )
 
         } catch {
             logger.error("avasset.load_failed url=\(url.lastPathComponent, privacy: .private(mask: .hash)) error=\(error.localizedDescription, privacy: .private)")
             throw DetectionError.assetLoadingFailed(error)
+        }
+    }
+
+    private func detectCodec(
+        from description: UnsafePointer<AudioStreamBasicDescription>?,
+        extensionFormat: AudioFormat,
+    ) -> AudioFormat {
+        guard let formatID = description?.pointee.mFormatID else {
+            return extensionFormat
+        }
+
+        switch formatID {
+        case kAudioFormatAppleLossless:
+            return .alac
+        case kAudioFormatMPEG4AAC,
+             kAudioFormatMPEG4AAC_HE,
+             kAudioFormatMPEG4AAC_HE_V2,
+             kAudioFormatMPEG4AAC_LD,
+             kAudioFormatMPEG4AAC_ELD:
+            return .aac
+        default:
+            return extensionFormat
         }
     }
 

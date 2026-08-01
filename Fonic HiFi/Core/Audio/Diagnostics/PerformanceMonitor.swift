@@ -136,18 +136,18 @@ public actor PerformanceMonitor: PerformanceMonitoring {
         self.audioLatencies.append(latency)
 
         if latency > PerformanceThresholds.targetAudioLatency {
-            self.logger.warning("Audio latency exceeded target: \(latency)s > \(PerformanceThresholds.targetAudioLatency)s")
+            self.logger.warning("Audio latency exceeded target: \(latency, privacy: .public)s > \(PerformanceThresholds.targetAudioLatency, privacy: .public)s")
         }
     }
 
     public func recordBufferUnderrun() async {
         self.bufferUnderruns += 1
-        self.logger.warning("Buffer underrun detected. Total: \(self.bufferUnderruns)")
+        self.logger.warning("Buffer underrun detected. Total: \(self.bufferUnderruns, privacy: .public)")
     }
 
     public func recordFormatSwitch(from: AudioFormat, to: AudioFormat, duration: TimeInterval) async {
         self.formatSwitches.append((from: from, to: to, duration: duration))
-        self.logger.info("Format switch: \(from.rawValue) -> \(to.rawValue) in \(duration)s")
+        self.logger.info("Format switch: \(from.rawValue, privacy: .public) -> \(to.rawValue, privacy: .public) in \(duration, privacy: .public)s")
     }
 
     // MARK: - Memory Metrics
@@ -156,14 +156,16 @@ public actor PerformanceMonitor: PerformanceMonitoring {
         self.memoryUsages.append(bytes)
 
         if bytes > PerformanceThresholds.targetMemoryUsage {
-            self.logger.warning("Memory usage exceeded target: \(bytes / 1024 / 1024)MB > \(PerformanceThresholds.targetMemoryUsage / 1024 / 1024)MB")
+            let memoryMegabytes = bytes / 1024 / 1024
+            let targetMegabytes = PerformanceThresholds.targetMemoryUsage / 1024 / 1024
+            self.logger.warning("Memory usage exceeded target: \(memoryMegabytes, privacy: .public)MB > \(targetMegabytes, privacy: .public)MB")
         }
     }
 
     public func recordMemoryWarning() async {
         self.memoryWarnings += 1
         self.memoryPressureEvents.append(.warning)
-        self.logger.warning("Memory warning received. Total: \(self.memoryWarnings)")
+        self.logger.warning("Memory warning received. Total: \(self.memoryWarnings, privacy: .public)")
     }
 
     public func checkMemoryPressure() async -> MemoryPressure {
@@ -196,9 +198,9 @@ public actor PerformanceMonitor: PerformanceMonitoring {
         self.appLaunchTime = duration
 
         if duration > PerformanceThresholds.targetAppLaunchTime {
-            self.logger.warning("App launch time exceeded target: \(duration)s > \(PerformanceThresholds.targetAppLaunchTime)s")
+            self.logger.warning("App launch time exceeded target: \(duration, privacy: .public)s > \(PerformanceThresholds.targetAppLaunchTime, privacy: .public)s")
         } else {
-            self.logger.info("App launched in \(duration)s")
+            self.logger.info("App launched in \(duration, privacy: .public)s")
         }
     }
 
@@ -206,25 +208,25 @@ public actor PerformanceMonitor: PerformanceMonitoring {
         self.searchLatencies.append((duration: duration, resultCount: resultCount))
 
         if duration > PerformanceThresholds.targetSearchLatency {
-            self.logger.warning("Search latency exceeded target: \(duration)s > \(PerformanceThresholds.targetSearchLatency)s")
+            self.logger.warning("Search latency exceeded target: \(duration, privacy: .public)s > \(PerformanceThresholds.targetSearchLatency, privacy: .public)s")
         }
     }
 
     public func recordImportPerformance(_ metrics: ImportMetrics) async {
         self.importMetrics.append(metrics)
-        self.logger.info("Import completed: \(metrics.successfulImports)/\(metrics.totalFiles) files in \(metrics.totalImportTime)s")
+        self.logger.info("Import completed: \(metrics.successfulImports, privacy: .public)/\(metrics.totalFiles, privacy: .public) files in \(metrics.totalImportTime, privacy: .public)s")
     }
 
     // MARK: - Error Tracking
 
     public func recordError(_ error: Error, context: String) async {
         self.errors.append((error: error, context: context, timestamp: Date()))
-        self.logger.error("Error in \(context): \(error.localizedDescription)")
+        self.logger.error("Error in \(context, privacy: .private): \(error.localizedDescription, privacy: .private)")
     }
 
     public func recordCrash(_ reason: String) async {
         self.crashes.append((reason: reason, timestamp: Date()))
-        self.logger.critical("Crash recorded: \(reason)")
+        self.logger.critical("Crash recorded: \(reason, privacy: .private)")
     }
 
     // MARK: - Reporting

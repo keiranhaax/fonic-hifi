@@ -106,7 +106,7 @@ Fixture-first (ledger routes this under M-14/H-13 fixtures). Group with AUDIT-00
 
 ## AUDIT-010 — Add ListeningSession to a new versioned schema and use the migration plan on first open
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P0
 - Audit sources: Model B (DLP-002, DLP-003), WP3-008, WP3-009
 - Audit finding IDs: DLP-002, DLP-003
@@ -153,14 +153,14 @@ Migration ordering bugs can brick store opens — this is why AUDIT-012 lands in
 Ledger H-02. WP3 downgraded severity because SwiftData's actual runtime failure mode was unverified; the invariant violation stands regardless.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: The deployed five-entity V2 schema is preserved as an immutable snapshot and migrates through the production V2-to-V3 plan to the live six-entity schema. The disk fixture matched checksum `aPr7hl9+thrTx4zb4MWTdHmK3BIQhXisbeX6NXkXwoc=`, preserved data and relationships, accepted `ListeningSession`, and the production-container failure test passed. The simulator build succeeded.
 
 ## AUDIT-011 — Wire listening-session lifecycle: production wiring, sequencing, real listened time, retention
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (DLP-004, DLP-017, DLP-019, DLP-020, CP-005), WP3-010, DCA-PART-001
 - Audit finding IDs: CAN-009 (DLP-004 + DCA-PART-001), CAN-012 (DLP-019 + CP-005), DLP-017, DLP-020
@@ -192,10 +192,10 @@ Call `configureSessionTracking` during production facade setup; serialize end/re
 Requires AUDIT-010's schema first. Keep session writes behind `TrackDataActor`. Preserve cancellation semantics.
 
 ### Acceptance Criteria
-- [ ] Production playback produces exactly one bounded, correctly-timed session per listen
-- [ ] Rapid track transitions never lose or clear the newer session (race test)
-- [ ] Listened time excludes paused/seek-skipped intervals
-- [ ] Retention bound enforced and tested
+- [x] Production playback produces exactly one bounded, correctly-timed session per listen
+- [x] Rapid track transitions never lose or clear the newer session (race test)
+- [x] Listened time excludes paused/seek-skipped intervals
+- [x] Retention bound enforced and tested
 
 ### Suggested Verification
 Focused lifecycle tests (deterministic clock, no real sleeps — coordinate with AUDIT-050 conventions); data-layer suite.
@@ -207,14 +207,14 @@ MainActor/actor hops around playback events; ensure no new synchronous MainActor
 Ledger H-03.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Production now configures session tracking; facade play/pause/resume/seek/stop/navigation/completion/shutdown events drive a generation-owned lifecycle that records elapsed listening time instead of playback position. A one-year retention policy runs on insert. Six deterministic lifecycle tests plus the retention test passed in the assembled 65-test audio/data lane; rapid-transition, paused-time, seek, and retention cases had zero skips.
 
 ## AUDIT-012 — Add real prior-store migration tests
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (TRV-010)
 - Audit finding IDs: TRV-010
@@ -260,14 +260,14 @@ None to production; test-infrastructure complexity only.
 Lands with GROUP-03 so AUDIT-010's stage is verified the moment it exists.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: The prior-store fixture is created on disk with the deployed V2 checksum, reopened only through `FonicHiFiMigrationPlan`, and verifies scalar values, bookmarks, relationships, quarantine defaults, and new-session persistence. `MigrationPlanTests` passed 2/2.
 
 ## AUDIT-013 — Remove copied media on post-copy import failure
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (DLP-005), WP3-011
 - Audit finding IDs: DLP-005
@@ -313,14 +313,14 @@ Cleanup racing a concurrently-succeeding duplicate import — coordinate with AU
 Ledger H-04.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Post-copy failures remove only the copied managed destination while preserving source files. Focused import, processor, and cancellation suites passed in the 97-test foundational lane; the assembled simulator build succeeded.
 
 ## AUDIT-014 — Make concurrent duplicate detection an atomic claim
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (DLP-006, CP-004), WP3-015, WP4-R05
 - Audit finding IDs: CAN-010
@@ -366,14 +366,14 @@ Serializing too much of the pipeline; keep hashing/copying parallel, claim minim
 Ledger H-05.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Duplicate detection and creation now share the `TrackDataActor` save boundary and duplicate outcomes remain distinct from failures. Focused concurrent-claim/import suites passed, including the corrected duplicate-stream assertion.
 
 ## AUDIT-015 — Propagate import cancellation to producers; make AsyncSemaphore cancellation-aware
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (DLP-021, CP-001, CP-002), WP3-013, WP4-R06
 - Audit finding IDs: CAN-013, CP-001
@@ -419,14 +419,14 @@ Cancellation tests at each pipeline stage; repeated release/cancel race test; im
 Ledger H-06 + H-07 combined (same primitive and pipeline).
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Producer cancellation propagates through discovery and processing, `AsyncSemaphore` removes cancelled waiters, and cited tests use deterministic control rather than wall-clock sleeps. The foundational 97-test lane and current import suites passed with zero skips.
 
 ## AUDIT-016 — Replace one-shot missing-file deletion with a quarantine/retry policy
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (DLP-007), WP3-012
 - Audit finding IDs: DLP-007
@@ -472,7 +472,7 @@ UI handling of unavailable tracks (play attempts must fail visibly — ties to A
 Ledger H-09. Sequence after import-pipeline work so file-lifecycle semantics are settled.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Missing files are quarantined and surfaced as unavailable; recovery resets the miss window; record removal requires three consecutive misses across at least seven days and cleans playlist/album/artist relationships without deleting media. Migration defaults, transient recovery, threshold cleanup, relationship cleanup, and visible/accessibility presentation tests passed.

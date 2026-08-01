@@ -17,6 +17,7 @@ final class AudioMonitorRuntime {
 
     private var engine: AudioEngineService?
     private var lastUnderrunDate: Date?
+    private var profilingStopTask: Task<Void, Never>?
     private(set) var updateInterval: TimeInterval = 1.0
     private(set) var isMonitoring = false
     private(set) var isProfiling = false
@@ -104,6 +105,8 @@ final class AudioMonitorRuntime {
     func startProfiling(duration: TimeInterval?) async {
         logger.info("Starting performance profiling")
 
+        profilingStopTask?.cancel()
+        profilingStopTask = nil
         isProfiling = true
         performanceProfiler.beginProfiling(duration: duration)
 
@@ -112,10 +115,14 @@ final class AudioMonitorRuntime {
         }
 
         if let duration {
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                try await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-                await self.stopProfiling()
+            profilingStopTask = Task { @MainActor [weak self] in
+                do {
+                    try await Task.sleep(for: .seconds(max(0, duration)))
+                } catch {
+                    return
+                }
+                guard !Task.isCancelled else { return }
+                await self?.stopProfiling()
             }
         }
     }
@@ -125,6 +132,9 @@ final class AudioMonitorRuntime {
 
         logger.info("Stopping performance profiling")
 
+        let scheduledStop = profilingStopTask
+        profilingStopTask = nil
+        scheduledStop?.cancel()
         isProfiling = false
         performanceProfiler.markStop()
         scheduler.stopProfiling()

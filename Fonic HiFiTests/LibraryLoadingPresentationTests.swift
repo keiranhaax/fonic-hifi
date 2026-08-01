@@ -8,8 +8,7 @@ final class LibraryLoadingPresentationTests: XCTestCase {
         XCTAssertEqual(
             LibraryView.loadingOverlayMessage(
                 selectedTab: .tracks,
-                loadingSection: .tracks,
-                itemCount: 0
+                phase: .initial
             ),
             "Loading tracks…"
         )
@@ -19,18 +18,16 @@ final class LibraryLoadingPresentationTests: XCTestCase {
         XCTAssertNil(
             LibraryView.loadingOverlayMessage(
                 selectedTab: .tracks,
-                loadingSection: .tracks,
-                itemCount: 25
+                phase: .pagination
             )
         )
     }
 
-    func testBackgroundSectionLoadDoesNotBlockSelectedTab() {
+    func testIdleSectionDoesNotUseBlockingMessage() {
         XCTAssertNil(
             LibraryView.loadingOverlayMessage(
                 selectedTab: .albums,
-                loadingSection: .tracks,
-                itemCount: 0
+                phase: .idle
             )
         )
     }

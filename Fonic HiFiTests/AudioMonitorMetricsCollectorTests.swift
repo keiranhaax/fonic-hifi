@@ -111,6 +111,39 @@ final class AudioMonitorMetricsCollectorTests: XCTestCase {
         XCTAssertEqual(result.timeSinceLastUnderrun, 12)
         XCTAssertEqual(result.underrunRate, analytics.underrunRate(), accuracy: 0.0001)
     }
+
+    func testCollectorPreservesUnavailableEngineMetricsState() async {
+        let collector = AudioMonitorMetricsCollector(
+            systemMetricsCollector: StubSystemMetricsCollector(
+                current: SystemMetrics(
+                    cpuUsage: 10,
+                    memoryUsage: 100,
+                    diskIOPS: 0,
+                    networkBandwidth: 0,
+                    batteryUsageRate: nil
+                )
+            ),
+            thermalStateMonitor: StubThermalMonitor(
+                state: ThermalMonitoringInfo(
+                    thermalState: .nominal,
+                    cpuTemperature: nil,
+                    isThrottling: false,
+                    recommendedAdjustments: []
+                )
+            ),
+            engineMetricsCollector: StubEngineMetricsCollector(metrics: .default)
+        )
+
+        let result = await collector.collectMetrics(
+            for: nil,
+            analytics: AudioSessionAnalytics(),
+            timeSinceLastUnderrun: nil
+        )
+
+        XCTAssertEqual(result.engineMetricsAvailability, .unavailable)
+        XCTAssertEqual(result.qualityScore, 0)
+        XCTAssertEqual(result.reliabilityScore, 0)
+    }
 }
 
 // MARK: - Test Doubles

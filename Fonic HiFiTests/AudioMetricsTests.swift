@@ -104,7 +104,7 @@ final class AudioMetricsTests: XCTestCase {
         XCTAssertTrue(insights.contains(where: { $0.contains("Thermal pressure") }))
         XCTAssertTrue(insights.contains(where: { $0.contains("frames being dropped") }))
         XCTAssertTrue(insights.contains(where: { $0.contains("render latency") }))
-        XCTAssertTrue(insights.contains(where: { $0.contains("Bit-perfect playback not active") }))
+        XCTAssertTrue(insights.contains(where: { $0.contains("not bit-perfect eligible") }))
         XCTAssertTrue(insights.contains(where: { $0.contains("Overall performance below optimal") }))
     }
 

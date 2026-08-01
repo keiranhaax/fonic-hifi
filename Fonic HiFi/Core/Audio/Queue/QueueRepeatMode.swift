@@ -66,6 +66,11 @@ public enum QueueRepeatMode: String, CaseIterable, Sendable {
         }
     }
 
+    /// Repeat behavior to apply when the user explicitly skips tracks.
+    var manualNavigationMode: QueueRepeatMode {
+        self == .one ? .none : self
+    }
+
     // MARK: - Navigation Logic
 
     /// Determines if there should be a next track given current state

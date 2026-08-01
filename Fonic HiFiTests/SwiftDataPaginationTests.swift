@@ -8,8 +8,8 @@ final class SwiftDataPaginationTests: XCTestCase {
     private var container: ModelContainer!
     private var context: ModelContext!
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
 
         let schema = Schema([
             RecentSearch.self
@@ -21,10 +21,10 @@ final class SwiftDataPaginationTests: XCTestCase {
         try seedSearches(count: 40)
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         container = nil
         context = nil
-        try super.tearDownWithError()
+        try await super.tearDown()
     }
 
     func testPaginatedFetchDescriptorReturnsCorrectPages() throws {
@@ -50,9 +50,14 @@ final class SwiftDataPaginationTests: XCTestCase {
         XCTAssertEqual(totalCount, 40)
     }
 
-    func testFetchCountTraversesAllBatches() throws {
-        let descriptor = FetchDescriptor<RecentSearch>()
-        let count = try context.batchedFetchCount(descriptor)
+    func testCountIgnoresPaginationAndUsesTheStoreCount() throws {
+        var descriptor = FetchDescriptor<RecentSearch>()
+        descriptor.fetchLimit = 1
+        descriptor.fetchOffset = 10
+
+        let paginator = PaginatedFetchDescriptor(descriptor: descriptor, pageSize: 10)
+        let count = try paginator.count(in: context)
+
         XCTAssertEqual(count, 40)
     }
 

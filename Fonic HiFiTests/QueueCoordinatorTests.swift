@@ -46,6 +46,66 @@ final class QueueCoordinatorTests: XCTestCase {
         XCTAssertTrue(coordination.playback.crossfadeCalls.isEmpty)
     }
 
+    func testPlayNextAdvancesUnderRepeatOne() async throws {
+        let queueManager = AudioQueueManager()
+        let stateManager = PlaybackStateManager()
+        let coordination = makeCoordinator(
+            queueManager: queueManager,
+            stateManager: stateManager,
+            crossfadeDuration: 0,
+        )
+
+        let tracks = makeQueue()
+        queueManager.enqueue(tracks: tracks)
+        XCTAssertTrue(queueManager.setCurrentTrack(tracks[0]))
+        queueManager.repeatMode = .one
+
+        try await coordination.coordinator.playNext()
+
+        XCTAssertEqual(queueManager.currentTrack?.id, tracks[1].id)
+        XCTAssertEqual(coordination.playback.playCalls.last?.queueEntry?.id, tracks[1].id)
+    }
+
+    func testPlayPreviousAdvancesUnderRepeatOne() async throws {
+        let queueManager = AudioQueueManager()
+        let stateManager = PlaybackStateManager()
+        let coordination = makeCoordinator(
+            queueManager: queueManager,
+            stateManager: stateManager,
+            crossfadeDuration: 0,
+        )
+
+        let tracks = makeQueue()
+        queueManager.enqueue(tracks: tracks)
+        XCTAssertTrue(queueManager.setCurrentTrack(tracks[1]))
+        queueManager.repeatMode = .one
+
+        try await coordination.coordinator.playPrevious()
+
+        XCTAssertEqual(queueManager.currentTrack?.id, tracks[0].id)
+        XCTAssertEqual(coordination.playback.playCalls.last?.queueEntry?.id, tracks[0].id)
+    }
+
+    func testNaturalCompletionStillRepeatsUnderRepeatOne() async throws {
+        let queueManager = AudioQueueManager()
+        let stateManager = PlaybackStateManager()
+        let coordination = makeCoordinator(
+            queueManager: queueManager,
+            stateManager: stateManager,
+            crossfadeDuration: 0,
+        )
+
+        let tracks = makeQueue()
+        queueManager.enqueue(tracks: tracks)
+        XCTAssertTrue(queueManager.setCurrentTrack(tracks[0]))
+        queueManager.repeatMode = .one
+
+        try await coordination.coordinator.playNextAfterCompletion()
+
+        XCTAssertEqual(queueManager.currentTrack?.id, tracks[0].id)
+        XCTAssertEqual(coordination.playback.playCalls.last?.queueEntry?.id, tracks[0].id)
+    }
+
     func testPlayNextStopsWhenNoUpcomingTrack() async {
         let queueManager = AudioQueueManager()
         let stateManager = PlaybackStateManager()

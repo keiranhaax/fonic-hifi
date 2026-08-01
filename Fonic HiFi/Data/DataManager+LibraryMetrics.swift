@@ -32,7 +32,7 @@ public extension DataManager {
             )
             return statistics
         } catch {
-            logger.error("Failed to get library statistics: \(error.localizedDescription)")
+            logger.error("Failed to get library statistics: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }
@@ -58,7 +58,7 @@ public extension DataManager {
             let result = try fetch.execute(in: mainContext)
             return (result.items, result.hasMore)
         } catch {
-            logger.error("Failed to fetch tracks with pagination: \(error.localizedDescription)")
+            logger.error("Failed to fetch tracks with pagination: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }
@@ -84,7 +84,7 @@ public extension DataManager {
             let result = try fetch.execute(in: mainContext)
             return (result.items, result.hasMore)
         } catch {
-            logger.error("Failed to fetch albums with pagination: \(error.localizedDescription)")
+            logger.error("Failed to fetch albums with pagination: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }

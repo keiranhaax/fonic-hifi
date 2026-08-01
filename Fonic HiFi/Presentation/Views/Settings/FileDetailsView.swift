@@ -6,15 +6,17 @@
 //
 
 import AVFoundation
+import OSLog
 import SwiftUI
 
 struct FileDetailsView: View {
     let file: FileItem
-    @Environment(\.importService) private var importService
+    @EnvironmentObject private var importService: LibraryImportService
     @Environment(\.dismiss) private var dismiss
 
     @State private var audioMetadata: AudioMetadata?
     @State private var isLoadingMetadata = false
+    @State private var showingImportProgress = false
 
     private let logger = Log.logger(.presentation)
 
@@ -108,6 +110,7 @@ struct FileDetailsView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(10)
                             }
+                            .disabled(importService.isImporting)
 
                             Button(action: shareFile) {
                                 HStack {
@@ -142,6 +145,11 @@ struct FileDetailsView: View {
             if file.isAudioFile {
                 await loadAudioMetadata()
             }
+        }
+        .sheet(isPresented: $showingImportProgress) {
+            ImportProgressView()
+                .importService(importService)
+                .interactiveDismissDisabled(importService.isImporting)
         }
     }
 
@@ -189,15 +197,10 @@ struct FileDetailsView: View {
     }
 
     private func importFile() {
-        guard let importService else {
-            return
-        }
+        showingImportProgress = true
 
-        Task {
+        Task { @MainActor in
             importService.importFiles(from: [file.url])
-            await MainActor.run {
-                dismiss()
-            }
         }
     }
 
@@ -214,7 +217,7 @@ struct FileDetailsView: View {
 // MARK: - Supporting Views
 
 struct SectionHeaderView: View {
-    let title: String
+    let title: LocalizedStringResource
 
     var body: some View {
         Text(title)
@@ -224,7 +227,7 @@ struct SectionHeaderView: View {
 }
 
 struct DetailRowView: View {
-    let label: String
+    let label: LocalizedStringResource
     let value: String
 
     var body: some View {

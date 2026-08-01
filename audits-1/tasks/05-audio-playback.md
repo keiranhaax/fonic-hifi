@@ -54,7 +54,7 @@ Ledger M-15 (first slice).
 
 ## AUDIT-021 — Wire or remove the remaining inert audio settings
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (AUD-CONFIG-001, UIUX-008), Model A (A-B05), WP3-018
 - Audit finding IDs: CAN-024 (residual)
@@ -86,9 +86,9 @@ For each remaining control: either plumb it through `AudioPlaybackSettingsStore`
 Preserve the uncommitted `AudioPlaybackSettingsStore` work. No engine-graph redesign here.
 
 ### Acceptance Criteria
-- [ ] Every visible setting demonstrably changes runtime state or is removed
-- [ ] Settings applied on engine creation and engine switch (test)
-- [ ] No regression in the in-flight settings tests
+- [x] Every visible setting demonstrably changes runtime state or is removed
+- [x] Settings applied on engine creation and engine switch (test)
+- [x] No regression in the in-flight settings tests
 
 ### Suggested Verification
 `AudioPlaybackSettingsStoreTests` + facade orchestrator tests; manual settings sweep with a real track.
@@ -100,14 +100,14 @@ Engine switching path; buffer/sample-rate misapplication can break playback — 
 Ledger M-15/M-19-adjacent.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Unsupported bit-perfect, buffer-size, sample-rate, and test controls were removed; every remaining control maps to applied playback state across engine creation and switching. Focused settings/facade tests passed and the simulator build succeeded; physical route behavior remains device-only evidence.
 
 ## AUDIT-022 — Repair the format contract: inspect codecs, stop advertising unplayable formats
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (AUD-FORMAT-001, AUD-FORMAT-002), Model A (A-B04)
 - Audit finding IDs: AUD-FORMAT-001, AUD-FORMAT-002
@@ -139,9 +139,9 @@ Use the already-loaded format descriptions to classify M4A codec (AAC vs ALAC); 
 Do not change engine selection logic beyond format facts. Real fixtures required (AAC-M4A, ALAC-M4A, FLAC, one unsupported).
 
 ### Acceptance Criteria
-- [ ] AAC-M4A fixture classified AAC/lossy; ALAC-M4A classified ALAC/lossless (red before fix)
-- [ ] No advertised/importable format lacks a playable path
-- [ ] Existing format-detection concurrency tests stay green (preserve in-flight `FormatDetectionCoordinator` edits)
+- [x] AAC-M4A fixture classified AAC/lossy; ALAC-M4A classified ALAC/lossless (red before fix)
+- [x] No advertised/importable format lacks a playable path
+- [x] Existing format-detection concurrency tests stay green (preserve in-flight `FormatDetectionCoordinator` edits)
 
 ### Suggested Verification
 Fixture-driven detector tests; import-to-playback smoke per format.
@@ -153,14 +153,14 @@ Bit-perfect eligibility depends on format facts (AUDIT-028); update together whe
 Ledger M-14, split-ready if needed (detection first, UI surface second).
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: M4A codec inspection distinguishes AAC from ALAC; import surfaces now advertise only represented playable formats, including FLAC, and reject a valid unsupported Opus fixture. The 17 selected format/contract/concurrency tests passed across the serialized lane and one corrected real-FLAC fixture rerun, with zero skips. Physical playback remains device-only.
 
 ## AUDIT-023 — Restore and reapply persisted EQ across engine creation and switching
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (AUD-DSP-001, DCA-PART-002)
 - Audit finding IDs: CAN-023
@@ -192,8 +192,8 @@ Load persisted EQ during facade initialization and reapply on every engine creat
 No EQ algorithm/graph changes. Both engines must be covered (AudioKit + native).
 
 ### Acceptance Criteria
-- [ ] Engine creation/switch/restart tests assert identical EQ state to persisted values
-- [ ] Unsupported DSP returns a typed visible result, not a silent no-op
+- [x] Engine creation/switch/restart tests assert identical EQ state to persisted values
+- [x] Unsupported DSP returns a typed visible result, not a silent no-op
 
 ### Suggested Verification
 Facade + adapter tests; audible check with a strong EQ curve on device.
@@ -205,14 +205,14 @@ Engine-switch timing; ensure reapplication doesn't glitch active playback.
 Ledger M-19. Focused tests + real-track verification required by repo rules for DSP changes.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Persisted EQ restores during facade initialization and reapplies on engine reuse, creation, and switching; unsupported AudioKit DSP returns retained typed state with a visible message. Core EQ tests passed 20/20, adapter capability tests passed 2/2, and the strengthened restart test passed. Audible strong-curve/device-switch validation remains device-only.
 
 ## AUDIT-024 — Move sleep-timer ownership out of NowPlayingContent; fade from actual volume
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (AUD-SLEEP-001, UIUX-007)
 - Audit finding IDs: CAN-015
@@ -243,9 +243,9 @@ Move `SleepTimerManager` ownership to an app-level owner (facade or environment-
 Preserve timer UI and options. No audio-session changes.
 
 ### Acceptance Criteria
-- [ ] Dismissing/reopening Now Playing preserves a running timer
-- [ ] Fade starts from and restores the actual volume
-- [ ] Cancel/background scenarios pass
+- [x] Dismissing/reopening Now Playing preserves a running timer
+- [x] Fade starts from and restores the actual volume
+- [x] Cancel/background scenarios pass
 
 ### Suggested Verification
 `SleepTimerManagerTests` (deterministic clock per AUDIT-050); manual background check.
@@ -254,14 +254,14 @@ Preserve timer UI and options. No audio-session changes.
 Ledger M-18.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: The facade durably owns the timer, starts from the active engine's volume, restores the captured baseline safely, and reconciles background elapsed time. All six deterministic SleepTimerManager tests passed in the assembled 65-test lane with zero skips. Manual real-background audio remains device-only.
 
 ## AUDIT-025 — Define and implement repeat-one behavior for manual Next/Previous
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (AUD-QUEUE-002)
 - Audit finding IDs: AUD-QUEUE-002
@@ -276,9 +276,9 @@ Ledger M-18.
 - Blocks: —
 - Related tasks: AUDIT-037
 - Affected features: queue navigation
-- Affected files or symbols: `QueueCoordinator.swift:40-41,59-60`, `QueueRepeatMode.swift:81-87,101-107`
-- Validation status: Confirmed (revalidated 2026-07-15) — manual next/previous uses repeat-aware methods; repeat-one returns current index
-- Validation evidence: cited lines
+- Affected files or symbols: `AudioQueueManager.nextManually()`, `AudioQueueManager.previousManually()`, `QueueCoordinator.playNextAfterCompletion()`, `AudioEngineFacade` completion callback
+- Validation status: Completed (2026-07-20)
+- Validation evidence: manual/coordinator traversal coverage in `AudioQueueManagerTests` and `QueueCoordinatorTests`; full unit target and Debug simulator build
 
 ### Problem
 With repeat-one active, tapping Next/Previous replays the same track — user intent to navigate is discarded.
@@ -293,8 +293,8 @@ Add a manual-navigation flag (or separate methods) so user-initiated next/previo
 No changes to repeat-all/shuffle semantics or persistence.
 
 ### Acceptance Criteria
-- [ ] Manual next/previous advances under repeat-one (test)
-- [ ] Natural completion still repeats (regression test)
+- [x] Manual next/previous advances under repeat-one (test)
+- [x] Natural completion still repeats (regression test)
 
 ### Suggested Verification
 `AudioQueueManagerTests` additions.
@@ -303,14 +303,14 @@ No changes to repeat-all/shuffle semantics or persistence.
 Ledger flagged this as needing a small product policy call; the recommended default matches Apple Music behavior.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-20
+- Completed: 2026-07-20
+- Commit: Not requested
+- Verification result: Red regression reproduced repeat-one replaying the current track after manual Next. Five focused regressions passed 5/5; queue/repeat/shuffle/coordinator suites passed 52/52; full `Fonic HiFiTests` passed 452/452; the Debug iPhone 17 Pro (iOS 27.0) simulator build succeeded; SwiftLint reported 0 violations in 288 files; `git diff --check` passed. SwiftFormat 0.62.1 is installed and `make check-deps` passed; `make format` was not run because it would rewrite the dirty worktree.
 
 ## AUDIT-026 — Rebuild engine objects after media-services reset
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (AUD-RESET-001)
 - Audit finding IDs: AUD-RESET-001 (residual)
@@ -341,8 +341,8 @@ On reset: tear down and recreate the current engine via the factory, restore EQ/
 Use existing factory/facade paths; no new engine types.
 
 ### Acceptance Criteria
-- [ ] Injected reset rebuilds engine, commands, and Now Playing (test with reset notification)
-- [ ] State after reset is coherent (paused, correct track/position)
+- [x] Injected reset rebuilds engine, commands, and Now Playing (test with reset notification)
+- [x] State after reset is coherent (paused, correct track/position)
 
 ### Suggested Verification
 Focused reset-injection test; device check by triggering media services reset (developer setting) — part of AUDIT-055 matrix.
@@ -351,14 +351,14 @@ Focused reset-injection test; device check by triggering media services reset (d
 Ledger X-05 slice.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Media-services reset now discards invalid engine objects without invoking them, rebuilds through the existing factory with retained configuration/EQ, restores the track and position paused, republishes Now Playing at rate 0, and registers one fresh remote-command set. The combined reset/diagnostics/completion simulator lane passed 90/90 with zero skips. Triggering the developer media-services reset on physical hardware remains in AUDIT-055.
 
 ## AUDIT-027 — Diagnostics honesty: report unavailable as unavailable and inject metrics ownership
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (AUD-DIAG-001, DCA-PART-005, CP-012), WP4-R07
 - Audit finding IDs: CAN-016, CP-012
@@ -389,9 +389,9 @@ Represent unavailable metrics as an explicit unavailable state (never zeros); st
 No new measurement claims. UI may show "not available for this engine".
 
 ### Acceptance Criteria
-- [ ] No synthetic zero is presented as data (test per engine)
-- [ ] Unsupported engines do not start a no-op metrics poll (test)
-- [ ] Metrics provider injectable and mocked in tests
+- [x] No synthetic zero is presented as data (test per engine)
+- [x] Unsupported engines do not start a no-op metrics poll (test)
+- [x] Metrics provider injectable and mocked in tests
 
 ### Suggested Verification
 Adapter/diagnostics tests; device trace to validate sampling overhead (AUDIT-054 lane).
@@ -400,14 +400,14 @@ Adapter/diagnostics tests; device trace to validate sampling overhead (AUDIT-054
 Ledger H-14.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Diagnostics now propagate explicit engine-metrics availability, AudioKit no longer produces or polls synthetic zero snapshots, and AVAudioEngine process metrics use an injectable provider and remain explicitly partial. Focused adapter, hook, collector, and export coverage passed in the 90-test combined simulator lane with zero skips; device sampling overhead remains in AUDIT-054.
 
 ## AUDIT-028 — Rename bit-perfect status to eligibility; key the cache; gate claims on measurement
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (AUD-BIT-001, AUD-BIT-002), Model A (A-B03)
 - Audit finding IDs: AUD-BIT-001, AUD-BIT-002
@@ -438,9 +438,9 @@ Key/invalidate cached eligibility on every input (source format, engine, route, 
 No claim-strengthening. Copy changes must survive localization work (AUDIT-043).
 
 ### Acceptance Criteria
-- [ ] Cache invalidates on each eligibility input change (tests)
-- [ ] UI copy states eligibility, not guarantee
-- [ ] Documented mapping of what evidence would upgrade the claim
+- [x] Cache invalidates on each eligibility input change (tests)
+- [x] UI copy states eligibility, not guarantee
+- [x] Documented mapping of what evidence would upgrade the claim
 
 ### Suggested Verification
 Validator unit tests; UI copy review; unity-graph bypass tests where feasible.
@@ -449,14 +449,14 @@ Validator unit tests; UI copy review; unity-graph bypass tests where feasible.
 Ledger X-07 (code-side slice; physical capture stays in AUDIT-055).
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Eligibility caching now keys source, engine, route, volume, playback-rate, Replay Gain, and EQ inputs. UI/reports state eligible/not measured, while a measured claim requires the documented seven-item physical evidence set. Validator and integration coverage passed in the 90-test combined simulator lane with zero skips; physical-output capture remains AUDIT-055.
 
 ## AUDIT-029 — Replace AudioKit 100 ms completion polling with an exactly-once completion callback
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (CP-007), Model A (A-B10)
 - Audit finding IDs: CP-007
@@ -487,9 +487,9 @@ Use the player's completion callback (e.g. `AudioPlayer.completionHandler` / sch
 Completion semantics must stay identical for: natural finish, seek-near-end, stop, cancel, transition. No engine-graph changes.
 
 ### Acceptance Criteria
-- [ ] Exactly one completion event per scenario above (tests)
-- [ ] No 100 ms completion poll remains
-- [ ] Gapless/crossfade behavior unchanged (regression suite)
+- [x] Exactly one completion event per scenario above (tests)
+- [x] No 100 ms completion poll remains
+- [x] Gapless/crossfade behavior unchanged (regression suite)
 
 ### Suggested Verification
 Completion-scenario tests with generated tones; energy comparison optional (AUDIT-054).
@@ -498,14 +498,14 @@ Completion-scenario tests with generated tones; energy comparison optional (AUDI
 Ledger M-16.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: AudioKit native completion callbacks now use generation and player-slot ownership to deliver exactly once across natural finish, seek, pause, stop, replacement, and crossfade. The adapter's 100 ms progress timer was removed; the existing centralized 0.5 s playback progress owner remains. All AudioKit adapter tests passed in the 90-test combined simulator lane with zero skips.
 
 ## AUDIT-030 — Serialize play requests with latest-request-wins cancellation
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P0
 - Audit sources: Model B (AUD-ENG-002), WP3-004
 - Audit finding IDs: AUD-ENG-002
@@ -537,9 +537,9 @@ Introduce a per-request generation token owned by the facade/controller: new req
 Preserve the uncommitted facade changes. No session-ownership redesign here (AUDIT-031).
 
 ### Acceptance Criteria
-- [ ] Delayed request A then fast request B always ends with B playing (race test)
-- [ ] Stale A cannot clear or commit any state
-- [ ] Cancellation produces no generic error UI
+- [x] Delayed request A then fast request B always ends with B playing (race test)
+- [x] Stale A cannot clear or commit any state
+- [x] Cancellation produces no generic error UI
 
 ### Suggested Verification
 Orchestrator race tests (extend `AudioEngineFacadeOrchestratorTests`); manual rapid-tap check.
@@ -551,14 +551,14 @@ Interruption/route handlers also mutate state — coordinate with AUDIT-031/032 
 Ledger X-03.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-07-28
+- Commit: Not requested
+- Verification result: Latest-request generations now cancel superseded playback work and guard every post-suspension state commit; cancellation remains silent. Race-oriented facade/controller coverage passed, followed by the randomized sequential unit target (590/590) and a fresh isolated simulator build.
 
 ## AUDIT-031 — Establish one audio-session owner; separate track transition from playback teardown
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P0
 - Audit sources: Model B (AUD-SESSION-001), Model A (A-B02), WP3-005
 - Audit finding IDs: AUD-SESSION-001
@@ -590,7 +590,7 @@ One session owner (session manager driven by the facade/controller); adapters ne
 No behavior change to activation options/category. Adapters keep their engine duties only.
 
 ### Acceptance Criteria
-- [ ] Session spy: activation before playback, zero deactivations across queued-track transitions, one deactivation at true shutdown
+- [x] Session spy: activation before playback, zero deactivations across queued-track transitions, one deactivation at true shutdown
 - [ ] Background playback survives track transitions (device check → AUDIT-055)
 
 ### Suggested Verification
@@ -603,14 +603,14 @@ Every transition path (manual, completion, crossfade, engine switch) — full pl
 Ledger X-01. Foundational for AUDIT-032/034.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-07-28
+- Commit: Not requested
+- Verification result: Session activation/deactivation is owned above the adapters; track unload and true playback shutdown are distinct, and session-spy tests prove no deactivation between queued tracks plus one at shutdown. The randomized sequential unit target passed 590/590 and the isolated simulator build passed. The physical background-transition check remains explicitly owned by blocked AUDIT-055.
 
 ## AUDIT-032 — Preserve interruption intent and pause on route loss
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P0
 - Audit sources: Model B (AUD-SESSION-002), Model A (A-B01), WP3-006
 - Audit finding IDs: AUD-SESSION-002
@@ -642,8 +642,8 @@ Record play intent at interruption begin; resume only if (intent && shouldResume
 Depends on AUDIT-031's single owner. No new session categories.
 
 ### Acceptance Criteria
-- [ ] Logic tests: playing/paused × interruption begin/end matrix
-- [ ] Route-loss pauses only when playing; state coherent; no auto-continue on another route
+- [x] Logic tests: playing/paused × interruption begin/end matrix
+- [x] Route-loss pauses only when playing; state coherent; no auto-continue on another route
 - [ ] Physical headphone/Bluetooth pull test (→ AUDIT-055)
 
 ### Suggested Verification
@@ -653,14 +653,14 @@ StateCoordinator tests with injected notifications; device pull test.
 Ledger X-02.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-07-28
+- Commit: Not requested
+- Verification result: Interruption intent is captured at begin and combined with the system resume option at end; old-device-unavailable route loss pauses active playback and clears auto-resume intent. The complete interruption matrix and route-loss tests passed within the 590-test unit target. Physical route removal remains explicitly owned by blocked AUDIT-055.
 
 ## AUDIT-033 — Reconcile state when an AudioKit crossfade is cancelled
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (AUD-TRANSITION-002)
 - Audit finding IDs: AUD-TRANSITION-002
@@ -692,8 +692,8 @@ On cancellation, deterministically reconcile to exactly one player/file/state (c
 AudioKit adapter only; no facade API change.
 
 ### Acceptance Criteria
-- [ ] Cancel at start/mid/end plus pause/seek/next each leave one active player and one coherent current track (tests)
-- [ ] Completion fires exactly once per transition
+- [x] Cancel at start/mid/end plus pause/seek/next each leave one active player and one coherent current track (tests)
+- [x] Completion fires exactly once per transition
 
 ### Suggested Verification
 Adapter tests with generated tones; audible spot check.
@@ -702,10 +702,10 @@ Adapter tests with generated tones; audible spot check.
 Ledger X-04.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-07-28
+- Commit: Not requested
+- Verification result: AudioKit crossfade cancellation now reconciles deterministically to one active slot, restores coherent volume/file state, and preserves exactly-once completion. Start/mid/end replacement and interaction coverage passed, including 10/10 repetitions of the formerly timing-sensitive replacement case; the full unit target passed 590/590.
 
 ## AUDIT-034 — Build a real prepared-next gapless transition state machine
 
@@ -741,10 +741,10 @@ Design a prepared-next state machine: schedule the next file on the inactive nat
 Requires all GROUP-05 predecessors. No bit-perfect claims from this work (AUDIT-028).
 
 ### Acceptance Criteria
-- [ ] Logic scheduling tests for boundary timing
-- [ ] Offline waveform analysis of rendered boundary shows no gap/overlap
+- [x] Logic scheduling tests for boundary timing
+- [x] Offline waveform analysis of rendered boundary shows no gap/overlap
 - [ ] Consecutive real-track device capture across formats (→ AUDIT-055)
-- [ ] No session deactivation at boundary (session spy)
+- [x] No session deactivation at boundary (session spy)
 
 ### Suggested Verification
 Three-stage: unit scheduling → offline render analysis → device capture.
@@ -756,14 +756,14 @@ Every transition path; seek-near-end; engine switch mid-queue. Full playback reg
 Ledger X-06. Hardest audio task; keep last in GROUP-05.
 
 ### Implementation Record
-- Started:
+- Started: 2026-07-28
 - Completed:
-- Commit:
-- Verification result:
+- Commit: Not requested
+- Verification result: IMPLEMENTED SLICE — prepared-next generations, native boundary scheduling/swap behavior, AudioKit transition reconciliation, and session-spy boundary coverage are in place. On 2026-07-29 a new iOS 27 Sendable audio-tap regression test captured the actual `AVAudioEngineAdapter.renderBoundary` output for two generated phase-contiguous 44.1 kHz stereo PCM WAV fixtures. The focused lane passed 1/1 and retained the rendered CAF plus sample report: 44,099 active frames versus 44,100 expected (−1), longest boundary silence run 1 frame, and boundary/pre-boundary peak ratio 0.9999938, showing neither inserted silence nor overlapped amplitude. AudioKit remains explicitly classified as `.preloadedFallback` and is not claimed as render-boundary gapless. The required consecutive representative real-track physical-device capture remains gated by AUDIT-055, so the task remains TODO.
 
 ## AUDIT-035 — Fix native seek offset accounting and A-B loop robustness (reproduce first)
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (AUD-SEEK-001), Model A (A-B07)
 - Audit finding IDs: AUD-SEEK-001
@@ -794,9 +794,9 @@ Reproduce with a scripted seek sequence first (record failing expectations); the
 Native adapter + controller only. Repeat/completion semantics unchanged.
 
 ### Acceptance Criteria
-- [ ] Reproduction test fails before and passes after
-- [ ] Repeated seeks then natural completion report monotonic, correct time
-- [ ] A-B loop seeks failures are visible, not `try?`-swallowed
+- [x] Reproduction test fails before and passes after
+- [x] Repeated seeks then natural completion report monotonic, correct time
+- [x] A-B loop seeks failures are visible, not `try?`-swallowed
 
 ### Suggested Verification
 Deterministic seek tests with generated audio; manual A-B session on device.
@@ -805,7 +805,7 @@ Deterministic seek tests with generated audio; manual A-B session on device.
 Ledger X-05 (reproduce-first mandate).
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-07-28
+- Commit: Not requested
+- Verification result: Native playback time now includes the scheduled seek base across repeated seeks and natural completion, while A-B loop boundaries use the injected clock and surface seek errors through playback error state. Focused regression coverage and the randomized sequential unit target passed 590/590; the isolated simulator build also passed.

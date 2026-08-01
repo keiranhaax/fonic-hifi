@@ -15,6 +15,7 @@ import WidgetKit
 struct LargeWidgetView: View {
     @Environment(\.showsWidgetContainerBackground) private var showsBackground
     @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.locale) private var locale
 
     let entry: NowPlayingEntry
 
@@ -70,7 +71,11 @@ struct LargeWidgetView: View {
                             }
                         }
 
-                        Text(entry.trackInfo.artistAlbum)
+                        Text(verbatim: LocalizedWidgetText.artistAlbum(
+                            artist: entry.trackInfo.artist,
+                            album: entry.trackInfo.album,
+                            locale: locale
+                        ))
                             .font(fonts.subtitle)
                             .foregroundStyle(colors.secondary)
                             .lineLimit(1)

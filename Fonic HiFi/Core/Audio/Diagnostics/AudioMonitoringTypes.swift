@@ -67,6 +67,7 @@ public struct SystemMetrics: Sendable {
 
 /// Container for engine-specific playback metrics used during monitoring.
 public struct EngineMetrics: Sendable {
+    public var availability: AudioMetricsAvailability = .available
     public let bufferUnderruns: Int
     public let decodingLatency: TimeInterval
     public let bufferFillLevel: Float
@@ -94,7 +95,7 @@ public struct EngineMetrics: Sendable {
     public let lastRecoveryTime: TimeInterval?
 
     public static var `default`: EngineMetrics {
-        EngineMetrics(
+        var metrics = EngineMetrics(
             bufferUnderruns: 0,
             decodingLatency: 0,
             bufferFillLevel: 1.0,
@@ -121,6 +122,8 @@ public struct EngineMetrics: Sendable {
             recoverySuccessRate: 1.0,
             lastRecoveryTime: nil,
         )
+        metrics.availability = .unavailable
+        return metrics
     }
 }
 
@@ -134,6 +137,7 @@ struct InterruptionRecord: Sendable {
 
 /// Codable representation used when exporting metrics archives.
 struct EncodedMetric: Codable, Sendable {
+    let engineMetricsAvailability: AudioMetricsAvailability
     let timestamp: Date
     let cpuUsage: Float
     let memoryUsage: Int64
@@ -145,6 +149,7 @@ struct EncodedMetric: Codable, Sendable {
     let bufferUnderruns: Int
 
     init(_ metric: AudioMetrics) {
+        engineMetricsAvailability = metric.engineMetricsAvailability
         timestamp = metric.timestamp
         cpuUsage = metric.cpuUsage
         memoryUsage = metric.memoryUsage

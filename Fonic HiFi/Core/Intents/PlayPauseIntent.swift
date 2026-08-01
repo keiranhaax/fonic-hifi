@@ -37,7 +37,7 @@ struct PlayPauseIntent: AudioPlaybackIntent, LiveActivityIntent {
                 try await engine.resume()
                 Self.logger.info("PlayPauseIntent: Resumed playback")
             } catch {
-                Self.logger.error("PlayPauseIntent: Failed to resume - \(error.localizedDescription)")
+                Self.logger.error("PlayPauseIntent: Failed to resume - \(error.localizedDescription, privacy: .private)")
             }
         }
 

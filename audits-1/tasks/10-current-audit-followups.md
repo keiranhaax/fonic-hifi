@@ -210,9 +210,16 @@ Never record credential values, endpoints, or authentication headers in tasks or
 
 Provider dashboards or support records supplied by the owner; secret-pattern and history scans that report only path/count/category, never values.
 
+### Implementation Record
+
+- Started: 2026-07-29 (owner-gate re-evaluation)
+- Completed:
+- Commit: Not requested
+- Verification result: BLOCKED — no account-owner disposition, provider-side authorization, or coordinated history-cleanup decision was supplied. No credential values or endpoints were inspected or recorded, no provider was contacted, and repository history was not rewritten.
+
 ## AUDIT-062 — Make facade initialization and shutdown mutually safe
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: 2026-07-18 current-diff concurrency audit
 - Category: Audio lifecycle / concurrency
@@ -237,18 +244,25 @@ Define one lifecycle state machine for initialize versus shutdown, cancel and aw
 
 ### Acceptance Criteria
 
-- [ ] Shutdown cannot return while an earlier initialization can still mutate facade state
-- [ ] Concurrent initialization callers still share one attempt
-- [ ] Initialization failure remains retryable
-- [ ] Focused tests exercise initialize/initialize, initialize/shutdown, failure/retry, and cancellation interleavings
+- [x] Shutdown cannot return while an earlier initialization can still mutate facade state
+- [x] Concurrent initialization callers still share one attempt
+- [x] Initialization failure remains retryable
+- [x] Focused tests exercise initialize/initialize, initialize/shutdown, failure/retry, and cancellation interleavings
 
 ### Suggested Verification
 
 Focused lifecycle tests under strict concurrency, then the complete unit target and isolated simulator build.
 
+### Implementation Record
+
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Initialization callers share one owned task, lifecycle generations guard every post-suspension mutation, and shutdown cancels and awaits the in-flight attempt before teardown returns. The focused concurrent initialize and shutdown/cancellation/retry tests passed within the 90-test simulator lane with zero skips.
+
 ## AUDIT-063 — Establish nonisolated boundaries for audio callbacks
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P0
 - Audit sources: 2026-07-18 current-tree concurrency audit
 - Category: Audio / Swift concurrency
@@ -273,18 +287,25 @@ Use an explicit nonisolated callback boundary that captures only sendable values
 
 ### Acceptance Criteria
 
-- [ ] Outer framework callbacks do not access main-actor state before the hop
-- [ ] Completion, interruption, route-loss, remote-command, and monitor paths retain their behavior
-- [ ] Race-oriented tests exercise callbacks from non-main executors
-- [ ] No `nonisolated(unsafe)` or `@unchecked Sendable` bypass is introduced
+- [x] Outer framework callbacks do not access main-actor state before the hop
+- [x] Completion, interruption, route-loss, remote-command, and monitor paths retain their behavior
+- [x] Race-oriented tests exercise callbacks from non-main executors
+- [x] No `nonisolated(unsafe)` or `@unchecked Sendable` bypass is introduced
 
 ### Suggested Verification
 
 Focused callback tests, strict-concurrency build, Thread Sanitizer where supported, complete unit target, and physical-device interruption/route checks through AUDIT-055.
 
+### Implementation Record
+
+- Started: 2026-07-28
+- Completed: 2026-07-28
+- Commit: Not requested
+- Verification result: Framework completion, interruption, route, remote-command, and monitor callbacks now enter through explicit sendable/nonisolated bridges and hop once to the owning actor before isolated state access. Race-oriented callback coverage, the 590-test unit target, and the fresh strict-concurrency simulator build passed; no unsafe isolation bypass was introduced. Physical route evidence remains owned by AUDIT-055.
+
 ## AUDIT-064 — Make transient playback errors accessible and motion-aware
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: 2026-07-18 current-diff accessibility audit
 - Category: Accessibility / playback UX
@@ -309,19 +330,26 @@ Expose an assertive but non-duplicating accessibility announcement, provide a se
 
 ### Acceptance Criteria
 
-- [ ] A newly presented playback error is announced once with meaningful text
-- [ ] The error can be dismissed semantically
-- [ ] Reduced-motion mode avoids movement-based transitions
-- [ ] Repeated/superseded errors have deterministic announcement and clearing behavior
-- [ ] Visual and accessibility behavior is verified in both root and Now Playing presentations
+- [x] A newly presented playback error is announced once with meaningful text
+- [x] The error can be dismissed semantically
+- [x] Reduced-motion mode avoids movement-based transitions
+- [x] Repeated/superseded errors have deterministic announcement and clearing behavior
+- [x] Visual and accessibility behavior is verified in both root and Now Playing presentations
 
 ### Suggested Verification
 
 Focused state tests, UI tests for presentation/dismissal, simulator accessibility inspection, and a physical-device VoiceOver pass through AUDIT-055.
 
+### Implementation Record
+
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Playback errors now post one high-priority accessibility announcement per distinct presentation, persist until semantic dismissal or supersession, reject stale dismissals, and use an opacity-only transition with animations disabled under Reduce Motion. Focused state tests passed in the 90-test lane, and root plus Now Playing UI dismissal flows passed 2/2 with zero skips. Physical-device VoiceOver listening remains AUDIT-055.
+
 ## AUDIT-065 — Complete explicit privacy annotations in release-reachable logging
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: AUDIT-006 residual; 2026-07-18 privacy-policy scan
 - Category: Privacy / diagnostics
@@ -346,14 +374,21 @@ Re-scan the live tree and remediate by privacy class in small batches: free-form
 
 ### Acceptance Criteria
 
-- [ ] Every release-reachable content-bearing interpolation has an explicit justified privacy classification
-- [ ] User paths, filenames, metadata, prompts, lyrics, credentials, and bearer-like values never use `.public`
-- [ ] Operational counts, booleans, durations, and fixed enum labels remain useful where public classification is justified
-- [ ] Two independent static probes and focused tests verify each batch
+- [x] Every release-reachable content-bearing interpolation has an explicit justified privacy classification
+- [x] User paths, filenames, metadata, prompts, lyrics, credentials, and bearer-like values never use `.public`
+- [x] Operational counts, booleans, durations, and fixed enum labels remain useful where public classification is justified
+- [x] Two independent static probes and focused tests verify each batch
 
 ### Suggested Verification
 
 Privacy-pattern scans, SwiftLint, focused subsystem tests, complete unit target, and an isolated Debug build.
+
+### Implementation Record
+
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Two independent assembled-tree probes classified 338 Logger interpolations (167 public operational fields, 171 private fields, 0 missing); the release subset contains 321 explicitly classified interpolations and no prohibited `print`, `NSLog`, or `os_log` calls. Seven debug-only gaps were annotated. Swift parse, strict SwiftLint, and scoped `git diff --check` passed.
 
 ## AUDIT-066 — Burn down compiler and test-runtime warnings by evidence family
 
@@ -386,9 +421,16 @@ Create one verified subtask per warning family: ownership of throwing tasks, iOS
 
 - [ ] Each warning family has a reproducible baseline and owner
 - [ ] Fixes address root causes without suppressing compiler, concurrency, or runtime diagnostics
-- [ ] Final build and XCResults report exact warning counts
-- [ ] Device-only or third-party warnings remain explicitly attributed and unclaimed
+- [x] Final build and XCResults report exact warning counts
+- [x] Device-only or third-party warnings remain explicitly attributed and unclaimed
 
 ### Suggested Verification
 
 Fresh isolated Debug build, complete unit and UI targets, XCResult warning extraction, and focused runtime probes for any remaining QoS issue.
+
+### Implementation Record
+
+- Started: 2026-07-28
+- Completed:
+- Commit: Not requested
+- Verification result: IMPLEMENTED SLICE — the fresh isolated app/widget build passes with zero compiler warnings after migrating the audio graph, tap, and interruption paths to their throwing/typed iOS 27 APIs. Focused audio migration tests pass 55/55. On 2026-07-29, two isolated randomized parallel unit XCResults each passed the then-current 592/592 with 0 failed, 0 skipped, and 0 runtime-warning objects; after adding the waveform regression, a fresh final unit lane discovered and passed 593/593. A fresh complete UI XCResult passed 26/26 with 0 failed and 0 skipped but reproduced exactly four QoS inversions, each immediately after a `Play Semantic Track by Semantic Artist` action in `testHomeBrowseSectionsExposeWorkingSemanticActions`, `testLibraryTrackExposesSeparatePlayAndInformationActions`, `testStandardSearchResultsExposeSemanticActions`, and `testQueueRestoresAfterBackgroundTerminationAndRelaunch`. The accepted shared and coverage plans each passed 619/619 and reproduced the same four QoS warnings. A focused A/B run verified that the app selected `AVAudioEngine` instead of AudioKit and still reproduced the warning, ruling out AudioKit as the sole owner; the simulator preference was restored to its original absent state. Xcode's exported diagnostics retain the triggering activity but no waiting/waited-on stack, so the remaining owner is narrowed to the shared selected-track playback path or Xcode 27 UI-test runtime and is not yet stack-proven. Ten SwiftUI/model-context test warnings and the 14 iOS 27 audio deprecation warnings were removed at their root causes; the remaining QoS family is not burned down, so the task remains TODO.

@@ -1,135 +1,51 @@
-# Audit Remediation: Remove @unchecked Sendable from @MainActor Classes
+# Audit Remediation: Remove Production `@unchecked Sendable`
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+**Status:** Implemented on 2026-07-15
 
-**Goal:** Remove ADR 004 violations where `@unchecked Sendable` is incorrectly applied to `@MainActor` classes.
+**Goal:** Remove the remaining production `@unchecked Sendable` escape hatch while preserving playback-settings behavior and stored-data compatibility.
 
-**Architecture:** `@MainActor` classes are implicitly Sendable because the actor serializes all access. Adding `@unchecked Sendable` bypasses Swift 6's data-race prevention and is explicitly forbidden by ADR 004.
+**Concurrency model:** `AudioPlaybackSettingsStore` is an actor. Its `UserDefaults` reference is stored and accessed only as actor-isolated state, so a separate unchecked wrapper is unnecessary.
 
-**Tech Stack:** Swift 6.2, iOS 26, strict concurrency
+## Current Findings
 
----
+The original Glass findings are no longer actionable:
 
-## Background
+- `3a339e8` removed the unused `GlassPerformanceProfiler`.
+- `8cc11d0` removed the unused `GlassEffectMemoryManager`.
 
-**Source:** AUDIT.md validation (2025-12-07)
+Before this remediation, the only production occurrence was `DefaultsBox` in `AudioPlaybackSettingsStore`. The following test-only annotations remain intentionally out of scope:
 
-**ADR 004 Rule:** Never use `@unchecked Sendable` on `@MainActor` classes.
+- `StubAlertManager` in `Fonic HiFiTests/AudioMonitorTests.swift`.
+- `MockSecurityScopedAccessor` in `Fonic HiFiTests/ImportPipelineTests.swift`.
 
-**Why it's dangerous:** `@unchecked Sendable` tells the compiler "trust me, this is safe" but bypasses compile-time safety checks. `@MainActor` already provides implicit Sendable conformance via actor isolation.
+Those test doubles require a separate audit because their isolation and synchronization contracts differ from the production actor addressed here.
 
----
+## Implemented Changes
 
-### Task 1: Remove @unchecked Sendable from GlassPerformanceProfiler
+- Removed `DefaultsBox` and its `@unchecked Sendable` conformance.
+- Stored `UserDefaults` directly as private actor-isolated state.
+- Preserved the public initializer, public methods, persistence keys, default values, and encoded equalizer payload.
+- Added a focused test that performs concurrent reads and writes through the actor, validates observed values, and verifies deterministic sentinel values afterward.
+- Used a unique `UserDefaults` suite for the concurrency test and removed its persistent domain after completion.
 
-**Files:**
-- Modify: `Fonic HiFi/Presentation/Views/Components/GlassModifiers.swift:382`
+No dependency, project-file, signing, entitlement, schema, or migration change was required.
 
-**Step 1: Verify current state**
+## Verification
 
-Run: `grep -n "@unchecked Sendable" "Fonic HiFi/Presentation/Views/Components/GlassModifiers.swift"`
+- Production search for `@unchecked Sendable` and `nonisolated(unsafe)`: no matches.
+- `AudioPlaybackSettingsStoreTests`: 5 passed, 0 failed.
+- `AudioPlaybackSettingsStoreTests` with Thread Sanitizer: 5 passed, 0 failed, with no reported races.
+- Complete `Fonic HiFiTests` unit target: 432 passed, 0 failed.
+- `git diff --check`: passed.
 
-Expected output includes:
-```
-382:final class GlassPerformanceProfiler: ObservableObject, @unchecked Sendable {
-438:final class GlassEffectMemoryManager: ObservableObject, @unchecked Sendable {
-```
+Validation used the main `Fonic HiFi` scheme with Xcode 27 and the booted iPhone 17 running iOS 27.0. iOS 26 runtime validation is `UNVERIFIED`: iOS 26.5 simulators were installed but not booted, and the verification workflow did not mutate simulator state by booting one automatically.
 
-**Step 2: Remove @unchecked Sendable from GlassPerformanceProfiler**
+The build emitted pre-existing warnings in unrelated production and test files. No warning or error originated from the files changed by this remediation.
 
-Change line 382 from:
-```swift
-final class GlassPerformanceProfiler: ObservableObject, @unchecked Sendable {
-```
+## Acceptance Criteria
 
-To:
-```swift
-final class GlassPerformanceProfiler: ObservableObject {
-```
-
-**Step 3: Verify compilation**
-
-Run: `make build`
-
-Expected: BUILD SUCCEEDED (no errors about Sendable - class is implicitly Sendable via @MainActor)
-
----
-
-### Task 2: Remove @unchecked Sendable from GlassEffectMemoryManager
-
-**Files:**
-- Modify: `Fonic HiFi/Presentation/Views/Components/GlassModifiers.swift:438`
-
-**Step 1: Remove @unchecked Sendable from GlassEffectMemoryManager**
-
-Change line 438 from:
-```swift
-final class GlassEffectMemoryManager: ObservableObject, @unchecked Sendable {
-```
-
-To:
-```swift
-final class GlassEffectMemoryManager: ObservableObject {
-```
-
-**Step 2: Verify compilation**
-
-Run: `make build`
-
-Expected: BUILD SUCCEEDED
-
-**Step 3: Run tests**
-
-Run: `make test`
-
-Expected: All 361 tests pass, 0 failures
-
-**Step 4: Commit**
-
-```bash
-git add "Fonic HiFi/Presentation/Views/Components/GlassModifiers.swift"
-git commit -m "fix(concurrency): remove @unchecked Sendable from @MainActor classes
-
-Per ADR 004, @MainActor classes are implicitly Sendable via actor isolation.
-The @unchecked Sendable annotation was redundant and bypassed compiler safety.
-
-Removed from:
-- GlassPerformanceProfiler (line 382)
-- GlassEffectMemoryManager (line 438)
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
----
-
-### Task 3: Verify no remaining violations in production code
-
-**Step 1: Search for remaining @unchecked Sendable in production code**
-
-Run: `grep -rn "@unchecked Sendable" "Fonic HiFi/" --include="*.swift" | grep -v Tests`
-
-Expected: Only `AudioPlaybackSettingsStore.swift:6` (acceptable - UserDefaults wrapper in actor)
-
-**Step 2: Document remaining usage**
-
-The `DefaultsBox` wrapper in `AudioPlaybackSettingsStore.swift` is acceptable because:
-- It wraps `UserDefaults` which is non-Sendable but thread-safe
-- It's inside an `actor` which provides additional isolation
-- Removing it would require `nonisolated init` and may cause compiler issues
-
-No action required.
-
----
-
-## Summary
-
-| Task | File | Action | Status |
-|------|------|--------|--------|
-| 1 | GlassModifiers.swift:382 | Remove `, @unchecked Sendable` | ☐ |
-| 2 | GlassModifiers.swift:438 | Remove `, @unchecked Sendable` | ☐ |
-| 3 | Verify no remaining violations | grep search | ☐ |
-
-**Total changes:** 2 line modifications
-**Estimated time:** 5 minutes
+- Production Swift source contains no `@unchecked Sendable` or `nonisolated(unsafe)` occurrence.
+- Playback-setting persistence behavior and keys remain unchanged.
+- Concurrent access is routed through `AudioPlaybackSettingsStore` actor methods.
+- Focused normal and Thread Sanitizer tests pass.
+- The complete unit-test target passes.

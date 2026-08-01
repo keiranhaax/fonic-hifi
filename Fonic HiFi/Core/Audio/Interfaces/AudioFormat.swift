@@ -102,14 +102,18 @@ public enum AudioFormat: String, CaseIterable, Sendable, Codable {
     public static func from(url: URL) -> AudioFormat? {
         let ext = url.pathExtension.lowercased()
         switch ext {
-        case "m4a": return .alac  // M4A container -> ALAC (matches AudioFormatType)
+        case "m4a": return .aac // Container only; codec inspection may refine this to ALAC.
         case "aif": return .aiff  // Common alternate extension
         default: return AudioFormat(rawValue: ext)
         }
     }
 
-    /// All supported file extensions
+    /// File extensions that have a complete import, detection, and playback path.
     public static var supportedExtensions: [String] {
-        allCases.map(\.fileExtension)
+        ["mp3", "aac", "m4a", "flac", "wav", "aiff", "aif"]
+    }
+
+    public static func isSupportedFileExtension(_ fileExtension: String) -> Bool {
+        supportedExtensions.contains(fileExtension.lowercased())
     }
 }

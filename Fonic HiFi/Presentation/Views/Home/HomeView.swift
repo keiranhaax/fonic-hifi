@@ -5,6 +5,7 @@
 //  iOS 26+ Home tab with data-driven sections
 //
 
+import OSLog
 import SwiftData
 import SwiftUI
 
@@ -24,9 +25,117 @@ struct SurpriseMeRequestGate {
 }
 
 @MainActor
+struct HomeLoadRequestGate {
+    private(set) var generation: UInt = 0
+
+    mutating func begin() -> UInt {
+        generation &+= 1
+        return generation
+    }
+
+    func isCurrent(_ request: UInt) -> Bool {
+        request == generation
+    }
+
+    mutating func invalidate() {
+        generation &+= 1
+    }
+}
+
+struct HomeLoadFailure: Equatable {
+    enum Context: Equatable {
+        case initial
+        case refresh
+    }
+
+    let context: Context
+
+    var title: String {
+        switch context {
+        case .initial:
+            "Couldn't Load Home"
+        case .refresh:
+            "Home Couldn't Refresh"
+        }
+    }
+
+    var message: String {
+        switch context {
+        case .initial:
+            "Your library couldn't be loaded. Try again."
+        case .refresh:
+            "Your existing music is still available. Try refreshing again."
+        }
+    }
+}
+
+struct HomeLoadPresentationState: Equatable {
+    private(set) var failure: HomeLoadFailure?
+
+    mutating func beginRequest() {
+        failure = nil
+    }
+
+    mutating func recordFailure(hasContent: Bool) {
+        failure = HomeLoadFailure(context: hasContent ? .refresh : .initial)
+    }
+
+    mutating func clearFailure() {
+        failure = nil
+    }
+}
+
+struct HomeLoadPhase: Equatable {
+    enum Phase: Equatable {
+        case idle
+        case loading
+        case ready
+    }
+
+    private(set) var library: Phase = .loading
+    private(set) var greeting: Phase = .idle
+
+    var blocksHomeContent: Bool {
+        library == .loading
+    }
+
+    mutating func beginLibraryLoad(showLoading: Bool) {
+        if showLoading {
+            library = .loading
+        }
+    }
+
+    mutating func finishLibraryLoad() {
+        library = .ready
+    }
+
+    mutating func beginGreetingLoad() {
+        greeting = .loading
+    }
+
+    mutating func finishGreetingLoad() {
+        greeting = .ready
+    }
+}
+
+private enum HomeActionError: LocalizedError {
+    case libraryUnavailable
+    case noPlayableTracks
+
+    var errorDescription: String? {
+        switch self {
+        case .libraryUnavailable:
+            "Your music library is unavailable."
+        case .noPlayableTracks:
+            "No music is available to play."
+        }
+    }
+}
+
+@MainActor
 struct HomeView: View {
     @Environment(\.dataManager) private var dataManager
-    @Environment(\.audioEngine) private var audioEngine
+    @EnvironmentObject private var audioEngine: AudioEngineFacade
     @Environment(\.showingNowPlaying) private var showingNowPlaying
 
     // Fresh library state
@@ -49,20 +158,31 @@ struct HomeView: View {
     @State private var timeBasedGreeting: TimeBasedGreeting?
     @State private var greetingTracks: [Track] = []
     @State private var surpriseMeRequestGate = SurpriseMeRequestGate()
+    @State private var greetingTask: Task<Void, Never>?
 
     // UI state
-    @State private var isLoading = true
+    @State private var loadPhase = HomeLoadPhase()
     @State private var hasLoadedOnce = false
+    @State private var loadPresentation = HomeLoadPresentationState()
+    @State private var loadRequestGate = HomeLoadRequestGate()
+    @State private var refreshTask: Task<Void, Never>?
     @State private var selectedArtist: Artist?
     @State private var selectedAlbum: Album?
     @State private var selectedGenre: GenreSelection?
 
+    private let logger = Log.logger(.presentation)
+
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading {
+                if loadPhase.blocksHomeContent {
                     ProgressView("Loading your music...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let loadFailure = loadPresentation.failure,
+                          loadFailure.context == .initial {
+                    HomeLoadFailureView(failure: loadFailure) {
+                        retryLoad()
+                    }
                 } else if isEmpty {
                     EmptyHomeView()
                 } else {
@@ -70,6 +190,17 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Home")
+            .safeAreaInset(edge: .top) {
+                if let loadFailure = loadPresentation.failure,
+                   loadFailure.context == .refresh,
+                   !isEmpty {
+                    HomeRefreshFailureBanner(
+                        failure: loadFailure,
+                        onRetry: retryLoad,
+                        onDismiss: dismissLoadFailure
+                    )
+                }
+            }
             .task {
                 guard !hasLoadedOnce else { return }
                 await loadData(showLoading: true)
@@ -77,7 +208,8 @@ struct HomeView: View {
             }
             .onAppear {
                 guard hasLoadedOnce else { return }
-                Task {
+                refreshTask?.cancel()
+                refreshTask = Task {
                     await loadData(showLoading: false)
                 }
             }
@@ -95,6 +227,13 @@ struct HomeView: View {
             .sheet(item: $selectedGenre) { selection in
                 GenreTracksView(genre: selection.name)
             }
+        }
+        .onDisappear {
+            refreshTask?.cancel()
+            refreshTask = nil
+            greetingTask?.cancel()
+            greetingTask = nil
+            loadRequestGate.invalidate()
         }
     }
 
@@ -203,133 +342,238 @@ struct HomeView: View {
     }
 
     private func loadData(showLoading: Bool) async {
-        if showLoading {
-            isLoading = true
+        let request = loadRequestGate.begin()
+        let hasContent = !isEmpty
+
+        loadPhase.beginLibraryLoad(showLoading: showLoading)
+        loadPresentation.beginRequest()
+
+        defer {
+            if loadRequestGate.isCurrent(request) {
+                loadPhase.finishLibraryLoad()
+            }
         }
 
         guard let dataManager else {
-            isLoading = false
+            if loadRequestGate.isCurrent(request) {
+                loadPresentation.recordFailure(hasContent: hasContent)
+            }
             return
         }
 
         do {
             // Fresh library data
-            recentlyAdded = try await dataManager.getRecentlyAddedTracks(limit: 10)
-            artists = try await dataManager.getAllArtists(limit: 15)
-            genres = try await dataManager.getUniqueGenres()
-            albums = try await dataManager.getAllAlbums(limit: 10)
+            let loadedRecentlyAdded = try await dataManager.getRecentlyAddedTracks(limit: 10)
+            let loadedArtists = try await dataManager.getAllArtists(limit: 15)
+            let loadedGenres = try await dataManager.getUniqueGenres()
+            let loadedAlbums = try await dataManager.getAllAlbums(limit: 10)
 
             // Active library data
-            recentlyPlayed = try await dataManager.getRecentlyPlayedTracks(limit: 10)
-            mostListened = try await dataManager.getMostListenedTracks(limit: 10)
-            favoriteAlbums = try await dataManager.getFavoriteAlbums(limit: 10)
+            let loadedRecentlyPlayed = try await dataManager.getRecentlyPlayedTracks(limit: 10)
+            let loadedMostListened = try await dataManager.getMostListenedTracks(limit: 10)
+            let loadedFavoriteAlbums = try await dataManager.getFavoriteAlbums(limit: 10)
+
+            // History-based sections
+            let loadedContinueListening = try await dataManager.getContinueListeningTracks(limit: 3)
+            let loadedRediscoverTracks = try await dataManager.getRediscoverTracks(limit: 10)
+
+            guard !Task.isCancelled, loadRequestGate.isCurrent(request) else { return }
+
+            recentlyAdded = loadedRecentlyAdded
+            artists = loadedArtists
+            genres = loadedGenres
+            albums = loadedAlbums
+            recentlyPlayed = loadedRecentlyPlayed
+            mostListened = loadedMostListened
+            favoriteAlbums = loadedFavoriteAlbums
+            continueListening = loadedContinueListening
+            rediscoverTracks = loadedRediscoverTracks
+
+            scheduleGreetingLoad(
+                request: request,
+                recentlyPlayed: loadedRecentlyPlayed,
+                genres: loadedGenres,
+                dataManager: dataManager
+            )
 
             // Pre-cache visible album artwork colors for smoother overlay theming work.
-            let albumsToPrewarm = Array((albums + favoriteAlbums).prefix(12))
+            let albumsToPrewarm = Array((loadedAlbums + loadedFavoriteAlbums).prefix(12))
             Task(priority: .utility) {
                 await DominantColorService.shared.prewarmColorCache(for: albumsToPrewarm)
             }
+        } catch is CancellationError {
+            return
+        } catch {
+            logger.error("Home library load failed: \(error.localizedDescription, privacy: .private)")
+            guard loadRequestGate.isCurrent(request) else { return }
+            loadPresentation.recordFailure(hasContent: hasContent)
+        }
+    }
 
-            // History-based sections
-            continueListening = try await dataManager.getContinueListeningTracks(limit: 3)
-            rediscoverTracks = try await dataManager.getRediscoverTracks(limit: 10)
+    private func scheduleGreetingLoad(
+        request: UInt,
+        recentlyPlayed: [Track],
+        genres: [String],
+        dataManager: DataManager
+    ) {
+        greetingTask?.cancel()
+        greetingTask = nil
 
-            // Generate AI greeting if we have history
-            if !recentlyPlayed.isEmpty {
+        guard !recentlyPlayed.isEmpty else {
+            timeBasedGreeting = nil
+            greetingTracks = []
+            loadPhase.finishGreetingLoad()
+            return
+        }
+
+        loadPhase.beginGreetingLoad()
+        greetingTask = Task { @MainActor in
+            defer {
+                if loadRequestGate.isCurrent(request) {
+                    loadPhase.finishGreetingLoad()
+                }
+            }
+
+            do {
                 let sessions = try await dataManager.trackDataActor.getListeningSessions(limit: 50)
                 let trackIDs = try await dataManager.trackDataActor.getAllTrackIDs(limit: 200)
-
-                let greeting = await recommendationService.generateTimeBasedGreeting(
+                let greeting = try await recommendationService.generateTimeBasedGreeting(
                     sessions: sessions,
                     availableTrackIDs: trackIDs,
                     genres: genres
                 )
+                try Task.checkCancellation()
+                let tracks = try dataManager.fetchTracks(by: greeting.trackIDs)
+                guard loadRequestGate.isCurrent(request) else { return }
                 timeBasedGreeting = greeting
-
-                // Load the actual tracks for the greeting using mainContext
-                greetingTracks = try dataManager.fetchTracks(by: greeting.trackIDs)
+                greetingTracks = tracks
+            } catch is CancellationError {
+                return
+            } catch {
+                logger.error(
+                    "Home greeting load failed: \(error.localizedDescription, privacy: .private)"
+                )
             }
-        } catch {
-            // Silently handle errors - home screen shows empty state gracefully
         }
-
-        isLoading = false
     }
 
     private func shuffleAll() {
-        guard let dataManager, let audioEngine else { return }
         Task {
             do {
-                let allTracks = try await dataManager.getRecentlyAddedTracks(limit: 1000)
-                guard !allTracks.isEmpty else { return }
-
-                let shuffledTracks = allTracks.shuffled()
-                let audioTracks = shuffledTracks.map { $0.toAudioTrack() }
-                audioEngine.queueManager.replaceQueue(with: audioTracks, startIndex: 0)
-                if let firstTrack = shuffledTracks.first {
-                    try await audioEngine.play(track: firstTrack)
-                    showingNowPlaying.wrappedValue = true
-                }
+                try await playShuffledLibrary()
             } catch {
-                // Handle error silently
+                logger.error("Shuffle All failed: \(error.localizedDescription, privacy: .private)")
+                audioEngine.reportPlaybackControlError(error)
             }
         }
     }
 
     private func surpriseMe() {
-        guard let dataManager, let audioEngine else { return }
         guard surpriseMeRequestGate.begin() else { return }
 
         Task {
             defer { surpriseMeRequestGate.finish() }
 
+            let tracks: [Track]
             do {
+                guard let dataManager else {
+                    throw HomeActionError.libraryUnavailable
+                }
+
                 // Gather context
                 let sessions = try await dataManager.trackDataActor.getListeningSessions(limit: 50)
                 let trackIDs = try await dataManager.trackDataActor.getAllTrackIDs(limit: 200)
 
                 // Generate surprise mix
-                let result = await recommendationService.generateSurpriseMix(
+                let result = try await recommendationService.generateSurpriseMix(
                     sessions: sessions,
                     availableTrackIDs: trackIDs,
                     genres: genres
                 )
 
                 // Fetch actual tracks from IDs using mainContext
-                let tracks = try dataManager.fetchTracks(by: result.trackIDs)
+                tracks = try dataManager.fetchTracks(by: result.trackIDs)
+            } catch {
+                await playSurpriseFallback(after: error)
+                return
+            }
 
-                guard !tracks.isEmpty else {
-                    // Fallback to shuffle if no tracks resolved
-                    shuffleAll()
-                    return
-                }
+            guard let firstTrack = tracks.first else {
+                await playSurpriseFallback(after: nil)
+                return
+            }
 
-                // Queue and play
+            do {
                 let audioTracks = tracks.map { $0.toAudioTrack() }
                 audioEngine.queueManager.replaceQueue(with: audioTracks, startIndex: 0)
-                if let firstTrack = tracks.first {
-                    try await audioEngine.play(track: firstTrack)
-                    showingNowPlaying.wrappedValue = true
-                }
+                try await audioEngine.play(track: firstTrack)
+                showingNowPlaying.wrappedValue = true
             } catch {
-                // Fallback to shuffle on any error
-                shuffleAll()
+                await playSurpriseFallback(after: error)
             }
         }
     }
 
+    private func playSurpriseFallback(after surpriseError: Error?) async {
+        if let surpriseError {
+            logger.error(
+                "Surprise Me failed; trying Shuffle All: \(surpriseError.localizedDescription, privacy: .private)"
+            )
+        } else {
+            logger.info("Surprise Me resolved no tracks; trying Shuffle All")
+        }
+
+        do {
+            try await playShuffledLibrary()
+        } catch {
+            logger.error(
+                "Surprise Me fallback failed: \(error.localizedDescription, privacy: .private)"
+            )
+            audioEngine.reportPlaybackControlError(error)
+        }
+    }
+
+    private func playShuffledLibrary() async throws {
+        guard let dataManager else {
+            throw HomeActionError.libraryUnavailable
+        }
+
+        let allTracks = try await dataManager.getRecentlyAddedTracks(limit: 1000)
+        let shuffledTracks = allTracks.shuffled()
+        guard let firstTrack = shuffledTracks.first else {
+            throw HomeActionError.noPlayableTracks
+        }
+
+        audioEngine.queueManager.replaceQueue(
+            with: shuffledTracks.map { $0.toAudioTrack() },
+            startIndex: 0
+        )
+        try await audioEngine.play(track: firstTrack)
+        showingNowPlaying.wrappedValue = true
+    }
+
     private func playTrack(_ track: Track) {
-        guard let audioEngine else { return }
         Task {
             do {
                 try await audioEngine.play(track: track)
                 showingNowPlaying.wrappedValue = true
             } catch {
-                // Handle error silently
+                logger.error("Home track playback failed: \(error.localizedDescription, privacy: .private)")
+                audioEngine.reportPlaybackControlError(error)
             }
         }
     }
 
+    private func retryLoad() {
+        refreshTask?.cancel()
+        refreshTask = Task {
+            await loadData(showLoading: isEmpty)
+        }
+    }
+
+    private func dismissLoadFailure() {
+        loadPresentation.clearFailure()
+    }
 }
 
 private struct GenreSelection: Identifiable {
@@ -371,6 +615,57 @@ private struct EmptyHomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .frame(minHeight: 300)
+    }
+}
+
+private struct HomeLoadFailureView: View {
+    let failure: HomeLoadFailure
+    let onRetry: () -> Void
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(failure.title, systemImage: "exclamationmark.triangle")
+        } description: {
+            Text(failure.message)
+        } actions: {
+            Button("Try Again", action: onRetry)
+                .buttonStyle(.borderedProminent)
+        }
+        .accessibilityIdentifier("HomeLoadError")
+    }
+}
+
+private struct HomeRefreshFailureBanner: View {
+    let failure: HomeLoadFailure
+    let onRetry: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
+            Label(failure.title, systemImage: "exclamationmark.triangle")
+                .font(.headline)
+
+            Text(failure.message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: DesignTokens.Spacing.small) {
+                Button("Try Again", action: onRetry)
+                    .buttonStyle(.borderedProminent)
+                    .frame(minHeight: 44)
+
+                Button("Dismiss", action: onDismiss)
+                    .buttonStyle(.bordered)
+                    .frame(minHeight: 44)
+            }
+        }
+        .padding(DesignTokens.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassSurface(style: .standard, cornerRadius: DesignTokens.CornerRadius.medium)
+        .padding(.horizontal)
+        .padding(.top, DesignTokens.Spacing.small)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("HomeRefreshError")
     }
 }
 
@@ -423,4 +718,5 @@ private struct TrackCardView: View {
 
 #Preview {
     HomeView()
+        .audioEngine(AudioEngineFacade())
 }

@@ -23,22 +23,16 @@ actor FormatDetectionCoordinator {
         try Task.checkCancellation()
         let waitBegan = ContinuousClock.now
 
-        await semaphore.acquire()
+        try await semaphore.acquire()
         let waitDuration = waitBegan.duration(to: .now)
         logger.debug(
             "detection.start wait_ms=\(milliseconds(waitDuration), privacy: .public)"
         )
 
         let detectionBegan = ContinuousClock.now
-
-        defer {
-            Task {
-                await semaphore.release()
-            }
-        }
-
+        let result: Result<AudioFileInfo, Error>
         do {
-            let result: AudioFileInfo = if let timeout, timeout > 0 {
+            let info: AudioFileInfo = if let timeout, timeout > 0 {
                 try await withThrowingTaskGroup(of: AudioFileInfo.self) { group in
                     group.addTask(operation: operation)
                     group.addTask {
@@ -62,19 +56,22 @@ actor FormatDetectionCoordinator {
             logger.debug(
                 "detection.success duration_ms=\(milliseconds(detectionDuration), privacy: .public)"
             )
-            return result
+            result = .success(info)
         } catch is CancellationError {
             logger.info("detection.cancelled")
-            throw CancellationError()
+            result = .failure(CancellationError())
         } catch CoordinatorError.timeout {
             logger.error("detection.timeout")
-            throw DetectionError.timeout
+            result = .failure(DetectionError.timeout)
         } catch {
             logger.error(
                 "detection.failure error_type=\(String(describing: type(of: error)), privacy: .public)"
             )
-            throw error
+            result = .failure(error)
         }
+
+        await semaphore.release()
+        return try result.get()
     }
 }
 

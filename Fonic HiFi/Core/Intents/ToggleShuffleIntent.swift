@@ -34,7 +34,7 @@ struct ToggleShuffleIntent: AppIntent, LiveActivityIntent {
 
         engine.setShuffleMode(newMode)
 
-        Self.logger.info("ToggleShuffleIntent: Shuffle mode set to \(newMode.isActive ? "on" : "off")")
+        Self.logger.info("ToggleShuffleIntent: Shuffle mode set to \(newMode.isActive ? "on" : "off", privacy: .public)")
 
         // Sync widget state after shuffle change
         await IntentDependencyProvider.shared.widgetCoordinator?.syncCurrentState()

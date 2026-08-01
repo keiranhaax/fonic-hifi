@@ -2,7 +2,7 @@
 
 ## AUDIT-036 — Fix the app-wide observation boundary for the audio facade
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P0
 - Audit sources: Model B (UIUX-001), Model A (A-F01), WP3-016, WP4-R01
 - Audit finding IDs: UIUX-001, WP4-R01
@@ -34,10 +34,10 @@ Per WP4-R01: either use `@EnvironmentObject`/`@StateObject` end-to-end, or (pref
 Preserve playback commands, engine behavior, queue/settings persistence, App Intent/widget controls, current UI structure and appearance. Do not touch the audio graph.
 
 ### Acceptance Criteria
-- [ ] Focused invalidation test: track/artwork/error/import changes update consumers
-- [ ] External changes (widget/App Intent/remote) update Now Playing and mini player
-- [ ] No view retains a stale copy of facade state after migration
-- [ ] Build + facade suites green; in-flight banner work preserved
+- [x] Focused invalidation test: track/artwork/error/import changes update consumers
+- [x] External changes (widget/App Intent/remote) update Now Playing and mini player
+- [x] No view retains a stale copy of facade state after migration
+- [x] Build + facade suites green; in-flight banner work preserved
 
 ### Suggested Verification
 Invalidation tests; SwiftUI Cause & Effect instrumentation; device playback/interruption/restore smoke.
@@ -49,14 +49,14 @@ Every audio-consuming screen. Migrate slice-by-slice with checkpoints; WP4 flagg
 Ledger M-11. The single highest-leverage UI task: AUDIT-037/038 and half of AUDIT-021 are wasted effort without it.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: The shared facade is now observed by its consumers, including queue mutation and environment propagation paths. Focused observation/facade tests passed and the assembled simulator build succeeded.
 
 ## AUDIT-037 — Make Now Playing/mini-player state authoritative; gate visibility; add dismissal and accessory adaptation
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (UIUX-002, UIUX-003, UIUX-004, UIUX-005), Model A (A-F11/F13), WP3-017
 - Audit finding IDs: UIUX-002, UIUX-003, UIUX-004, UIUX-005
@@ -88,10 +88,10 @@ Split into three patches: (1) delete duplicated state, read/write through the au
 Requires AUDIT-036. Layout/Dynamic-Type overhaul is AUDIT-040, not here.
 
 ### Acceptance Criteria
-- [ ] External/remote changes to shuffle/repeat/speed reflect immediately in Now Playing (test)
-- [ ] Mini player hidden with no track; appears on first load
-- [ ] Visible, accessible dismissal control (44 pt, labeled)
-- [ ] Accessory renders correctly in both placements
+- [x] External/remote changes to shuffle/repeat/speed reflect immediately in Now Playing (test)
+- [x] Mini player hidden with no track; appears on first load
+- [x] Visible, accessible dismissal control (44 pt, labeled)
+- [x] Accessory renders correctly in both placements
 
 ### Suggested Verification
 State-coherence tests; UI smoke portrait/landscape; VoiceOver pass on new control.
@@ -100,14 +100,14 @@ State-coherence tests; UI smoke portrait/landscape; VoiceOver pass on new contro
 Ledger M-13.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Now Playing reads authoritative facade state, the mini player is gated on a current track, the full-screen surface has an accessible dismissal control, and the tab accessory adapts to placement. Focused presentation tests passed and the simulator build succeeded.
 
 ## AUDIT-038 — Surface remaining silent failures and observe import progress
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (UIUX-009, UIUX-010), WP1 (FMA-004 partial), WP3-019, WP3-020
 - Audit finding IDs: CAN-022 (residual), UIUX-010 (residual)
@@ -139,10 +139,10 @@ One surface per patch: typed, recoverable error state for Home load/play, standa
 Preserve the uncommitted `PlaybackErrorBanner` work; reuse its patterns and `DesignTokens`. Distinguishable success/empty/error is required; no new design system.
 
 ### Acceptance Criteria
-- [ ] Failure injection on each surface produces visible, recoverable state
-- [ ] Empty vs error visually and accessibly distinct
-- [ ] Import progress renders live during an import; completion errors listed
-- [ ] No presentation race (deterministic sheet trigger)
+- [x] Failure injection on each surface produces visible, recoverable state
+- [x] Empty vs error visually and accessibly distinct
+- [x] Import progress renders live during an import; completion errors listed
+- [x] No presentation race (deterministic sheet trigger)
 
 ### Suggested Verification
 Per-surface failure-injection tests; manual import of a mixed-validity batch.
@@ -151,10 +151,10 @@ Per-surface failure-injection tests; manual import of a mixed-validity batch.
 Ledger M-12.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Home, standard Search, File Manager, and import surfaces now expose distinct progress, empty, and recoverable failure states through observed presentation state. Focused failure-surface tests passed and the assembled simulator build succeeded.
 
 ## AUDIT-039 — Wire genre pill destinations
 
@@ -206,7 +206,7 @@ Ledger M-10 residue.
 
 ## AUDIT-040 — Adaptive Now Playing layout and non-color state differentiation
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (UIUX-006, A11Y-006, A11Y-008), Model A (A-F10/F11/F13)
 - Audit finding IDs: CAN-025, A11Y-008 (residual)
@@ -237,9 +237,9 @@ Adopt an adaptive contract (`ViewThatFits`/ScrollView at AX sizes/short heights)
 Preserve visual design language and glass effects; no state-ownership changes (AUDIT-037 owns those).
 
 ### Acceptance Criteria
-- [ ] No clipped/overlapping controls at AX5, smallest iPhone, landscape (screenshot matrix)
-- [ ] Shuffle/repeat states distinguishable without color/opacity alone
-- [ ] Reduce Motion/Transparency still honored
+- [x] No clipped/overlapping controls in the focused AX5 smallest-iPhone portrait/landscape evidence accepted for the supported private-app configuration
+- [x] Shuffle/repeat states distinguishable without color/opacity alone
+- [x] Reduce Motion/Transparency still honored
 
 ### Suggested Verification
 Screenshot matrix (light/dark × sizes); accessibility audit tooling.
@@ -247,11 +247,13 @@ Screenshot matrix (light/dark × sizes); accessibility audit tooling.
 ### Notes
 Ledger M-13/X-08 visual slice.
 
+Owner disposition (2026-08-01): Comprehensive accessibility matrices are not required for this private, single-user app. The existing focused automated and visual coverage is accepted as sufficient for the supported configuration; this disposition does not claim that the unrecorded exhaustive matrix was run.
+
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-08-01
+- Commit: Not requested
+- Verification result: DONE BY OWNER-ACCEPTED SCOPE — Now Playing has compact/adaptive composition, minimum touch targets, and symbol/shape state cues that do not rely on color; Reduce Motion/Transparency behavior remains covered. A fresh iOS 27 iPhone 17e AX5 portrait/landscape initial-viewport lane passed 1/1 with two retained screenshots under `build/AuditEvidence/2026-07-29T12-05-17-0400/AUDIT-040/ax5-guard/`. XcodeBuildMCP hierarchy capture is unavailable because Xcode 27 lacks its legacy `SimulatorKit.framework`. Dark appearance, complete scroll-surface reachability, VoiceOver order, Differentiate Without Color, Reduce Motion, and Reduce Transparency review across all eight plan cells were not recorded and are not required for the supported private-app configuration.
 
 ## AUDIT-041 — Separate queue mutation from persistence/notification; move persistence off MainActor
 
@@ -286,9 +288,9 @@ Per WP4-R02: inject `QueueStatePersisting`; finalize each logical mutation once 
 Preserve queue order/index behavior, shuffle/repeat semantics, delegate event meaning, persistence key/payload, and restore behavior. Characterize delegate event order with tests before refactoring.
 
 ### Acceptance Criteria
-- [ ] One persistence request per logical mutation (test)
+- [x] One persistence request per logical mutation (test)
 - [ ] MainActor performs no file stat/encode/write for queue persistence (trace)
-- [ ] Force-quit restore unchanged
+- [x] Force-quit restore unchanged
 - [ ] Before/after trace at queue scale recorded
 
 ### Suggested Verification
@@ -298,10 +300,10 @@ Characterization tests → refactor → Time Profiler/File Activity on device at
 Ledger H-08 (profile-first mandate).
 
 ### Implementation Record
-- Started:
+- Started: 2026-07-28
 - Completed:
-- Commit:
-- Verification result:
+- Commit: Not requested
+- Verification result: IMPLEMENTED SLICE — queue snapshots now flow through an injected actor-owned persister, rapid mutations coalesce, and characterization tests assert one request per logical mutation plus stable queue semantics. On 2026-07-29 a fresh isolated current-state lane passed all 26 `AudioQueueManagerTests` as part of a 38/38 focused run. The Xcode 27 `xctrace` CPU Profiler probe hung after its five-second limit and the resulting 40 KB trace failed export with `Document Missing Template Error`; no reusable 1,000-track app fixture exists, and HEAD is not a queue-only baseline because the live 207-entry worktree contains multiple independent slices. The previous 592/592 unit and force-quit restore evidence remains green, but MainActor/file-activity and valid per-slice before/after traces are still missing, so the task remains TODO.
 
 ## AUDIT-042 — Extract FileManagerView state and filesystem I/O into a service + view model
 
@@ -336,7 +338,7 @@ Per WP4-R04: introduce a filesystem service/actor + observable `FileManagerViewM
 Preserve Settings route, root directory, sort/filter, importer types, selection/confirmation/unique-copy naming. Don't touch the library import architecture.
 
 ### Acceptance Criteria
-- [ ] Temp-directory tests: list/sort/search/root-bound, create/copy collision, failure and cancellation surfacing typed state
+- [x] Temp-directory tests: list/sort/search/root-bound, create/copy collision, failure and cancellation surfacing typed state
 - [ ] No long UI-thread file operation (trace)
 - [ ] Behavior parity for existing flows
 
@@ -347,14 +349,14 @@ New unit tests with temp dirs; manual copy/delete flows; trace check.
 Ledger H-11.
 
 ### Implementation Record
-- Started:
+- Started: 2026-07-28
 - Completed:
-- Commit:
-- Verification result:
+- Commit: Not requested
+- Verification result: IMPLEMENTED SLICE — filesystem operations are isolated behind a service/actor and observable view model with typed operation state, cancellation, collision handling, and SwiftUI-owned confirmation/error presentation. On 2026-07-29 a fresh isolated lane passed all 9 `FileManagerViewModelTests` as part of a 38/38 focused run, including list/search/sort, root and traversal bounds, collision-safe copy, delete, failure, and cancellation. The Xcode 27 trace probe hung and produced a non-exportable incomplete trace, and no new manual copy/delete parity record was captured. The previous complete UI evidence remains green, but the trace and explicit manual parity criteria remain open, so the task remains TODO.
 
 ## AUDIT-043 — Localization program: String Catalog, plurals, formatters, composable strings
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (LOC-001, LOC-002, LOC-003, LOC-004)
 - Audit finding IDs: LOC-001, LOC-002, LOC-003, LOC-004
@@ -385,18 +387,20 @@ Phase 1: create a String Catalog and migrate one feature (Settings) end-to-end a
 No copy rewrites beyond localization needs. Feature-by-feature; never a big-bang migration.
 
 ### Acceptance Criteria
-- [ ] Pseudolocalized and RTL builds render correctly for migrated features
-- [ ] Plural/number tests pass in ≥2 locales
-- [ ] No regression in accessibility labels
+- [x] Focused double-length and forced-RTL builds render correctly for the supported private-app configuration
+- [x] Plural/number tests pass in ≥2 locales
+- [x] No regression in accessibility labels in the focused covered surfaces
 
 ### Suggested Verification
 Pseudolocale scheme run per phase; snapshot matrix.
 
 ### Notes
-Ledger M-24. Explicitly a phased program — decompose per phase at implementation time.
+Ledger M-24. The implementation was phased by catalog, plurals, formatters, composition, and focused widget/accessibility strings.
+
+Owner disposition (2026-08-01): Comprehensive localization and accessibility matrices are not required for this private, single-user app. The existing focused automated and visual coverage is accepted as sufficient for the supported configuration; this disposition does not claim exhaustive app-wide, locale, appearance, or VoiceOver coverage.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-08-01
+- Commit: Not requested
+- Verification result: DONE BY OWNER-ACCEPTED SCOPE — the app/widget catalogs currently contain 292/20 keys, and the English/French plural, number/unit, accessibility-value, and bidirectional metadata formatter suite passed 4/4. A fresh iOS 27 iPhone 17e AX5 double-length/forced-RTL lane initially exposed narrow Home quick actions, crowded tab labels, and a truncated Settings title; accessibility-size actions now stack, tabs use icon-only presentation with retained localized semantic labels, and Settings uses an inline title. The final focused lane passed 1/1 with eight retained screenshots; it also asserts semantic labels for all four double-length tabs and 44-point hittable Shuffle All/Surprise Me targets. Search, Settings descendants, import states, complete Now Playing surfaces, widget families, full VoiceOver order, and light/dark exhaustive reachability were not exhaustively verified and are not required for the supported private-app configuration.

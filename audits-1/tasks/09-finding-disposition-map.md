@@ -41,7 +41,7 @@ Legend: `AUDIT-###` = task in files `02`–`10`; `DONE — 01-resolved-findings.
 | AUD-ENG-001 | Medium | AVAudioEngine preference is ignored | AUD-ENG-001 | AUDIT-020 (DONE) |
 | AUD-FORMAT-001 | Medium | M4A container is always reported as ALAC/lossless | AUD-FORMAT-001 | AUDIT-022 |
 | AUD-FORMAT-002 | Medium | Import UI exposes formats the playback detector cannot represent | AUD-FORMAT-002 | AUDIT-022 |
-| AUD-QUEUE-002 | Medium | Repeat-one also repeats manual Next/Previous | AUD-QUEUE-002 | AUDIT-025 |
+| AUD-QUEUE-002 | Medium | Repeat-one also repeats manual Next/Previous | AUD-QUEUE-002 | AUDIT-025 (DONE) |
 | AUD-RECOVERY-001 | Medium | Queue resume position is dropped and shuffled order is restored incorrectly | AUD-RECOVERY-001 | DONE — 01-resolved-findings.md |
 | AUD-REMOTE-001 | Medium | Skip commands are enabled but discarded | AUD-REMOTE-001 | DONE — 01-resolved-findings.md |
 | AUD-RESET-001 | Medium | Media-services reset does not rebuild invalid audio objects | AUD-RESET-001 | AUDIT-026 |

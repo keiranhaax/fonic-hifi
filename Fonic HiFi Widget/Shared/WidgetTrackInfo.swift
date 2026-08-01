@@ -108,6 +108,11 @@ public extension WidgetTrackInfo {
     /// Save to App Group UserDefaults
     func save() {
         guard let defaults = UserDefaults.appGroup else { return }
+        save(to: defaults)
+    }
+
+    /// Save to an explicitly provided store.
+    func save(to defaults: UserDefaults) {
         let encoder = JSONEncoder()
 
         if let data = try? encoder.encode(self) {
@@ -117,9 +122,15 @@ public extension WidgetTrackInfo {
 
     /// Load from App Group UserDefaults
     static func load() -> WidgetTrackInfo? {
-        guard let defaults = UserDefaults.appGroup,
-              let data = defaults.data(forKey: WidgetConstants.Keys.trackInfo)
-        else { return nil }
+        guard let defaults = UserDefaults.appGroup else { return nil }
+        return load(from: defaults)
+    }
+
+    /// Load from an explicitly provided store.
+    static func load(from defaults: UserDefaults) -> WidgetTrackInfo? {
+        guard let data = defaults.data(forKey: WidgetConstants.Keys.trackInfo) else {
+            return nil
+        }
 
         return try? JSONDecoder().decode(WidgetTrackInfo.self, from: data)
     }
@@ -128,14 +139,24 @@ public extension WidgetTrackInfo {
     static func loadOrEmpty() -> WidgetTrackInfo {
         load() ?? .empty
     }
+
+    /// Load from an explicitly provided store or return empty state.
+    static func loadOrEmpty(from defaults: UserDefaults) -> WidgetTrackInfo {
+        load(from: defaults) ?? .empty
+    }
 }
 
 // MARK: - Up Next Tracks
 
-public extension Array where Element == WidgetTrackInfo {
+public extension [WidgetTrackInfo] {
     /// Save up-next tracks to App Group UserDefaults
     func saveAsUpNext() {
         guard let defaults = UserDefaults.appGroup else { return }
+        saveAsUpNext(to: defaults)
+    }
+
+    /// Save up-next tracks to an explicitly provided store.
+    func saveAsUpNext(to defaults: UserDefaults) {
         let encoder = JSONEncoder()
 
         if let data = try? encoder.encode(self) {
@@ -145,9 +166,15 @@ public extension Array where Element == WidgetTrackInfo {
 
     /// Load up-next tracks from App Group UserDefaults
     static func loadUpNext() -> [WidgetTrackInfo] {
-        guard let defaults = UserDefaults.appGroup,
-              let data = defaults.data(forKey: WidgetConstants.Keys.upNextTracks)
-        else { return [] }
+        guard let defaults = UserDefaults.appGroup else { return [] }
+        return loadUpNext(from: defaults)
+    }
+
+    /// Load up-next tracks from an explicitly provided store.
+    static func loadUpNext(from defaults: UserDefaults) -> [WidgetTrackInfo] {
+        guard let data = defaults.data(forKey: WidgetConstants.Keys.upNextTracks) else {
+            return []
+        }
 
         return (try? JSONDecoder().decode([WidgetTrackInfo].self, from: data)) ?? []
     }

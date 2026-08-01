@@ -5,8 +5,115 @@ import Testing
 
 @Suite("SmartSearchService Tests")
 struct SmartSearchServiceTests {
+    enum InjectedGenerationFailure: Error, CaseIterable {
+        case generationFailed
+        case unsupportedLocale
+    }
 
-    @Test("Fallback search returns results from available tracks")
+    @Test("Unavailable model returns an explicit standard-search handoff without creating a session")
+    @MainActor
+    func unavailableModelDoesNotCreateProvider() async throws {
+        var providerCreationCount = 0
+        let service = SmartSearchService(
+            availabilityCheck: { false },
+            generationProviderFactory: {
+                providerCreationCount += 1
+                return StubSmartSearchGenerationProvider { _ in
+                    Issue.record("Unavailable search must not invoke generation")
+                    return Self.result(trackIDs: [])
+                }
+            }
+        )
+
+        let result = try await service.smartSearch(
+            query: "chill",
+            sessions: [],
+            availableTrackIDs: [UUID()],
+            trackMetadata: []
+        )
+
+        #expect(result.searchStrategy == SmartSearchService.standardFallbackStrategy)
+        #expect(providerCreationCount == 0)
+    }
+
+    @Test(
+        "Generation and locale failures hand off to standard search",
+        arguments: InjectedGenerationFailure.allCases
+    )
+    @MainActor
+    func generationFailuresUseFallback(_ failure: InjectedGenerationFailure) async throws {
+        let service = makeService { _ in
+            throw failure
+        }
+
+        let result = try await service.smartSearch(
+            query: "ambient",
+            sessions: [],
+            availableTrackIDs: [UUID()],
+            trackMetadata: []
+        )
+
+        #expect(result.searchStrategy == SmartSearchService.standardFallbackStrategy)
+    }
+
+    @Test("Cancellation propagates instead of becoming a fallback result")
+    @MainActor
+    func cancellationPropagates() async {
+        let service = makeService { _ in
+            throw CancellationError()
+        }
+
+        do {
+            _ = try await service.smartSearch(
+                query: "ambient",
+                sessions: [],
+                availableTrackIDs: [UUID()],
+                trackMetadata: []
+            )
+            Issue.record("Expected cancellation to propagate")
+        } catch is CancellationError {
+            // Expected.
+        } catch {
+            Issue.record("Expected CancellationError, received \(error)")
+        }
+    }
+
+    @Test("Injected generation is serialized for the shared provider")
+    @MainActor
+    func sharedProviderRequestsAreSerialized() async throws {
+        var activeRequestCount = 0
+        var maximumActiveRequestCount = 0
+        let offeredID = UUID()
+        let service = makeService { _ in
+            activeRequestCount += 1
+            maximumActiveRequestCount = max(maximumActiveRequestCount, activeRequestCount)
+            await Task.yield()
+            activeRequestCount -= 1
+            return Self.result(trackIDs: [offeredID])
+        }
+
+        async let first = service.smartSearch(
+            query: "first",
+            sessions: [],
+            availableTrackIDs: [offeredID],
+            trackMetadata: [
+                (id: offeredID, title: "First", artist: "Artist", genre: String?.none)
+            ]
+        )
+        async let second = service.smartSearch(
+            query: "second",
+            sessions: [],
+            availableTrackIDs: [offeredID],
+            trackMetadata: [
+                (id: offeredID, title: "First", artist: "Artist", genre: String?.none)
+            ]
+        )
+
+        _ = try await (first, second)
+        #expect(maximumActiveRequestCount == 1)
+    }
+
+    @Test("Fallback search explicitly hands off to standard search")
     @MainActor
     func fallbackSearchWorks() async {
         let service = SmartSearchService()
@@ -17,16 +124,8 @@ struct SmartSearchServiceTests {
             availableTrackIDs: trackIDs
         )
 
-        #expect(result.searchStrategy.contains("fallback") || result.searchStrategy.contains("unavailable"))
-    }
-
-    @Test("Availability check returns boolean")
-    @MainActor
-    func availabilityCheckWorks() async {
-        let service = SmartSearchService()
-
-        let isAvailable = await service.isSmartSearchAvailable()
-        #expect(isAvailable == true || isAvailable == false)
+        #expect(result.trackIDs.isEmpty)
+        #expect(result.searchStrategy == SmartSearchService.standardFallbackStrategy)
     }
 
     @Test("Empty query returns empty results")
@@ -135,5 +234,38 @@ struct SmartSearchServiceTests {
         )
 
         #expect(metadata.map(\.id) == [availableTrackID])
+    }
+
+    @MainActor
+    private func makeService(
+        generation: @escaping @MainActor (String) async throws -> SmartSearchResult
+    ) -> SmartSearchService {
+        let provider = StubSmartSearchGenerationProvider(generation: generation)
+        return SmartSearchService(
+            availabilityCheck: { true },
+            generationProviderFactory: { provider }
+        )
+    }
+
+    private static func result(trackIDs: [UUID]) -> SmartSearchResult {
+        SmartSearchResult(
+            trackIDs: trackIDs,
+            matchReasons: [],
+            searchStrategy: "Injected generation",
+            suggestions: []
+        )
+    }
+}
+
+@MainActor
+private final class StubSmartSearchGenerationProvider: SmartSearchGenerationProviding {
+    private let generation: @MainActor (String) async throws -> SmartSearchResult
+
+    init(generation: @escaping @MainActor (String) async throws -> SmartSearchResult) {
+        self.generation = generation
+    }
+
+    func generate(prompt: String) async throws -> SmartSearchResult {
+        try await generation(prompt)
     }
 }

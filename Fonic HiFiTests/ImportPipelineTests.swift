@@ -5,7 +5,7 @@ import XCTest
 
 final class ImportPipelineTests: XCTestCase {
     private func makeInMemoryContainer() throws -> ModelContainer {
-        let schema = Schema(SchemaV2.models)
+        let schema = Schema(versionedSchema: SchemaV3.self)
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: true,
@@ -167,7 +167,7 @@ final class ImportPipelineTests: XCTestCase {
         XCTAssertEqual(importService.filesProcessed, urls.count)
         XCTAssertEqual(importService.recentlyImported.count, urls.count)
         XCTAssertTrue(importService.importErrors.isEmpty)
-        XCTAssertEqual(invalidationCount, urls.count)
+        XCTAssertEqual(invalidationCount, 1)
         XCTAssertEqual(importService.importProgress, 1.0, accuracy: 0.0001)
 
         let trackCount = try await trackDataActor.getTracksCount()
@@ -257,7 +257,8 @@ final class ImportPipelineTests: XCTestCase {
 
         XCTAssertEqual(duplicateResults.count, 1)
         XCTAssertFalse(duplicateResults.first?.succeeded ?? true)
-        XCTAssertEqual(duplicateResults.first?.error?.message, "Duplicate file already exists")
+        XCTAssertTrue(duplicateResults.first?.isDuplicate ?? false)
+        XCTAssertNil(duplicateResults.first?.error)
 
         let trackCount = try await trackDataActor.getTracksCount()
         XCTAssertEqual(trackCount, 1)
@@ -313,9 +314,7 @@ private final class MockMetadataExtractor: MetadataExtracting {
     }
 
     func extractTrackMetadata(from url: URL) async throws -> TrackMetadata {
-        try await withTaskCancellationHandler(handler: {
-            Task { await tracker.end() }
-        }) {
+        try await withTaskCancellationHandler(operation: {
             await tracker.begin()
             try await Task.sleep(nanoseconds: 5_000_000)
 
@@ -345,7 +344,9 @@ private final class MockMetadataExtractor: MetadataExtracting {
 
             await tracker.end()
             return metadata
-        }
+        }, onCancel: {
+            Task { await self.tracker.end() }
+        })
     }
 
     func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {

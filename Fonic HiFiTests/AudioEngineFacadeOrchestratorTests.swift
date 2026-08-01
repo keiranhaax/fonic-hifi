@@ -137,6 +137,202 @@ struct AudioEngineFacadeOrchestratorTests {
         #expect(monitor.getCurrentMetricsCallCount == 1)
     }
 
+    @Test("Concurrent initialization callers share one attempt")
+    @MainActor
+    func concurrentInitializationCallersShareOneAttempt() async throws {
+        let monitor = FacadeMonitorStub()
+        monitor.suspendStartMonitoring()
+        let facade = AudioEngineFacade(
+            monitor: monitor,
+            runtimeMonitoringEnabled: true
+        )
+
+        let firstInitialization = Task { @MainActor in
+            try await facade.initialize()
+        }
+        await monitor.waitUntilStartMonitoringBegins()
+
+        let secondInitialization = Task { @MainActor in
+            try await facade.initialize()
+        }
+        await Task.yield()
+
+        #expect(monitor.startMonitoringIntervals.count == 1)
+
+        monitor.resumeStartMonitoring()
+        try await firstInitialization.value
+        try await secondInitialization.value
+
+        #expect(facade.isReady)
+        #expect(monitor.startMonitoringIntervals.count == 1)
+
+        await facade.shutdown()
+    }
+
+    @Test("Shutdown cancels initialization and leaves retryable state")
+    @MainActor
+    func shutdownCancelsInitializationAndLeavesRetryableState() async throws {
+        let monitor = FacadeMonitorStub()
+        monitor.suspendStartMonitoring()
+        let facade = AudioEngineFacade(
+            monitor: monitor,
+            runtimeMonitoringEnabled: true
+        )
+
+        let initialization = Task { @MainActor in
+            try await facade.initialize()
+        }
+        await monitor.waitUntilStartMonitoringBegins()
+
+        await facade.shutdown()
+        monitor.resumeStartMonitoring()
+
+        await #expect(throws: CancellationError.self) {
+            try await initialization.value
+        }
+        #expect(facade.isReady == false)
+
+        monitor.allowStartMonitoring()
+        try await facade.initialize()
+
+        #expect(facade.isReady)
+        #expect(monitor.startMonitoringIntervals.count == 2)
+
+        await facade.shutdown()
+    }
+
+    @Test("Latest playback request wins while the delayed request cannot commit")
+    @MainActor
+    func latestPlaybackRequestWins() async throws {
+        let clock = ControlledTestClock()
+        let facade = AudioEngineFacade(
+            monitor: FacadeMonitorStub(),
+            runtimeMonitoringEnabled: false
+        )
+        var committedRequests: [String] = []
+
+        let delayedRequest = Task { @MainActor in
+            try await facade.performLatestPlaybackRequest {
+                try await clock.sleep(for: .seconds(10))
+                committedRequests.append("A")
+            }
+        }
+        try await clock.waitUntilSleeperCount()
+
+        let latestRequest = Task { @MainActor in
+            try await facade.performLatestPlaybackRequest {
+                committedRequests.append("B")
+            }
+        }
+
+        try await latestRequest.value
+        try await delayedRequest.value
+
+        #expect(committedRequests == ["B"])
+        #expect(facade.playbackError == nil)
+    }
+
+    @Test("Caller cancellation remains observable when no newer playback request supersedes it")
+    @MainActor
+    func callerCancellationRemainsObservable() async throws {
+        let clock = ControlledTestClock()
+        let facade = AudioEngineFacade(
+            monitor: FacadeMonitorStub(),
+            runtimeMonitoringEnabled: false
+        )
+
+        let request = Task { @MainActor in
+            try await facade.performLatestPlaybackRequest {
+                try await clock.sleep(for: .seconds(10))
+            }
+        }
+        try await clock.waitUntilSleeperCount()
+        request.cancel()
+
+        await #expect(throws: CancellationError.self) {
+            try await request.value
+        }
+        #expect(facade.playbackError == nil)
+    }
+
+    @Test("Playback control errors publish user-visible message")
+    @MainActor
+    func playbackControlErrorsPublishMessage() async throws {
+        let facade = AudioEngineFacade()
+
+        facade.reportPlaybackControlError(AudioError.queueEmpty)
+
+        #expect(facade.lastPlaybackErrorMessage == AudioError.queueEmpty.errorDescription)
+    }
+
+    @Test("Latest playback error replaces previous message")
+    @MainActor
+    func latestPlaybackErrorReplacesPreviousMessage() async throws {
+        let facade = AudioEngineFacade()
+        let firstError = AudioError.queueEmpty
+        let secondError = AudioError.playbackFailed(reason: "Second failure")
+
+        facade.reportPlaybackControlError(firstError)
+        facade.reportPlaybackControlError(secondError)
+
+        #expect(facade.lastPlaybackErrorMessage == secondError.errorDescription)
+    }
+
+    @Test("Repeated playback error reuses the visible presentation")
+    @MainActor
+    func repeatedPlaybackErrorReusesVisiblePresentation() async throws {
+        let facade = AudioEngineFacade()
+        let error = AudioError.queueEmpty
+
+        facade.reportPlaybackControlError(error)
+        let firstPresentation = try #require(facade.playbackError)
+        facade.reportPlaybackControlError(error)
+
+        #expect(facade.playbackError?.id == firstPresentation.id)
+        #expect(facade.playbackError?.message == error.errorDescription)
+    }
+
+    @Test("Only the current playback error presentation can dismiss itself")
+    @MainActor
+    func onlyCurrentPlaybackErrorCanDismissItself() async throws {
+        let facade = AudioEngineFacade()
+
+        facade.reportPlaybackControlError(AudioError.queueEmpty)
+        let supersededID = try #require(facade.playbackError?.id)
+        facade.reportPlaybackControlError(AudioError.playbackFailed(reason: "Current failure"))
+        let currentID = try #require(facade.playbackError?.id)
+
+        facade.dismissPlaybackControlError(id: supersededID)
+        #expect(facade.playbackError?.id == currentID)
+
+        facade.dismissPlaybackControlError(id: currentID)
+        #expect(facade.playbackError == nil)
+        #expect(facade.lastPlaybackErrorMessage == nil)
+    }
+
+    @Test("Playback error presentation disables animation for Reduce Motion")
+    @MainActor
+    func playbackErrorPresentationDisablesAnimationForReduceMotion() async throws {
+        #expect(PlaybackErrorBanner.presentationAnimation(reduceMotion: true) == nil)
+        #expect(PlaybackErrorBanner.presentationAnimation(reduceMotion: false) != nil)
+    }
+
+    @Test("Remote command failures are surfaced by facade")
+    @MainActor
+    func remoteCommandFailuresAreSurfaced() async throws {
+        let stateManager = PlaybackStateManager(enableTransitionValidation: false)
+        let queueManager = AudioQueueManager()
+        let facade = AudioEngineFacade(
+            stateManager: stateManager,
+            queueManager: queueManager,
+            monitor: FacadeMonitorStub()
+        )
+
+        await facade.audioSessionDidReceiveCommand(.seek(to: 15))
+
+        #expect(facade.lastPlaybackErrorMessage != nil)
+    }
+
     @MainActor
     private func makeTrack(name: String) -> Track {
         let url = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -174,11 +370,35 @@ private final class FacadeMonitorStub: AudioPerformanceMonitoring, AudioDiagnost
     private(set) var startMonitoringIntervals: [TimeInterval] = []
     private(set) var stopMonitoringCallCount = 0
     private(set) var detachCallCount = 0
+    private var shouldSuspendStartMonitoring = false
+    private var suspendedStartMonitoringContinuation: CheckedContinuation<Void, Never>?
+    private var startMonitoringObservers: [CheckedContinuation<Void, Never>] = []
+    private var suspendedStartMonitoringWasCancelled = false
 
     var isMonitoring: Bool { get async { !startMonitoringIntervals.isEmpty && stopMonitoringCallCount == 0 } }
 
     func startMonitoring(updateInterval: TimeInterval) async {
         startMonitoringIntervals.append(updateInterval)
+
+        let observers = startMonitoringObservers
+        startMonitoringObservers.removeAll()
+        observers.forEach { $0.resume() }
+
+        guard shouldSuspendStartMonitoring else { return }
+
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                if suspendedStartMonitoringWasCancelled || Task.isCancelled {
+                    continuation.resume()
+                } else {
+                    suspendedStartMonitoringContinuation = continuation
+                }
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.cancelSuspendedStartMonitoring()
+            }
+        }
     }
 
     func stopMonitoring() async {
@@ -219,6 +439,38 @@ private final class FacadeMonitorStub: AudioPerformanceMonitoring, AudioDiagnost
 
     func detachFromEngine() async {
         detachCallCount += 1
+    }
+
+    func suspendStartMonitoring() {
+        shouldSuspendStartMonitoring = true
+        suspendedStartMonitoringWasCancelled = false
+    }
+
+    func allowStartMonitoring() {
+        shouldSuspendStartMonitoring = false
+        suspendedStartMonitoringWasCancelled = false
+        resumeStartMonitoring()
+    }
+
+    func waitUntilStartMonitoringBegins() async {
+        if !startMonitoringIntervals.isEmpty {
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            startMonitoringObservers.append(continuation)
+        }
+    }
+
+    func resumeStartMonitoring() {
+        let continuation = suspendedStartMonitoringContinuation
+        suspendedStartMonitoringContinuation = nil
+        continuation?.resume()
+    }
+
+    private func cancelSuspendedStartMonitoring() {
+        suspendedStartMonitoringWasCancelled = true
+        resumeStartMonitoring()
     }
 
     var currentEngine: AudioEngineService? { get async { attachedEngines.last } }
@@ -285,6 +537,7 @@ private final class FacadeEngineStub: AudioEngineService {
     func configure(with _: AudioEngineConfiguration) async throws {}
     func prepareNext(url _: URL) async {}
     func crossfade(to _: URL, duration _: TimeInterval, playbackRate _: Double, gainDB _: Float) async throws {}
-    func getMetrics() async -> AudioMetrics { .empty }
+    var metricsAvailability: AudioMetricsAvailability { .available }
+    func availableMetrics() async -> AudioMetrics? { .empty }
     func collectMetrics() async {}
 }

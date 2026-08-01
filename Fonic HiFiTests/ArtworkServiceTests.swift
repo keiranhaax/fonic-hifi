@@ -12,9 +12,9 @@ final class ArtworkServiceTests: XCTestCase {
     private var service: ArtworkService!
     private var tempDirectory: URL!
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        let schema = Schema(SchemaV2.models)
+    override func setUp() async throws {
+        try await super.setUp()
+        let schema = Schema(versionedSchema: SchemaV3.self)
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: true,
@@ -30,7 +30,7 @@ final class ArtworkServiceTests: XCTestCase {
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         service?.clearCache()
         service = nil
         context = nil
@@ -39,7 +39,7 @@ final class ArtworkServiceTests: XCTestCase {
             try? FileManager.default.removeItem(at: tempDirectory)
         }
         tempDirectory = nil
-        try super.tearDownWithError()
+        try await super.tearDown()
     }
 
     func testArtworkForTrackUsesCacheUntilCleared() async throws {

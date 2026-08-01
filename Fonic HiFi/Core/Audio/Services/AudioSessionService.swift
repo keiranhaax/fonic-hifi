@@ -138,6 +138,14 @@ public protocol AudioSessionDelegate: AnyObject {
 
     /// Called when a remote command is received
     func audioSessionDidReceiveCommand(_ command: RemoteCommand) async
+
+    /// Called after the system resets media services and the audio session has
+    /// been reconfigured. Existing audio-engine objects must be discarded.
+    func audioSessionMediaServicesWereReset() async
+}
+
+public extension AudioSessionDelegate {
+    func audioSessionMediaServicesWereReset() async {}
 }
 
 /// Remote control commands

@@ -38,13 +38,37 @@ actor FileImportProcessor {
         var errorDescription: String? { message }
     }
 
+    enum ProcessedFileOutcome: Sendable {
+        case imported(PersistentIdentifier)
+        case duplicate
+        case failed(ProcessedFileError)
+    }
+
     struct ProcessedFileResult: Sendable {
         let file: DiscoveredAudioFile
-        let identifier: PersistentIdentifier?
-        let error: ProcessedFileError?
+        let outcome: ProcessedFileOutcome
         let duration: TimeInterval
 
-        var succeeded: Bool { identifier != nil }
+        var identifier: PersistentIdentifier? {
+            guard case let .imported(identifier) = outcome else { return nil }
+            return identifier
+        }
+
+        var error: ProcessedFileError? {
+            guard case let .failed(error) = outcome else { return nil }
+            return error
+        }
+
+        var succeeded: Bool {
+            if case .imported = outcome { return true }
+            return false
+        }
+
+        var isDuplicate: Bool {
+            if case .duplicate = outcome { return true }
+            return false
+        }
+
         var errorDescription: String? { error?.message }
     }
 
@@ -54,13 +78,17 @@ actor FileImportProcessor {
     private let trackDataActor: TrackDataActor
     private let metadataExtractor: MetadataExtracting
     private let securityAccessor: SecurityScopedAccessing
+    private let musicContainerOverride: URL?
+    private let discoveryCheckpoint: (@Sendable () async -> Void)?
 
-    private let supportedExtensions: Set<String> = [
-        "mp3", "m4a", "aac", "flac", "alac", "wav", "aiff", "aif", "ape", "wv", "ogg", "opus"
-    ]
+    private let supportedExtensions = Set(AudioFormat.supportedExtensions)
 
     /// App container directory for storing copied music files
     private lazy var musicContainerURL: URL = {
+        if let musicContainerOverride {
+            return musicContainerOverride
+        }
+
         if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
             return documentsURL.appendingPathComponent("Music", isDirectory: true)
         }
@@ -81,10 +109,14 @@ actor FileImportProcessor {
         trackDataActor: TrackDataActor,
         metadataExtractor: MetadataExtracting,
         securityAccessor: SecurityScopedAccessing = DefaultSecurityScopedAccessor(),
+        musicContainerURL: URL? = nil,
+        discoveryCheckpoint: (@Sendable () async -> Void)? = nil,
     ) {
         self.trackDataActor = trackDataActor
         self.metadataExtractor = metadataExtractor
         self.securityAccessor = securityAccessor
+        musicContainerOverride = musicContainerURL
+        self.discoveryCheckpoint = discoveryCheckpoint
     }
 
     // MARK: - Public Methods
@@ -101,7 +133,10 @@ actor FileImportProcessor {
     /// Discover audio files lazily via streaming sequence
     func discoverAudioFilesStream(from urls: [URL]) -> AsyncStream<DiscoveredAudioFile> {
         AsyncStream { continuation in
-            Task { await self.emitDiscoveredFiles(from: urls, to: continuation) }
+            let producer = Task { await self.emitDiscoveredFiles(from: urls, to: continuation) }
+            continuation.onTermination = { @Sendable _ in
+                producer.cancel()
+            }
         }
     }
 
@@ -130,7 +165,7 @@ actor FileImportProcessor {
         do {
             try ensureMusicContainerExists()
         } catch {
-            logger.error("Failed to prepare music container: \(error.localizedDescription)")
+            logger.error("Failed to prepare music container: \(error.localizedDescription, privacy: .private)")
             return Self.makeContainerPreparationFailureStream(from: files, error: error)
         }
 
@@ -141,7 +176,7 @@ actor FileImportProcessor {
         let log = logger
 
         return AsyncStream<ProcessedFileResult> { continuation in
-            Task {
+            let producer = Task {
                 await Self.emitProcessedFiles(
                     from: files,
                     maxConcurrentTasks: maxConcurrentTasks,
@@ -150,8 +185,11 @@ actor FileImportProcessor {
                     trackDataActor: trackActor,
                     securityAccessor: accessor,
                     logger: log,
-                    to: continuation
+                    to: continuation,
                 )
+            }
+            continuation.onTermination = { @Sendable _ in
+                producer.cancel()
             }
         }
     }
@@ -177,7 +215,7 @@ actor FileImportProcessor {
         // Ensure music container exists
         try ensureMusicContainerExists()
 
-        return try await Self.importFile(
+        let result = try await Self.importFile(
             file,
             baseDirectory: musicContainerURL,
             metadataExtractor: metadataExtractor,
@@ -185,6 +223,13 @@ actor FileImportProcessor {
             securityAccessor: securityAccessor,
             logger: logger,
         )
+
+        switch result {
+        case let .created(identifier):
+            return identifier
+        case .duplicate:
+            throw ProcessedFileError(message: "Duplicate file already exists")
+        }
     }
 
     /// Check if a file already exists in the library
@@ -193,7 +238,7 @@ actor FileImportProcessor {
             let existingTrackId = try await trackDataActor.trackExists(for: url)
             return existingTrackId != nil
         } catch {
-            logger.error("Error checking if file exists: \(error.localizedDescription)")
+            logger.error("Error checking if file exists: \(error.localizedDescription, privacy: .private)")
             return false
         }
     }
@@ -205,6 +250,7 @@ actor FileImportProcessor {
         var nextProgressLog: Date
         var completed = 0
         var successes = 0
+        var duplicates = 0
         var failures = 0
         var totalDuration: TimeInterval = 0
         var inFlight = 0
@@ -228,6 +274,8 @@ actor FileImportProcessor {
             totalDuration += result.duration
             if result.succeeded {
                 successes += 1
+            } else if result.isDuplicate {
+                duplicates += 1
             } else {
                 failures += 1
             }
@@ -236,23 +284,26 @@ actor FileImportProcessor {
 
     private static func makeContainerPreparationFailureStream(
         from files: AsyncStream<DiscoveredAudioFile>,
-        error: Error
+        error: Error,
     ) -> AsyncStream<ProcessedFileResult> {
         let message = error.localizedDescription
         return AsyncStream<ProcessedFileResult> { continuation in
-            Task {
+            let producer = Task {
                 var iterator = files.makeAsyncIterator()
-                while let file = await iterator.next() {
-                    continuation.yield(
+                while !Task.isCancelled, let file = await iterator.next() {
+                    let yieldResult = continuation.yield(
                         ProcessedFileResult(
                             file: file,
-                            identifier: nil,
-                            error: ProcessedFileError(message: message),
-                            duration: 0
-                        )
+                            outcome: .failed(ProcessedFileError(message: message)),
+                            duration: 0,
+                        ),
                     )
+                    guard Self.consumerIsActive(after: yieldResult) else { break }
                 }
                 continuation.finish()
+            }
+            continuation.onTermination = { @Sendable _ in
+                producer.cancel()
             }
         }
     }
@@ -267,14 +318,17 @@ actor FileImportProcessor {
         logger: Logger,
         to continuation: AsyncStream<ProcessedFileResult>.Continuation
     ) async {
+        defer { continuation.finish() }
+
         var iterator = files.makeAsyncIterator()
         let concurrency = max(1, maxConcurrentTasks)
 
         var hashCache = await loadSourceHashCache(from: trackDataActor, logger: logger)
+        guard !Task.isCancelled else { return }
         var stats = ImportQueueStats()
 
-        await withTaskGroup(of: ProcessedFileResult.self) { group in
-            for _ in 0..<concurrency {
+        await withTaskGroup(of: ProcessedFileResult?.self) { group in
+            for _ in 0 ..< concurrency {
                 guard !Task.isCancelled else { break }
                 guard let discoveredFile = await iterator.next() else { break }
 
@@ -293,7 +347,12 @@ actor FileImportProcessor {
                 stats.recordLaunch()
             }
 
-            while let result = await group.next() {
+            while let next = await group.next() {
+                guard let result = next else {
+                    group.cancelAll()
+                    break
+                }
+
                 stats.recordCompletion(for: result)
 
                 if result.succeeded {
@@ -303,11 +362,14 @@ actor FileImportProcessor {
                     hashCache.addEntry(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString)
                 }
 
-                continuation.yield(
-                    result
-                )
+                let yieldResult = continuation.yield(result)
+                guard Self.consumerIsActive(after: yieldResult) else {
+                    group.cancelAll()
+                    break
+                }
 
                 if Task.isCancelled {
+                    group.cancelAll()
                     break
                 }
 
@@ -334,7 +396,19 @@ actor FileImportProcessor {
         }
 
         logQueueSummary(stats: stats, logger: logger)
-        continuation.finish()
+    }
+
+    private static func consumerIsActive(
+        after result: AsyncStream<some Sendable>.Continuation.YieldResult,
+    ) -> Bool {
+        switch result {
+        case .enqueued, .dropped:
+            true
+        case .terminated:
+            false
+        @unknown default:
+            false
+        }
     }
 
     private static func loadSourceHashCache(
@@ -344,7 +418,7 @@ actor FileImportProcessor {
         do {
             return try await trackDataActor.loadSourceHashCache()
         } catch {
-            logger.warning("Failed to load hash cache, falling back to per-file checks: \(error.localizedDescription)")
+            logger.warning("Failed to load hash cache, falling back to per-file checks: \(error.localizedDescription, privacy: .private)")
             return SourceHashCache()
         }
     }
@@ -356,40 +430,51 @@ actor FileImportProcessor {
         metadataExtractor: MetadataExtracting,
         trackDataActor: TrackDataActor,
         securityAccessor: SecurityScopedAccessing,
-        logger: Logger
-    ) async -> ProcessedFileResult {
+        logger: Logger,
+    ) async -> ProcessedFileResult? {
         let taskStart = Date()
 
         let urlHash = file.originalURL.librarySourceHash()
         let bookmarkHash = file.securityScopedBookmark?.sha256Hex()
         let urlString = file.originalURL.absoluteString
 
-        if hashCache.contains(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString) {
-            logger.notice("Duplicate import skipped (cache hit): \(file.originalURL.lastPathComponent, privacy: .private(mask: .hash))")
-            return ProcessedFileResult(
-                file: file,
-                identifier: nil,
-                error: ProcessedFileError(message: "Duplicate file already exists"),
-                duration: Date().timeIntervalSince(taskStart)
-            )
-        }
-
         do {
-            let identifier = try await Self.importFile(
+            try Task.checkCancellation()
+
+            if hashCache.contains(urlHash: urlHash, bookmarkHash: bookmarkHash, urlString: urlString) {
+                logger.notice("Duplicate import skipped (cache hit): \(file.originalURL.lastPathComponent, privacy: .private(mask: .hash))")
+                return ProcessedFileResult(
+                    file: file,
+                    outcome: .duplicate,
+                    duration: Date().timeIntervalSince(taskStart),
+                )
+            }
+
+            let importResult = try await Self.importFile(
                 file,
                 baseDirectory: baseDirectory,
                 metadataExtractor: metadataExtractor,
                 trackDataActor: trackDataActor,
                 securityAccessor: securityAccessor,
-                logger: logger
+                logger: logger,
             )
             let duration = Date().timeIntervalSince(taskStart)
-            return ProcessedFileResult(
-                file: file,
-                identifier: identifier,
-                error: nil,
-                duration: duration
-            )
+            switch importResult {
+            case let .created(identifier):
+                return ProcessedFileResult(
+                    file: file,
+                    outcome: .imported(identifier),
+                    duration: duration,
+                )
+            case .duplicate:
+                return ProcessedFileResult(
+                    file: file,
+                    outcome: .duplicate,
+                    duration: duration,
+                )
+            }
+        } catch is CancellationError {
+            return nil
         } catch {
             let duration = Date().timeIntervalSince(taskStart)
             let filename = file.originalURL.lastPathComponent
@@ -402,9 +487,8 @@ actor FileImportProcessor {
             )
             return ProcessedFileResult(
                 file: file,
-                identifier: nil,
-                error: ProcessedFileError(message: error.localizedDescription),
-                duration: duration
+                outcome: .failed(ProcessedFileError(message: error.localizedDescription)),
+                duration: duration,
             )
         }
     }
@@ -422,6 +506,7 @@ actor FileImportProcessor {
         let inFlight = stats.inFlight
         let maxInFlight = stats.maxInFlight
         let successes = stats.successes
+        let duplicates = stats.duplicates
         let failures = stats.failures
         let elapsed = now.timeIntervalSince(stats.startedAt)
         let throughput = elapsed > 0 ? Double(completed) / elapsed : Double(completed)
@@ -431,6 +516,7 @@ actor FileImportProcessor {
             inFlight=\(inFlight, privacy: .public) \
             maxInFlight=\(maxInFlight, privacy: .public) \
             successes=\(successes, privacy: .public) \
+            duplicates=\(duplicates, privacy: .public) \
             failures=\(failures, privacy: .public) \
             throughput=\(throughput, format: .fixed(precision: 2), privacy: .public)
             """
@@ -445,6 +531,7 @@ actor FileImportProcessor {
             """
             import.queue.summary files=\(stats.completed, privacy: .public) \
             successes=\(stats.successes, privacy: .public) \
+            duplicates=\(stats.duplicates, privacy: .public) \
             failures=\(stats.failures, privacy: .public) \
             maxInFlight=\(stats.maxInFlight, privacy: .public) \
             elapsed=\(totalElapsed, format: .fixed(precision: 2), privacy: .public) \
@@ -455,12 +542,21 @@ actor FileImportProcessor {
 
     private func emitDiscoveredFiles(
         from urls: [URL],
-        to continuation: AsyncStream<DiscoveredAudioFile>.Continuation
+        to continuation: AsyncStream<DiscoveredAudioFile>.Continuation,
     ) async {
         var totalYielded = 0
 
         for url in urls {
-            if Task.isCancelled { break }
+            if Task.isCancelled {
+                break
+            }
+
+            if let discoveryCheckpoint {
+                await discoveryCheckpoint()
+                if Task.isCancelled {
+                    break
+                }
+            }
 
             var isDirectory: ObjCBool = false
             let accessed = securityAccessor.startAccessing(url)
@@ -473,17 +569,30 @@ actor FileImportProcessor {
             }
 
             if isDirectory.boolValue {
-                enumerateAudioFiles(in: url, requiresSecurityScope: accessed) { file in
+                let completed = await enumerateAudioFiles(in: url, requiresSecurityScope: accessed) { file in
+                    let yieldResult = continuation.yield(file)
+                    guard Self.consumerIsActive(after: yieldResult) else {
+                        return false
+                    }
                     totalYielded += 1
-                    continuation.yield(file)
+                    return true
+                }
+                if !completed {
+                    break
                 }
             } else if supportedExtensions.contains(url.pathExtension.lowercased()) {
                 let bookmark = bookmarkData(for: url, requiresSecurityScope: accessed, alreadyAccessing: accessed)
                 if accessed {
                     securityAccessor.stopAccessing(url)
                 }
+                let yieldResult = continuation.yield(
+                    DiscoveredAudioFile(originalURL: url, securityScopedBookmark: bookmark),
+                )
+                guard Self.consumerIsActive(after: yieldResult) else {
+                    break
+                }
                 totalYielded += 1
-                continuation.yield(DiscoveredAudioFile(originalURL: url, securityScopedBookmark: bookmark))
+                await Task.yield()
             } else {
                 if accessed {
                     securityAccessor.stopAccessing(url)
@@ -498,8 +607,8 @@ actor FileImportProcessor {
     private func enumerateAudioFiles(
         in directoryURL: URL,
         requiresSecurityScope: Bool,
-        yield: (DiscoveredAudioFile) -> Void
-    ) {
+        yield: (DiscoveredAudioFile) -> Bool,
+    ) async -> Bool {
         let fileManager = FileManager.default
 
         defer {
@@ -513,11 +622,13 @@ actor FileImportProcessor {
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else {
-            return
+            return true
         }
 
         while let fileURL = enumerator.nextObject() as? URL {
-            if Task.isCancelled { break }
+            if Task.isCancelled {
+                return false
+            }
 
             guard let resourceValues = try? fileURL.resourceValues(forKeys: [.isRegularFileKey]),
                   let isRegularFile = resourceValues.isRegularFile,
@@ -528,9 +639,14 @@ actor FileImportProcessor {
 
             if supportedExtensions.contains(fileURL.pathExtension.lowercased()) {
                 let bookmark = bookmarkData(for: fileURL, requiresSecurityScope: requiresSecurityScope)
-                yield(DiscoveredAudioFile(originalURL: fileURL, securityScopedBookmark: bookmark))
+                guard yield(DiscoveredAudioFile(originalURL: fileURL, securityScopedBookmark: bookmark)) else {
+                    return false
+                }
+                await Task.yield()
             }
         }
+
+        return true
     }
 
     private func ensureMusicContainerExists() throws {
@@ -541,7 +657,7 @@ actor FileImportProcessor {
                 withIntermediateDirectories: true,
                 attributes: nil,
             )
-            self.logger.info("Created music container at: \(self.musicContainerURL.path)")
+            self.logger.info("Created music container at: \(self.musicContainerURL.path, privacy: .private)")
         }
     }
 
@@ -564,7 +680,7 @@ actor FileImportProcessor {
         do {
             return try url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
         } catch {
-            logger.error("Failed to create bookmark for \(url.lastPathComponent): \(error.localizedDescription)")
+            logger.error("Failed to create bookmark for \(url.lastPathComponent, privacy: .private(mask: .hash)): \(error.localizedDescription, privacy: .private)")
             return nil
         }
     }
@@ -576,7 +692,7 @@ actor FileImportProcessor {
         trackDataActor: TrackDataActor,
         securityAccessor: SecurityScopedAccessing,
         logger: Logger,
-    ) async throws -> PersistentIdentifier {
+    ) async throws -> TrackImportClaimResult {
         let (resolvedURL, stopAccess) = try resolveSecurityScopedURL(
             for: file,
             securityAccessor: securityAccessor,
@@ -585,8 +701,10 @@ actor FileImportProcessor {
 
         if try await trackDataActor.trackExists(for: file.originalURL, bookmark: file.securityScopedBookmark) != nil {
             logger.notice("Duplicate import skipped for: \(file.originalURL.lastPathComponent, privacy: .private(mask: .hash))")
-            throw ProcessedFileError(message: "Duplicate file already exists")
+            return .duplicate
         }
+
+        try Task.checkCancellation()
 
         let copiedFileURL = try copyFile(
             from: resolvedURL,
@@ -594,13 +712,38 @@ actor FileImportProcessor {
             logger: logger,
         )
 
-        let trackMetadata = try await metadataExtractor.extractTrackMetadata(from: copiedFileURL)
-        let enrichedMetadata = trackMetadata.withSourceInfo(
-            sourceURL: file.originalURL,
-            sourceBookmark: file.securityScopedBookmark
-        )
+        do {
+            try Task.checkCancellation()
+            let trackMetadata = try await metadataExtractor.extractTrackMetadata(from: copiedFileURL)
+            try Task.checkCancellation()
+            let enrichedMetadata = trackMetadata.withSourceInfo(
+                sourceURL: file.originalURL,
+                sourceBookmark: file.securityScopedBookmark,
+            )
 
-        return try await trackDataActor.createTrack(from: enrichedMetadata)
+            try Task.checkCancellation()
+            let claimResult = try await trackDataActor.claimImportedTrack(from: enrichedMetadata)
+            if case .duplicate = claimResult {
+                removeUnclaimedCopiedFile(copiedFileURL, logger: logger)
+            }
+            return claimResult
+        } catch {
+            removeUnclaimedCopiedFile(copiedFileURL, logger: logger)
+            throw error
+        }
+    }
+
+    private static func removeUnclaimedCopiedFile(_ copiedFileURL: URL, logger: Logger) {
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: copiedFileURL.path) else { return }
+
+        do {
+            try fileManager.removeItem(at: copiedFileURL)
+        } catch {
+            logger.error(
+                "Failed to remove unclaimed copied file: \(error.localizedDescription, privacy: .private)",
+            )
+        }
     }
 
     private static func resolveSecurityScopedURL(

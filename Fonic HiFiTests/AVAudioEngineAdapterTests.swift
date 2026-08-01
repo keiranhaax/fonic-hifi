@@ -6,7 +6,7 @@ import XCTest
 final class AVAudioEngineAdapterTests: XCTestCase {
     func testLoadPopulatesDuration() async throws {
         let url = try makePCMTestAudioFile(testCase: self)
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         try await adapter.load(url: url)
 
@@ -19,7 +19,7 @@ final class AVAudioEngineAdapterTests: XCTestCase {
     func testLoadHandlesMixedSampleRateFilesSequentially() async throws {
         let highRateURL = try makePCMTestAudioFile(sampleRate: 96_000, testCase: self)
         let standardRateURL = try makePCMTestAudioFile(sampleRate: 44_100, testCase: self)
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         try await adapter.load(url: highRateURL)
         let firstDuration = await adapter.duration
@@ -32,14 +32,10 @@ final class AVAudioEngineAdapterTests: XCTestCase {
 
     func testPlayAndStopUpdatePlaybackState() async throws {
         let url = try makePCMTestAudioFile(testCase: self)
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         try await adapter.load(url: url)
-        do {
-            try await adapter.play()
-        } catch {
-            throw XCTSkip("Audio engine unavailable: \(error)")
-        }
+        try await adapter.play()
 
         let playing = await adapter.isPlaying
         XCTAssertTrue(playing)
@@ -52,17 +48,8 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         XCTAssertEqual(currentTime, 0, accuracy: 0.01)
     }
 
-    func testStopUsesInjectedSessionManagerForDeactivation() async {
-        let sessionManager = StubAudioSessionManager()
-        let adapter = AVAudioEngineAdapter(sessionManager: sessionManager)
-
-        await adapter.stop()
-
-        XCTAssertEqual(sessionManager.activateSessionCalls, [false])
-    }
-
-    func testSeekWithoutLoadedFileThrows() async {
-        let adapter = AVAudioEngineAdapter()
+    func testSeekWithoutLoadedFileThrows() async throws {
+        let adapter = try AVAudioEngineAdapter()
 
         do {
             try await adapter.seek(to: 1.0)
@@ -74,7 +61,7 @@ final class AVAudioEngineAdapterTests: XCTestCase {
 
     func testSeekRejectsInvalidPosition() async throws {
         let url = try makePCMTestAudioFile(testCase: self)
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         try await adapter.load(url: url)
 
@@ -94,8 +81,72 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         }
     }
 
+    func testRepeatedPausedSeeksReportAbsolutePositions() async throws {
+        let url = try makePCMTestAudioFile(duration: 1, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+
+        try await adapter.load(url: url)
+        try await adapter.seek(to: 0.2)
+        let firstPosition = await adapter.currentTime
+
+        try await adapter.seek(to: 0.6)
+        let secondPosition = await adapter.currentTime
+
+        XCTAssertEqual(firstPosition, 0.2, accuracy: 1.0 / 44_100)
+        XCTAssertEqual(secondPosition, 0.6, accuracy: 1.0 / 44_100)
+        XCTAssertGreaterThan(secondPosition, firstPosition)
+    }
+
+    func testRepeatedSeeksThenNaturalCompletionReportMonotonicAbsoluteTime() async throws {
+        let url = try makePCMTestAudioFile(duration: 1, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+        let completion = expectation(description: "Final seek segment completed naturally")
+        adapter.setCompletionHandler {
+            completion.fulfill()
+        }
+
+        try await adapter.load(url: url)
+        try await adapter.play()
+        try await adapter.seek(to: 0.2)
+        let firstPosition = await adapter.currentTime
+        try await adapter.seek(to: 0.6)
+        let secondPosition = await adapter.currentTime
+
+        await fulfillment(of: [completion], timeout: 2)
+        let completedPosition = await adapter.currentTime
+        let duration = await adapter.duration
+
+        XCTAssertGreaterThanOrEqual(firstPosition, 0.2)
+        XCTAssertGreaterThanOrEqual(secondPosition, 0.6)
+        XCTAssertGreaterThanOrEqual(secondPosition, firstPosition)
+        XCTAssertEqual(completedPosition, duration, accuracy: 1.0 / 44_100)
+    }
+
+    func testAbsolutePlaybackFrameAddsSeekBaseAndClampsAtCompletion() {
+        let positions = [
+            AVAudioEngineAdapter.absolutePlaybackFrame(
+                scheduledStartFrame: 2_000,
+                nodeSampleTime: 250,
+                totalFrames: 10_000
+            ),
+            AVAudioEngineAdapter.absolutePlaybackFrame(
+                scheduledStartFrame: 6_000,
+                nodeSampleTime: 500,
+                totalFrames: 10_000
+            ),
+            AVAudioEngineAdapter.absolutePlaybackFrame(
+                scheduledStartFrame: 6_000,
+                nodeSampleTime: 4_500,
+                totalFrames: 10_000
+            ),
+        ]
+
+        XCTAssertEqual(positions, [2_250, 6_500, 10_000])
+        XCTAssertEqual(positions, positions.sorted())
+    }
+
     func testSetVolumeClampsBetweenZeroAndOne() async throws {
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         await adapter.setVolume(1.5)
         let highVolume = await adapter.volume
@@ -106,47 +157,52 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         XCTAssertEqual(lowVolume, 0.0, accuracy: 0.0001)
     }
 
-    func testGetMetricsReturnsNonNegativeValues() async {
-        let adapter = AVAudioEngineAdapter()
+    func testAvailableMetricsUseInjectedProcessProviderAndRemainPartial() async throws {
+        let provider = StubProcessMetricsProvider(
+            snapshot: ProcessMetricsSnapshot(cpuUsage: 12.5, residentMemoryBytes: 42_000)
+        )
+        let adapter = try AVAudioEngineAdapter(processMetricsProvider: provider)
 
-        let metrics = await adapter.getMetrics()
-        XCTAssertGreaterThanOrEqual(metrics.cpuUsage, 0)
-        XCTAssertGreaterThanOrEqual(metrics.memoryUsage, 0)
+        let snapshot = await adapter.availableMetrics()
+        let metrics = try XCTUnwrap(snapshot)
+        XCTAssertEqual(metrics.engineMetricsAvailability, .partial)
+        XCTAssertEqual(metrics.cpuUsage, 12.5)
+        XCTAssertEqual(metrics.memoryUsage, 42_000)
         XCTAssertGreaterThanOrEqual(metrics.bufferUnderruns, 0)
         XCTAssertNotNil(metrics.timestamp)
     }
 
     func testSetPlaybackRate_changesRate() async throws {
         // Given
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         // When
         await adapter.setPlaybackRate(1.5)
 
         // Then
-        let rate = await adapter.currentPlaybackRate
+        let rate = adapter.currentPlaybackRate
         XCTAssertEqual(rate, 1.5, accuracy: 0.01)
     }
 
     func testSetPlaybackRate_clampsBetween0_5And2_0() async throws {
         // Given
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         // When - too high
         await adapter.setPlaybackRate(3.0)
-        let highRate = await adapter.currentPlaybackRate
+        let highRate = adapter.currentPlaybackRate
         XCTAssertEqual(highRate, 2.0, accuracy: 0.01)
 
         // When - too low
         await adapter.setPlaybackRate(0.25)
-        let lowRate = await adapter.currentPlaybackRate
+        let lowRate = adapter.currentPlaybackRate
         XCTAssertEqual(lowRate, 0.5, accuracy: 0.01)
     }
 
     func testPrepareNext_setsHasNextPrepared() async throws {
         // Given
         let url = try makePCMTestAudioFile(testCase: self)
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
         try await adapter.load(url: url)
 
         // When
@@ -159,7 +215,7 @@ final class AVAudioEngineAdapterTests: XCTestCase {
     func testPrepareNext_withoutLoad_stillPrepares() async throws {
         // Given
         let url = try makePCMTestAudioFile(testCase: self)
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         // When - prepareNext without loading a current track first
         await adapter.prepareNext(url: url)
@@ -172,30 +228,30 @@ final class AVAudioEngineAdapterTests: XCTestCase {
 
     func testApplyEQ_updatesEQState() async throws {
         // Given
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
         var config = EqualizerConfiguration.default
         config.bands[0] = EQBand(frequency: 32, gain: 6.0) // Boost 32Hz
         config.isEnabled = true
 
         // When
-        await adapter.applyEQ(config)
+        try await adapter.applyEQ(config)
 
         // Then
-        let isEnabled = await adapter.isEQEnabled
+        let isEnabled = adapter.isEQEnabled
         XCTAssertTrue(isEnabled)
     }
 
     func testApplyEQ_disabledByDefault() async throws {
         // Given
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         // Then
-        let isEnabled = await adapter.isEQEnabled
+        let isEnabled = adapter.isEQEnabled
         XCTAssertFalse(isEnabled)
     }
 
     func testApplyEQ_appliesFrequencyAndBandwidth() async throws {
-        let adapter = AVAudioEngineAdapter()
+        let adapter = try AVAudioEngineAdapter()
 
         // Create config with non-default frequency and bandwidth
         let customBand = EQBand(frequency: 1500, gain: 3.0, bandwidth: 0.5)
@@ -204,7 +260,7 @@ final class AVAudioEngineAdapterTests: XCTestCase {
 
         let config = EqualizerConfiguration(bands: bands, isEnabled: true, presetName: "Test")
 
-        await adapter.applyEQ(config)
+        try await adapter.applyEQ(config)
 
         // Verify isEQEnabled is set
         let isEnabled = adapter.isEQEnabled
@@ -214,117 +270,86 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         // This test documents the expected behavior
     }
 
-    func testConfigureEQBands_usesShelfFiltersForEdgeBands() async {
-        let adapter = AVAudioEngineAdapter()
-
-        // The configureEQBands is called in init, so we just verify the result
-        // We need to expose eqNode for testing or verify behavior
-        // For now, this test documents expected behavior
-        XCTAssertTrue(true, "Shelf filters should be used for 32 Hz and 16 kHz bands")
-    }
-
     // MARK: - Comprehensive EQ Integration Tests
 
-    func testApplyEQ_withAllParametersSet_appliesCorrectly() async {
-        let adapter = AVAudioEngineAdapter()
+    func testApplyEQ_withAllParametersSet_appliesCorrectly() async throws {
+        let adapter = try AVAudioEngineAdapter()
 
         var bands = EqualizerConfiguration.default.bands
         bands[5] = EQBand(frequency: 1500, gain: 6.0, bandwidth: 0.5)
         let config = EqualizerConfiguration(bands: bands, isEnabled: true, presetName: "Test")
 
-        await adapter.applyEQ(config)
+        try await adapter.applyEQ(config)
 
         XCTAssertTrue(adapter.isEQEnabled)
     }
 
-    func testApplyEQ_disabled_maintainsBitPerfect() async {
-        let adapter = AVAudioEngineAdapter()
+    func testApplyEQ_disabled_maintainsBitPerfect() async throws {
+        let adapter = try AVAudioEngineAdapter()
 
         let config = EqualizerConfiguration(bands: EqualizerConfiguration.default.bands, isEnabled: false)
-        await adapter.applyEQ(config)
+        try await adapter.applyEQ(config)
 
         XCTAssertFalse(adapter.isEQEnabled)
         // When EQ disabled, bit-perfect should be possible (true bypass removes EQ from graph)
     }
 
-    func testPreampGain_appliedCorrectly() async {
-        let adapter = AVAudioEngineAdapter()
+    func testPreampGain_appliedCorrectly() async throws {
+        let adapter = try AVAudioEngineAdapter()
 
         var bands = EqualizerConfiguration.default.bands
         bands[0] = EQBand(frequency: 32, gain: 12.0)  // Max boost
         let config = EqualizerConfiguration(bands: bands, isEnabled: true)
 
-        await adapter.applyEQ(config)
+        try await adapter.applyEQ(config)
 
         // Preamp should reduce output by 12 dB (applied via mainMixerNode.outputVolume)
         XCTAssertTrue(adapter.isEQEnabled)
     }
 
-    func testApplyEQ_toggleEnableDisable_maintainsState() async {
-        let adapter = AVAudioEngineAdapter()
+    func testApplyEQ_toggleEnableDisable_maintainsState() async throws {
+        let adapter = try AVAudioEngineAdapter()
 
         var bands = EqualizerConfiguration.default.bands
         bands[0] = EQBand(frequency: 32, gain: 6.0)
 
         // Enable EQ
         let enabledConfig = EqualizerConfiguration(bands: bands, isEnabled: true, presetName: "Test")
-        await adapter.applyEQ(enabledConfig)
+        try await adapter.applyEQ(enabledConfig)
         XCTAssertTrue(adapter.isEQEnabled)
 
         // Disable EQ
         let disabledConfig = EqualizerConfiguration(bands: bands, isEnabled: false, presetName: "Test")
-        await adapter.applyEQ(disabledConfig)
+        try await adapter.applyEQ(disabledConfig)
         XCTAssertFalse(adapter.isEQEnabled)
 
         // Re-enable EQ
-        await adapter.applyEQ(enabledConfig)
+        try await adapter.applyEQ(enabledConfig)
         XCTAssertTrue(adapter.isEQEnabled)
     }
 
-    func testApplyEQ_allPresets_applyWithoutError() async {
-        let adapter = AVAudioEngineAdapter()
+    func testApplyEQ_allPresets_applyWithoutError() async throws {
+        let adapter = try AVAudioEngineAdapter()
 
         for (name, preset) in EqualizerConfiguration.presets {
-            await adapter.applyEQ(preset)
+            try await adapter.applyEQ(preset)
             let isEnabled = adapter.isEQEnabled
             XCTAssertEqual(isEnabled, preset.isEnabled, "Preset '\(name)' should have isEnabled=\(preset.isEnabled)")
         }
     }
 
-    func testSupportsEQ_returnsTrue() async {
-        let adapter = AVAudioEngineAdapter()
+    func testSupportsEQ_returnsTrue() async throws {
+        let adapter = try AVAudioEngineAdapter()
 
         let supportsEQ = await adapter.supportsEQ
         XCTAssertTrue(supportsEQ, "AVAudioEngineAdapter should support EQ")
     }
 }
 
-@MainActor
-private final class StubAudioSessionManager: AudioSessionManaging {
-    private(set) var activateSessionCalls: [Bool] = []
+private struct StubProcessMetricsProvider: ProcessMetricsProviding {
+    let snapshot: ProcessMetricsSnapshot
 
-    func configureSession() async throws {}
-
-    func activateSession(_ active: Bool) async throws {
-        activateSessionCalls.append(active)
-    }
-
-    func setPreferredSampleRate(_: Double) async {}
-
-    func enableRemoteCommands() async {}
-    func disableRemoteCommands() async {}
-    func handleInterruption(_: Notification) async {}
-    func handleRouteChange(_: Notification) async {}
-
-    var currentRouteDescription: AVAudioSessionRouteDescription {
-        get async { AVAudioSession.sharedInstance().currentRoute }
-    }
-
-    var isSessionActive: Bool {
-        get async { false }
-    }
-
-    var supportsBitPerfect: Bool {
-        get async { false }
+    func currentProcessMetrics() -> ProcessMetricsSnapshot {
+        snapshot
     }
 }

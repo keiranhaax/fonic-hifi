@@ -22,17 +22,18 @@ final class AudioMonitorReporter {
     }
 
     func engineInfo(for engine: AudioEngineService?, metricsCollector: EngineMetricsCollecting) async -> AudioEngineInfo {
-        if let engineMetrics = await metricsCollector.metrics(for: engine) as EngineMetrics? {
+        let engineMetrics = await metricsCollector.metrics(for: engine)
+        if engineMetrics.availability.supportsCollection {
             return AudioEngineInfo(
                 type: engineMetrics.engineType,
                 version: ProcessInfo.processInfo.operatingSystemVersionString,
-                capabilities: [engineMetrics.isBitPerfect ? "BitPerfect" : "Standard"],
+                capabilities: [engineMetrics.isBitPerfect ? "BitPerfectEligible" : "Standard"],
                 configuration: [
                     "sampleRate": String(format: "%.0f", engineMetrics.sampleRate),
                     "bitDepth": String(engineMetrics.bitDepth),
                     "channels": String(engineMetrics.channelCount)
                 ],
-                performanceProfile: engineMetrics.isBitPerfect ? "Reference" : "Standard",
+                performanceProfile: engineMetrics.availability == .available ? "Measured" : "Partial",
                 lastInitialized: Date()
             )
         }
@@ -262,12 +263,15 @@ final class AudioMonitorReporter {
     }
 
     private func exportAsCSV(_ metrics: [AudioMetrics]) -> Data {
-        var rows = ["timestamp,cpuUsage,memoryUsageMB,bufferFill,renderLatencyMs,performanceScore,qualityScore,isBitPerfect"]
+        var rows = [
+            "timestamp,engineMetricsAvailability,cpuUsage,memoryUsageMB,bufferFill,renderLatencyMs,performanceScore,qualityScore,bitPerfectEligible"
+        ]
         let formatter = ISO8601DateFormatter()
         for metric in metrics {
             let memoryMB = Double(metric.memoryUsage) / 1_048_576
             let rowComponents = [
                 formatter.string(from: metric.timestamp),
+                metric.engineMetricsAvailability.rawValue,
                 String(format: "%.1f", metric.cpuUsage),
                 String(format: "%.0f", memoryMB),
                 String(format: "%.2f", metric.bufferFillLevel),
@@ -286,13 +290,14 @@ final class AudioMonitorReporter {
         var xml = "<metrics>\n"
         for metric in metrics {
             xml += "  <metric timestamp=\"\(formatter.string(from: metric.timestamp))\">\n"
+            xml += "    <engineMetricsAvailability>\(metric.engineMetricsAvailability.rawValue)</engineMetricsAvailability>\n"
             xml += "    <cpuUsage>\(String(format: "%.1f", metric.cpuUsage))</cpuUsage>\n"
             xml += "    <memoryUsageMB>\(String(format: "%.0f", Double(metric.memoryUsage) / 1_048_576))</memoryUsageMB>\n"
             xml += "    <bufferFill>\(String(format: "%.2f", metric.bufferFillLevel))</bufferFill>\n"
             xml += "    <renderLatencyMs>\(String(format: "%.3f", metric.renderLatency * 1000))</renderLatencyMs>\n"
             xml += "    <performanceScore>\(String(format: "%.2f", metric.performanceScore))</performanceScore>\n"
             xml += "    <qualityScore>\(String(format: "%.2f", metric.qualityScore))</qualityScore>\n"
-            xml += "    <bitPerfect>\(metric.isBitPerfect)</bitPerfect>\n"
+            xml += "    <bitPerfectEligible>\(metric.isBitPerfect)</bitPerfectEligible>\n"
             xml += "  </metric>\n"
         }
         xml += "</metrics>"

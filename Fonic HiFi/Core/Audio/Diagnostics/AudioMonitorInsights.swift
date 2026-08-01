@@ -214,7 +214,7 @@ final class AudioMonitorInsights {
                     type: .format,
                     description: "Bit-perfect playback is not active; output is routed through the system mixer.",
                     impact: .moderate,
-                    resolution: "Enable Bit-Perfect playback in Settings to bypass CoreAudio resampling."
+                    resolution: "Use a bit-perfect-eligible configuration and verify the physical output before making a bit-perfect claim."
                 )
             )
         }
@@ -223,8 +223,8 @@ final class AudioMonitorInsights {
         if bitPerfectStatus != .active {
             improvements.append(
                 QualityImprovement(
-                    title: "Enable Bit-Perfect Output",
-                    description: "Activating bit-perfect mode avoids CoreAudio resampling for lossless formats.",
+                    title: "Improve Bit-Perfect Eligibility",
+                    description: "Match formats and bypass DSP; this does not measure the physical output.",
                     expectedGain: 8,
                     difficulty: .easy
                 )
@@ -749,7 +749,9 @@ final class AudioMonitorInsights {
 
     private func buildPathAnalysis(signalIssues: [SignalIssue], bitPerfectActive: Bool) -> String {
         if signalIssues.isEmpty {
-            return bitPerfectActive ? "Signal chain is bit-perfect with nominal jitter." : "Signal chain stable; playback routed through system mixer."
+            return bitPerfectActive
+                ? "Software signal chain is bit-perfect eligible; physical output is not measured."
+                : "Signal chain stable; playback routed through system mixer."
         }
         let issueDescriptions = signalIssues.map(\.rawValue).joined(separator: ", ")
         return "Detected integrity issues: \(issueDescriptions). Review output chain for optimizations."

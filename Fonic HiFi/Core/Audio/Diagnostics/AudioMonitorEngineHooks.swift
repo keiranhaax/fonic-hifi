@@ -23,7 +23,10 @@ final class AudioMonitorEngineHooks {
         metricsTask = nil
         self.engine = engine
 
-        guard isMonitoringActive, let engine else { return }
+        guard isMonitoringActive,
+              let engine,
+              engine.metricsAvailability.supportsCollection
+        else { return }
         startMetricsTask(for: engine, interval: monitoringInterval)
     }
 
@@ -31,7 +34,7 @@ final class AudioMonitorEngineHooks {
         monitoringInterval = interval
         isMonitoringActive = true
 
-        guard let engine else { return }
+        guard let engine, engine.metricsAvailability.supportsCollection else { return }
         startMetricsTask(for: engine, interval: interval)
     }
 
@@ -43,7 +46,10 @@ final class AudioMonitorEngineHooks {
 
     func updateMonitoringInterval(to interval: TimeInterval) {
         monitoringInterval = interval
-        guard isMonitoringActive, let engine else { return }
+        guard isMonitoringActive,
+              let engine,
+              engine.metricsAvailability.supportsCollection
+        else { return }
         startMetricsTask(for: engine, interval: interval)
     }
 
@@ -78,7 +84,10 @@ final class AudioMonitorEngineHooks {
                 break
             }
 
-            guard !Task.isCancelled, let currentEngine = engine else { break }
+            guard !Task.isCancelled,
+                  let currentEngine = engine,
+                  currentEngine.metricsAvailability.supportsCollection
+            else { break }
             await currentEngine.collectMetrics()
         }
     }

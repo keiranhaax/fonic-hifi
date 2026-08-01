@@ -204,6 +204,7 @@ private final class EngineManagerEngineStub: AudioEngineService {
 
     func prepareNext(url _: URL) async {}
     func crossfade(to _: URL, duration _: TimeInterval, playbackRate _: Double, gainDB _: Float) async throws {}
-    func getMetrics() async -> AudioMetrics { .empty }
+    var metricsAvailability: AudioMetricsAvailability { .available }
+    func availableMetrics() async -> AudioMetrics? { .empty }
     func collectMetrics() async {}
 }

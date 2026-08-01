@@ -7,12 +7,35 @@
 
 import Foundation
 
-/// Comprehensive result of bit-perfect validation
+/// Claim strength supported by the evidence attached to an assessment.
+public enum BitPerfectClaimLevel: String, Sendable, Equatable {
+    case ineligible
+    case eligible
+    case measured
+}
+
+/// Evidence required before eligibility may be upgraded to a measured
+/// bit-perfect claim on the intended physical output.
+public enum BitPerfectMeasurementEvidence: String, Sendable, CaseIterable, Hashable {
+    case sourceFormat
+    case actualEngineOutputFormat
+    case activePhysicalRoute
+    case unitySystemAndApplicationVolume
+    case noSampleRateBitDepthOrChannelConversion
+    case allDSPStagesBypassed
+    case physicalOutputBitComparison
+}
+
+/// Comprehensive result of bit-perfect eligibility analysis.
 public struct BitPerfectValidationResult: Sendable, Equatable {
     // MARK: - Core Validation Results
 
-    /// Whether bit-perfect playback is possible/active
+    /// Whether the observed software configuration is eligible. This is not
+    /// proof of the bits emitted by the physical output.
     public let isValid: Bool
+
+    /// Measurement evidence captured for the intended physical output.
+    public let measurementEvidence: Set<BitPerfectMeasurementEvidence>
 
     /// Overall validation confidence (0.0 to 1.0)
     public let confidence: Double
@@ -101,6 +124,7 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
 
     public init(
         isValid: Bool,
+        measurementEvidence: Set<BitPerfectMeasurementEvidence> = [],
         confidence: Double = 1.0,
         timestamp: Date = Date(),
         expectedSampleRate: Int,
@@ -123,6 +147,7 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
         performanceImpact: PerformanceImpact = .low,
     ) {
         self.isValid = isValid
+        self.measurementEvidence = measurementEvidence
         self.confidence = confidence
         self.timestamp = timestamp
         self.expectedSampleRate = expectedSampleRate
@@ -174,21 +199,40 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
 
     /// Quick summary of validation status
     public var statusSummary: String {
-        if isValid {
-            "Bit-perfect playback active"
+        if claimLevel == .measured {
+            "Bit-perfect output measured"
+        } else if isValid {
+            "Bit-perfect eligible (not measured)"
         } else if let reason = mismatchReason {
             reason.userFriendlyDescription
         } else {
-            "Bit-perfect validation failed"
+            "Not bit-perfect eligible"
         }
+    }
+
+    /// Current claim strength. Eligibility is upgraded only when every required
+    /// evidence item, including a physical-output bit comparison, is present.
+    public var claimLevel: BitPerfectClaimLevel {
+        guard isValid else { return .ineligible }
+        let required = Set(BitPerfectMeasurementEvidence.allCases)
+        return required.isSubset(of: measurementEvidence) ? .measured : .eligible
+    }
+
+    public var missingMeasurementEvidence: Set<BitPerfectMeasurementEvidence> {
+        Set(BitPerfectMeasurementEvidence.allCases).subtracting(measurementEvidence)
     }
 
     /// Detailed validation report for debugging
     public var detailedReport: String {
-        var report = "Bit-Perfect Validation Report\n"
+        var report = "Bit-Perfect Eligibility Report\n"
         report += "==============================\n"
         report += "Timestamp: \(timestamp)\n"
-        report += "Result: \(isValid ? "VALID" : "INVALID")\n"
+        let resultLabel = switch claimLevel {
+        case .ineligible: "INELIGIBLE"
+        case .eligible: "ELIGIBLE (NOT MEASURED)"
+        case .measured: "MEASURED"
+        }
+        report += "Result: \(resultLabel)\n"
         report += "Confidence: \(String(format: "%.1f%%", confidence * 100))\n\n"
 
         report += "Format Comparison:\n"
@@ -225,6 +269,13 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
             report += "\nWarnings:\n"
             for warning in warnings {
                 report += "- \(warning.description)\n"
+            }
+        }
+
+        if claimLevel != .measured {
+            report += "\nEvidence still required for a measured claim:\n"
+            for evidence in missingMeasurementEvidence.sorted(by: { $0.rawValue < $1.rawValue }) {
+                report += "- \(evidence.rawValue)\n"
             }
         }
 

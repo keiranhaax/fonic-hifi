@@ -42,43 +42,10 @@ public struct PaginatedFetchDescriptor<T: PersistentModel> {
     /// - Parameter context: The model context to query
     /// - Returns: Total count of items matching the descriptor
     public func count(in context: ModelContext) throws -> Int {
-        // Use a descriptor without limit/offset for count
         var countDescriptor = descriptor
         countDescriptor.fetchLimit = nil
         countDescriptor.fetchOffset = nil
-
-        // iOS 26 optimized count that doesn't load actual data
-        return try context.batchedFetchCount(countDescriptor)
-    }
-}
-
-/// Extension to ModelContext for efficient counting
-public extension ModelContext {
-    /// Fetch count without loading data into memory
-    /// This is critical for preventing memory crashes with large libraries
-    /// - Parameter descriptor: The fetch descriptor to count
-    /// - Returns: Number of items matching the descriptor
-    func batchedFetchCount(_ descriptor: FetchDescriptor<some PersistentModel>) throws -> Int {
-        var total = 0
-        var offset = 0
-        let batchSize = 512
-        var countingDescriptor = descriptor
-
-        while true {
-            countingDescriptor.fetchOffset = offset
-            countingDescriptor.fetchLimit = batchSize
-
-            let batch = try fetch(countingDescriptor)
-            total += batch.count
-
-            if batch.count < batchSize {
-                break
-            }
-
-            offset += batch.count
-        }
-
-        return total
+        return try context.fetchCount(countDescriptor)
     }
 }
 

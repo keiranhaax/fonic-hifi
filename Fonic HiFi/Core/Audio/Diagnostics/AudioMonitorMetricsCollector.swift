@@ -26,6 +26,7 @@ final class AudioMonitorMetricsCollector {
         let engineMetrics = await engineMetricsCollector.metrics(for: engine)
 
         return AudioMetrics(
+            engineMetricsAvailability: engineMetrics.availability,
             cpuUsage: systemMetrics.cpuUsage,
             memoryUsage: systemMetrics.memoryUsage,
             bufferUnderruns: engineMetrics.bufferUnderruns,
@@ -80,15 +81,15 @@ private extension AudioMonitorMetricsCollector {
             score -= 0.15
         }
 
-        if engineMetrics.bufferUnderruns > 0 {
+        if engineMetrics.availability.supportsCollection, engineMetrics.bufferUnderruns > 0 {
             score -= 0.4
         }
 
-        if engineMetrics.droppedFrames > 0 {
+        if engineMetrics.availability.supportsCollection, engineMetrics.droppedFrames > 0 {
             score -= 0.2
         }
 
-        if engineMetrics.renderLatency > 0.1 {
+        if engineMetrics.availability.supportsCollection, engineMetrics.renderLatency > 0.1 {
             score -= 0.1
         }
 
@@ -96,6 +97,7 @@ private extension AudioMonitorMetricsCollector {
     }
 
     func calculateQualityScore(_ engineMetrics: EngineMetrics) -> Float {
+        guard engineMetrics.availability.supportsCollection else { return 0 }
         var score: Float = 1.0
 
         if engineMetrics.isBitPerfect {
@@ -118,6 +120,7 @@ private extension AudioMonitorMetricsCollector {
     }
 
     func calculateReliabilityScore(_ engineMetrics: EngineMetrics) -> Float {
+        guard engineMetrics.availability.supportsCollection else { return 0 }
         var score: Float = 1.0
 
         if engineMetrics.criticalErrors > 0 {

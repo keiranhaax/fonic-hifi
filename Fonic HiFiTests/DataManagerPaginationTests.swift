@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class DataManagerPaginationTests: XCTestCase {
     private func makeInMemoryContainer() throws -> ModelContainer {
-        let schema = Schema(SchemaV2.models)
+        let schema = Schema(SchemaV3.models)
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: true,
@@ -136,5 +136,42 @@ final class DataManagerPaginationTests: XCTestCase {
         XCTAssertFalse(finalPage.hasMore)
         XCTAssertEqual(finalPage.playlists.first?.name, "Playlist-030")
         XCTAssertEqual(finalPage.playlists.last?.name, "Playlist-039")
+    }
+
+    func testCompleteTrackSearchHasNoHiddenResultCap() async throws {
+        let container = try makeInMemoryContainer()
+        let dataManager = await makeDataManager(container: container)
+
+        try await MainActor.run {
+            for index in 0 ..< 125 {
+                let track = Track(
+                    url: URL(fileURLWithPath: "/tmp/search-track-\(index).flac"),
+                    title: String(format: "Needle-%03d", index),
+                    artist: "Search Artist",
+                    album: "Search Album",
+                    audioFormat: "FLAC",
+                    duration: 180,
+                )
+                dataManager.mainContext.insert(track)
+            }
+            try dataManager.mainContext.save()
+        }
+
+        let matches: [Track] = try await dataManager.searchTracks("Needle")
+
+        XCTAssertEqual(matches.count, 125)
+        XCTAssertEqual(matches.first?.title, "Needle-000")
+        XCTAssertEqual(matches.last?.title, "Needle-124")
+    }
+
+    func testLibraryInvalidationAdvancesOneRevision() async throws {
+        let container = try makeInMemoryContainer()
+        let dataManager = await makeDataManager(container: container)
+
+        XCTAssertEqual(dataManager.libraryRevision, 0)
+
+        dataManager.invalidateLibrary()
+
+        XCTAssertEqual(dataManager.libraryRevision, 1)
     }
 }

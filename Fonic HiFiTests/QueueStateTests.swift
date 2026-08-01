@@ -153,6 +153,10 @@ final class QueueStateTests: XCTestCase {
     }
 
     func testLastPlaybackPositionPersistsAndRestores() throws {
+        let suiteName = "QueueStateTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
         // Given
         let tracks = makeTracks(titles: ["Test Track"])
         let state = QueueState(
@@ -168,14 +172,34 @@ final class QueueStateTests: XCTestCase {
         )
 
         // When
-        try state.save()
-        let restored = try XCTUnwrap(QueueState.load())
+        try state.save(to: defaults)
+        let restored = try XCTUnwrap(QueueState.load(from: defaults))
 
         // Then
         XCTAssertEqual(restored.lastPlaybackPosition, 42.5, accuracy: 0.001)
 
-        // Cleanup
-        QueueState.clear()
+        QueueState.clear(from: defaults)
+        XCTAssertNil(QueueState.load(from: defaults))
+    }
+
+    func testPersistenceStoresRemainIsolated() throws {
+        let firstSuiteName = "QueueStateTests.first.\(UUID().uuidString)"
+        let secondSuiteName = "QueueStateTests.second.\(UUID().uuidString)"
+        let firstDefaults = try XCTUnwrap(UserDefaults(suiteName: firstSuiteName))
+        let secondDefaults = try XCTUnwrap(UserDefaults(suiteName: secondSuiteName))
+        defer {
+            firstDefaults.removePersistentDomain(forName: firstSuiteName)
+            secondDefaults.removePersistentDomain(forName: secondSuiteName)
+        }
+
+        let firstState = QueueState(lastPlaybackPosition: 12)
+        let secondState = QueueState(lastPlaybackPosition: 34)
+
+        try firstState.save(to: firstDefaults)
+        try secondState.save(to: secondDefaults)
+
+        XCTAssertEqual(QueueState.load(from: firstDefaults)?.lastPlaybackPosition, 12)
+        XCTAssertEqual(QueueState.load(from: secondDefaults)?.lastPlaybackPosition, 34)
     }
 
     func testLastPlaybackPositionDefaultsToZero() {

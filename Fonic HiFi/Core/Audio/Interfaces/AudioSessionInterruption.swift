@@ -73,54 +73,30 @@ public struct AudioSessionInterruption: Sendable, Equatable {
         )
     }
 
-    /// Create interruption from AVAudioSession notification
-    public static func from(notification: Notification) -> AudioSessionInterruption? {
-        guard notification.name == AVAudioSession.interruptionNotification,
-              let userInfo = notification.userInfo,
-              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
-              let interruptionType = AVAudioSession.InterruptionType(rawValue: typeValue)
-        else {
-            return nil
-        }
+    /// Create an interruption from the reason carried by an iOS 27
+    /// `DidBecomeInactiveMessage`.
+    public static func from(
+        interruptionReason reason: AVAudioSession.InterruptionReason
+    ) -> AudioSessionInterruption {
+        AudioSessionInterruption.began(
+            category: InterruptionCategory.from(reason: reason),
+            context: [
+                "reason": String(reason.rawValue),
+                "notification": "AudioSessionDidBecomeInactive",
+            ]
+        )
+    }
 
-        let type: InterruptionType
-        var shouldResume = false
-        var category: InterruptionCategory?
-        var context: [String: String] = [:]
-
-        switch interruptionType {
-        case .began:
-            type = .began
-
-            // Extract interruption category if available
-            if let reasonValue = userInfo[AVAudioSessionInterruptionReasonKey] as? UInt,
-               let reason = AVAudioSession.InterruptionReason(rawValue: reasonValue) {
-                category = InterruptionCategory.from(reason: reason)
-                context["reason"] = String(reason.rawValue)
-            }
-
-        case .ended:
-            type = .ended
-
-            // Check if we should resume
-            if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
-                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
-                shouldResume = options.contains(.shouldResume)
-                context["options"] = String(optionsValue)
-            }
-
-        @unknown default:
-            return nil
-        }
-
-        // Add any additional context
-        context["notification"] = "AudioSessionInterruption"
-
-        return AudioSessionInterruption(
-            type: type,
-            shouldResume: shouldResume,
-            category: category,
-            context: context,
+    /// Create an interruption-end event from an iOS 27 resumption recommendation.
+    public static func from(
+        resumptionRecommendation recommendation: AVAudioSession.ResumptionRecommendation
+    ) -> AudioSessionInterruption {
+        AudioSessionInterruption.ended(
+            shouldResume: recommendation == .shouldResume,
+            context: [
+                "recommendation": String(recommendation.rawValue),
+                "notification": "AudioSessionResumptionRecommendation",
+            ]
         )
     }
 }

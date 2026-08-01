@@ -7,6 +7,22 @@
 
 import Foundation
 
+/// Describes the transition that was adopted for a previously prepared track.
+///
+/// Only `renderBoundary` represents an engine-scheduled gapless boundary.
+/// `preloadedFallback` avoids redundant decoding but still starts the track
+/// after the prior completion callback and must not be presented as gapless
+/// evidence.
+public enum PreparedTrackTransition: Sendable, Equatable {
+    case none
+    case preloadedFallback
+    case renderBoundary
+
+    public var wasAdopted: Bool {
+        self != .none
+    }
+}
+
 /// Core protocol defining the interface for all audio playback engines.
 /// Implementations may use AVAudioEngine, AudioKit, or other vetted engines
 /// based on format requirements and performance characteristics.
@@ -29,8 +45,12 @@ public protocol AudioEngineService: Sendable {
     /// Current audio format being played
     var audioFormat: AudioFormat? { get async }
 
-    /// Indicates if bit-perfect playback is active
+    /// Indicates whether the current software configuration is eligible for
+    /// bit-perfect playback. This is not physical-output measurement.
     var isBitPerfect: Bool { get async }
+
+    /// Declares whether this engine can provide measured diagnostics.
+    var metricsAvailability: AudioMetricsAvailability { get }
 
     // MARK: - Playback Control
 
@@ -77,6 +97,15 @@ public protocol AudioEngineService: Sendable {
     /// - Parameter url: The file URL of the next track
     func prepareNext(url: URL) async
 
+    /// Invalidate any next-track preparation after the queue changes.
+    func invalidatePreparedTransition() async
+
+    /// Adopt a previously prepared next track.
+    ///
+    /// - Returns: The quality of the adopted transition. Callers must not treat
+    ///   a `.preloadedFallback` result as render-boundary gapless evidence.
+    func consumePreparedTransition(to url: URL) async -> PreparedTrackTransition
+
     /// Crossfade to the given track with configurable parameters
     /// - Parameters:
     ///   - url: File URL of the next track
@@ -85,9 +114,11 @@ public protocol AudioEngineService: Sendable {
     ///   - gainDB: Replay gain offset in decibels
     func crossfade(to url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float) async throws
 
-    /// Get current audio metrics for monitoring
-    /// - Returns: Current performance metrics
-    func getMetrics() async -> AudioMetrics
+    /// Get the currently available measured audio metrics.
+    ///
+    /// Engines that declare `.unavailable` return `nil`; callers must not
+    /// substitute zero-valued metrics and present them as measurements.
+    func availableMetrics() async -> AudioMetrics?
 
     /// Collect and store audio metrics for analysis
     func collectMetrics() async
@@ -100,7 +131,7 @@ public protocol AudioEngineService: Sendable {
 
     /// Apply equalizer configuration to the audio output
     /// Default implementation is no-op for engines that don't support EQ
-    func applyEQ(_ configuration: EqualizerConfiguration) async
+    func applyEQ(_ configuration: EqualizerConfiguration) async throws
 
     /// Whether this engine supports EQ processing
     var supportsEQ: Bool { get async }
@@ -113,9 +144,25 @@ public extension AudioEngineService {
         get async { false }
     }
 
+    var metricsAvailability: AudioMetricsAvailability {
+        .unavailable
+    }
+
+    func availableMetrics() async -> AudioMetrics? {
+        nil
+    }
+
     /// Default implementation does nothing for prepareNext
     func prepareNext(url _: URL) async {
         // Optional implementation
+    }
+
+    func invalidatePreparedTransition() async {
+        // Optional implementation
+    }
+
+    func consumePreparedTransition(to _: URL) async -> PreparedTrackTransition {
+        .none
     }
 
     /// Default playback rate setter does nothing
@@ -147,7 +194,7 @@ public extension AudioEngineService {
     }
 
     /// Default implementation does nothing for applyEQ
-    func applyEQ(_: EqualizerConfiguration) async {
+    func applyEQ(_: EqualizerConfiguration) async throws {
         // Default no-op for engines that don't support EQ
     }
 

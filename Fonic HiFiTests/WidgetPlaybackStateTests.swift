@@ -1,24 +1,23 @@
+@testable import Fonic_HiFi
 import Foundation
 import XCTest
 
-@testable import Fonic_HiFi
-
 @MainActor
 final class WidgetPlaybackStateTests: XCTestCase {
-    private var defaults: UserDefaults?
+    private var suiteName = ""
+    private var defaults: UserDefaults!
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        defaults = UserDefaults.appGroup
-        defaults?.removeObject(forKey: WidgetConstants.Keys.playbackState)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.lastUpdated)
+    override func setUp() async throws {
+        try await super.setUp()
+        suiteName = "WidgetPlaybackStateTests.\(UUID().uuidString)"
+        defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 
-    override func tearDownWithError() throws {
-        defaults?.removeObject(forKey: WidgetConstants.Keys.playbackState)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.lastUpdated)
+    override func tearDown() async throws {
+        defaults?.removePersistentDomain(forName: suiteName)
         defaults = nil
-        try super.tearDownWithError()
+        suiteName = ""
+        try await super.tearDown()
     }
 
     func testComputedPropertiesClampAndClassifyState() {
@@ -79,11 +78,7 @@ final class WidgetPlaybackStateTests: XCTestCase {
         XCTAssertGreaterThan(stale.age, 300)
     }
 
-    func testSaveAndLoadRoundTrip() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
-
+    func testSaveAndLoadRoundTrip() {
         let expected = WidgetPlaybackState(
             isPlaying: true,
             currentTime: 73,
@@ -95,13 +90,13 @@ final class WidgetPlaybackStateTests: XCTestCase {
             playbackRate: 1.25
         )
 
-        expected.save()
+        expected.save(to: defaults)
 
-        guard let loaded = WidgetPlaybackState.load() else {
+        guard let loaded = WidgetPlaybackState.load(from: defaults) else {
             XCTFail("Expected persisted playback state")
             return
         }
-        let lastUpdated = defaults?.object(forKey: WidgetConstants.Keys.lastUpdated) as? Date
+        let lastUpdated = defaults.object(forKey: WidgetConstants.Keys.lastUpdated) as? Date
 
         XCTAssertEqual(loaded.isPlaying, expected.isPlaying)
         XCTAssertEqual(loaded.currentTime, expected.currentTime, accuracy: 0.0001)
@@ -115,13 +110,9 @@ final class WidgetPlaybackStateTests: XCTestCase {
         XCTAssertNotNil(lastUpdated)
     }
 
-    func testLoadOrIdleFallsBackWhenMissing() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
+    func testLoadOrIdleFallsBackWhenMissing() {
+        defaults.removeObject(forKey: WidgetConstants.Keys.playbackState)
 
-        defaults?.removeObject(forKey: WidgetConstants.Keys.playbackState)
-
-        XCTAssertEqual(WidgetPlaybackState.loadOrIdle(), .idle)
+        XCTAssertEqual(WidgetPlaybackState.loadOrIdle(from: defaults), .idle)
     }
 }

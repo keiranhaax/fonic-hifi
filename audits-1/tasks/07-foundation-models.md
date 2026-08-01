@@ -55,7 +55,7 @@ AGENTS.md Foundation Models rules make this mandatory, not optional hardening.
 
 ## AUDIT-045 — Distinguish cancellation from failure; hand off to standard search on fallback
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: WP1 (FMA-003, FMA-005), Model B (UIUX-011 context)
 - Audit finding IDs: FMA-003, FMA-005
@@ -86,9 +86,9 @@ Rethrow/propagate cancellation (never convert to results); add request identity/
 Add an explicit single-request gate around each shared `LanguageModelSession` (or use an independent session per request); the current services cache sessions without serialization. Deterministic fallback must never block normal search (AGENTS.md).
 
 ### Acceptance Criteria
-- [ ] Cancelled generation commits no state (test)
-- [ ] Stale completion cannot overwrite a newer query's results (race test)
-- [ ] Fallback path returns actual standard-search results (test)
+- [x] Cancelled generation commits no state (test)
+- [x] Stale completion cannot overwrite a newer query's results (race test)
+- [x] Fallback path returns actual standard-search results (test)
 
 ### Suggested Verification
 Async view-model tests with controlled generation stubs; UI check of fallback labeling.
@@ -100,14 +100,14 @@ Search debounce/cancellation flow in `SmartSearchViewModel`; ensure fallback han
 FMA-005 was previously masked by unreachable smart search (UIUX-011) — now reachable, so this defect is user-visible. Apple documents that a `LanguageModelSession` handles one request at a time and errors on a concurrent request: `https://developer.apple.com/documentation/foundationmodels/generating-content-and-performing-tasks-with-foundation-models`.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Smart Search now propagates cancellation, serializes shared model requests, rejects stale completions, and performs a labeled repository-backed standard-search fallback. Controlled service/view-model tests covered unavailable, failure, cancellation, serialization, stale completion, and real fallback results; 23/23 selected Home/Smart Search tests passed.
 
 ## AUDIT-046 — Decouple initial Home rendering from the model response
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: WP1 (FMA-008)
 - Audit finding IDs: FMA-008
@@ -138,8 +138,8 @@ Render library-backed sections immediately; stream the greeting/recommendations 
 No recommendation-logic changes. Deterministic content must never wait on the model.
 
 ### Acceptance Criteria
-- [ ] Home renders non-AI sections without awaiting the model (test with a never-completing stub)
-- [ ] AI sections appear when ready; unavailable state renders fallback
+- [x] Home renders non-AI sections without awaiting the model (test with a never-completing stub)
+- [x] AI sections appear when ready; unavailable state renders fallback
 
 ### Suggested Verification
 Stubbed-latency test; visual check on a Model-unavailable configuration.
@@ -151,14 +151,14 @@ Home loading-state transitions and any code that keyed off the single `isLoading
 Also removes a hidden dependency of app startup on model availability.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Home commits library-backed content before starting greeting generation, owns and cancels the greeting task, and rejects stale completions while retaining deterministic unavailable fallback. Tests prove a never-completing greeting does not block initial content; the selected Home/Smart Search lane passed 23/23.
 
 ## AUDIT-047 — Build the Foundation Models failure-matrix test suite
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: WP1 (FMA-007)
 - Audit finding IDs: FMA-007
@@ -189,9 +189,9 @@ Introduce a narrow generation-provider seam (protocol around session use) plus a
 Test seams must not weaken production isolation. Simulator success is not Apple Intelligence hardware proof — record that limit.
 
 ### Acceptance Criteria
-- [ ] Every matrix case has a deterministic test (red-first where fixing behavior)
-- [ ] Vacuous assertions replaced
-- [ ] Supported-device path validated on eligible hardware (or explicitly recorded UNVERIFIED → AUDIT-055)
+- [x] Every matrix case has a deterministic test (red-first where fixing behavior)
+- [x] Vacuous assertions replaced
+- [x] Supported-device path validated on eligible hardware (or explicitly recorded UNVERIFIED → AUDIT-055)
 
 ### Suggested Verification
 New suite runs deterministically in CI; eligible-device run recorded.
@@ -203,7 +203,7 @@ The injection seam touches production service initializers — defaults must pre
 AGENTS.md requires exactly this matrix for AI features. Follow AUDIT-050's clock/skip conventions.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Smart Search and recommendation generation now have injectable providers and cancellable serialization gates. Deterministic tests cover unavailable, generation/locale failure, malformed/duplicate/out-of-set/over-limit output, cancellation, and concurrent calls; the focused simulator lane passed 22/22 with zero skips. Eligible-hardware Foundation Models execution is UNVERIFIED and remains assigned to AUDIT-055.

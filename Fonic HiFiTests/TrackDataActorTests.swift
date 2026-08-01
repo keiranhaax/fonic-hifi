@@ -26,6 +26,31 @@ final class TrackDataActorTests: XCTestCase {
         XCTAssertTrue(stored.isLossless)
     }
 
+    func testCreateTrackPersistsNumberTotalsAndReplayGain() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let fileURL = try makeTemporaryFile(named: "numbering-replaygain.flac", testCase: self)
+        let metadata = makeMetadata(
+            url: fileURL,
+            trackNumber: 3,
+            totalTracks: 12,
+            discNumber: 2,
+            totalDiscs: 3,
+            replayGainTrack: -6.5,
+            replayGainAlbum: -4.25
+        )
+
+        let identifier = try await environment.actor.createTrack(from: metadata)
+        let refetchingActor = TrackDataActor(modelContainer: environment.container)
+        let stored = try await refetchingActor.getTrackMetadata(for: identifier)
+
+        XCTAssertEqual(stored.trackNumber, 3)
+        XCTAssertEqual(stored.totalTracks, 12)
+        XCTAssertEqual(stored.discNumber, 2)
+        XCTAssertEqual(stored.totalDiscs, 3)
+        XCTAssertEqual(try XCTUnwrap(stored.replayGainTrack), -6.5, accuracy: 0.001)
+        XCTAssertEqual(try XCTUnwrap(stored.replayGainAlbum), -4.25, accuracy: 0.001)
+    }
+
     func testCreateTracksStoresAllEntries() async throws {
         let environment = try makeEnvironment(testCase: self)
         let first = try makeTemporaryFile(named: "batch-one.flac", testCase: self)
@@ -134,18 +159,128 @@ final class TrackDataActorTests: XCTestCase {
         XCTAssertNil(exists)
     }
 
-    func testCleanupMissingFilesRemovesEntries() async throws {
+    func testCleanupMissingFilesQuarantinesTransientMissAndRecovers() async throws {
         let environment = try makeEnvironment(testCase: self)
-        let fileURL = try makeTemporaryFile(named: "orphaned.flac", testCase: self)
+        let fileURL = try makeTemporaryFile(named: "transient-miss.flac", testCase: self)
+        let firstCheck = Date(timeIntervalSince1970: 1_700_000_000)
 
         _ = try await environment.actor.createTrack(from: makeMetadata(url: fileURL))
-        try FileManager.default.removeItem(at: fileURL)
 
-        let removed = try await environment.actor.cleanupMissingFiles()
+        let removedAfterMiss = try await environment.actor.cleanupMissingFiles(
+            checker: TrackFileAvailabilityChecker { _ in false },
+            now: firstCheck
+        )
+        XCTAssertEqual(removedAfterMiss, 0)
+
+        var context = ModelContext(environment.container)
+        var stored = try XCTUnwrap(context.fetch(FetchDescriptor<Track>()).first)
+        XCTAssertEqual(stored.unavailableCheckCount, 1)
+        XCTAssertEqual(stored.unavailableSince, firstCheck)
+        XCTAssertEqual(stored.availabilityLastCheckedAt, firstCheck)
+        XCTAssertFalse(stored.fileAvailability.isAvailable)
+
+        let removedAfterRecovery = try await environment.actor.cleanupMissingFiles(
+            checker: TrackFileAvailabilityChecker { _ in true },
+            now: firstCheck.addingTimeInterval(24 * 60 * 60)
+        )
+        XCTAssertEqual(removedAfterRecovery, 0)
+
+        context = ModelContext(environment.container)
+        stored = try XCTUnwrap(context.fetch(FetchDescriptor<Track>()).first)
+        XCTAssertEqual(stored.unavailableCheckCount, 0)
+        XCTAssertNil(stored.unavailableSince)
+        XCTAssertNil(stored.availabilityLastCheckedAt)
+        XCTAssertTrue(stored.fileAvailability.isAvailable)
+    }
+
+    func testCleanupMissingFilesRequiresCountAndDurationThreshold() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let fileURL = try makeTemporaryFile(named: "threshold.flac", testCase: self)
+        let firstCheck = Date(timeIntervalSince1970: 1_700_000_000)
+        let unavailable = TrackFileAvailabilityChecker { _ in false }
+        let policy = MissingFileQuarantinePolicy(
+            requiredConsecutiveMisses: 3,
+            minimumUnavailableDuration: 7 * 24 * 60 * 60
+        )
+
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: fileURL))
+
+        let firstRemovalCount = try await environment.actor.cleanupMissingFiles(
+            checker: unavailable,
+            policy: policy,
+            now: firstCheck
+        )
+        XCTAssertEqual(firstRemovalCount, 0)
+
+        let secondRemovalCount = try await environment.actor.cleanupMissingFiles(
+            checker: unavailable,
+            policy: policy,
+            now: firstCheck.addingTimeInterval(24 * 60 * 60)
+        )
+        XCTAssertEqual(secondRemovalCount, 0)
+
+        let recentThirdRemovalCount = try await environment.actor.cleanupMissingFiles(
+            checker: unavailable,
+            policy: policy,
+            now: firstCheck.addingTimeInterval(6 * 24 * 60 * 60)
+        )
+        XCTAssertEqual(
+            recentThirdRemovalCount,
+            0,
+            "The miss count alone must not remove a recently unavailable record"
+        )
+
+        let expiredRemovalCount = try await environment.actor.cleanupMissingFiles(
+            checker: unavailable,
+            policy: policy,
+            now: firstCheck.addingTimeInterval(8 * 24 * 60 * 60)
+        )
+        XCTAssertEqual(expiredRemovalCount, 1)
+
+        let context = ModelContext(environment.container)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Track>()).isEmpty)
+    }
+
+    func testCleanupMissingFilesRemovesRelationshipReferencesAfterThreshold() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let fileURL = try makeTemporaryFile(named: "relationship-cleanup.flac", testCase: self)
+        _ = try await environment.actor.createTrack(from: makeMetadata(url: fileURL))
+
+        let setupContext = ModelContext(environment.container)
+        let track = try XCTUnwrap(setupContext.fetch(FetchDescriptor<Track>()).first)
+        let playlist = Playlist(name: "Cleanup Fixture")
+        playlist.trackIds = [track.id]
+        playlist.tracks = [track]
+        setupContext.insert(playlist)
+        try setupContext.save()
+
+        let removed = try await environment.actor.cleanupMissingFiles(
+            checker: TrackFileAvailabilityChecker { _ in false },
+            policy: MissingFileQuarantinePolicy(
+                requiredConsecutiveMisses: 1,
+                minimumUnavailableDuration: 0
+            ),
+            now: Date(timeIntervalSince1970: 1_700_000_000)
+        )
         XCTAssertEqual(removed, 1)
 
-        let exists = try await environment.actor.trackExists(for: fileURL)
-        XCTAssertNil(exists)
+        let verificationContext = ModelContext(environment.container)
+        XCTAssertTrue(try verificationContext.fetch(FetchDescriptor<Track>()).isEmpty)
+
+        let storedPlaylist = try XCTUnwrap(
+            verificationContext.fetch(FetchDescriptor<Playlist>()).first
+        )
+        XCTAssertTrue(storedPlaylist.tracks.isEmpty)
+        XCTAssertTrue(storedPlaylist.trackIds.isEmpty)
+
+        let storedAlbum = try XCTUnwrap(
+            verificationContext.fetch(FetchDescriptor<Album>()).first
+        )
+        let storedArtist = try XCTUnwrap(
+            verificationContext.fetch(FetchDescriptor<Artist>()).first
+        )
+        XCTAssertTrue(storedAlbum.tracks.isEmpty)
+        XCTAssertTrue(storedArtist.tracks.isEmpty)
     }
 
     func testWithSourceInfoPopulatesHashes() {
@@ -169,16 +304,18 @@ final class TrackDataActorTests: XCTestCase {
         let trackId = try await environment.actor.createTrack(from: metadata)
 
         // When - toggle favorite on
-        try await environment.actor.toggleFavorite(trackId: trackId)
+        let firstToggle = try await environment.actor.toggleFavorite(trackId: trackId)
 
         // Then - should be favorite
+        XCTAssertTrue(firstToggle, "Toggle should return the persisted favorite state")
         let afterFirstToggle = try await environment.actor.getTrackMetadata(for: trackId)
         XCTAssertTrue(afterFirstToggle.isFavorite == true, "Track should be marked as favorite after first toggle")
 
         // When - toggle favorite off
-        try await environment.actor.toggleFavorite(trackId: trackId)
+        let secondToggle = try await environment.actor.toggleFavorite(trackId: trackId)
 
         // Then - should not be favorite
+        XCTAssertFalse(secondToggle, "Toggle should return the persisted favorite state")
         let afterSecondToggle = try await environment.actor.getTrackMetadata(for: trackId)
         XCTAssertTrue(afterSecondToggle.isFavorite == false, "Track should not be favorite after second toggle")
     }
@@ -233,6 +370,34 @@ final class TrackDataActorTests: XCTestCase {
         XCTAssertEqual(sessions.count, 2)
         // Most recent first
         XCTAssertEqual(sessions.first?.trackId, trackId2)
+    }
+
+    func testListeningSessionRetentionRemovesSessionsOlderThanOneYear() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let expiredTrackID = UUID()
+        let currentTrackID = UUID()
+
+        try await environment.actor.recordListeningSession(
+            trackId: expiredTrackID,
+            startedAt: Date().addingTimeInterval(-(366 * 24 * 60 * 60)),
+            durationListened: 60,
+            trackDuration: 180,
+            completionPercentage: 1.0 / 3.0,
+            wasSkipped: false,
+            wasCompleted: false
+        )
+        try await environment.actor.recordListeningSession(
+            trackId: currentTrackID,
+            startedAt: Date(),
+            durationListened: 120,
+            trackDuration: 180,
+            completionPercentage: 2.0 / 3.0,
+            wasSkipped: false,
+            wasCompleted: false
+        )
+
+        let sessions = try await environment.actor.getListeningSessions(limit: 10)
+        XCTAssertEqual(sessions.map(\.trackId), [currentTrackID])
     }
 
     // MARK: - AI Recommendations Support
@@ -324,6 +489,30 @@ final class TrackDataActorTests: XCTestCase {
         XCTAssertTrue(metadata.allSatisfy { !$0.title.isEmpty })
         XCTAssertTrue(metadata.allSatisfy { !$0.artist.isEmpty })
     }
+
+    func testGetNeglectedTrackIDsFiltersOptionalPlaybackDatesBeforeLimiting() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let context = ModelContext(environment.container)
+        let cutoff = Date().addingTimeInterval(-(31 * 24 * 60 * 60))
+
+        let neverPlayed = makeTrack(title: "Never Played", playCount: 5, lastPlayed: nil)
+        let neglected = makeTrack(title: "Neglected", playCount: 4, lastPlayed: cutoff)
+        let recent = makeTrack(title: "Recent", playCount: 10, lastPlayed: .now)
+        let unfamiliar = makeTrack(title: "Unfamiliar", playCount: 1, lastPlayed: cutoff)
+
+        for track in [neverPlayed, neglected, recent, unfamiliar] {
+            context.insert(track)
+        }
+        try context.save()
+
+        let ids = try await environment.actor.getNeglectedTrackIds(
+            daysSinceLastPlay: 30,
+            minimumPlayCount: 2,
+            limit: 2
+        )
+
+        XCTAssertEqual(ids, [neverPlayed.id, neglected.id])
+    }
 }
 
 // MARK: - Helpers
@@ -342,13 +531,27 @@ private func makeEnvironment(testCase: XCTestCase) throws -> TrackActorEnvironme
     return TrackActorEnvironment(actor: actor, container: container)
 }
 
-private func makeMetadata(url: URL, title: String = "Sample Title", genre: String? = nil) -> TrackMetadata {
+private func makeMetadata(
+    url: URL,
+    title: String = "Sample Title",
+    genre: String? = nil,
+    trackNumber: Int? = nil,
+    totalTracks: Int? = nil,
+    discNumber: Int? = nil,
+    totalDiscs: Int? = nil,
+    replayGainTrack: Float? = nil,
+    replayGainAlbum: Float? = nil
+) -> TrackMetadata {
     TrackMetadata(
         url: url,
         title: title,
         artist: "Sample Artist",
         album: "Sample Album",
         genre: genre,
+        trackNumber: trackNumber,
+        totalTracks: totalTracks,
+        discNumber: discNumber,
+        totalDiscs: totalDiscs,
         audioFormat: "FLAC",
         duration: 240,
         sampleRate: 96_000,
@@ -358,8 +561,27 @@ private func makeMetadata(url: URL, title: String = "Sample Title", genre: Strin
         isLossless: true,
         lyrics: "Lyrics",
         comment: "Comment",
-        sourceURL: url
+        sourceURL: url,
+        replayGainTrack: replayGainTrack,
+        replayGainAlbum: replayGainAlbum
     )
+}
+
+private func makeTrack(
+    title: String,
+    playCount: Int,
+    lastPlayed: Date?
+) -> Track {
+    let track = Track(
+        url: URL(filePath: "/tmp/\(title).flac"),
+        title: title,
+        artist: "Test Artist",
+        album: "Test Album",
+        audioFormat: "FLAC"
+    )
+    track.playCount = playCount
+    track.lastPlayed = lastPlayed
+    return track
 }
 
 private func makeTemporaryFile(named name: String, testCase: XCTestCase) throws -> URL {

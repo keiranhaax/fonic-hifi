@@ -5,7 +5,7 @@ import XCTest
 @MainActor
 final class LibraryStatisticsCacheTests: XCTestCase {
     private func makeInMemoryContainer() throws -> ModelContainer {
-        let schema = Schema(SchemaV2.models)
+        let schema = Schema(versionedSchema: SchemaV3.self)
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: true,

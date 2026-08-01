@@ -19,7 +19,8 @@ final class BitPerfectValidationEngine {
 
     func validate(
         session: AVAudioSession,
-        sourceFormat: AudioFileInfo
+        sourceFormat: AudioFileInfo,
+        context: BitPerfectEligibilityContext
     ) async -> BitPerfectValidationResult {
         var validationIssues: [ValidationIssue] = []
         let warnings: [ValidationWarning] = []
@@ -39,6 +40,32 @@ final class BitPerfectValidationEngine {
                     technicalDetails: "Active processing: \(processingDetection.stages.map(\.description).joined(separator: ", "))",
                     severity: .warning,
                     suggestedResolution: "Disable audio processing features",
+                    canAutoResolve: true
+                )
+            )
+        }
+
+        if context.hasDSP {
+            let stageDescription = [
+                context.equalizerEnabled ? "equalizer" : nil,
+                context.replayGainEnabled ? "Replay Gain" : nil,
+                context.playbackRate != 1 ? "playback-rate conversion" : nil
+            ].compactMap { $0 }.joined(separator: ", ")
+            processingStages.append(
+                AudioProcessingStage(
+                    type: context.equalizerEnabled ? .equalization : .dynamicsProcessing,
+                    description: "Application DSP active: \(stageDescription)",
+                    affectsBitPerfect: true,
+                    performanceImpact: 0.2
+                )
+            )
+            validationIssues.append(
+                ValidationIssue(
+                    type: .processingDetected,
+                    description: "Application audio processing is enabled",
+                    technicalDetails: stageDescription,
+                    severity: .warning,
+                    suggestedResolution: "Disable EQ, Replay Gain, and playback-rate conversion",
                     canAutoResolve: true
                 )
             )
@@ -90,6 +117,7 @@ final class BitPerfectValidationEngine {
 
         let systemVolume = session.outputVolume
         let volumeIsOptimal = systemVolume == 1.0
+        let applicationVolumeIsOptimal = context.applicationVolume == 1.0
 
         if !volumeIsOptimal {
             validationIssues.append(
@@ -109,6 +137,19 @@ final class BitPerfectValidationEngine {
                     description: "Digital volume scaling at \(Int(systemVolume * 100))%",
                     affectsBitPerfect: true,
                     performanceImpact: 0.1
+                )
+            )
+        }
+
+        if !applicationVolumeIsOptimal {
+            validationIssues.append(
+                ValidationIssue(
+                    type: .volumeScaling,
+                    description: "Application volume is not at 100%",
+                    technicalDetails: "Current application volume: \(Int(context.applicationVolume * 100))%",
+                    severity: .warning,
+                    suggestedResolution: "Set application volume to 100%",
+                    canAutoResolve: true
                 )
             )
         }
@@ -134,7 +175,8 @@ final class BitPerfectValidationEngine {
             if !bitDepthMatches { return .bitDepthMismatch }
             if !deviceSupportsFormat { return .deviceNotCapable }
             if !volumeIsOptimal { return .systemVolumeNotUnity }
-            if processingDetection.hasProcessing { return .audioProcessingActive }
+            if !applicationVolumeIsOptimal { return .applicationVolumeNotUnity }
+            if processingDetection.hasProcessing || context.hasDSP { return .audioProcessingActive }
             return nil
         }()
 
@@ -142,7 +184,9 @@ final class BitPerfectValidationEngine {
             bitDepthMatches &&
             deviceSupportsFormat &&
             volumeIsOptimal &&
-            !processingDetection.hasProcessing
+            applicationVolumeIsOptimal &&
+            !processingDetection.hasProcessing &&
+            !context.hasDSP
 
         let recommendedSettings = recommendationEngine.recommendedSettings(
             sourceFormat: sourceFormat,
@@ -183,10 +227,10 @@ final class BitPerfectValidationEngine {
             warnings: warnings,
             deviceInfo: deviceInfo,
             deviceSupportsFormat: deviceSupportsFormat,
-            hasAudioProcessing: processingDetection.hasProcessing,
+            hasAudioProcessing: processingDetection.hasProcessing || context.hasDSP,
             processingStages: processingStages,
             systemVolume: systemVolume,
-            applicationVolume: 1.0,
+            applicationVolume: context.applicationVolume,
             recommendedSettings: recommendedSettings,
             alternatives: alternatives,
             performanceImpact: performanceImpact

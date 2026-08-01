@@ -5,16 +5,17 @@
 //  Created by Claude on 5/28/25.
 //
 
+import OSLog
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// Main file import view with document picker and folder selection
 struct FileImportView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.importService) private var importService
+    @EnvironmentObject private var importService: LibraryImportService
 
     @State private var showingFilePicker = false
     @State private var selectedURLs: [URL] = []
+    @State private var pickerFailure: ImportPickerFailure?
 
     private let logger = Log.logger(.importService)
 
@@ -41,51 +42,43 @@ struct FileImportView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Button("Import") {
-                        guard let importService else { return }
-                        Task {
-                            importService.importFiles(from: selectedURLs)
-                            dismiss()
-                        }
+                        importService.importFiles(from: selectedURLs)
                     }
-                    .disabled(selectedURLs.isEmpty || importService?.isImporting == true)
+                    .disabled(selectedURLs.isEmpty || importService.isImporting)
                 }
             }
             .fileImporter(
                 isPresented: $showingFilePicker,
-                allowedContentTypes: supportedAudioTypes + [.folder],
+                allowedContentTypes: AudioImportContentTypes.all + [.folder],
                 allowsMultipleSelection: true
             ) { result in
                 handleFileSelection(result)
+            }
+            .alert(item: $pickerFailure) { failure in
+                Alert(
+                    title: Text(failure.title),
+                    message: Text(failure.message),
+                    primaryButton: .default(Text("Try Again")) {
+                        showingFilePicker = true
+                    },
+                    secondaryButton: .cancel()
+                )
             }
         }
     }
 
     private func handleFileSelection(_ result: Result<[URL], Error>) {
-        switch result {
-        case let .success(urls):
+        switch ImportPickerSelection.resolve(result, surface: .fileSelection) {
+        case let .selected(urls):
             selectedURLs.append(contentsOf: urls)
-        case let .failure(error):
-            logger.error("File selection failed: \(error.localizedDescription, privacy: .private)")
+        case let .failed(failure):
+            if case let .failure(error) = result {
+                logger.error("File selection failed: \(error.localizedDescription, privacy: .private)")
+            }
+            pickerFailure = failure
         }
     }
 
-    private var supportedAudioTypes: [UTType] {
-        [
-            .mp3,
-            .wav,
-            .aiff,
-            .mpeg4Audio,
-            .audio,
-            UTType(filenameExtension: "m4a") ?? .data,
-            UTType(filenameExtension: "flac") ?? .data,
-            UTType(filenameExtension: "aac") ?? .data,
-            UTType(filenameExtension: "ogg") ?? .data,
-            UTType(filenameExtension: "opus") ?? .data,
-            UTType(filenameExtension: "wv") ?? .data,
-            UTType(filenameExtension: "ape") ?? .data,
-            UTType(filenameExtension: "aif") ?? .data,
-        ]
-    }
 }
 
 /// Empty state view when no files are selected
@@ -187,6 +180,6 @@ struct SelectedFilesView: View {
         FileImportView()
             .importService(importService)
     } else {
-        FileImportView()
+        Text("Preview unavailable")
     }
 }

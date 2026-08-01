@@ -2,7 +2,7 @@
 
 ## AUDIT-048 — Guard the app/widget shared-contract mirror against drift
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (DCA-DUP-001), WP4-R08, WP5 (CLN-006)
 - Audit finding IDs: DCA-DUP-001, WP4-R08, CLN-006
@@ -34,9 +34,9 @@ Per WP4-R08, in two steps: (1) immediately add a semantic drift guard — a unit
 Preserve exactly: App Group identifier, UserDefaults keys, widget kind, Codable fields/defaults/date strategy, legacy payload compatibility. Do not touch widget design, timeline policy, App Intents, artwork cache policy, or bundle identifiers.
 
 ### Acceptance Criteria
-- [ ] Round-trip fixture tests pass in both directions plus a legacy stored payload
-- [ ] Drift in a mirrored contract fails CI (or the unified source removes the mirror entirely)
-- [ ] Both app and widget targets build cleanly; no duplicate symbols
+- [x] Round-trip fixture tests pass in both directions plus a legacy stored payload
+- [x] Drift in a mirrored contract fails CI (or the unified source removes the mirror entirely)
+- [x] Both app and widget targets build cleanly; no duplicate symbols
 
 ### Suggested Verification
 App + widget target builds; new contract tests; decode a pre-change persisted App Group payload.
@@ -48,14 +48,14 @@ Wire format between installed app versions and the widget; target-membership mis
 AGENTS.md explicitly allows unification only intentionally — this task is that intentional unification. Keep step 1 even if step 2 is deferred.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-21
+- Completed: 2026-07-21
+- Commit: Not requested
+- Verification result: PASS — semantic AST parity, app-to-widget and widget-to-app round trips, and frozen v1 payload decoding pass; one-sided and synchronized required-field drift probes fail as designed; a focused iPhone 17 Pro UI test build compiled and embedded both app and widget targets without duplicate symbols
 
 ## AUDIT-049 — Replace poll-driven widget sync with event-driven updates; move artwork/file work off MainActor
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (AUD-WIDGET-001, DLP-016, CP-006 → CAN-017; CP-009)
 - Audit finding IDs: CAN-017, CP-009
@@ -87,10 +87,10 @@ Expose a queue-change publisher/AsyncSequence from the established queue-state o
 Do not change payload shape, App Group keys, or timeline policy (AUDIT-048 guards these). Widget must still fail safely when app-side data is absent (AGENTS.md widget rules).
 
 ### Acceptance Criteria
-- [ ] Queue/track changes propagate to the shared payload without polling (test with a driven state stream)
-- [ ] No periodic wake-ups when playback state is idle
-- [ ] Artwork processing verified off the main thread (assertion or test)
-- [ ] Widget renders placeholder/stale-data states unchanged
+- [x] Queue/track changes propagate to the shared payload without polling (test with a driven state stream)
+- [x] No periodic wake-ups when playback state is idle
+- [x] Artwork processing verified off the main thread (assertion or test)
+- [x] Widget renders placeholder/stale-data states unchanged
 
 ### Suggested Verification
 App + widget builds; coordinator unit tests with a scripted state stream; Instruments main-thread check while playing (feeds AUDIT-054); widget snapshot/timeline manual pass.
@@ -102,14 +102,14 @@ Missed transitions the poll used to catch eventually (ensure the event source co
 Poll interval comments in code ("5x slower than 100ms") show the loop is a workaround, not a design.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-07-28
+- Commit: Not requested
+- Verification result: Queue changes now drive widget payload updates through the queue state stream without a periodic poll; artwork enrichment and App Group file work are actor-owned and generation-guarded, with burst coalescing and unchanged placeholder/stale behavior. Widget-focused coverage passed, the contract verifier passed, the complete unit target passed 590/590, and the fresh app/widget build passed.
 
 ## AUDIT-050 — Test hygiene: deterministic clocks, isolated shared state, honest skip policy
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (TRV-004, TRV-015 → CAN-026; TRV-005, TRV-008, TRV-009)
 - Audit finding IDs: CAN-026, TRV-005, TRV-008, TRV-009
@@ -141,13 +141,13 @@ Establish suite-wide conventions once: (1) inject a clock/scheduler into `SleepT
 Test-only plus narrow injection seams; no behavior changes to production logic beyond adding injectable dependencies with production defaults. Coordinate the persistence seam with AUDIT-041 rather than duplicating it.
 
 ### Acceptance Criteria
-- [ ] No `Task.sleep`-based synchronization remains in the cited tests; suite time drops measurably
-- [ ] Tests pass in random order and in parallel (shared-state isolation verified)
-- [ ] Skip inventory documented; unjustified skips converted to failures or capability-gated tests
-- [ ] CI surfaces skip counts (with AUDIT-005)
+- [x] No `Task.sleep`-based synchronization remains in the cited tests; suite time drops measurably
+- [x] Tests pass in random order and in parallel (shared-state isolation verified)
+- [x] Skip inventory documented; unjustified skips converted to failures or capability-gated tests
+- [x] CI skip-count reporting is not applicable while hosted CI is intentionally disabled (AUDIT-005)
 
 ### Suggested Verification
-Full test target twice with `-parallel-testing-enabled` and randomized order; compare durations; review CI skip report.
+Full test target twice with `-parallel-testing-enabled` and randomized order; compare durations. Review CI skip reporting only if hosted CI is reintroduced.
 
 ### Risks and Regression Areas
 Clock injection touches production initializers — keep defaults identical; overly strict skip policy could redden CI on legitimately capability-limited runners (document the allowed list).
@@ -155,15 +155,17 @@ Clock injection touches production initializers — keep defaults identical; ove
 ### Notes
 Do this before or alongside AUDIT-047/051 — both consume these conventions. Ledger cross-ref: WP3 CAN-026 retained at Medium.
 
+Owner disposition (2026-08-01): Local test hygiene is required and complete; the hosted-CI skip-report surface is not needed for this private app.
+
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-08-01
+- Commit: Not requested
+- Verification result: OWNER-DISPOSITIONED — cited timer/state tests use controlled clocks, persistence tests use isolated stores, AudioKit initialization failures are failures rather than skips, and the repository has zero `XCTSkip` occurrences. On 2026-07-29, two fresh isolated randomized parallel runs used two clone workers and completed with matching results of 592/592 passed, 0 failed, and 0 skipped; that count was re-measured before the later waveform regression was added. A final standalone lane then discovered and passed 593/593, and the randomized shared plan passed 619/619 across 593 unit plus 26 UI tests. The coverage lane exposed an order-dependent UI fixture: `testMiniPlayerIsHiddenWithoutCurrentTrack` could restore queue state persisted by an earlier randomized test. The test now uses the existing `-UITestResetQueuePersistence` launch seam; it passed 1/1 in isolation and again inside the fresh 619/619 coverage rerun. Default verbose failure-diagnostic collection can hang after clone launch failures, so accepted aggregate runs used Xcode 27's documented `-collect-test-diagnostics never` option and retained complete XCResults. Older 590/23 and 592 rows are historical suite sizes, not count drift. The CI skip-report criterion is owner-accepted as not applicable while hosted CI is intentionally retired.
 
 ## AUDIT-051 — Real integration and scale test lanes (real media bytes, production-shaped stores)
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (TRV-006, TRV-011)
 - Audit finding IDs: TRV-006, TRV-011
@@ -195,10 +197,10 @@ Generate small real audio files (AVFoundation-rendered tones in real containers:
 Tests and fixture tooling only. Do not repurpose `music-file/` user media without confirmation; do not claim gapless/hardware behavior from this lane.
 
 ### Acceptance Criteria
-- [ ] Integration test imports real encoded audio and reaches playing state via production components
-- [ ] Metadata assertions come from real extraction, not fixture echoes
-- [ ] Scale tests run against an on-disk store with a recorded, thresholded baseline
-- [ ] Lane runtime stays within an agreed CI budget
+- [x] Integration test imports real encoded audio and reaches playing state via production components
+- [x] Metadata assertions come from real extraction, not fixture echoes
+- [x] Scale tests run against an on-disk store with a recorded, thresholded baseline
+- [x] Lane runtime stays within an agreed CI budget
 
 ### Suggested Verification
 Run new lanes locally and in CI; confirm they fail when an import stage is deliberately broken (mutation check).
@@ -210,14 +212,14 @@ CI time growth — keep fixture files tiny and cache generated media; flaky thre
 Fills the gap that let AUDIT-013/014/015-class defects ship despite a "green" suite.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-07-28
+- Commit: Not requested
+- Verification result: A generated, genuinely encoded WAV fixture now runs through production metadata extraction, import/persistence, queue, and facade playback; assertions use extracted metadata. The on-disk 10,000-track lane records thresholded aggregation/cached-read timings and a 30-second lane budget. Focused integration/scale coverage passed, followed by the complete 590-test unit target.
 
 ## AUDIT-052 — Dead-code and unreachable-file triage behind an Xcode-verified gate
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P3
 - Audit sources: Model B (DCA-DEAD-001 residual, DCA-DEAD-002), WP5 (CLN-003, CLN-004, CLN-005 residual)
 - Audit finding IDs: DCA-DEAD-002, CLN-003, CLN-004
@@ -249,9 +251,9 @@ Three-step gate per item: (1) regenerate the inventory against the current tree 
 Removal only — no behavior changes, no "while I'm here" refactors. Skip anything touched by the user's uncommitted work.
 
 ### Acceptance Criteria
-- [ ] Regenerated inventory recorded with per-item disposition (remove/wire/keep-documented)
-- [ ] Clean build + full green tests after each removal batch
-- [ ] No removed symbol referenced by tests, previews, or the widget target
+- [x] Regenerated inventory recorded with per-item disposition (remove/wire/keep-documented)
+- [x] Clean build + full green tests after each removal batch
+- [x] No removed symbol referenced by tests, previews, or the widget target
 
 ### Suggested Verification
 Full-suite run and app+widget builds per batch; `rg` sweep for each removed symbol before deletion.
@@ -263,14 +265,14 @@ Reflection-free Swift makes lexical checks mostly safe, but SwiftUI previews, `@
 Deliberately last-priority: zero user value, nonzero regression risk. Do not run during active feature work in the same files.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-28
+- Completed: 2026-07-28
+- Commit: Not requested
+- Verification result: Regenerated disposition — the stale file inventory was retained because current Xcode/project and lexical checks showed the files compile or remain referenced; four clean-file declaration-only `Playlist` roots were removed: `clearTracks()`, `removeSmartFilter(at:)`, `clearSmartFilters()`, and `mostPlayed()`. Post-removal reference sweeps found zero uses; focused playlist/data/migration tests passed 24/24, the full unit target passed 590/590, the UI target passed 23/23, and a fresh app/widget build passed.
 
 ## AUDIT-053 — Documentation index: reconcile stale, duplicated, and contradictory docs
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P3
 - Audit sources: WP5 (CLN-008, CLN-015), Model B (doc-drift observations)
 - Audit finding IDs: CLN-008, CLN-015
@@ -285,9 +287,9 @@ Deliberately last-priority: zero user value, nonzero regression risk. Do not run
 - Blocks: —
 - Related tasks: AUDIT-002 (removes the duplicate-copy docs; this task organizes what remains)
 - Affected features: none (docs)
-- Affected files or symbols: 215 tracked Markdown docs across competing roots (`.factory/docs` 27, `docs/plans` 11, `Files/**` 98, root 9); `CLAUDE.md:46-53` links four `docs/references/` targets that exist locally but are **untracked** (broken for any fresh clone — decide with the user whether to track them); `summary.md` reports a stale 172-file architecture (the four target roots currently contain 288 Swift files); `Files-analysis.md`, `EQ.md` unindexed at root
-- Validation status: Confirmed structurally (tracked-document and target-root counts re-checked 2026-07-15; `docs/references/` link targets exist untracked)
-- Validation evidence: `git ls-files` scoped counts, target-root `rg --files -g '*.swift'`, and WP5 CLN-008 evidence block
+- Affected files or symbols: `docs/README.md`; 241 Markdown files represented after adding the index (240 tracked at task start plus the new index): `.factory/docs` 27, `docs` 16, `Files/**` 98, `audits-1/**` 82, root 6, project-local skills 4, and nested target/test guides 8; root `CLAUDE.md` is absent; all four `docs/references/` files are tracked; `EQ.md`, `Files-analysis.md`, and `summary.md` remain tracked and are explicitly indexed as generated research
+- Validation status: Completed 2026-07-21 — live roots recounted, stale `CLAUDE.md` and untracked-reference claims corrected, archive requirements given an explicit forward disposition, and all internal Markdown links checked
+- Validation evidence: `git ls-files` topology count plus the new index (241 total across 19 classified roots); repository-wide Markdown-link sweep (21 internal Markdown links, 0 broken); required guide, backlog, root-report, and reference paths verified
 
 ### Problem
 Documentation is fragmented across five roots with contradictory or stale content and broken links, so agents and humans revalidate everything from scratch (AGENTS.md already mandates distrust of `README.md`/`STATUS.md`/`Files/` claims — this task reduces why).
@@ -302,10 +304,10 @@ Per WP5: create one documentation index with explicit statuses (authoritative / 
 Docs only. No source, config, or asset changes. Do not delete `Files/` content; archive/index instead.
 
 ### Acceptance Criteria
-- [ ] One index lists every doc root with status labels
-- [ ] No broken internal doc links (checked by script or manual sweep)
-- [ ] Root-level strays (`EQ.md`, `Files-analysis.md`, `summary.md`) relocated or explicitly indexed
-- [ ] Unique requirements from archived docs demonstrably mapped forward
+- [x] One index lists every doc root with status labels
+- [x] No broken internal doc links (checked by script or manual sweep)
+- [x] Root-level strays (`EQ.md`, `Files-analysis.md`, `summary.md`) relocated or explicitly indexed
+- [x] Unique requirements from archived docs demonstrably mapped forward
 
 ### Suggested Verification
 Link check across docs; `git diff --stat` confined to docs; AGENTS.md path references still valid.
@@ -317,10 +319,10 @@ Agent workflows referencing old paths (e.g. `.factory/docs`, `CLAUDE.md` links) 
 Coordinate ordering with AUDIT-002 so files aren't moved and then deleted (or vice versa) in conflicting commits.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-21
+- Completed: 2026-07-21
+- Commit: Not requested
+- Verification result: PASS — 241 Markdown files accounted for across all classified roots; 21 internal Markdown links resolve; root strays are explicitly classified; audit findings route through the disposition map and other archived requirements have a deliberate historical-only or promotion destination; documentation-only diff and whitespace checks pass
 
 ## AUDIT-054 — Performance program: profile first, then fix measured MainActor/allocation hotspots
 
@@ -358,8 +360,8 @@ No speculative rewrites of untraced code; no architecture changes beyond the est
 ### Acceptance Criteria
 - [ ] Baseline and post-phase traces recorded with the scenario list above
 - [ ] Each shipped fix shows a measured improvement (main-thread time, memory, or hitch rate)
-- [ ] Startup tasks are owned, cancellable, and cancellation-tested
-- [ ] No regression in the AUDIT-051 scale baselines
+- [x] Startup tasks are owned, cancellable, and cancellation-tested
+- [x] No regression in the AUDIT-051 scale baselines
 
 ### Suggested Verification
 Instruments on device (simulator traces acceptable for relative main-thread comparisons; memory claims need device); AUDIT-051 perf lane before/after.
@@ -371,15 +373,15 @@ Moving search off MainActor touches actor isolation (strict concurrency — no `
 Explicitly an umbrella: decompose into per-phase tasks after Phase 0 ranks the work. XL estimate reflects the program, not one change.
 
 ### Implementation Record
-- Started:
+- Started: 2026-07-28
 - Completed:
-- Commit:
-- Verification result:
+- Commit: Not requested
+- Verification result: IMPLEMENTED SLICE — deferred startup work is owned by a structured, cancellable workflow with deterministic cancellation tests. On 2026-07-29 a fresh isolated current-state lane passed 2/2 startup workflow tests, 9/9 file-manager tests, 26/26 queue tests, and the on-disk 10,000-track statistics baseline (38/38 total; scale test 2.34 seconds). A five-second Xcode 27 `xctrace` CPU Profiler probe hung during finalization and left a 40 KB bundle that failed export with `Document Missing Template Error`. There is no reusable 5,000–10,000-track app UI fixture, and HEAD is a multi-slice baseline because the startup workflow and other relevant files are untracked or mixed with the live 207-entry worktree. Required Phase-0 Time Profiler, SwiftUI, and Allocations scenario traces plus measured post-change improvements remain absent, so the profile-first program remains TODO pending working trace infrastructure and a per-slice baseline or owner disposition.
 
 ## AUDIT-055 — Physical-device media acceptance and release-evidence lane
 
-- Status: [BLOCKED]
-- Priority: P1 (release gate) — blocked on physical devices + release owner
+- Status: [DONE]
+- Priority: P1 (release gate) — owner-closed as not applicable while the app is private
 - Audit sources: Model B (TRV-016, A11YTEST-001, TRV-012 → CAN-020), ledger X-08
 - Audit finding IDs: TRV-016, CAN-020
 - Category: Verification / release
@@ -391,7 +393,7 @@ Explicitly an umbrella: decompose into per-phase tasks after Phase 0 ranks the w
 - Implementation group: —
 - Depends on: implementations it verifies — notably AUDIT-026 (media reset), AUDIT-028 (bit-perfect claims), AUDIT-031/032 (session/route), AUDIT-034 (gapless); consumes AUDIT-047's on-device AI check
 - Blocks: any "release-ready", "gapless", or "bit-perfect" claim
-- Related tasks: AUDIT-004/007 (release configuration/privacy answers), AUDIT-005 (future CI evidence, blocked), AUDIT-057 (CI retirement)
+- Related tasks: AUDIT-004/007 (release configuration/privacy answers), AUDIT-005 (future CI evidence, owner-closed), AUDIT-057 (CI retirement)
 - Affected features: none directly (verification lane)
 - Affected files or symbols: `Makefile` simulator-only lanes; no active hosted workflow or device matrix
 - Validation status: Confirmed — no device lane exists; AGENTS.md §7 requires device evidence for exactly these behaviors
@@ -410,10 +412,10 @@ Define a repeatable acceptance matrix (owner + device set required): interruptio
 Evidence and process only — findings feed back as new tasks, not ad-hoc fixes inside this lane.
 
 ### Acceptance Criteria
-- [ ] Written matrix with per-scenario pass/fail and device/OS identity
-- [ ] Every marketing-sensitive claim (gapless, bit-perfect, background) mapped to a recorded evidence item
-- [ ] Accessibility pass recorded on device
-- [ ] Re-run procedure documented so the lane is repeatable per release
+- [x] Private-app scope explicitly excludes a release/device acceptance matrix
+- [x] No release-ready, gapless, bit-perfect, or background-audio claim is made from simulator-only evidence
+- [x] Physical-device validation remains optional personal QA rather than a release gate
+- [x] A release re-run procedure is not required unless public distribution becomes an explicit goal
 
 ### Suggested Verification
 The lane is itself verification; review completeness against AGENTS.md §7.
@@ -422,13 +424,13 @@ The lane is itself verification; review completeness against AGENTS.md §7.
 None to code; the risk is organizational (unowned lane → stale evidence).
 
 ### Notes
-[BLOCKED]: requires physical devices (incl. USB DAC/Bluetooth targets) and a human release owner. Everything else in this backlog can proceed; final release claims cannot.
+Owner disposition (2026-08-01): A physical-device release matrix is not needed while the app remains private and undistributed. Personal hardware testing remains available if the owner wants confidence in Bluetooth, USB DAC, AirPlay, background audio, or audible gapless behavior; simulator evidence must not be presented as proof of those claims.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-29 (owner-gate re-evaluation)
+- Completed: 2026-08-01
+- Commit: Not requested
+- Verification result: OWNER-DISPOSITIONED — no physical-device release matrix, route/capture hardware, or release owner is required for the private-app scope. Simulator and offline-waveform evidence remain limited to their stated scope and do not establish background, route, audible gapless, bit-perfect, on-device accessibility, AI eligibility, widget, or archive release claims.
 
 ## AUDIT-056 — Untrack or remove the full Claude agent tree
 

@@ -7,8 +7,27 @@
 
 import Foundation
 
+/// Describes how much of an engine metrics snapshot is backed by measurements.
+public enum AudioMetricsAvailability: String, Sendable, Equatable, Codable {
+    /// The engine exposes all fields represented by the snapshot.
+    case available
+
+    /// The engine exposes only a documented subset of fields.
+    case partial
+
+    /// The engine does not expose a metrics API.
+    case unavailable
+
+    public var supportsCollection: Bool {
+        self != .unavailable
+    }
+}
+
 /// Comprehensive performance metrics for audio playback monitoring
 public struct AudioMetrics: Sendable, Equatable {
+    /// Whether engine-specific values are fully, partially, or not measured.
+    public let engineMetricsAvailability: AudioMetricsAvailability
+
     // MARK: - Core Performance Metrics
 
     /// CPU usage percentage (0-100)
@@ -64,7 +83,8 @@ public struct AudioMetrics: Sendable, Equatable {
     /// Audio format being processed
     public let audioFormat: String
 
-    /// Whether bit-perfect playback is active
+    /// Whether the engine's software state is bit-perfect eligible. This is not
+    /// measured physical-output proof.
     public let isBitPerfect: Bool
 
     // MARK: - Buffer Management Metrics
@@ -149,6 +169,7 @@ public struct AudioMetrics: Sendable, Equatable {
     // MARK: - Initialization
 
     public init(
+        engineMetricsAvailability: AudioMetricsAvailability = .available,
         cpuUsage: Float,
         memoryUsage: Int64,
         bufferUnderruns: Int,
@@ -191,6 +212,7 @@ public struct AudioMetrics: Sendable, Equatable {
         reliabilityScore: Float = 1.0,
         efficiencyScore: Float = 1.0,
     ) {
+        self.engineMetricsAvailability = engineMetricsAvailability
         self.cpuUsage = cpuUsage
         self.memoryUsage = memoryUsage
         self.bufferUnderruns = bufferUnderruns
@@ -239,6 +261,7 @@ public struct AudioMetrics: Sendable, Equatable {
     /// Empty metrics for initial state
     public static var empty: AudioMetrics {
         AudioMetrics(
+            engineMetricsAvailability: .unavailable,
             cpuUsage: 0,
             memoryUsage: 0,
             bufferUnderruns: 0,
@@ -362,7 +385,7 @@ public struct AudioMetrics: Sendable, Equatable {
         }
 
         if !isBitPerfect, bitDepth > 16 {
-            insights.append("Bit-perfect playback not active for high-resolution audio")
+            insights.append("Playback is not bit-perfect eligible for high-resolution audio")
         }
 
         if performanceScore < 0.7 {

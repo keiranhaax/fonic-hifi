@@ -23,6 +23,8 @@ final class PlaybackController {
     typealias TrackCompletionHandler = @MainActor () async -> Void
     typealias LoopCheckHandler = @MainActor (TimeInterval) -> TimeInterval?
 
+    private static let progressPollInterval: TimeInterval = 0.1
+
     private let sessionManager: any AudioSessionService
     private let formatDetectionManager: any FormatDetectionService
     private let validator: BitPerfectValidator
@@ -74,23 +76,46 @@ final class PlaybackController {
 
     func play(track: Track, queueEntry: AudioTrack? = nil) async throws {
         let info = try await formatDetectionManager.detectFormat(at: track.url)
+        try Task.checkCancellation()
         await sessionManager.setPreferredSampleRate(info.sampleRate)
+        try Task.checkCancellation()
         try await sessionManager.activateAudioSession()
-        logger.info("Detected format for playback: \(info.format.displayName)")
+        try Task.checkCancellation()
+        logger.info("Detected format for playback: \(info.format.displayName, privacy: .public)")
+
+        let audioTrack = queueEntry ?? track.toAudioTrack()
+        let preparedEngine = engineManager.currentEngine
+        let preparedTransition = if let preparedEngine {
+            await preparedEngine.consumePreparedTransition(to: audioTrack.url)
+        } else {
+            PreparedTrackTransition.none
+        }
+        let adoptedPreparedTransition = preparedTransition.wasAdopted
+        let engine: AudioEngineService
+        if adoptedPreparedTransition, let preparedEngine {
+            engine = preparedEngine
+            if preparedTransition == .preloadedFallback {
+                logger.info(
+                    "Adopted preloaded track with a stop/start fallback; no render-boundary gapless claim"
+                )
+            }
+        } else {
+            engine = try await engineManager.ensureEngine(for: info)
+        }
+        try Task.checkCancellation()
 
         if engineManager.configuration.performanceMode == .quality {
             let validation = await validator.validateBitPerfectPlayback(
                 sourceFormat: info,
                 outputDevice: nil,
+                context: await engineManager.bitPerfectEligibilityContext()
             )
+            try Task.checkCancellation()
             if !validation.isValid {
-                logger.warning("Bit-perfect validation failed: \(validation.mismatchReason?.userFriendlyDescription ?? "Unknown")")
+                logger.warning("Bit-perfect eligibility check failed: \(validation.mismatchReason?.userFriendlyDescription ?? "Unknown", privacy: .private)")
             }
         }
 
-        let engine = try await engineManager.ensureEngine(for: info)
-
-        let audioTrack = queueEntry ?? track.toAudioTrack()
         if queueManager.currentTrack?.id != audioTrack.id {
             queueManager.setCurrentTrack(audioTrack)
         }
@@ -99,24 +124,30 @@ final class PlaybackController {
         uiState.showMiniPlayer = true
         stateManager.updateState(.loading())
 
-        try await engine.load(url: audioTrack.url)
+        if !adoptedPreparedTransition {
+            try await engine.load(url: audioTrack.url)
+            try Task.checkCancellation()
+        }
         await applyPlaybackParameters(for: audioTrack, engine: engine)
+        try Task.checkCancellation()
 
         // Set completion handler for auto-advance
-        engine.setCompletionHandler { [weak self] in
-            Task { @MainActor in
-                await self?.handleTrackCompletion()
-            }
-        }
+        engine.setCompletionHandler(Self.makeCompletionHandler(owner: self))
 
-        try await engine.play()
+        if !adoptedPreparedTransition {
+            try await engine.play()
+            try Task.checkCancellation()
+        }
 
         stateManager.updateState(.playing(currentTime: 0, duration: info.duration))
         await updateNowPlayingInfo(track: track, duration: info.duration)
+        try Task.checkCancellation()
 
         startProgressTracking(engine: engine)
         await diagnosticsHandler(track, info)
+        try Task.checkCancellation()
         await prepareUpcomingTrack(engine: engine)
+        try Task.checkCancellation()
     }
 
     func resume() async throws {
@@ -125,21 +156,29 @@ final class PlaybackController {
         }
 
         try await sessionManager.activateAudioSession()
+        try Task.checkCancellation()
 
         if let track = uiState.currentTrack {
             await applyPlaybackParameters(for: track, engine: engine)
+            try Task.checkCancellation()
         }
 
         try await engine.play()
+        try Task.checkCancellation()
 
         let currentTime = await engine.currentTime
+        try Task.checkCancellation()
         let duration = await engine.duration
+        try Task.checkCancellation()
         stateManager.updateState(.playing(currentTime: currentTime, duration: duration))
 
         if let track = uiState.currentTrack {
             await updateNowPlayingInfo(track: track, duration: duration, currentTime: currentTime)
+            try Task.checkCancellation()
             await prepareUpcomingTrack(engine: engine)
+            try Task.checkCancellation()
             await diagnosticsHandler(track, nil)
+            try Task.checkCancellation()
         }
 
         startProgressTracking(engine: engine)
@@ -236,15 +275,68 @@ final class PlaybackController {
             playbackRate: engineManager.configuration.playbackRate,
             gainDB: gain,
         )
+        try Task.checkCancellation()
 
         stateManager.updateState(.playing(currentTime: 0, duration: audioTrack.duration))
         await updateNowPlayingInfo(track: displayTrack, duration: audioTrack.duration)
+        try Task.checkCancellation()
         startProgressTracking(engine: engine)
         await diagnosticsHandler(displayTrack, nil)
+        try Task.checkCancellation()
+        await prepareUpcomingTrack(engine: engine)
+        try Task.checkCancellation()
+    }
+
+    /// Rebuild playback after AVFoundation resets media services.
+    ///
+    /// The replacement engine is loaded and positioned but intentionally left
+    /// paused. This prevents an unsolicited resume while preserving the user's
+    /// track and elapsed time in both app state and Now Playing.
+    func recoverAfterMediaServicesReset(
+        track: Track,
+        queueEntry: AudioTrack?,
+        info: AudioFileInfo,
+        preservedPosition: TimeInterval
+    ) async throws {
+        progressTimer.stop()
+
+        let engine = try await engineManager.rebuildEngineAfterMediaServicesReset(for: info)
+        let audioTrack = queueEntry ?? track.toAudioTrack()
+        let duration = info.duration > 0 ? info.duration : audioTrack.duration
+        let position = min(max(0, preservedPosition), max(0, duration))
+
+        try await engine.load(url: audioTrack.url)
+        await applyPlaybackParameters(for: audioTrack, engine: engine)
+        engine.setCompletionHandler(Self.makeCompletionHandler(owner: self))
+
+        if position > 0 {
+            try await engine.seek(to: position)
+        }
+        await engine.pause()
+
+        uiState.currentTrack = track
+        uiState.showMiniPlayer = true
+        stateManager.forceUpdateState(.paused(currentTime: position, duration: duration))
+        await updateNowPlayingInfo(
+            track: track,
+            duration: duration,
+            currentTime: position,
+            playbackRate: 0
+        )
         await prepareUpcomingTrack(engine: engine)
     }
 
     // MARK: - Helpers
+
+    private nonisolated static func makeCompletionHandler(
+        owner: PlaybackController
+    ) -> () -> Void {
+        { [weak owner] in
+            Task { @MainActor [weak owner] in
+                await owner?.handleTrackCompletion()
+            }
+        }
+    }
 
     private func applyPlaybackParameters(for track: any TrackProtocol, engine: AudioEngineService) async {
         await engine.setPlaybackRate(engineManager.configuration.playbackRate)
@@ -264,7 +356,8 @@ final class PlaybackController {
     }
 
     private func prepareUpcomingTrack(engine: AudioEngineService) async {
-        guard engineManager.configuration.enableGapless || engineManager.configuration.crossfadeDuration > 0,
+        guard engineManager.configuration.enableGapless,
+              engineManager.configuration.crossfadeDuration == 0,
               let nextTrack = queueManager.getNextTrack()
         else {
             return
@@ -274,27 +367,68 @@ final class PlaybackController {
     }
 
     private func startProgressTracking(engine: AudioEngineService) {
-        progressTimer.start(pollInterval: 0.5) { [weak self] in
+        progressTimer.start(pollInterval: Self.progressPollInterval) { [weak self] in
             guard let self else { return }
-            guard stateManager.currentState.isPlaying else { return }
-
-            async let currentTime = engine.currentTime
-            async let duration = engine.duration
-            let (time, total) = await (currentTime, duration)
-            stateManager.updateTime(time, duration: total)
-
-            // Check A-B loop
-            if let seekTarget = loopCheckHandler?(time) {
-                try? await engine.seek(to: seekTarget)
-            }
-
-            await updateNowPlayingElapsedTimeIfNeeded(currentTime: time)
+            await refreshPlaybackProgress(engine: engine)
         }
     }
 
-    private func updateNowPlayingElapsedTimeIfNeeded(currentTime: TimeInterval) async {
+    /// Refresh one playback progress cycle.
+    ///
+    /// Kept as a deterministic unit-test seam because timer scheduling is not
+    /// part of the seek/A-B behavior being verified.
+    func refreshPlaybackProgress(engine: AudioEngineService) async {
+        guard stateManager.currentState.isPlaying else { return }
+
+        async let currentTime = engine.currentTime
+        async let duration = engine.duration
+        let (time, total) = await (currentTime, duration)
+        stateManager.updateTime(time, duration: total)
+
+        var elapsedTime = time
+        var forceNowPlayingUpdate = false
+        if let seekTarget = loopCheckHandler?(time) {
+            do {
+                try await engine.seek(to: seekTarget)
+                stateManager.updateTime(seekTarget, duration: total)
+                elapsedTime = seekTarget
+                forceNowPlayingUpdate = true
+            } catch is CancellationError {
+                return
+            } catch {
+                guard !Task.isCancelled else { return }
+                let playbackError = Self.loopSeekPlaybackError(from: error)
+                logger.error(
+                    "A-B loop seek failed: \(String(describing: error), privacy: .private)"
+                )
+                progressTimer.stop()
+                stateManager.handleEngineError(playbackError, currentTime: time)
+                return
+            }
+        }
+
+        await updateNowPlayingElapsedTimeIfNeeded(
+            currentTime: elapsedTime,
+            force: forceNowPlayingUpdate
+        )
+    }
+
+    private static func loopSeekPlaybackError(from error: any Error) -> AudioError {
+        if let audioError = error as? AudioError {
+            return audioError
+        }
+        return .playbackFailed(reason: "A-B loop seek failed")
+    }
+
+    private func updateNowPlayingElapsedTimeIfNeeded(
+        currentTime: TimeInterval,
+        force: Bool = false
+    ) async {
         let now = nowProvider()
-        if let lastNowPlayingSyncDate, nowPlayingSyncInterval > 0, now.timeIntervalSince(lastNowPlayingSyncDate) < nowPlayingSyncInterval {
+        if !force,
+           let lastNowPlayingSyncDate,
+           nowPlayingSyncInterval > 0,
+           now.timeIntervalSince(lastNowPlayingSyncDate) < nowPlayingSyncInterval {
             return
         }
 

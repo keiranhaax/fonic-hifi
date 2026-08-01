@@ -47,6 +47,7 @@ public final class LibraryImportService: ObservableObject {
     // MARK: - Private Properties
 
     private var importTask: Task<Void, Never>?
+    private var importGeneration: UUID?
 
     // Transaction tracking
     private var currentTransaction: ImportTransaction?
@@ -67,53 +68,58 @@ public final class LibraryImportService: ObservableObject {
         self.fileProcessingConcurrency = max(1, fileProcessingConcurrency)
     }
 
+    init(
+        fileProcessor: FileImportProcessor,
+        fileProcessingConcurrency: Int = 4,
+        statisticsInvalidator: @escaping () -> Void = {},
+    ) {
+        self.fileProcessor = fileProcessor
+        self.statisticsInvalidator = statisticsInvalidator
+        self.fileProcessingConcurrency = max(1, fileProcessingConcurrency)
+    }
+
     // MARK: - Public Methods
 
     /// Import files from selected URLs (handles security-scoped resources)
     public func importFiles(from urls: [URL]) {
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-
-            guard !isImporting else {
-                logger.warning("Import already in progress")
-                return
-            }
-
-            importProgress = 0.0
-            filesProcessed = 0
-            totalFiles = 0
-            importErrors.removeAll()
-            recentlyImported.removeAll()
-            isImporting = true
-            statusMessage = "Scanning for audio files..."
-
-            let task = Task(priority: .userInitiated) { @MainActor [weak self] in
-                guard let self else { return }
-                logger.info("Starting import of \(urls.count) URLs")
-                Metrics.increment(.importsDiscovered, by: urls.count, metadata: [
-                    "phase": "requested"
-                ])
-                await executeImportPipeline(urls: urls)
-            }
-
-            importTask?.cancel()
-            importTask = task
-
-            await task.value
-
-            importTask = nil
+        guard !isImporting else {
+            logger.warning("Import already in progress")
+            return
         }
+
+        importProgress = 0.0
+        filesProcessed = 0
+        totalFiles = 0
+        importErrors.removeAll()
+        recentlyImported.removeAll()
+        isImporting = true
+        statusMessage = "Scanning for audio files..."
+
+        let generation = UUID()
+        importGeneration = generation
+        let task = Task(priority: .userInitiated) { @MainActor [weak self] in
+            guard let self, self.importGeneration == generation else { return }
+            self.logger.info("Starting import of \(urls.count, privacy: .public) URLs")
+            Metrics.increment(.importsDiscovered, by: urls.count, metadata: [
+                "phase": "requested"
+            ])
+            await self.executeImportPipeline(urls: urls, generation: generation)
+
+            guard self.importGeneration == generation else { return }
+            self.importTask = nil
+            self.importGeneration = nil
+        }
+        importTask = task
     }
 
     /// Cancel the current import operation
     public func cancelImport() {
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            self.importTask?.cancel()
-            self.importTask = nil
-            self.isImporting = false
-            self.statusMessage = "Import cancelled"
-        }
+        let task = importTask
+        importGeneration = nil
+        importTask = nil
+        task?.cancel()
+        isImporting = false
+        statusMessage = "Import cancelled"
 
         self.logger.info("Import operation cancelled")
     }
@@ -145,7 +151,7 @@ public final class LibraryImportService: ObservableObject {
             statisticsInvalidator()
             return identifier
         } catch {
-            self.logger.error("Failed to import single file: \(error.localizedDescription)")
+            self.logger.error("Failed to import single file: \(error.localizedDescription, privacy: .private)")
             self.importErrors.append(ImportError(
                 url: url,
                 error: error,
@@ -158,9 +164,21 @@ public final class LibraryImportService: ObservableObject {
     // MARK: - Private Methods
 
     func executeImportPipeline(urls: [URL]) async {
+        await executeImportPipeline(urls: urls, generation: nil)
+    }
+
+    private func executeImportPipeline(urls: [URL], generation: UUID?) async {
+        guard ownsImportState(generation) else { return }
+
         let concurrency = fileProcessingConcurrency
         let discoveryStarted = Date()
         var successes = 0
+        defer {
+            if successes > 0 {
+                statisticsInvalidator()
+            }
+        }
+        var duplicates = 0
         var failures = 0
         var accumulatedDuration: TimeInterval = 0
         var totalDiscovered = 0
@@ -199,6 +217,7 @@ public final class LibraryImportService: ObservableObject {
                 guard await enqueue(file) else { break }
 
                 await MainActor.run {
+                    guard self.ownsImportState(generation) else { return }
                     totalDiscovered += 1
                     self.totalFiles = totalDiscovered
                     if totalDiscovered == 1 {
@@ -206,7 +225,7 @@ public final class LibraryImportService: ObservableObject {
                     } else {
                         self.statusMessage = "Importing \(totalDiscovered) files (concurrency \(concurrency))"
                         if totalDiscovered % 25 == 0 {
-                            self.logger.info("import.discovery.progress discovered=\(totalDiscovered) concurrency=\(concurrency)")
+                            self.logger.info("import.discovery.progress discovered=\(totalDiscovered, privacy: .public) concurrency=\(concurrency, privacy: .public)")
                         }
                     }
                 }
@@ -220,7 +239,8 @@ public final class LibraryImportService: ObservableObject {
 
             let discoveryElapsed = Date().timeIntervalSince(discoveryStarted)
             await MainActor.run {
-                self.logger.info("import.discovery.summary discovered=\(totalDiscovered) elapsed=\(String(format: "%.2f", discoveryElapsed))")
+                guard self.ownsImportState(generation) else { return }
+                self.logger.info("import.discovery.summary discovered=\(totalDiscovered, privacy: .public) elapsed=\(String(format: "%.2f", discoveryElapsed), privacy: .public)")
             }
         }
 
@@ -235,9 +255,17 @@ public final class LibraryImportService: ObservableObject {
                 discoveryTask.cancel()
                 queueContinuation.finish()
                 _ = await discoveryTask.result
-                self.statusMessage = "Import cancelled"
-                self.isImporting = false
-                self.logger.info("Import task cancelled")
+                if ownsImportState(generation) {
+                    self.statusMessage = "Import cancelled"
+                    self.isImporting = false
+                    self.logger.info("Import task cancelled")
+                }
+                return
+            }
+
+            guard ownsImportState(generation) else {
+                discoveryTask.cancel()
+                queueContinuation.finish()
                 return
             }
 
@@ -246,11 +274,15 @@ public final class LibraryImportService: ObservableObject {
             if let identifier = result.identifier {
                 self.recentlyImported.append(identifier)
                 successes += 1
-                statisticsInvalidator()
                 Metrics.increment(.importsCompleted, metadata: [
                     "file": LogPrivacy.filename(result.file.originalURL),
                     "duration": String(format: "%.2f", result.duration)
                 ])
+            } else if result.isDuplicate {
+                duplicates += 1
+                self.logger.notice(
+                    "Duplicate import skipped: \(result.file.originalURL.lastPathComponent, privacy: .private(mask: .hash))"
+                )
             } else {
                 failures += 1
                 let message = result.errorDescription ?? "Unknown failure"
@@ -276,15 +308,22 @@ public final class LibraryImportService: ObservableObject {
                 let throughputLabel = String(format: "%.2f", throughput)
                 self.logger.info(
                     """
-                    import.pipeline.progress processed=\(processed) successes=\(successes)
-                    failures=\(failures) remaining=\(remaining)
-                    discovered=\(self.totalFiles) concurrency=\(concurrency) throughput=\(throughputLabel)
+                    import.pipeline.progress processed=\(processed, privacy: .public) successes=\(successes, privacy: .public)
+                    duplicates=\(duplicates, privacy: .public) failures=\(failures, privacy: .public) remaining=\(remaining, privacy: .public)
+                    discovered=\(self.totalFiles, privacy: .public) concurrency=\(concurrency, privacy: .public) throughput=\(throughputLabel, privacy: .public)
                     """
                 )
             }
         }
 
-        await discoveryTask.value
+        await withTaskCancellationHandler {
+            await discoveryTask.value
+        } onCancel: {
+            discoveryTask.cancel()
+            queueContinuation.finish()
+        }
+
+        guard ownsImportState(generation) else { return }
 
         if Task.isCancelled {
             self.statusMessage = "Import cancelled"
@@ -300,15 +339,15 @@ public final class LibraryImportService: ObservableObject {
         }
 
         let elapsed = Date().timeIntervalSince(processingStarted)
-        let summary = "Import completed: \(successes) of \(self.totalFiles) files imported"
+        let summary = "Import completed: \(successes) imported, \(duplicates) skipped, \(failures) failed"
         self.statusMessage = summary
         self.isImporting = false
         let averageDuration = self.totalFiles > 0 ? accumulatedDuration / Double(self.totalFiles) : 0
         self.logger.info(
             """
             Import completed successfully:
-            discovered=\(totalDiscovered) imported=\(successes) failed=\(failures)
-            avgDuration=\(String(format: "%.2f", averageDuration)) elapsed=\(String(format: "%.2f", elapsed))
+            discovered=\(totalDiscovered, privacy: .public) imported=\(successes, privacy: .public) duplicates=\(duplicates, privacy: .public) failed=\(failures, privacy: .public)
+            avgDuration=\(String(format: "%.2f", averageDuration), privacy: .public) elapsed=\(String(format: "%.2f", elapsed), privacy: .public)
             """
         )
     }
@@ -322,7 +361,7 @@ public final class LibraryImportService: ObservableObject {
         let fileExists = FileManager.default.fileExists(atPath: track.url.path)
 
         if !fileExists {
-            self.logger.warning("Track file not found: \(LogPrivacy.filename(track.url))")
+            self.logger.warning("Track file not found: \(LogPrivacy.filename(track.url), privacy: .private(mask: .hash))")
         }
 
         return fileExists
@@ -333,6 +372,11 @@ public final class LibraryImportService: ObservableObject {
         self.filesProcessed += 1
         self.importProgress = self.totalFiles > 0 ? Double(self.filesProcessed) / Double(self.totalFiles) : 0.0
         self.statusMessage = "Processed \(self.filesProcessed) of \(self.totalFiles) files"
+    }
+
+    private func ownsImportState(_ generation: UUID?) -> Bool {
+        guard let generation else { return true }
+        return importGeneration == generation
     }
 }
 

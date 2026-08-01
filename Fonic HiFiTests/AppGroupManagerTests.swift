@@ -1,39 +1,29 @@
+@testable import Fonic_HiFi
 import Foundation
 import XCTest
 
-@testable import Fonic_HiFi
-
 @MainActor
 final class AppGroupManagerTests: XCTestCase {
-    private let manager = AppGroupManager.shared
-    private var defaults: UserDefaults?
+    private var suiteName = ""
+    private var defaults: UserDefaults!
+    private var manager: AppGroupManager!
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        defaults = UserDefaults.appGroup
-
-        defaults?.removeObject(forKey: WidgetConstants.Keys.playbackState)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.trackInfo)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.upNextTracks)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.lastUpdated)
-        manager.clearAllData()
+    override func setUp() async throws {
+        try await super.setUp()
+        suiteName = "AppGroupManagerTests.\(UUID().uuidString)"
+        defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        manager = AppGroupManager(defaults: defaults)
     }
 
-    override func tearDownWithError() throws {
-        manager.clearAllData()
-        defaults?.removeObject(forKey: WidgetConstants.Keys.playbackState)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.trackInfo)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.upNextTracks)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.lastUpdated)
+    override func tearDown() async throws {
+        defaults?.removePersistentDomain(forName: suiteName)
+        manager = nil
         defaults = nil
-        try super.tearDownWithError()
+        suiteName = ""
+        try await super.tearDown()
     }
 
-    func testUpdatePlaybackStatePersistsStateAndSyncDate() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
-
+    func testUpdatePlaybackStatePersistsStateAndSyncDate() {
         let state = WidgetPlaybackState(
             isPlaying: true,
             currentTime: 30,
@@ -55,15 +45,11 @@ final class AppGroupManagerTests: XCTestCase {
         XCTAssertEqual(loaded.hasNext, state.hasNext)
         XCTAssertEqual(loaded.hasPrevious, state.hasPrevious)
         XCTAssertEqual(loaded.playbackRate, state.playbackRate, accuracy: 0.0001)
-        XCTAssertEqual(manager.loadLastUpdated(), defaults?.object(forKey: WidgetConstants.Keys.lastUpdated) as? Date)
+        XCTAssertEqual(manager.loadLastUpdated(), defaults.object(forKey: WidgetConstants.Keys.lastUpdated) as? Date)
         XCTAssertNotNil(manager.lastSyncDate)
     }
 
-    func testUpdatePlaybackStateSkipsMeaninglessProgressOnlyChanges() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
-
+    func testUpdatePlaybackStateSkipsMeaninglessProgressOnlyChanges() {
         let baseline = WidgetPlaybackState(
             isPlaying: true,
             currentTime: 10,
@@ -91,11 +77,7 @@ final class AppGroupManagerTests: XCTestCase {
         XCTAssertEqual(loaded.duration, baseline.duration, accuracy: 0.0001)
     }
 
-    func testUpdateTrackInfoSavesAndClearsData() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
-
+    func testUpdateTrackInfoSavesAndClearsData() {
         let track = makeTrackInfo(title: "One", artist: "Artist")
         manager.updateTrackInfo(track)
         XCTAssertEqual(manager.loadTrackInfo(), track)
@@ -108,12 +90,8 @@ final class AppGroupManagerTests: XCTestCase {
         XCTAssertNil(manager.loadTrackInfo())
     }
 
-    func testUpdateUpNextTracksTruncatesToFive() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
-
-        let tracks = (0..<7).map { index in
+    func testUpdateUpNextTracksTruncatesToFive() {
+        let tracks = (0 ..< 7).map { index in
             makeTrackInfo(title: "Track-\(index)", artist: "Artist-\(index)")
         }
 
@@ -124,11 +102,7 @@ final class AppGroupManagerTests: XCTestCase {
         XCTAssertEqual(loaded.map(\.title), tracks.prefix(5).map(\.title))
     }
 
-    func testClearAllDataResetsPersistedWidgetState() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
-
+    func testClearAllDataResetsPersistedWidgetState() {
         manager.updatePlaybackState(
             WidgetPlaybackState(
                 isPlaying: true,
@@ -141,7 +115,7 @@ final class AppGroupManagerTests: XCTestCase {
             )
         )
         manager.updateTrackInfo(makeTrackInfo(title: "To Clear", artist: "Artist"))
-        manager.updateUpNextTracks((0..<3).map { makeTrackInfo(title: "Up-\($0)", artist: "Artist") })
+        manager.updateUpNextTracks((0 ..< 3).map { makeTrackInfo(title: "Up-\($0)", artist: "Artist") })
 
         manager.clearAllData()
 
@@ -151,14 +125,91 @@ final class AppGroupManagerTests: XCTestCase {
         XCTAssertNil(manager.lastSyncDate)
     }
 
-    private func makeTrackInfo(title: String, artist: String) -> WidgetTrackInfo {
+    func testRelaunchedManagerClearsPriorProcessTrackAndUpNext() throws {
+        let suiteName = "AppGroupManagerTests.\(UUID().uuidString)"
+        let isolatedDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { isolatedDefaults.removePersistentDomain(forName: suiteName) }
+
+        let priorProcess = AppGroupManager(defaults: isolatedDefaults)
+        let current = makeTrackInfo(title: "Prior", artist: "Artist")
+        let upcoming = makeTrackInfo(title: "Upcoming", artist: "Artist")
+        priorProcess.updateTrackInfo(current)
+        priorProcess.updateUpNextTracks([upcoming])
+
+        let relaunched = AppGroupManager(defaults: isolatedDefaults)
+        XCTAssertEqual(relaunched.loadTrackInfo(), current)
+        XCTAssertEqual(relaunched.loadUpNextTracks(), [upcoming])
+
+        XCTAssertTrue(relaunched.updateTrackInfo(nil))
+        XCTAssertTrue(relaunched.updateUpNextTracks([]))
+        XCTAssertNil(relaunched.loadTrackInfo())
+        XCTAssertTrue(relaunched.loadUpNextTracks().isEmpty)
+    }
+
+    func testSameTrackCanGainArtworkWithoutChangingIdentity() throws {
+        let suiteName = "AppGroupManagerTests.\(UUID().uuidString)"
+        let isolatedDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { isolatedDefaults.removePersistentDomain(forName: suiteName) }
+
+        let isolatedManager = AppGroupManager(defaults: isolatedDefaults)
+        let trackId = UUID()
+        let placeholder = makeTrackInfo(
+            id: trackId,
+            title: "Track",
+            artist: "Artist",
+            artworkKey: nil
+        )
+        let resolved = makeTrackInfo(
+            id: trackId,
+            title: "Track",
+            artist: "Artist",
+            artworkKey: trackId.uuidString
+        )
+
+        XCTAssertTrue(isolatedManager.updateTrackInfo(placeholder))
+        XCTAssertTrue(isolatedManager.updateTrackInfo(resolved))
+        XCTAssertEqual(isolatedManager.loadTrackInfo(), resolved)
+    }
+
+    func testQueuePayloadWritesAdvancePersistedSyncDate() throws {
+        let suiteName = "AppGroupManagerTests.\(UUID().uuidString)"
+        let isolatedDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { isolatedDefaults.removePersistentDomain(forName: suiteName) }
+
+        let isolatedManager = AppGroupManager(defaults: isolatedDefaults)
+        XCTAssertTrue(
+            isolatedManager.updateTrackInfo(
+                makeTrackInfo(title: "Current", artist: "Artist")
+            )
+        )
+        XCTAssertNotNil(
+            isolatedDefaults.object(forKey: WidgetConstants.Keys.lastUpdated) as? Date
+        )
+
+        isolatedDefaults.removeObject(forKey: WidgetConstants.Keys.lastUpdated)
+        XCTAssertTrue(
+            isolatedManager.updateUpNextTracks([
+                makeTrackInfo(title: "Next", artist: "Artist"),
+            ])
+        )
+        XCTAssertNotNil(
+            isolatedDefaults.object(forKey: WidgetConstants.Keys.lastUpdated) as? Date
+        )
+    }
+
+    private func makeTrackInfo(
+        id: UUID = UUID(),
+        title: String,
+        artist: String,
+        artworkKey: String? = UUID().uuidString
+    ) -> WidgetTrackInfo {
         WidgetTrackInfo(
-            id: UUID(),
+            id: id,
             title: title,
             artist: artist,
             album: "Album",
             duration: 180,
-            artworkKey: UUID().uuidString,
+            artworkKey: artworkKey,
             audioFormat: "FLAC",
             isLossless: true
         )

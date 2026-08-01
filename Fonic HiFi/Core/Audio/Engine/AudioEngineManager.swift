@@ -23,6 +23,9 @@ public final class AudioEngineManager {
     private(set) var currentEngineType: AudioEngineType?
     private(set) var currentFormat: AudioFormat?
     private var pendingEngineSwitch: Bool = false
+    private(set) var equalizerConfiguration: EqualizerConfiguration = .default
+    private(set) var equalizerApplicationResult: EqualizerApplicationResult = .waitingForEngine
+    var equalizerApplicationResultHandler: (@MainActor (EqualizerApplicationResult) -> Void)?
 
     public private(set) var configuration: AudioEngineConfiguration
 
@@ -37,7 +40,7 @@ public final class AudioEngineManager {
         self.engineFactory = engineFactory
         self.monitor = monitor
 
-        logger.debug("AudioEngineManager initialised with configuration: \(String(describing: configuration.performanceMode))")
+        logger.debug("AudioEngineManager initialised with configuration: \(String(describing: configuration.performanceMode), privacy: .public)")
     }
 
     // MARK: - Engine Lifecycle
@@ -61,12 +64,13 @@ public final class AudioEngineManager {
         )
 
         if let engine = currentEngine, currentEngineType == requiredType {
-            logger.debug("Reusing existing engine for format: \(info.format.displayName)")
+            logger.debug("Reusing existing engine for format: \(info.format.displayName, privacy: .public)")
             do {
                 try await engine.configure(with: configuration)
+                await applyEqualizerConfiguration(to: engine)
                 return engine
             } catch {
-                logger.error("Failed to reconfigure engine: \(error.localizedDescription)")
+                logger.error("Failed to reconfigure engine: \(error.localizedDescription, privacy: .private)")
                 return try await recreateEngine(for: info, requiredType: requiredType)
             }
         }
@@ -83,8 +87,41 @@ public final class AudioEngineManager {
         do {
             try await engine.configure(with: configuration)
         } catch {
-            logger.warning("Failed to live-update engine configuration: \(error.localizedDescription)")
+            logger.warning("Failed to live-update engine configuration: \(error.localizedDescription, privacy: .private)")
         }
+    }
+
+    func bitPerfectEligibilityContext() async -> BitPerfectEligibilityContext {
+        let applicationVolume = if let currentEngine {
+            await currentEngine.volume
+        } else {
+            Float(1)
+        }
+
+        return BitPerfectEligibilityContext(
+            engineIdentifier: currentEngineType?.rawValue ?? "none",
+            applicationVolume: applicationVolume,
+            playbackRate: configuration.playbackRate,
+            replayGainEnabled: configuration.replayGainMode != .off,
+            equalizerEnabled: equalizerConfiguration.isEnabled
+        )
+    }
+
+    /// Retain the desired EQ configuration and apply it to the active engine.
+    ///
+    /// The retained value is reapplied whenever `ensureEngine(for:)` creates,
+    /// recreates, or reconfigures an engine.
+    @discardableResult
+    public func updateEqualizerConfiguration(
+        _ configuration: EqualizerConfiguration
+    ) async -> EqualizerApplicationResult {
+        equalizerConfiguration = configuration
+
+        guard let engine = currentEngine else {
+            return recordEqualizerApplicationResult(.waitingForEngine)
+        }
+
+        return await applyEqualizerConfiguration(to: engine)
     }
 
     /// Stop and release the current engine.
@@ -102,6 +139,39 @@ public final class AudioEngineManager {
         currentFormat = nil
 
         logger.debug("Cleaned up current audio engine")
+    }
+
+    /// Discard and recreate engine objects invalidated by a media-services reset.
+    ///
+    /// The previous engine must not receive any calls after the reset. Its
+    /// configuration and EQ state are retained by the manager and applied to the
+    /// replacement produced by the factory.
+    @discardableResult
+    public func rebuildEngineAfterMediaServicesReset(
+        for info: AudioFileInfo
+    ) async throws -> AudioEngineService {
+        let requiredType = engineFactory.selectEngineType(
+            for: info.format,
+            configuration: configuration
+        )
+
+        await discardEngineAfterMediaServicesReset()
+
+        logger.notice(
+            "Rebuilding \(requiredType.rawValue, privacy: .public) after media-services reset"
+        )
+        return try await recreateEngine(for: info, requiredType: requiredType)
+    }
+
+    /// Drop invalid engine references without invoking the engine.
+    public func discardEngineAfterMediaServicesReset() async {
+        pendingEngineSwitch = false
+        guard currentEngine != nil else { return }
+
+        await monitor.detachFromEngine()
+        currentEngine = nil
+        currentEngineType = nil
+        currentFormat = nil
     }
 
     /// Force recreation of the engine on next playback by clearing cached instance.
@@ -122,7 +192,7 @@ public final class AudioEngineManager {
     // MARK: - Helpers
 
     private func recreateEngine(for info: AudioFileInfo, requiredType: AudioEngineType) async throws -> AudioEngineService {
-        logger.debug("Creating new engine (\(requiredType.rawValue)) for format: \(info.format.displayName)")
+        logger.debug("Creating new engine (\(requiredType.rawValue, privacy: .public)) for format: \(info.format.displayName, privacy: .public)")
 
         await cleanupCurrentEngine()
 
@@ -136,6 +206,7 @@ public final class AudioEngineManager {
         currentEngine = engine
         currentEngineType = requiredType
         currentFormat = info.format
+        await applyEqualizerConfiguration(to: engine)
 
         Metrics.increment(.engineSwitch, metadata: [
             "type": requiredType.rawValue,
@@ -143,6 +214,53 @@ public final class AudioEngineManager {
         ])
 
         return engine
+    }
+
+    @discardableResult
+    private func applyEqualizerConfiguration(
+        to engine: AudioEngineService
+    ) async -> EqualizerApplicationResult {
+        let engineType = currentEngineType
+
+        guard equalizerConfiguration.isEnabled else {
+            if await engine.supportsEQ {
+                do {
+                    try await engine.applyEQ(equalizerConfiguration)
+                } catch {
+                    logger.error(
+                        "Failed to disable equalizer: \(error.localizedDescription, privacy: .private)"
+                    )
+                    return recordEqualizerApplicationResult(.failed(engine: engineType))
+                }
+            }
+            return recordEqualizerApplicationResult(.applied(engine: engineType))
+        }
+
+        guard await engine.supportsEQ else {
+            logger.warning(
+                "Equalizer is unavailable for \(engineType?.rawValue ?? "the current engine", privacy: .public)"
+            )
+            return recordEqualizerApplicationResult(.unsupported(engine: engineType))
+        }
+
+        do {
+            try await engine.applyEQ(equalizerConfiguration)
+            return recordEqualizerApplicationResult(.applied(engine: engineType))
+        } catch {
+            logger.error(
+                "Failed to apply equalizer: \(error.localizedDescription, privacy: .private)"
+            )
+            return recordEqualizerApplicationResult(.failed(engine: engineType))
+        }
+    }
+
+    @discardableResult
+    private func recordEqualizerApplicationResult(
+        _ result: EqualizerApplicationResult
+    ) -> EqualizerApplicationResult {
+        equalizerApplicationResult = result
+        equalizerApplicationResultHandler?(result)
+        return result
     }
 
     // MARK: - Testing Support
@@ -158,7 +276,7 @@ public final class AudioEngineManager {
             do {
                 try await engine.configure(with: configuration)
             } catch {
-                logger.warning("Failed to configure overridden engine: \(error.localizedDescription)")
+                logger.warning("Failed to configure overridden engine: \(error.localizedDescription, privacy: .private)")
             }
         }
     }

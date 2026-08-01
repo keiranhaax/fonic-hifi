@@ -4,6 +4,7 @@
 **Status:** implementation in progress; third bounded batch verified, with E-02 complete and E-07 split at shuffle-active editing
 **Audited revision:** `459db9bfd18d17960e8fd2ff8defc4701085532e` on `main`
 **Task order:** easiest to hardest, except the security response, which is urgent and external
+**Completion marker:** ✅ identifies a fully completed and verified ledger item; partial slices remain unchecked.
 
 ## Purpose and scope
 
@@ -169,7 +170,7 @@ For every implementation row:
 
 ### PRE-01 — Checkpoint the existing dirty worktree
 
-- **Status:** `SATISFIED FOR BATCHES 1–2` — the user explicitly authorized task commits; each batch recorded its starting revision/status, and every batch-2 path was clean before editing.
+- **Status:** `✅ SATISFIED FOR BATCHES 1–3` — the user explicitly authorized task commits; each batch recorded its starting revision/status, and every touched path was clean or an explicitly preserved deletion before editing.
 - **Outcome:** identify which current edits are intentional and establish a user-approved checkpoint or patch record before overlapping work.
 - **Verification:** current changes are attributable; no task diff contains unexplained pre-existing lines; the latest verified focused check is rerun after the checkpoint.
 - **Rollback:** return to the recorded checkpoint by task-scoped reverse patches only.
@@ -178,20 +179,20 @@ For every implementation row:
 
 | ID | Status | Outcome and source | Exact verification |
 |---|---|---|---|
-| E-01 | VERIFIED | Finish `.gitignore`: preserve the current main-project/`Package.resolved` fix, repair the corrupted `.apdiskbuild_verify.log` line, and add scoped log/local-config rules. A-C04, A-C07. | Ten path probes matched: eight intended artifacts/configs are ignored by repository rules; the authoritative project and pin are not ignored. `git diff --check` exits 0. |
-| E-02 | VERIFIED | Removed three tracked personal `xcuserdata` files in `b64b89d`, then removed the stale project backup and two tracked build logs in `814bf5e`. Existing ignore rules prevent regeneration from becoming tracked. PCFG-008, PSR-007, DCA-ART-001. | Each commit contained exactly three deletions, staged diff checks exited 0, the unrelated-worktree fingerprint remained unchanged, and post-deletion simulator builds succeeded in 2.0 s and 1.3 s with 0 errors. |
+| E-01 | ✅ VERIFIED | Finish `.gitignore`: preserve the current main-project/`Package.resolved` fix, repair the corrupted `.apdiskbuild_verify.log` line, and add scoped log/local-config rules. A-C04, A-C07. | Ten path probes matched: eight intended artifacts/configs are ignored by repository rules; the authoritative project and pin are not ignored. `git diff --check` exits 0. |
+| E-02 | ✅ VERIFIED | Removed three tracked personal `xcuserdata` files in `b64b89d`, then removed the stale project backup and two tracked build logs in `814bf5e`. Existing ignore rules prevent regeneration from becoming tracked. PCFG-008, PSR-007, DCA-ART-001. | Each commit contained exactly three deletions, staged diff checks exited 0, the unrelated-worktree fingerprint remained unchanged, and post-deletion simulator builds succeeded in 2.0 s and 1.3 s with 0 errors. |
 | E-03 | PENDING/OWNER | Resolve the mode-160000 orphan gitlink: remove it or restore a verified upstream plus `.gitmodules`. PCFG-006. | `git submodule status` exits 0 and a fresh clone has no broken gitlink. |
 | E-04 | PENDING/TOOLING | Add widget and UI-test roots to SwiftLint without enabling unrelated rule churn. SwiftLint is not installed on the selected host, and project rules prohibit installing it without approval. PCFG-009. | `swiftlint lint --strict` scans all four target roots and exits 0; touched source count is nonzero for each root. |
 | E-05 | BLOCKED(PRODUCT/SIGNING) | Decide APNs and Live Activities. Remove unused declarations through Xcode/capability tooling, or create separate implementation epics. PCFG-010/012, PSR-008/009. | Processed Release entitlements/Info.plist match the decision; archive signing succeeds. |
-| E-06 | VERIFIED (deletion path) | Delete the three inert `QueueCoordinator` APIs or delegate them to existing manager APIs with typed IDs/results. A-D05, DCA-PART-003. | For deletion: two independent reference probes find no inert API and `build-for-testing` produces the unit-test bundle. If retained in the future, positive mutation and persistence tests are required. |
+| E-06 | ✅ VERIFIED (deletion path) | Delete the three inert `QueueCoordinator` APIs or delegate them to existing manager APIs with typed IDs/results. A-D05, DCA-PART-003. | For deletion: two independent reference probes find no inert API and `build-for-testing` produces the unit-test bundle. If retained in the future, positive mutation and persistence tests are required. |
 | E-07 | PARTIAL — VERIFIED SHUFFLE-OFF SLICE | Queue edits now use atomic manager-owned `IndexSet` translation, preserve the current track at index 0/middle/last, support SwiftUI start/end and multi-row move semantics, reject invalid sets, and expose `EditButton`. Shuffle-active editing is intentionally disabled until its order/persistence contract is designed. AUD-QUEUE-001, UIUX-013. | 22 `AudioQueueManagerTests` passed with 0 failures/skips; explicit shuffle-active no-op coverage prevents the prior corruption path. |
-| E-08 | VERIFIED (disabled path) | Keep unsupported skip-forward/backward remote commands disabled while retaining absolute seek and the supported transport controls. AUD-REMOTE-001. | All 4 `AudioSessionServiceTests` passed; the direct command-center test proves both skip commands remain disabled after enabling supported controls. |
+| E-08 | ✅ VERIFIED (disabled path) | Keep unsupported skip-forward/backward remote commands disabled while retaining absolute seek and the supported transport controls. AUD-REMOTE-001. | All 4 `AudioSessionServiceTests` passed; the direct command-center test proves both skip commands remain disabled after enabling supported controls. |
 | E-09 | PENDING | Upsert normalized recent searches and render rows with persistent identity. DLP-015. | Repeating/case-variant queries leaves one row; ordering and delete tests pass. |
 | E-10 | PENDING | Persist all extracted ReplayGain gain/peak fields. DLP-008. | A focused metadata-to-model test asserts all four values survive save/re-fetch. |
 | E-11 | PENDING | Remove the nested `NavigationStack` in Audio Settings. UIUX-014. | Settings → Audio Settings → back/edge-swipe UI flow has one navigation stack and passes. |
 | E-12 | PENDING | Add a confirmation dialog that names the scope of Reset All Settings. UIUX-016. | Cancel preserves settings; confirm resets the documented keys; both UI paths pass. |
 | E-13 | PENDING | Render and enforce the Surprise Me busy/disabled state. UIUX-019. | Double activation starts exactly one request; progress state appears and clears on success/failure. |
-| E-14a | VERIFIED | Correct the stale widget provider comment to match its actual `TimelineProvider` conformance. A-F14. | Source comment and conformance agree; the app/widget build succeeds with 0 errors. |
+| E-14a | ✅ VERIFIED | Correct the stale widget provider comment to match its actual `TimelineProvider` conformance. A-F14. | Source comment and conformance agree; the app/widget build succeeds with 0 errors. |
 | E-14b | PENDING/SPLIT | Replace the unrelated HealthKit project reference with a concise Fonic-specific reference. A-B11. | Documentation paths/settings match current pbxproj, plist, and Swift 6 language mode; `git diff --check` exits 0. |
 | E-15 | PENDING/BATCHED | Triage production-unreferenced source one family at a time; delete only after two reference probes and ownership review. A-D01–04, A-D06–07, DCA-DEAD-001/002. | For each batch: two reference probes, focused tests, main build, then `git diff --check`; zero unrelated deletion. |
 

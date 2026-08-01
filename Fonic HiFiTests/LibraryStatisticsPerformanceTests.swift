@@ -5,15 +5,37 @@ import XCTest
 
 @MainActor
 final class LibraryStatisticsPerformanceTests: XCTestCase {
-    private func makeInMemoryContainer() throws -> ModelContainer {
-        let schema = Schema(SchemaV2.models)
+    private struct OnDiskFixture {
+        let container: ModelContainer
+        let storeURL: URL
+    }
+
+    private func makeOnDiskFixture() throws -> OnDiskFixture {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LibraryStatisticsPerformanceTests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+
+        let schema = Schema(versionedSchema: SchemaV3.self)
+        let storeURL = directory.appendingPathComponent("Library.store")
         let configuration = ModelConfiguration(
+            "LibraryStatisticsPerformanceFixture",
             schema: schema,
-            isStoredInMemoryOnly: true,
+            url: storeURL,
             allowsSave: true,
             cloudKitDatabase: .none
         )
-        return try ModelContainer(for: schema, configurations: [configuration])
+        return try OnDiskFixture(
+            container: ModelContainer(
+                for: schema,
+                migrationPlan: FonicHiFiMigrationPlan.self,
+                configurations: [configuration]
+            ),
+            storeURL: storeURL
+        )
     }
 
     private func makeDataManager(container: ModelContainer) async -> DataManager {
@@ -23,9 +45,14 @@ final class LibraryStatisticsPerformanceTests: XCTestCase {
     }
 
     func testStatisticsAggregationPerformance() async throws {
-        let container = try makeInMemoryContainer()
+        let laneStart = CFAbsoluteTimeGetCurrent()
+        let laneBudget: TimeInterval = 30
+        let fixture = try makeOnDiskFixture()
+        let container = fixture.container
         let dataManager = await makeDataManager(container: container)
         let totalTracks = 10_000
+        let aggregationBudget: TimeInterval = 1.8
+        let cachedReadBudget: TimeInterval = 0.1
         dataManager.libraryStatisticsCacheTTL = 10
 
         var expectedDuration: TimeInterval = 0
@@ -64,6 +91,10 @@ final class LibraryStatisticsPerformanceTests: XCTestCase {
             }
             try dataManager.mainContext.save()
         }
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: fixture.storeURL.path),
+            "The scale baseline must exercise a real on-disk SwiftData store"
+        )
 
         let start = CFAbsoluteTimeGetCurrent()
         let statistics = try await dataManager.getLibraryStatistics()
@@ -74,7 +105,11 @@ final class LibraryStatisticsPerformanceTests: XCTestCase {
         XCTAssertEqual(statistics.hiResTrackCount, expectedHiRes)
         XCTAssertEqual(statistics.totalDuration, expectedDuration, accuracy: 0.0001)
         XCTAssertEqual(statistics.totalFileSize, expectedFileSize)
-        XCTAssertLessThan(elapsed, 1.8, "Statistics aggregation should remain performant for large libraries")
+        XCTAssertLessThan(
+            elapsed,
+            aggregationBudget,
+            "On-disk aggregation of \(totalTracks) tracks exceeded the \(aggregationBudget)s baseline"
+        )
         XCTAssertEqual(dataManager.libraryStatisticsComputationCount, 1)
 
         let cachedStart = CFAbsoluteTimeGetCurrent()
@@ -82,7 +117,18 @@ final class LibraryStatisticsPerformanceTests: XCTestCase {
         let cachedElapsed = CFAbsoluteTimeGetCurrent() - cachedStart
 
         XCTAssertEqual(cachedStatistics.trackCount, totalTracks)
-        XCTAssertLessThan(cachedElapsed, 0.1, "Cached statistics should return near-instantly")
+        XCTAssertLessThan(
+            cachedElapsed,
+            cachedReadBudget,
+            "Cached statistics exceeded the \(cachedReadBudget)s baseline"
+        )
         XCTAssertEqual(dataManager.libraryStatisticsComputationCount, 1)
+
+        let laneElapsed = CFAbsoluteTimeGetCurrent() - laneStart
+        XCTAssertLessThan(
+            laneElapsed,
+            laneBudget,
+            "The complete \(totalTracks)-track scale lane exceeded the \(laneBudget)s CI budget"
+        )
     }
 }

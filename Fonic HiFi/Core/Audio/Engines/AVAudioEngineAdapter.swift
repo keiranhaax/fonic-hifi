@@ -12,6 +12,51 @@ import OSLog
     import Mach
 #endif
 
+public struct ProcessMetricsSnapshot: Sendable, Equatable {
+    public let cpuUsage: Float?
+    public let residentMemoryBytes: Int64?
+
+    public init(cpuUsage: Float?, residentMemoryBytes: Int64?) {
+        self.cpuUsage = cpuUsage
+        self.residentMemoryBytes = residentMemoryBytes
+    }
+}
+
+/// Narrow boundary for process-level measurements used by engine diagnostics.
+public protocol ProcessMetricsProviding: Sendable {
+    func currentProcessMetrics() -> ProcessMetricsSnapshot
+}
+
+public struct MachProcessMetricsProvider: ProcessMetricsProviding {
+    public init() {}
+
+    public func currentProcessMetrics() -> ProcessMetricsSnapshot {
+        #if canImport(Mach)
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(
+                    mach_task_self_,
+                    task_flavor_t(MACH_TASK_BASIC_INFO),
+                    $0,
+                    &count
+                )
+            }
+        }
+
+        if result == KERN_SUCCESS {
+            return ProcessMetricsSnapshot(
+                cpuUsage: nil,
+                residentMemoryBytes: Int64(info.resident_size)
+            )
+        }
+        #endif
+
+        return ProcessMetricsSnapshot(cpuUsage: nil, residentMemoryBytes: nil)
+    }
+}
+
 private actor BufferUnderrunTracker {
     private var count = 0
 
@@ -81,8 +126,27 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Total number of frames in the current file
     private var totalFrames: AVAudioFramePosition = 0
 
+    /// Absolute source frame where the active player's current schedule begins.
+    ///
+    /// `AVAudioPlayerNode.playerTime(forNodeTime:)` reports time relative to the
+    /// scheduled segment, so a seek must retain its source-frame base.
+    private var scheduledStartFrame: AVAudioFramePosition = 0
+
     /// Last render time for tracking playback position
     private var lastRenderTime: AVAudioTime?
+
+    private struct PreparedGaplessTransition {
+        let url: URL
+        let file: AVAudioFile
+        let sourceGeneration: UUID
+        let nextGeneration: UUID
+        let nextPlayerIsPrimary: Bool
+        let boundaryHostTime: UInt64
+    }
+
+    private var playbackGeneration: UUID?
+    private var preparedTransition: PreparedGaplessTransition?
+    private var unconsumedPreparedURL: URL?
 
     // Progress updates are handled by AudioEngineFacade's ProgressTimerManager
     // No local timer needed
@@ -90,8 +154,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Current playback state
     private var playbackState: PlaybackState = .idle
 
-    /// Audio session manager
-    private let sessionManager: any AudioSessionManaging
+    private let processMetricsProvider: any ProcessMetricsProviding
 
     private let logger = Log.logger(.audioEngine)
 
@@ -107,27 +170,35 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
     // MARK: - Initialization
 
-    public init(sessionManager: any AudioSessionManaging = AudioSessionManager.shared) {
-        self.sessionManager = sessionManager
+    public init(
+        processMetricsProvider: any ProcessMetricsProviding = MachProcessMetricsProvider()
+    ) throws {
+        self.processMetricsProvider = processMetricsProvider
         super.init()
-        setupEngine()
+        try setupEngine()
     }
 
     // MARK: - AudioEngineService Implementation
 
     public var currentTime: TimeInterval {
         get async {
+            guard let file = audioFile else { return 0 }
+
             let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
-            guard let playerTime = activePlayer.playerTime(forNodeTime: activePlayer.lastRenderTime ?? AVAudioTime()) else {
-                return 0
+            let nodeSampleTime: AVAudioFramePosition
+            if let renderTime = activePlayer.lastRenderTime,
+               let playerTime = activePlayer.playerTime(forNodeTime: renderTime) {
+                nodeSampleTime = playerTime.sampleTime
+            } else {
+                nodeSampleTime = 0
             }
 
-            if let file = audioFile {
-                let sampleRate = file.processingFormat.sampleRate
-                return Double(playerTime.sampleTime) / sampleRate
-            }
-
-            return 0
+            let absoluteFrame = Self.absolutePlaybackFrame(
+                scheduledStartFrame: scheduledStartFrame,
+                nodeSampleTime: nodeSampleTime,
+                totalFrames: totalFrames
+            )
+            return Double(absoluteFrame) / file.processingFormat.sampleRate
         }
     }
 
@@ -171,8 +242,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
 
     public func load(url: URL) async throws {
-        // Stop any current playback
-        await stop()
+        await unloadTrack()
         await bufferUnderruns.reset()
 
         do {
@@ -188,6 +258,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
             // Store total frames for duration calculation
             totalFrames = file.length
+            scheduledStartFrame = 0
 
             try reconnectPlayerNodesIfNeeded(for: file.processingFormat)
 
@@ -241,21 +312,19 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             logger.debug("4. Player node playing state: \(activePlayer.isPlaying, privacy: .public)")
         #endif
 
-        // Schedule file for playback
-        // CRITICAL: AVAudioPlayerNode completion handlers run on background threads
-        // per Apple documentation. We must explicitly dispatch to main actor.
-        activePlayer.scheduleFile(file, at: nil) { [weak self] in
-            #if DEBUG
-                self?.logger.debug("5. File playback completed")
-            #endif
-            // This closure runs on Core Audio's background thread
-            // Use Task to dispatch to MainActor safely
-            Task { @MainActor [weak self] in
-                self?.handlePlaybackCompletionSync()
-            }
-        }
+        let generation = UUID()
+        playbackGeneration = generation
+        preparedTransition = nil
+        unconsumedPreparedURL = nil
+        scheduledStartFrame = 0
+        activePlayer.scheduleFile(
+            file,
+            at: nil,
+            completionCallbackType: .dataPlayedBack,
+            completionHandler: Self.makeCompletionCallback(owner: self, generation: generation)
+        )
 
-        activePlayer.play()
+        try activePlayer.playAudio()
         #if DEBUG
             logger.debug("6. Called activePlayer.play()")
             logger.debug("7. Player node playing after play: \(activePlayer.isPlaying, privacy: .public)")
@@ -280,6 +349,11 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
 
     public func stop() async {
+        await unloadTrack()
+        await bufferUnderruns.reset()
+    }
+
+    private func unloadTrack() async {
         // Stop both players
         primaryPlayerNode.stop()
         secondaryPlayerNode.stop()
@@ -289,16 +363,13 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         // Reset position and gapless state
         audioFile = nil
         totalFrames = 0
+        scheduledStartFrame = 0
         preparedFile = nil
+        preparedTransition = nil
+        unconsumedPreparedURL = nil
+        playbackGeneration = nil
         hasNextPrepared = false
         isPrimaryActive = true
-        await bufferUnderruns.reset()
-
-        do {
-            try await sessionManager.activateSession(false)
-        } catch {
-            logger.error("Failed to deactivate audio session: \(String(describing: error), privacy: .private)")
-        }
     }
 
     public func seek(to time: TimeInterval) async throws {
@@ -309,38 +380,50 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
         let wasPlaying = activePlayer.isPlaying
 
-        // Stop current playback
-        activePlayer.stop()
-
         // Calculate frame position
         let sampleRate = file.processingFormat.sampleRate
+        let fileDuration = Double(file.length) / sampleRate
+        guard sampleRate > 0,
+              time.isFinite,
+              time >= 0,
+              time < fileDuration
+        else {
+            throw AudioError.invalidSeekPosition(time)
+        }
         let framePosition = AVAudioFramePosition(time * sampleRate)
-
-        // Validate seek position
         guard framePosition >= 0, framePosition < file.length else {
             throw AudioError.invalidSeekPosition(time)
         }
+
+        // Stop current playback only after validation so a rejected seek does
+        // not destroy the currently scheduled segment.
+        activePlayer.stop()
+        let inactivePlayer = isPrimaryActive ? secondaryPlayerNode : primaryPlayerNode
+        inactivePlayer.stop()
+        preparedFile = nil
+        preparedTransition = nil
+        unconsumedPreparedURL = nil
+        hasNextPrepared = false
 
         // Create new segment
         let framesToPlay = file.length - framePosition
 
         // Schedule segment
+        let generation = UUID()
+        playbackGeneration = generation
+        scheduledStartFrame = framePosition
         activePlayer.scheduleSegment(
             file,
             startingFrame: framePosition,
             frameCount: AVAudioFrameCount(framesToPlay),
             at: nil,
-        ) { [weak self] in
-            // This closure runs on Core Audio's background thread
-            // Use Task to dispatch to MainActor safely
-            Task { @MainActor [weak self] in
-                self?.handlePlaybackCompletionSync()
-            }
-        }
+            completionCallbackType: .dataPlayedBack,
+            completionHandler: Self.makeCompletionCallback(owner: self, generation: generation)
+        )
 
         // Resume if was playing
         if wasPlaying {
-            activePlayer.play()
+            try activePlayer.playAudio()
         }
     }
 
@@ -354,19 +437,9 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     public func configure(with configuration: AudioEngineConfiguration) async throws {
         self.configuration = configuration
 
-        // Apply configuration to engine
-        let format = engine.outputNode.outputFormat(forBus: 0)
-
         // If engine is running, we need to stop and reconfigure
         if engine.isRunning {
             engine.stop()
-
-            // Reconfigure with new settings
-            if let preferredSampleRate = configuration.sampleRate {
-                // Note: AVAudioEngine doesn't allow direct sample rate changes
-                // This would require recreating the engine
-            }
-
             try startEngine()
         }
     }
@@ -385,41 +458,128 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             preparedFile = try AVAudioFile(forReading: url)
             guard let file = preparedFile else { return }
 
-            // Schedule file on inactive player
-            inactivePlayer.scheduleFile(file, at: nil) { [weak self] in
-                Task { @MainActor [weak self] in
-                    self?.handlePlaybackCompletionSync()
-                }
+            inactivePlayer.stop()
+            hasNextPrepared = true
+
+            guard let sourceFile = audioFile,
+                  let sourceGeneration = playbackGeneration,
+                  let renderTime = (isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode).lastRenderTime,
+                  let playerTime = (isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode)
+                    .playerTime(forNodeTime: renderTime)
+            else {
+                logger.debug(
+                    "Prepared next track without render-boundary scheduling; normal transition fallback remains active"
+                )
+                return
             }
 
-            hasNextPrepared = true
-            logger.debug("Prepared next track for gapless playback: \(url.lastPathComponent)")
+            guard !formatsDiffer(sourceFile.processingFormat, file.processingFormat) else {
+                logger.info(
+                    "Prepared next track uses a different processing format; using an honest non-gapless fallback"
+                )
+                return
+            }
+
+            let currentSourceFrame = Self.absolutePlaybackFrame(
+                scheduledStartFrame: scheduledStartFrame,
+                nodeSampleTime: playerTime.sampleTime,
+                totalFrames: sourceFile.length
+            )
+            let remainingFrames = max(0, sourceFile.length - currentSourceFrame)
+            let delay = Self.gaplessBoundaryDelay(
+                remainingFrames: remainingFrames,
+                sampleRate: sourceFile.processingFormat.sampleRate,
+                playbackRate: currentPlaybackRate
+            )
+            let boundaryHostTime = renderTime.hostTime &+ AVAudioTime.hostTime(forSeconds: delay)
+            let nextGeneration = UUID()
+
+            inactivePlayer.scheduleFile(
+                file,
+                at: nil,
+                completionCallbackType: .dataPlayedBack,
+                completionHandler: Self.makeCompletionCallback(
+                    owner: self,
+                    generation: nextGeneration
+                )
+            )
+            try inactivePlayer.playAudio(at: AVAudioTime(hostTime: boundaryHostTime))
+
+            preparedTransition = PreparedGaplessTransition(
+                url: url,
+                file: file,
+                sourceGeneration: sourceGeneration,
+                nextGeneration: nextGeneration,
+                nextPlayerIsPrimary: !isPrimaryActive,
+                boundaryHostTime: boundaryHostTime
+            )
+            logger.debug("Prepared next track for gapless playback: \(url.lastPathComponent, privacy: .private(mask: .hash))")
         } catch {
-            logger.error("Failed to prepare next track: \(error.localizedDescription)")
+            logger.error("Failed to prepare next track: \(error.localizedDescription, privacy: .private)")
             preparedFile = nil
+            preparedTransition = nil
             hasNextPrepared = false
         }
     }
 
-    public func getMetrics() async -> AudioMetrics {
-        let cpuUsage = getCurrentCPUUsage()
-        let memoryUsage = getCurrentMemoryUsage()
+    public func invalidatePreparedTransition() async {
+        guard preparedTransition != nil || hasNextPrepared else { return }
+
+        let inactivePlayer = isPrimaryActive ? secondaryPlayerNode : primaryPlayerNode
+        inactivePlayer.stop()
+        preparedFile = nil
+        preparedTransition = nil
+        hasNextPrepared = false
+        unconsumedPreparedURL = nil
+    }
+
+    public func consumePreparedTransition(to url: URL) async -> PreparedTrackTransition {
+        guard unconsumedPreparedURL == url, audioFile?.url == url else {
+            return .none
+        }
+        unconsumedPreparedURL = nil
+        return .renderBoundary
+    }
+
+    public var metricsAvailability: AudioMetricsAvailability {
+        .partial
+    }
+
+    /// AVAudioEngine exposes route/format/latency and the installed underrun tap,
+    /// but not decoder latency, buffer fill, dropped frames, or process CPU.
+    public func availableMetrics() async -> AudioMetrics? {
+        let processMetrics = processMetricsProvider.currentProcessMetrics()
+        let outputFormat = engine.outputNode.outputFormat(forBus: 0)
+        let streamDescription = outputFormat.streamDescription.pointee
+        let sampleRate = outputFormat.sampleRate
+        let channelCount = Int(outputFormat.channelCount)
+        let bitDepth = Int(streamDescription.mBitsPerChannel)
+        let bufferSize = Int(audioSessionBufferFrames(sampleRate: sampleRate))
+        let renderLatency = AVAudioSession.sharedInstance().outputLatency
 
         return AudioMetrics(
-            cpuUsage: cpuUsage,
-            memoryUsage: memoryUsage,
-        bufferUnderruns: await bufferUnderruns.value(),
-            decodingLatency: 0.001, // AVAudioEngine has very low latency
-            bufferFillLevel: 1.0,
+            engineMetricsAvailability: .partial,
+            cpuUsage: processMetrics.cpuUsage ?? 0,
+            memoryUsage: processMetrics.residentMemoryBytes ?? 0,
+            bufferUnderruns: await bufferUnderruns.value(),
+            decodingLatency: 0,
+            bufferFillLevel: 0,
             droppedFrames: 0,
-            renderLatency: 0.005,
+            renderLatency: renderLatency,
             timestamp: Date(),
+            sampleRate: sampleRate,
+            bitDepth: bitDepth,
+            channelCount: channelCount,
+            engineType: AudioEngineType.avAudioEngine.rawValue,
+            audioFormat: audioFile?.url.pathExtension.lowercased() ?? "unknown",
+            isBitPerfect: await isBitPerfect,
+            bufferSize: bufferSize
         )
     }
 
     // MARK: - Private Methods
 
-    private func setupEngine() {
+    private func setupEngine() throws {
         // Attach primary chain nodes
         engine.attach(primaryPlayerNode)
         engine.attach(primaryTimePitchNode)
@@ -436,16 +596,16 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         let format = engine.outputNode.outputFormat(forBus: 0)
 
         // Primary chain: primaryPlayer → primaryTimePitch → submix
-        engine.connect(primaryPlayerNode, to: primaryTimePitchNode, format: nil)
-        engine.connect(primaryTimePitchNode, to: submixNode, format: format)
+        try engine.connectNode(primaryPlayerNode, to: primaryTimePitchNode, format: nil)
+        try engine.connectNode(primaryTimePitchNode, to: submixNode, format: format)
 
         // Secondary chain: secondaryPlayer → secondaryTimePitch → submix
-        engine.connect(secondaryPlayerNode, to: secondaryTimePitchNode, format: nil)
-        engine.connect(secondaryTimePitchNode, to: submixNode, format: format)
+        try engine.connectNode(secondaryPlayerNode, to: secondaryTimePitchNode, format: nil)
+        try engine.connectNode(secondaryTimePitchNode, to: submixNode, format: format)
 
         // Master chain: submix → EQ → mainMixer
-        engine.connect(submixNode, to: eqNode, format: format)
-        engine.connect(eqNode, to: engine.mainMixerNode, format: format)
+        try engine.connectNode(submixNode, to: eqNode, format: format)
+        try engine.connectNode(eqNode, to: engine.mainMixerNode, format: format)
 
         // Configure EQ bands with standard frequencies
         configureEQBands()
@@ -455,21 +615,47 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
 
     /// Insert EQ node into the audio graph
-    private func insertEQIntoGraph() {
+    private func insertEQIntoGraph() throws {
         guard !isEQInGraph else { return }
         engine.disconnectNodeOutput(submixNode)
-        engine.connect(submixNode, to: eqNode, format: nil)
-        engine.connect(eqNode, to: engine.mainMixerNode, format: nil)
+        do {
+            try engine.connectNode(submixNode, to: eqNode, format: nil)
+            try engine.connectNode(eqNode, to: engine.mainMixerNode, format: nil)
+        } catch {
+            engine.disconnectNodeOutput(submixNode)
+            engine.disconnectNodeOutput(eqNode)
+            do {
+                try engine.connectNode(submixNode, to: engine.mainMixerNode, format: nil)
+            } catch {
+                logger.fault(
+                    "Failed to restore EQ bypass graph: \(error.localizedDescription, privacy: .private)"
+                )
+            }
+            throw error
+        }
         isEQInGraph = true
         logger.debug("EQ node inserted into audio graph")
     }
 
     /// Remove EQ node from the audio graph for true bit-perfect bypass
-    private func removeEQFromGraph() {
+    private func removeEQFromGraph() throws {
         guard isEQInGraph else { return }
         engine.disconnectNodeOutput(submixNode)
         engine.disconnectNodeOutput(eqNode)
-        engine.connect(submixNode, to: engine.mainMixerNode, format: nil)
+        do {
+            try engine.connectNode(submixNode, to: engine.mainMixerNode, format: nil)
+        } catch {
+            engine.disconnectNodeOutput(submixNode)
+            do {
+                try engine.connectNode(submixNode, to: eqNode, format: nil)
+                try engine.connectNode(eqNode, to: engine.mainMixerNode, format: nil)
+            } catch {
+                logger.fault(
+                    "Failed to restore EQ processing graph: \(error.localizedDescription, privacy: .private)"
+                )
+            }
+            throw error
+        }
         isEQInGraph = false
         logger.debug("EQ node removed from audio graph for bit-perfect bypass")
     }
@@ -519,8 +705,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
         engine.disconnectNodeOutput(primaryPlayerNode)
         engine.disconnectNodeOutput(secondaryPlayerNode)
-        engine.connect(primaryPlayerNode, to: primaryTimePitchNode, format: fileFormat)
-        engine.connect(secondaryPlayerNode, to: secondaryTimePitchNode, format: fileFormat)
+        try engine.connectNode(primaryPlayerNode, to: primaryTimePitchNode, format: fileFormat)
+        try engine.connectNode(secondaryPlayerNode, to: secondaryTimePitchNode, format: fileFormat)
 
         logger.debug(
             """
@@ -557,17 +743,23 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         let format = engine.mainMixerNode.outputFormat(forBus: 0)
         let tracker = bufferUnderruns
 
-        engine.mainMixerNode.installTap(
-            onBus: 0,
-            bufferSize: 1024,
-            format: format,
-            block: Self.makeMonitoringTap(tracker: tracker)
-        )
+        do {
+            try engine.mainMixerNode.installAudioTap(
+                onBus: 0,
+                bufferSize: 1024,
+                format: format,
+                tapProvider: Self.makeMonitoringTap(tracker: tracker)
+            )
+        } catch {
+            logger.warning(
+                "Audio underrun monitoring is unavailable: \(error.localizedDescription, privacy: .private)"
+            )
+        }
     }
 
     private nonisolated static func makeMonitoringTap(
         tracker: BufferUnderrunTracker
-    ) -> AVAudioNodeTapBlock {
+    ) -> @Sendable (AVReadOnlyAudioPCMBuffer, AVAudioTime) -> Void {
         { buffer, _ in
             guard buffer.frameLength == 0 else { return }
             Task {
@@ -576,55 +768,34 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         }
     }
 
-    private func getCurrentCPUUsage() -> Float {
-        #if canImport(Mach)
-            // Simplified CPU usage calculation
-            // In production, use proper system APIs
-            var info = mach_task_basic_info()
-            var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
-
-            let result = withUnsafeMutablePointer(to: &info) {
-                $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
-                    task_info(
-                        mach_task_self_,
-                        task_flavor_t(MACH_TASK_BASIC_INFO),
-                        $0,
-                        &count,
-                    )
-                }
-            }
-
-            if result == KERN_SUCCESS {
-                // This is a simplified calculation
-                return Float(info.resident_size) / Float(1024 * 1024 * 1024) * 100
-            }
-        #endif
-
-        return 0
+    static func gaplessBoundaryDelay(
+        remainingFrames: AVAudioFramePosition,
+        sampleRate: Double,
+        playbackRate: Double
+    ) -> TimeInterval {
+        guard remainingFrames > 0, sampleRate > 0, playbackRate > 0 else {
+            return 0
+        }
+        return Double(remainingFrames) / sampleRate / playbackRate
     }
 
-    private func getCurrentMemoryUsage() -> Int64 {
-        #if canImport(Mach)
-            var info = mach_task_basic_info()
-            var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+    static func absolutePlaybackFrame(
+        scheduledStartFrame: AVAudioFramePosition,
+        nodeSampleTime: AVAudioFramePosition,
+        totalFrames: AVAudioFramePosition
+    ) -> AVAudioFramePosition {
+        guard totalFrames > 0 else { return 0 }
 
-            let result = withUnsafeMutablePointer(to: &info) {
-                $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
-                    task_info(
-                        mach_task_self_,
-                        task_flavor_t(MACH_TASK_BASIC_INFO),
-                        $0,
-                        &count,
-                    )
-                }
-            }
+        let startFrame = min(max(0, scheduledStartFrame), totalFrames)
+        let relativeFrame = max(0, nodeSampleTime)
+        let (absoluteFrame, overflowed) = startFrame.addingReportingOverflow(relativeFrame)
+        guard !overflowed else { return totalFrames }
+        return min(absoluteFrame, totalFrames)
+    }
 
-            if result == KERN_SUCCESS {
-                return Int64(info.resident_size)
-            }
-        #endif
-
-        return 0
+    private func audioSessionBufferFrames(sampleRate: Double) -> AVAudioFrameCount {
+        let duration = AVAudioSession.sharedInstance().ioBufferDuration
+        return AVAudioFrameCount(max(duration * sampleRate, 0))
     }
 
     // MARK: - Playback Rate
@@ -647,16 +818,15 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
     /// Apply an equalizer configuration to the audio output
     /// Uses true bypass (removes EQ node from graph) when disabled for bit-perfect playback
-    public func applyEQ(_ configuration: EqualizerConfiguration) async {
-        eqConfiguration = configuration
-        isEQEnabled = configuration.isEnabled
-
+    public func applyEQ(_ configuration: EqualizerConfiguration) async throws {
         if configuration.isEnabled {
             // Ensure EQ is in the graph
             if !isEQInGraph {
-                insertEQIntoGraph()
+                try insertEQIntoGraph()
             }
 
+            eqConfiguration = configuration
+            isEQEnabled = true
             for (index, band) in configuration.bands.enumerated() where index < 10 {
                 eqNode.bands[index].frequency = band.frequency
                 eqNode.bands[index].bandwidth = band.bandwidth
@@ -670,12 +840,16 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         } else {
             // Remove EQ from graph for true bit-perfect bypass
             if isEQInGraph {
-                removeEQFromGraph()
+                try removeEQFromGraph()
             }
+            eqConfiguration = configuration
+            isEQEnabled = false
             engine.mainMixerNode.outputVolume = 1.0  // Reset to unity
         }
 
-        logger.debug("EQ \(configuration.isEnabled ? "enabled" : "disabled") with preset: \(LogPrivacy.truncated(configuration.presetName ?? "Custom", limit: 32))")
+        let enabledState = configuration.isEnabled ? "enabled" : "disabled"
+        let presetName = LogPrivacy.truncated(configuration.presetName ?? "Custom", limit: 32)
+        logger.debug("EQ \(enabledState, privacy: .public) with preset: \(presetName, privacy: .private)")
     }
 
     // MARK: - Completion Handler
@@ -685,13 +859,48 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         completionHandler = handler
     }
 
-    /// Handle playback completion synchronously on main thread
-    /// This is called from Task { @MainActor in } to avoid RealtimeMessenger crashes
-    private func handlePlaybackCompletionSync() {
-        playbackState = .stopped
+    private nonisolated static func makeCompletionCallback(
+        owner: AVAudioEngineAdapter,
+        generation: UUID
+    ) -> @Sendable (AVAudioPlayerNodeCompletionCallbackType) -> Void {
+        { [weak owner] _ in
+            Task { @MainActor [weak owner] in
+                owner?.handlePlaybackCompletion(generation: generation)
+            }
+        }
+    }
 
-        // Call completion handler if it exists
+    private func handlePlaybackCompletion(generation: UUID) {
+        guard playbackGeneration == generation else { return }
+
+        if let transition = preparedTransition,
+           transition.sourceGeneration == generation {
+            commitPreparedTransition(transition)
+            completionHandler?()
+            return
+        }
+
+        playbackState = .stopped
+        scheduledStartFrame = totalFrames
+        playbackGeneration = nil
         completionHandler?()
+    }
+
+    private func commitPreparedTransition(_ transition: PreparedGaplessTransition) {
+        let sourcePlayer = transition.nextPlayerIsPrimary
+            ? secondaryPlayerNode
+            : primaryPlayerNode
+        sourcePlayer.stop()
+        isPrimaryActive = transition.nextPlayerIsPrimary
+        audioFile = transition.file
+        totalFrames = transition.file.length
+        scheduledStartFrame = 0
+        playbackGeneration = transition.nextGeneration
+        preparedFile = nil
+        preparedTransition = nil
+        hasNextPrepared = false
+        unconsumedPreparedURL = transition.url
+        playbackState = .playing(currentTime: 0, duration: Double(transition.file.length) / transition.file.processingFormat.sampleRate)
     }
 
     deinit {

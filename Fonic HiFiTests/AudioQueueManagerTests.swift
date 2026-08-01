@@ -1,5 +1,6 @@
 @testable import Fonic_HiFi
 import Foundation
+import Synchronization
 import XCTest
 
 @MainActor
@@ -39,9 +40,7 @@ final class AudioQueueManagerTests: XCTestCase {
         Metrics.enable(true)
         Metrics.setSinkForTesting { counter, amount, _, metadata in
             guard counter == .queueMutation else { return }
-            Task {
-                await recorder.record(counter: counter, amount: amount, metadata: metadata)
-            }
+            recorder.record(counter: counter, amount: amount, metadata: metadata)
         }
 
         let queue = AudioQueueManager()
@@ -50,7 +49,7 @@ final class AudioQueueManagerTests: XCTestCase {
         let trackB = makeTrack(title: longTitle)
 
         queue.enqueue(tracks: [trackA, trackB])
-        var events = await recorder.takeEvents()
+        var events = recorder.takeEvents()
         XCTAssertEqual(events.count, 1)
         if let event = events.first {
             XCTAssertEqual(event.counter, .queueMutation)
@@ -62,7 +61,7 @@ final class AudioQueueManagerTests: XCTestCase {
 
         XCTAssertTrue(queue.setCurrentIndex(0))
         _ = queue.next()
-        events = await recorder.takeEvents()
+        events = recorder.takeEvents()
         XCTAssertEqual(events.count, 1)
         if let event = events.first {
             XCTAssertEqual(event.metadata["action"], "next")
@@ -72,7 +71,7 @@ final class AudioQueueManagerTests: XCTestCase {
         }
 
         XCTAssertNotNil(queue.remove(at: 1))
-        events = await recorder.takeEvents()
+        events = recorder.takeEvents()
         XCTAssertEqual(events.count, 1)
         if let event = events.first {
             XCTAssertEqual(event.metadata["action"], "remove")
@@ -83,7 +82,7 @@ final class AudioQueueManagerTests: XCTestCase {
         }
 
         queue.clear()
-        events = await recorder.takeEvents()
+        events = recorder.takeEvents()
         XCTAssertEqual(events.count, 1)
         if let event = events.first {
             XCTAssertEqual(event.metadata["action"], "clear")
@@ -113,6 +112,30 @@ final class AudioQueueManagerTests: XCTestCase {
         let wrappedAdvance = queue.next()
         XCTAssertEqual(wrappedAdvance?.id, tracks[0].id)
         XCTAssertEqual(queue.history.map(\._id), [tracks[2].id, tracks[1].id, tracks[0].id])
+    }
+
+    func testManualNextAndPreviousAdvanceUnderRepeatOne() {
+        let queue = AudioQueueManager()
+        let tracks = [makeTrack(title: "One"), makeTrack(title: "Two"), makeTrack(title: "Three")]
+
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(1))
+        queue.repeatMode = .one
+
+        XCTAssertEqual(queue.nextManually()?.id, tracks[2].id)
+        XCTAssertEqual(queue.previousManually()?.id, tracks[1].id)
+    }
+
+    func testNaturalNextStillRepeatsUnderRepeatOne() {
+        let queue = AudioQueueManager()
+        let tracks = [makeTrack(title: "One"), makeTrack(title: "Two"), makeTrack(title: "Three")]
+
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(1))
+        queue.repeatMode = .one
+
+        XCTAssertEqual(queue.next()?.id, tracks[1].id)
+        XCTAssertEqual(queue.currentIndex, 1)
     }
 
     func testShuffleAndRestoreOrderPreservesCurrentTrack() {
@@ -400,8 +423,14 @@ final class AudioQueueManagerTests: XCTestCase {
         XCTAssertFalse(queue.moveToPrevious())
     }
 
-    func testSaveRestoreAndClearState() {
-        let queue = AudioQueueManager()
+    func testSaveRestoreAndClearState() async {
+        let suiteName = "AudioQueueManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Unable to create isolated defaults suite")
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let queue = AudioQueueManager(queueStateSuiteName: suiteName)
         let tracks = [
             makeTrack(title: "Keep", createFile: true),
             makeTrack(title: "Rotate", createFile: true),
@@ -409,23 +438,57 @@ final class AudioQueueManagerTests: XCTestCase {
         queue.enqueue(tracks: tracks)
         XCTAssertTrue(queue.setCurrentIndex(1))
 
-        queue.saveState()
+        await queue.saveState(playbackPosition: 42.5)
 
-        let restored = AudioQueueManager()
-        XCTAssertTrue(restored.restoreState())
+        let restored = AudioQueueManager(queueStateSuiteName: suiteName)
+        let didRestore = await restored.restoreState()
+        XCTAssertTrue(didRestore)
         XCTAssertEqual(restored.tracks.map(\._id), tracks.map(\._id))
         XCTAssertEqual(restored.currentIndex, 1)
+        XCTAssertEqual(restored.queueState.lastPlaybackPosition, 42.5, accuracy: 0.001)
 
-        restored.clearSavedState()
+        await restored.clearSavedState()
 
-        let empty = AudioQueueManager()
-        XCTAssertFalse(empty.restoreState())
+        let empty = AudioQueueManager(queueStateSuiteName: suiteName)
+        let didRestoreEmptyState = await empty.restoreState()
+        XCTAssertFalse(didRestoreEmptyState)
     }
 
-    func testShuffledEditsPersistTraversalAndCanonicalOrder() {
-        let queue = AudioQueueManager()
-        queue.clearSavedState()
-        defer { queue.clearSavedState() }
+    func testChangingCurrentTrackResetsPersistedPosition() async {
+        let suiteName = "AudioQueueManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Unable to create isolated defaults suite")
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let queue = AudioQueueManager(queueStateSuiteName: suiteName)
+        let tracks = [
+            makeTrack(title: "First", createFile: true),
+            makeTrack(title: "Second", createFile: true),
+        ]
+        queue.enqueue(tracks: tracks)
+        XCTAssertTrue(queue.setCurrentIndex(0))
+        await queue.saveState(playbackPosition: 42.5)
+
+        XCTAssertTrue(queue.setCurrentIndex(1))
+        await queue.flushPendingPersistence()
+
+        let restored = AudioQueueManager(queueStateSuiteName: suiteName)
+        let didRestore = await restored.restoreState()
+        XCTAssertTrue(didRestore)
+        XCTAssertEqual(restored.currentIndex, 1)
+        XCTAssertEqual(restored.queueState.lastPlaybackPosition, 0, accuracy: 0.001)
+    }
+
+    func testShuffledEditsPersistTraversalAndCanonicalOrder() async {
+        let suiteName = "AudioQueueManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Unable to create isolated defaults suite")
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let queue = AudioQueueManager(queueStateSuiteName: suiteName)
+        await queue.clearSavedState()
 
         let tracks = ["A", "B", "C", "D"].map { makeTrack(title: $0, createFile: true) }
         queue.enqueue(tracks: tracks)
@@ -434,10 +497,11 @@ final class AudioQueueManagerTests: XCTestCase {
         queue.moveRemaining(fromOffsets: IndexSet(integer: 0), toOffset: 3)
         let traversalIDs = queue.tracks.map(\._id)
         let currentID = queue.currentTrack?.id
-        queue.saveState()
+        await queue.saveState()
 
-        let restored = AudioQueueManager()
-        XCTAssertTrue(restored.restoreState())
+        let restored = AudioQueueManager(queueStateSuiteName: suiteName)
+        let didRestore = await restored.restoreState()
+        XCTAssertTrue(didRestore)
         XCTAssertEqual(restored.tracks.map(\._id), traversalIDs)
         XCTAssertEqual(restored.currentTrack?.id, currentID)
 
@@ -445,6 +509,8 @@ final class AudioQueueManagerTests: XCTestCase {
 
         XCTAssertEqual(restored.tracks.map(\._id), tracks.map(\._id))
         XCTAssertEqual(restored.currentTrack?.id, currentID)
+
+        await queue.clearSavedState()
     }
 
     func testDebugInfoAndValidateState() {
@@ -500,17 +566,22 @@ final class AudioQueueManagerTests: XCTestCase {
 
 // MARK: - Helpers
 
-private actor QueueMetricsRecorder {
-    private var events: [(counter: MetricsCounter, amount: Int, metadata: [String: String])] = []
+private final class QueueMetricsRecorder: Sendable {
+    typealias Event = (counter: MetricsCounter, amount: Int, metadata: [String: String])
+    private let events = Mutex<[Event]>([])
 
     func record(counter: MetricsCounter, amount: Int, metadata: [String: String]) {
-        events.append((counter, amount, metadata))
+        events.withLock {
+            $0.append((counter, amount, metadata))
+        }
     }
 
-    func takeEvents() -> [(counter: MetricsCounter, amount: Int, metadata: [String: String])] {
-        let snapshot = events
-        events.removeAll()
-        return snapshot
+    func takeEvents() -> [Event] {
+        events.withLock {
+            let snapshot = $0
+            $0.removeAll()
+            return snapshot
+        }
     }
 }
 

@@ -5,20 +5,25 @@
 //  Created by Claude on 5/29/25.
 //
 
+import OSLog
 import SwiftUI
 
 /// Individual track row component used in track lists
 @MainActor
 struct TrackRowView: View {
     let track: Track
-    @Environment(\.audioEngine) private var audioService
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.showingNowPlaying) private var showingNowPlaying
     @Environment(\.themePalette) private var theme
 
     private let logger = Log.logger(.library)
 
     private var isCurrentlyPlaying: Bool {
-        audioService?.currentTrack?.id == track.id
+        audioService.currentTrack?.id == track.id
+    }
+
+    private var availabilityPresentation: TrackRowAvailabilityPresentation {
+        TrackRowAvailabilityPresentation(availability: track.fileAvailability)
     }
 
     var body: some View {
@@ -26,7 +31,11 @@ struct TrackRowView: View {
             HStack(spacing: 12) {
                 // Track number or playing indicator
                 ZStack {
-                    if isCurrentlyPlaying, audioService?.isPlaying == true {
+                    if let unavailableSymbol = availabilityPresentation.systemImage {
+                        Image(systemName: unavailableSymbol)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if isCurrentlyPlaying, audioService.isPlaying {
                         Image(systemName: "speaker.wave.2.fill")
                             .font(.caption)
                             .foregroundColor(theme.accent)
@@ -48,6 +57,13 @@ struct TrackRowView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
+
+                    if let statusText = availabilityPresentation.statusText {
+                        Text(statusText)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
 
                 Spacer()
@@ -62,11 +78,14 @@ struct TrackRowView: View {
             .background(isCurrentlyPlaying ? theme.subtle : Color.clear)
         }
         .buttonStyle(.plain)
+        .disabled(!availabilityPresentation.isPlaybackEnabled)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Play \(track.title) by \(track.artist)")
-        .accessibilityHint("Plays this track")
-        .disabled(audioService == nil)
-        .opacity(audioService?.isReady == true ? 1.0 : 0.6) // Visual feedback for initialization state
+        .accessibilityLabel(availabilityPresentation.accessibilityLabel(
+            title: track.title,
+            artist: track.artist
+        ))
+        .accessibilityHint(availabilityPresentation.accessibilityHint)
+        .opacity(audioService.isReady && availabilityPresentation.isPlaybackEnabled ? 1.0 : 0.6)
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -77,8 +96,8 @@ struct TrackRowView: View {
 
     @MainActor
     private func playTrack() {
-        guard let audioService else {
-            logger.error("playTrack: audioService is nil")
+        guard availabilityPresentation.isPlaybackEnabled else {
+            logger.info("Unavailable track selection ignored")
             return
         }
 
@@ -87,8 +106,8 @@ struct TrackRowView: View {
         logger.info("""
             Track selected for playback
             - audioService ID: \(serviceID, privacy: .private(mask: .hash))
-            - isReady: \(audioService.isReady)
-            - isPlaying: \(audioService.isPlaying)
+            - isReady: \(audioService.isReady, privacy: .public)
+            - isPlaying: \(audioService.isPlaying, privacy: .public)
             """)
 
         audioService.setCurrentTrack(track)
@@ -104,6 +123,36 @@ struct TrackRowView: View {
                 audioService.setCurrentTrack(nil)
                 showingNowPlaying.wrappedValue = false
             }
+        }
+    }
+}
+
+struct TrackRowAvailabilityPresentation: Equatable {
+    let isPlaybackEnabled: Bool
+    let statusText: String?
+    let systemImage: String?
+    let accessibilityHint: String
+
+    init(availability: TrackFileAvailability) {
+        switch availability {
+        case .available:
+            isPlaybackEnabled = true
+            statusText = nil
+            systemImage = nil
+            accessibilityHint = "Plays this track"
+        case .temporarilyUnavailable:
+            isPlaybackEnabled = false
+            statusText = "File unavailable"
+            systemImage = "exclamationmark.triangle"
+            accessibilityHint = "The file is temporarily unavailable. Fonic HiFi will check again later."
+        }
+    }
+
+    func accessibilityLabel(title: String, artist: String) -> String {
+        if isPlaybackEnabled {
+            "Play \(title) by \(artist)"
+        } else {
+            "Unavailable: \(title) by \(artist)"
         }
     }
 }

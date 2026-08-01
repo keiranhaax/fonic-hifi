@@ -66,6 +66,37 @@ public enum AudioEngineType: String, CaseIterable, Sendable {
     }
 }
 
+/// Typed interpretation of the persisted engine preference.
+public enum AudioEnginePreference: Equatable, Sendable {
+    public static let storageKey = "preferredAudioEngine"
+
+    case automatic
+    case requested(AudioEngineType)
+    case unsupported
+
+    public init(storedValue: String?) {
+        switch storedValue {
+        case nil, "":
+            self = .automatic
+        case AudioEngineType.avAudioEngine.rawValue:
+            self = .requested(.avAudioEngine)
+        case "AudioKit", AudioEngineType.audioKitEngine.rawValue:
+            self = .requested(.audioKitEngine)
+        default:
+            self = .unsupported
+        }
+    }
+
+    public var canonicalStoredValue: String? {
+        switch self {
+        case .automatic, .unsupported:
+            nil
+        case .requested(let engineType):
+            engineType.rawValue
+        }
+    }
+}
+
 /// Performance impact of using a specific engine
 public enum PerformanceImpact: String, Sendable {
     case low = "Low"

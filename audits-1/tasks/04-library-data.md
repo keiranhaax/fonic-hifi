@@ -2,7 +2,7 @@
 
 ## AUDIT-017 — Repository correctness: cheap counts, no N+1 mapping, search via repository, refresh after writes
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (DLP-011, DLP-012, DLP-013, DLP-014, CP-014)
 - Audit finding IDs: CAN-011 (residual), DLP-011, DLP-013, DLP-014 (residual)
@@ -34,10 +34,10 @@ Use `fetchCount`-style cheap counts (or drop unused totals); precompute row coun
 Preserve SwiftData query semantics and schema. Keep view-model changes minimal — request-ownership redesign is AUDIT-018.
 
 ### Acceptance Criteria
-- [ ] Page fetch performs no full-result hydration for counts (verified via fetch instrumentation or fetchCount assertion)
-- [ ] 10k-track on-disk fixture: album/artist pages return correct counts without per-row relationship faults
-- [ ] Search results are complete (or explicitly paged), never silently truncated
-- [ ] Import completion refreshes visible library state exactly once
+- [x] Page fetch performs no full-result hydration for counts (verified via fetch instrumentation or fetchCount assertion)
+- [x] 10k-track on-disk fixture: album/artist pages return correct counts without per-row relationship faults
+- [x] Search results are complete (or explicitly paged), never silently truncated
+- [x] Import completion refreshes visible library state exactly once
 
 ### Suggested Verification
 Repository unit tests against an on-disk fixture store; performance comparison at 10k tracks (with AUDIT-051 benchmarks).
@@ -49,14 +49,14 @@ Query-plan changes can alter ordering/paging; lock with characterization tests f
 Ledger H-10/H-12 (data slices).
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Repository pages now use store-side counts, prefetch relationship counts, expose explicit paging without a hidden standard-search cap, and refresh through the library revision signal. The selected repository/library validation lane passed, including the 10k-track fixture; the assembled simulator build succeeded.
 
 ## AUDIT-018 — Give each Library section explicit request ownership and load phases
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: WP4-R03
 - Audit finding IDs: WP4-R03
@@ -88,10 +88,10 @@ Per WP4-R03: store a per-section request task or generation, set stored loading 
 Preserve tabs, page size, prefetch threshold, item identity, import/create actions, error text, and visual layout. No repository query changes (AUDIT-017 owns those).
 
 ### Acceptance Criteria
-- [ ] Out-of-order completion cannot overwrite newer results (async test)
-- [ ] Duplicate threshold trigger issues one request
-- [ ] Tab/query change cancels in-flight requests
-- [ ] Initial-load vs pagination present distinct UI states
+- [x] Out-of-order completion cannot overwrite newer results (async test)
+- [x] Duplicate threshold trigger issues one request
+- [x] Tab/query change cancels in-flight requests
+- [x] Initial-load vs pagination present distinct UI states
 
 ### Suggested Verification
 Executable async view-model tests; UI smoke on Library tabs.
@@ -103,14 +103,14 @@ Loading indicators and empty-state logic; lock with tests before refactor.
 WP4 requires approval before implementation — treat this task's landing as that approval checkpoint.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Each Library section now owns its request generation, task, and initial/pagination phase; duplicate pagination is suppressed and revision changes refresh visible data. Deterministic request-ownership tests passed in the selected library lane; the assembled simulator build succeeded.
 
 ## AUDIT-019 — Complete the playlist mutation path
 
-- Status: [TODO]
+- Status: [DONE]
 - Priority: P2
 - Audit sources: Model B (DLP-010)
 - Audit finding IDs: DLP-010
@@ -142,9 +142,9 @@ Route playlist create/add/remove/reorder through `TrackDataActor`/repository (vi
 No schema change expected (verify relationships exist). Preserve current UI design.
 
 ### Acceptance Criteria
-- [ ] Add/remove/reorder survive app relaunch (on-disk test)
-- [ ] Mutations go through the model-actor/repository boundary
-- [ ] Views refresh once after each write
+- [x] Add/remove/reorder survive app relaunch (on-disk test)
+- [x] Mutations go through the model-actor/repository boundary
+- [x] Views refresh once after each write
 
 ### Suggested Verification
 Repository/actor tests + UI flow test creating and editing a playlist.
@@ -156,7 +156,7 @@ Relationship delete rules; verify no cascade deletes tracks.
 Ledger H-10 slice.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-26
+- Completed: 2026-07-26
+- Commit: Not requested
+- Verification result: Playlist create/add/remove/reorder now run through the model actor, the editor refreshes after successful writes, and an on-disk test verifies persistence across container reopen. The selected playlist tests passed and the integrated Library UI compiled in the simulator build.

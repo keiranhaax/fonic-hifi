@@ -5,12 +5,12 @@
 //  Created by Assistant on 12/22/24.
 //
 
+import OSLog
 import SwiftUI
 
 struct SettingsView: View {
     // MARK: - AppStorage (inline toggles)
 
-    @AppStorage("enableBitPerfectPlayback") private var bitPerfectEnabled = false
     @AppStorage("darkModeEnabled") private var darkModeEnabled = true
     @AppStorage("showNowPlayingAnimation") private var animationEnabled = true
     @AppStorage("enableHapticFeedback") private var hapticsEnabled = true
@@ -20,6 +20,7 @@ struct SettingsView: View {
     @State private var showingResetConfirmation = false
 
     @Environment(\.themePalette) private var theme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private let logger = Log.logger(.presentation)
 
@@ -36,7 +37,7 @@ struct SettingsView: View {
                             icon: "speaker.wave.3.fill",
                             iconColor: .orange,
                             title: "Audio Engine",
-                            subtitle: "Quality, engine, buffer settings"
+                            subtitle: "Engine and playback settings",
                         )
                     }
 
@@ -48,14 +49,6 @@ struct SettingsView: View {
                             iconColor: .purple,
                             title: "Equalizer",
                             subtitle: "10-band parametric EQ"
-                        )
-                    }
-
-                    Toggle(isOn: $bitPerfectEnabled) {
-                        SettingsRow(
-                            icon: "waveform",
-                            iconColor: .blue,
-                            title: "Bit-Perfect Mode"
                         )
                     }
                 }
@@ -200,7 +193,7 @@ struct SettingsView: View {
             }
             .tint(theme.accent)
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(dynamicTypeSize.isAccessibilitySize ? .inline : .large)
             .alert(
                 "Reset all settings?",
                 isPresented: $showingResetConfirmation
@@ -217,10 +210,13 @@ struct SettingsView: View {
 
     // MARK: - Computed Properties
 
-    private var appVersionString: String {
+    private var appVersionString: LocalizedStringResource {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "Version \(version) (\(build))"
+        return LocalizedStringResource(
+            "Version \(version) (\(build))",
+            comment: "App version followed by the build number"
+        )
     }
 
     // MARK: - Actions
@@ -234,7 +230,6 @@ struct SettingsView: View {
     }
 
     private func resetSettings() {
-        bitPerfectEnabled = false
         darkModeEnabled = true
         animationEnabled = true
         hapticsEnabled = true
@@ -250,8 +245,8 @@ struct SettingsView: View {
 struct SettingsRow: View {
     let icon: String
     let iconColor: Color
-    let title: String
-    var subtitle: String?
+    let title: LocalizedStringResource
+    var subtitle: LocalizedStringResource?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -275,5 +270,11 @@ struct SettingsRow: View {
 // MARK: - Preview
 
 #Preview {
-    SettingsView()
+    if let importService = DataManager.makePreviewImportService() {
+        SettingsView()
+            .audioEngine(AudioEngineFacade())
+            .importService(importService)
+    } else {
+        Text("Preview unavailable")
+    }
 }

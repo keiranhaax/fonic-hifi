@@ -38,7 +38,16 @@ public final class QueueCoordinator {
 
     /// Play the next track in the queue
     public func playNext() async throws {
-        guard let nextTrack = queueManager.next() else {
+        try await playNext(queueManager.nextManually())
+    }
+
+    /// Play the repeat-aware next track after natural completion.
+    func playNextAfterCompletion() async throws {
+        try await playNext(queueManager.next())
+    }
+
+    private func playNext(_ nextTrack: AudioTrack?) async throws {
+        guard let nextTrack else {
             logger.info("No next track available")
             await playbackController.stop()
             return
@@ -57,7 +66,7 @@ public final class QueueCoordinator {
 
     /// Play the previous track in the queue
     public func playPrevious() async throws {
-        guard let previousTrack = queueManager.previous() else {
+        guard let previousTrack = queueManager.previousManually() else {
             logger.info("No previous track available")
             return
         }
@@ -80,7 +89,7 @@ public final class QueueCoordinator {
     public func enqueue(_ tracks: [Track]) {
         let audioTracks = tracks.map { $0.toAudioTrack() }
         queueManager.enqueue(tracks: audioTracks)
-        logger.info("Enqueued \(tracks.count) tracks")
+        logger.info("Enqueued \(tracks.count, privacy: .public) tracks")
     }
 
     /// Add a track to play next
@@ -96,14 +105,14 @@ public final class QueueCoordinator {
     /// - Parameter mode: Shuffle mode to set
     public func setShuffleMode(_ mode: QueueShuffleMode) {
         queueManager.shuffleMode = mode
-        logger.info("Shuffle mode set to: \(String(describing: mode))")
+        logger.info("Shuffle mode set to: \(String(describing: mode), privacy: .public)")
     }
 
     /// Set repeat mode
     /// - Parameter mode: Repeat mode to set
     public func setRepeatMode(_ mode: QueueRepeatMode) {
         queueManager.repeatMode = mode
-        logger.info("Repeat mode set to: \(String(describing: mode))")
+        logger.info("Repeat mode set to: \(String(describing: mode), privacy: .public)")
     }
 
     /// Get the current shuffle mode

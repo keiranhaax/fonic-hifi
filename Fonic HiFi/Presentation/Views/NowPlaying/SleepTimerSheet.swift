@@ -3,6 +3,7 @@ import SwiftUI
 /// Sheet for configuring and monitoring the sleep timer.
 struct SleepTimerSheet: View {
     @ObservedObject var timerManager: SleepTimerManager
+    let startTimer: @MainActor (_ seconds: Int, _ fadeOutDuration: Int) async -> Bool
     @Environment(\.dismiss) private var dismiss
 
     // MARK: - Timer Presets
@@ -82,7 +83,7 @@ struct SleepTimerSheet: View {
         Section {
             ForEach(presets, id: \.seconds) { preset in
                 Button {
-                    startTimer(seconds: preset.seconds)
+                    beginTimer(seconds: preset.seconds)
                 } label: {
                     HStack {
                         Text(preset.label)
@@ -127,10 +128,13 @@ struct SleepTimerSheet: View {
 
     // MARK: - Helpers
 
-    private func startTimer(seconds: Int) {
-        timerManager.fadeOutDuration = enableFadeOut ? Int(fadeOutDuration) : 0
-        timerManager.start(seconds: seconds, currentVolume: 1.0)
-        dismiss()
+    private func beginTimer(seconds: Int) {
+        let fadeDuration = enableFadeOut ? Int(fadeOutDuration) : 0
+        Task { @MainActor in
+            if await startTimer(seconds, fadeDuration) {
+                dismiss()
+            }
+        }
     }
 
     private func formatTime(_ seconds: Int) -> String {
@@ -147,5 +151,13 @@ struct SleepTimerSheet: View {
 }
 
 #Preview {
-    SleepTimerSheet(timerManager: SleepTimerManager())
+    let manager = SleepTimerManager()
+    SleepTimerSheet(
+        timerManager: manager,
+        startTimer: { seconds, fadeOutDuration in
+            manager.fadeOutDuration = fadeOutDuration
+            manager.start(seconds: seconds, currentVolume: 1)
+            return true
+        }
+    )
 }

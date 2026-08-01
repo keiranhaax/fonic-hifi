@@ -114,6 +114,11 @@ public extension WidgetPlaybackState {
     /// Save to App Group UserDefaults
     func save() {
         guard let defaults = UserDefaults.appGroup else { return }
+        save(to: defaults)
+    }
+
+    /// Save to an explicitly provided store.
+    func save(to defaults: UserDefaults) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
 
@@ -125,9 +130,15 @@ public extension WidgetPlaybackState {
 
     /// Load from App Group UserDefaults
     static func load() -> WidgetPlaybackState? {
-        guard let defaults = UserDefaults.appGroup,
-              let data = defaults.data(forKey: WidgetConstants.Keys.playbackState)
-        else { return nil }
+        guard let defaults = UserDefaults.appGroup else { return nil }
+        return load(from: defaults)
+    }
+
+    /// Load from an explicitly provided store.
+    static func load(from defaults: UserDefaults) -> WidgetPlaybackState? {
+        guard let data = defaults.data(forKey: WidgetConstants.Keys.playbackState) else {
+            return nil
+        }
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -138,5 +149,10 @@ public extension WidgetPlaybackState {
     /// Load or return idle state
     static func loadOrIdle() -> WidgetPlaybackState {
         load() ?? .idle
+    }
+
+    /// Load from an explicitly provided store or return idle state.
+    static func loadOrIdle(from defaults: UserDefaults) -> WidgetPlaybackState {
+        load(from: defaults) ?? .idle
     }
 }

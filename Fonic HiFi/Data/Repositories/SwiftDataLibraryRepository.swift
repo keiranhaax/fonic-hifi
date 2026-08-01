@@ -44,16 +44,16 @@ public actor SwiftDataLibraryRepository: LibraryRepository {
             descriptor: descriptor,
             page: page,
             pageSize: pageSize,
-            includeTotalCount: true,
         )
         let result = try fetch.execute(in: context)
         let mapped = result.items.map(TrackEntity.init(track:))
-        return Page(items: mapped, hasMore: result.hasMore, nextPage: page + 1, totalCount: result.totalCount)
+        return Page(items: mapped, hasMore: result.hasMore, nextPage: page + 1)
     }
 
     public func albums(page: Int, pageSize: Int, searchQuery: String?) async throws -> Page<AlbumEntity> {
         let context = makeContext()
         var descriptor = FetchDescriptor<Album>(sortBy: [SortDescriptor(\.title)])
+        descriptor.relationshipKeyPathsForPrefetching = [\Album.tracks]
 
         if let query = normalized(searchQuery) {
             descriptor.predicate = #Predicate<Album> { album in
@@ -66,26 +66,31 @@ public actor SwiftDataLibraryRepository: LibraryRepository {
             descriptor: descriptor,
             page: page,
             pageSize: pageSize,
-            includeTotalCount: true,
         )
         let result = try fetch.execute(in: context)
+        let trackCounts = Dictionary(
+            uniqueKeysWithValues: result.items.map { album in
+                (album.id, album.tracks.count)
+            }
+        )
         let mapped = result.items.map { album in
             AlbumEntity(
                 id: album.id,
                 title: album.title,
                 albumArtist: album.albumArtist,
-                trackCount: album.trackCount,
+                trackCount: trackCounts[album.id, default: 0],
                 artworkSha: nil,
                 year: album.year,
                 dateAdded: album.dateAdded,
             )
         }
-        return Page(items: mapped, hasMore: result.hasMore, nextPage: page + 1, totalCount: result.totalCount)
+        return Page(items: mapped, hasMore: result.hasMore, nextPage: page + 1)
     }
 
     public func artists(page: Int, pageSize: Int, searchQuery: String?) async throws -> Page<ArtistEntity> {
         let context = makeContext()
         var descriptor = FetchDescriptor<Artist>(sortBy: [SortDescriptor(\.sortName)])
+        descriptor.relationshipKeyPathsForPrefetching = [\Artist.albums, \Artist.tracks]
 
         if let query = normalized(searchQuery) {
             descriptor.predicate = #Predicate<Artist> { artist in
@@ -98,19 +103,24 @@ public actor SwiftDataLibraryRepository: LibraryRepository {
             descriptor: descriptor,
             page: page,
             pageSize: pageSize,
-            includeTotalCount: true,
         )
         let result = try fetch.execute(in: context)
+        let relationshipCounts = Dictionary(
+            uniqueKeysWithValues: result.items.map { artist in
+                (artist.id, (albums: artist.albums.count, tracks: artist.tracks.count))
+            }
+        )
         let mapped = result.items.map { artist in
-            ArtistEntity(
+            let counts = relationshipCounts[artist.id] ?? (albums: 0, tracks: 0)
+            return ArtistEntity(
                 id: artist.id,
                 name: artist.name,
                 sortName: artist.sortName,
-                albumCount: artist.albumCount,
-                trackCount: artist.trackCount,
+                albumCount: counts.albums,
+                trackCount: counts.tracks,
             )
         }
-        return Page(items: mapped, hasMore: result.hasMore, nextPage: page + 1, totalCount: result.totalCount)
+        return Page(items: mapped, hasMore: result.hasMore, nextPage: page + 1)
     }
 
     public func playlists(page: Int, pageSize: Int, searchQuery: String?) async throws -> Page<PlaylistEntity> {
@@ -128,11 +138,10 @@ public actor SwiftDataLibraryRepository: LibraryRepository {
             descriptor: descriptor,
             page: page,
             pageSize: pageSize,
-            includeTotalCount: true,
         )
         let result = try fetch.execute(in: context)
         let mapped = result.items.map { PlaylistEntity(playlist: $0) }
-        return Page(items: mapped, hasMore: result.hasMore, nextPage: page + 1, totalCount: result.totalCount)
+        return Page(items: mapped, hasMore: result.hasMore, nextPage: page + 1)
     }
 
     public func recentAdditions(limit: Int) async throws -> [TrackEntity] {

@@ -15,7 +15,7 @@ struct MorphableArtwork: View {
     let size: CGFloat
     let namespace: Namespace.ID
     let isSource: Bool
-    @Environment(\.audioEngine) private var audioService
+    @EnvironmentObject private var audioService: AudioEngineFacade
 
     init(size: CGFloat, namespace: Namespace.ID, isSource: Bool = true) {
         self.size = size
@@ -37,7 +37,7 @@ struct MorphableArtwork: View {
 
     @ViewBuilder
     private var artworkContent: some View {
-        if let artworkData = audioService?.currentTrack?.artwork,
+        if let artworkData = audioService.currentTrack?.artwork,
            let uiImage = UIImage(data: artworkData) {
             Image(uiImage: uiImage)
                 .resizable()
@@ -72,7 +72,7 @@ struct MorphableArtwork: View {
     @Previewable @State var audioService = AudioEngineFacade()
 
     MorphableArtwork(size: 30, namespace: namespace)
-        .environment(\.audioEngine, audioService)
+        .audioEngine(audioService)
         .padding()
         .background(Color.black)
 }
@@ -82,7 +82,7 @@ struct MorphableArtwork: View {
     @Previewable @State var audioService = AudioEngineFacade()
 
     MorphableArtwork(size: 280, namespace: namespace)
-        .environment(\.audioEngine, audioService)
+        .audioEngine(audioService)
         .padding()
         .background(Color.black)
 }

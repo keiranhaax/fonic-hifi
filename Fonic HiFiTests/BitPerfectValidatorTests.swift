@@ -142,6 +142,51 @@ final class BitPerfectValidatorTests: XCTestCase {
         XCTAssertEqual(deviceManager.currentCapabilitiesCallCount, 1)
         XCTAssertEqual(analyzer.detectCallCount, 1)
         XCTAssertEqual(recommendationEngine.recommendedCallCount, 1)
+
+        let changedDSPContext = BitPerfectEligibilityContext(
+            engineIdentifier: AudioEngineType.avAudioEngine.rawValue,
+            applicationVolume: 1,
+            playbackRate: 1,
+            replayGainEnabled: false,
+            equalizerEnabled: true
+        )
+        _ = await validator.validateBitPerfectPlayback(
+            sourceFormat: sourceFormat,
+            outputDevice: nil,
+            context: changedDSPContext
+        )
+
+        XCTAssertEqual(deviceManager.currentCapabilitiesCallCount, 2)
+        XCTAssertEqual(analyzer.detectCallCount, 2)
+        XCTAssertEqual(recommendationEngine.recommendedCallCount, 2)
+    }
+
+    func testEligibleResultDoesNotClaimMeasuredOutputWithoutCompleteEvidence() {
+        let eligible = BitPerfectValidationResult(
+            isValid: true,
+            expectedSampleRate: 96_000,
+            actualSampleRate: 96_000,
+            expectedBitDepth: 24,
+            actualBitDepth: 24
+        )
+
+        XCTAssertEqual(eligible.claimLevel, .eligible)
+        XCTAssertEqual(eligible.statusSummary, "Bit-perfect eligible (not measured)")
+        XCTAssertTrue(
+            eligible.missingMeasurementEvidence.contains(.physicalOutputBitComparison)
+        )
+
+        let measured = BitPerfectValidationResult(
+            isValid: true,
+            measurementEvidence: Set(BitPerfectMeasurementEvidence.allCases),
+            expectedSampleRate: 96_000,
+            actualSampleRate: 96_000,
+            expectedBitDepth: 24,
+            actualBitDepth: 24
+        )
+
+        XCTAssertEqual(measured.claimLevel, .measured)
+        XCTAssertEqual(measured.statusSummary, "Bit-perfect output measured")
     }
 
     func testAnalyzeAudioPathUsesValidationEngineCollaborators() async {

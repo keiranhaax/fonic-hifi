@@ -8,7 +8,7 @@ struct SmartSearchIntegrationTests {
 
     @Test("SmartSearchService handles various query types")
     @MainActor
-    func handlesVariousQueries() async {
+    func handlesVariousQueries() async throws {
         let service = SmartSearchService()
         let trackIDs = (0..<20).map { _ in UUID() }
         let metadata: [(id: UUID, title: String, artist: String, genre: String?)] = trackIDs.map {
@@ -16,7 +16,7 @@ struct SmartSearchIntegrationTests {
         }
 
         // Exact query
-        let exactResult = await service.smartSearch(
+        let exactResult = try await service.smartSearch(
             query: "Track",
             sessions: [],
             availableTrackIDs: trackIDs,
@@ -25,7 +25,7 @@ struct SmartSearchIntegrationTests {
         #expect(exactResult.searchStrategy.isEmpty == false)
 
         // Descriptive query
-        let descriptiveResult = await service.smartSearch(
+        let descriptiveResult = try await service.smartSearch(
             query: "something chill for the evening",
             sessions: [],
             availableTrackIDs: trackIDs,
@@ -34,7 +34,7 @@ struct SmartSearchIntegrationTests {
         #expect(descriptiveResult.searchStrategy.isEmpty == false)
 
         // Empty query
-        let emptyResult = await service.smartSearch(
+        let emptyResult = try await service.smartSearch(
             query: "",
             sessions: [],
             availableTrackIDs: trackIDs,

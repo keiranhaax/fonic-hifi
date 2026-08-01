@@ -36,12 +36,61 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         let expectedValue = enabled ? "1" : "0"
         guard element.value as? String != expectedValue else { return }
 
+        XCTAssertTrue(element.isHittable)
         element.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
         let expectation = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", expectedValue),
             object: element
         )
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 3), .completed)
+    }
+
+    private func assertMinimumTouchTarget(
+        _ element: XCUIElement,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let measurementTolerance = 0.01
+        XCTAssertGreaterThanOrEqual(
+            element.frame.width,
+            44 - measurementTolerance,
+            file: file,
+            line: line
+        )
+        XCTAssertGreaterThanOrEqual(
+            element.frame.height,
+            44 - measurementTolerance,
+            file: file,
+            line: line
+        )
+    }
+
+    private func attachScreenshot(
+        of _: XCUIApplication,
+        named name: String
+    ) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    private func waitForOrientation(
+        _ orientation: UIDeviceOrientation,
+        in app: XCUIApplication
+    ) {
+        let window = app.windows.firstMatch
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { object, _ in
+                guard let element = object as? XCUIElement else { return false }
+                let frame = element.frame
+                return orientation.isLandscape
+                    ? frame.width > frame.height
+                    : frame.height > frame.width
+            },
+            object: window
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 5), .completed)
     }
 
     func testLibraryTabAndNowPlayingSheet() throws {
@@ -64,6 +113,181 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
 
         let nowPlayingHeader = app.staticTexts["Now Playing"]
         XCTAssertTrue(nowPlayingHeader.waitForExistence(timeout: 5), "Now Playing view did not present")
+
+        let dismissNowPlaying = app.buttons["DismissNowPlayingButton"]
+        XCTAssertTrue(dismissNowPlaying.waitForExistence(timeout: 3))
+        XCTAssertTrue(dismissNowPlaying.isHittable)
+        assertMinimumTouchTarget(dismissNowPlaying)
+        dismissNowPlaying.tap()
+        XCTAssertFalse(nowPlayingHeader.waitForExistence(timeout: 1))
+    }
+
+    func testNowPlayingAX5SmallPhoneInitialViewports() throws {
+        addTeardownBlock {
+            XCUIDevice.shared.orientation = .portrait
+        }
+
+        let orientations: [(name: String, value: UIDeviceOrientation)] = [
+            ("portrait", .portrait),
+            ("landscape", .landscapeLeft),
+        ]
+
+        for orientation in orientations {
+            XCUIDevice.shared.orientation = orientation.value
+            let app = launchPreviewApp()
+            waitForOrientation(orientation.value, in: app)
+
+            let miniPlayer = app.otherElements["MiniPlayer"]
+            XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
+            miniPlayer.tap()
+
+            let nowPlayingHeader = app.staticTexts["Now Playing"]
+            XCTAssertTrue(nowPlayingHeader.waitForExistence(timeout: 5))
+
+            let dismiss = app.buttons["DismissNowPlayingButton"]
+            XCTAssertTrue(dismiss.isHittable)
+            assertMinimumTouchTarget(dismiss)
+
+            XCTAssertTrue(app.buttons["ShuffleButton"].exists)
+            XCTAssertTrue(app.buttons["Previous track"].exists)
+            XCTAssertTrue(app.buttons["Next track"].exists)
+            XCTAssertTrue(app.buttons["RepeatButton"].exists)
+            XCTAssertTrue(app.sliders["PlaybackVolumeSlider"].exists)
+
+            attachScreenshot(
+                of: app,
+                named: "Now Playing - iPhone 17e - AX5 - \(orientation.name) - initial viewport"
+            )
+            app.terminate()
+        }
+    }
+
+    func testDoubleLengthAndRightToLeftInitialViewports() throws {
+        let configurations: [(name: String, arguments: [String])] = [
+            (
+                "double-length",
+                ["-UITestLibraryData", "-NSDoubleLocalizedStrings", "YES"]
+            ),
+            (
+                "right-to-left",
+                [
+                    "-UITestLibraryData",
+                    "-AppleTextDirection",
+                    "YES",
+                    "-NSForceRightToLeftWritingDirection",
+                    "YES",
+                    "-NSForceRightToLeftLocalizedStrings",
+                    "YES",
+                ]
+            ),
+        ]
+
+        for configuration in configurations {
+            let app = launchPreviewApp(arguments: configuration.arguments)
+            let tabBar = app.tabBars.firstMatch
+            XCTAssertTrue(tabBar.waitForExistence(timeout: 10))
+
+            if configuration.name == "double-length" {
+                for title in ["Home", "Library", "Settings", "Search"] {
+                    let button = tabButton(title, in: app)
+                    XCTAssertTrue(button.exists, "\(title) tab lost its semantic label")
+                    XCTAssertTrue(
+                        button.label.localizedCaseInsensitiveContains(title),
+                        "\(title) tab exposed an icon name instead of localized text"
+                    )
+                }
+
+                for title in ["Shuffle All", "Surprise Me"] {
+                    let button = app.buttons
+                        .matching(NSPredicate(format: "label CONTAINS[c] %@", title))
+                        .firstMatch
+                    XCTAssertTrue(button.waitForExistence(timeout: 5))
+                    XCTAssertTrue(button.isHittable)
+                    assertMinimumTouchTarget(button)
+                }
+            }
+
+            attachScreenshot(
+                of: app,
+                named: "Localization - \(configuration.name) - Home"
+            )
+
+            tabBar.buttons.element(boundBy: 1).tap()
+            XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 5))
+            attachScreenshot(
+                of: app,
+                named: "Localization - \(configuration.name) - Library"
+            )
+
+            tabBar.buttons.element(boundBy: 2).tap()
+            XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 5))
+            attachScreenshot(
+                of: app,
+                named: "Localization - \(configuration.name) - Settings"
+            )
+
+            let miniPlayer = app.otherElements["MiniPlayer"]
+            XCTAssertTrue(miniPlayer.waitForExistence(timeout: 5))
+            miniPlayer.tap()
+            let dismiss = app.buttons["DismissNowPlayingButton"]
+            XCTAssertTrue(dismiss.waitForExistence(timeout: 5))
+            XCTAssertTrue(dismiss.isHittable)
+            XCTAssertFalse(dismiss.label.isEmpty)
+            attachScreenshot(
+                of: app,
+                named: "Localization - \(configuration.name) - Now Playing"
+            )
+
+            app.terminate()
+        }
+    }
+
+    func testMiniPlayerIsHiddenWithoutCurrentTrack() throws {
+        let app = launchPreviewApp(arguments: [
+            "-UITestNoCurrentTrack",
+            "-UITestResetQueuePersistence",
+        ])
+
+        XCTAssertTrue(tabButton("Home", in: app).waitForExistence(timeout: 10))
+        XCTAssertFalse(
+            app.otherElements["MiniPlayer"].waitForExistence(timeout: 1),
+            "Mini player rendered without an authoritative current track"
+        )
+    }
+
+    func testRootPlaybackErrorHasSemanticDismissal() throws {
+        let app = launchPreviewApp(arguments: ["-UITestPlaybackError"])
+
+        let banner = app.otherElements["RootPlaybackErrorBanner"]
+        XCTAssertTrue(banner.waitForExistence(timeout: 10), "Root playback error did not appear")
+        XCTAssertTrue(
+            app.staticTexts["Playback failed: UI testing."].exists,
+            "Playback error text was not exposed"
+        )
+
+        let dismissButton = app.buttons["Dismiss playback error"]
+        XCTAssertTrue(dismissButton.isHittable, "Playback error dismissal was not semantic")
+        XCTAssertGreaterThanOrEqual(dismissButton.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(dismissButton.frame.height, 44)
+        dismissButton.tap()
+
+        XCTAssertFalse(banner.waitForExistence(timeout: 1), "Dismissed root playback error remained visible")
+    }
+
+    func testNowPlayingPlaybackErrorHasSemanticDismissal() throws {
+        let app = launchPreviewApp(arguments: ["-UITestPlaybackError"])
+
+        let miniPlayer = app.otherElements["MiniPlayer"]
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10), "Mini player not visible")
+        miniPlayer.tap()
+
+        let banner = app.otherElements["NowPlayingPlaybackErrorBanner"]
+        XCTAssertTrue(banner.waitForExistence(timeout: 5), "Now Playing playback error did not appear")
+        let dismissButton = banner.buttons["Dismiss playback error"]
+        XCTAssertTrue(dismissButton.isHittable, "Now Playing error dismissal was not semantic")
+        dismissButton.tap()
+
+        XCTAssertFalse(banner.waitForExistence(timeout: 1), "Dismissed Now Playing error remained visible")
     }
 
     func testTabNavigationAndSettingsLinks() throws {
@@ -112,15 +336,21 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue(searchTab.waitForExistence(timeout: 10), "Search tab not found")
         searchTab.tap()
 
-        let searchMode = app.buttons["Search Mode"]
+        let searchMode = app.buttons["SearchModeMenu"]
         XCTAssertTrue(searchMode.waitForExistence(timeout: 5), "Search mode control is not reachable")
+        XCTAssertEqual(searchMode.label, "Search Mode, Standard Search")
         searchMode.tap()
 
         let smartSearch = app.buttons["Smart Search"]
         XCTAssertTrue(smartSearch.waitForExistence(timeout: 3), "Smart Search mode is not exposed")
         if smartSearch.isEnabled {
             smartSearch.tap()
-            XCTAssertEqual(searchMode.value as? String, "Smart Search")
+            let selectedMode = app.buttons["SearchModeMenu"]
+            let expectation = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "label == %@", "Search Mode, Smart Search"),
+                object: selectedMode
+            )
+            XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 3), .completed)
         } else {
             XCTAssertTrue(
                 app.staticTexts["Smart Search is unavailable on this device."].waitForExistence(timeout: 3),
@@ -148,19 +378,19 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue((band.value as? String)?.contains("decibels") == true)
     }
 
-    func testAudioSettingsSlidersExposeLabelsAndUnits() throws {
+    func testAudioSettingsExposeOnlyAppliedPlaybackControls() throws {
         let app = launchPreviewApp()
 
         app.buttons["Settings"].tap()
+        XCTAssertFalse(app.switches["Bit-Perfect Mode"].exists)
         let audioSettingsLink = app.staticTexts["Audio Engine"]
         XCTAssertTrue(audioSettingsLink.waitForExistence(timeout: 5))
         audioSettingsLink.tap()
         app.swipeUp()
 
-        let bufferSize = app.sliders["BufferSizeSlider"]
-        XCTAssertTrue(bufferSize.waitForExistence(timeout: 5), "Buffer Size slider is not labeled")
-        XCTAssertEqual(bufferSize.label, "Buffer Size")
-        XCTAssertTrue((bufferSize.value as? String)?.contains("samples") == true)
+        XCTAssertFalse(app.switches["Enable Bit-Perfect Playback"].exists)
+        XCTAssertFalse(app.sliders["BufferSizeSlider"].exists)
+        XCTAssertFalse(app.buttons["Sample Rate"].exists)
 
         let crossfade = app.sliders["CrossfadeDurationSlider"]
         app.swipeUp()
@@ -202,13 +432,11 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
 
         let favorite = app.buttons["Add to favorites"]
         XCTAssertTrue(favorite.waitForExistence(timeout: 5))
-        XCTAssertGreaterThanOrEqual(favorite.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(favorite.frame.height, 44)
+        assertMinimumTouchTarget(favorite)
 
         let loop = app.buttons["Set loop point A"]
         XCTAssertTrue(loop.waitForExistence(timeout: 5))
-        XCTAssertGreaterThanOrEqual(loop.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(loop.frame.height, 44)
+        assertMinimumTouchTarget(loop)
     }
 
     func testShuffleAndRepeatExposeStateValues() throws {
@@ -270,7 +498,12 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
 
         let showExtensions = app.switches["Show File Extensions"]
         reveal(showExtensions, in: app)
+        let miniPlayer = app.otherElements["MiniPlayer"]
+        for _ in 0..<6 where showExtensions.frame.maxY > miniPlayer.frame.minY {
+            app.swipeUp()
+        }
         XCTAssertTrue(showExtensions.waitForExistence(timeout: 5), "File extension setting not found")
+        XCTAssertLessThanOrEqual(showExtensions.frame.maxY, miniPlayer.frame.minY)
         setSwitch(showExtensions, enabled: false)
         XCTAssertEqual(showExtensions.value as? String, "0", "Test precondition did not disable file extensions")
 
@@ -363,18 +596,49 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         let importSelected = app.buttons["Import Selected"]
         XCTAssertTrue(importSelected.waitForExistence(timeout: 3))
         XCTAssertTrue(importSelected.isEnabled)
-        let deleteSelected = app.buttons["Delete (3)"]
+        let deleteSelected = app.buttons["DeleteSelectedFilesButton"]
         XCTAssertTrue(deleteSelected.waitForExistence(timeout: 3))
+        XCTAssertEqual(deleteSelected.label, "Delete 3 files")
         deleteSelected.tap()
         XCTAssertTrue(app.staticTexts["Delete Files"].waitForExistence(timeout: 3))
         app.buttons["Cancel"].tap()
 
         importSelected.tap()
-        XCTAssertFalse(importSelected.exists)
-        XCTAssertTrue(app.buttons["Done"].exists)
+        let importProgress = app.otherElements["ImportProgressView"]
+        XCTAssertTrue(importProgress.waitForExistence(timeout: 5))
 
-        app.buttons["Done"].tap()
+        let progressDone = app.navigationBars["Importing Music"].buttons["Done"]
+        XCTAssertTrue(progressDone.waitForExistence(timeout: 10))
+        progressDone.tap()
+
+        let finishEditing = app.buttons["Done"]
+        XCTAssertTrue(finishEditing.waitForExistence(timeout: 3))
+        finishEditing.tap()
         XCTAssertTrue(app.buttons["Edit"].waitForExistence(timeout: 3))
+    }
+
+    func testFileDetailsImportShowsObservedProgress() throws {
+        let app = launchPreviewApp(arguments: ["-UITestFileManagerData"])
+        let settingsTab = tabButton("Settings", in: app)
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
+        settingsTab.tap()
+
+        let fileManager = app.staticTexts["File Manager"]
+        reveal(fileManager, in: app)
+        XCTAssertTrue(fileManager.waitForExistence(timeout: 5))
+        fileManager.tap()
+
+        let track = app.staticTexts["UI Test Track.mp3"]
+        XCTAssertTrue(track.waitForExistence(timeout: 5))
+        track.tap()
+
+        let importButton = app.buttons["Import to Library"]
+        XCTAssertTrue(importButton.waitForExistence(timeout: 5))
+        importButton.tap()
+
+        let importProgress = app.otherElements["ImportProgressView"]
+        XCTAssertTrue(importProgress.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Importing Music"].buttons["Done"].waitForExistence(timeout: 10))
     }
 
     func testMiniPlayerExposesSeparateSemanticActions() throws {
@@ -387,13 +651,16 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue(play.exists)
         XCTAssertTrue(next.exists)
 
-        play.tap()
-        XCTAssertFalse(app.staticTexts["Now Playing"].exists)
-        next.tap()
-        XCTAssertFalse(app.staticTexts["Now Playing"].exists)
-
         openNowPlaying.tap()
-        XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
+        let nowPlaying = app.staticTexts["Now Playing"]
+        XCTAssertTrue(nowPlaying.waitForExistence(timeout: 5))
+        app.buttons["DismissNowPlayingButton"].tap()
+        XCTAssertFalse(nowPlaying.waitForExistence(timeout: 1))
+
+        play.tap()
+        XCTAssertFalse(nowPlaying.exists)
+        next.tap()
+        XCTAssertFalse(nowPlaying.exists)
     }
 
     func testLibraryTrackExposesSeparatePlayAndInformationActions() throws {
@@ -414,6 +681,42 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
 
         play.tap()
         XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Semantic Track"].exists)
+    }
+
+    func testQueueRestoresAfterBackgroundTerminationAndRelaunch() throws {
+        let app = launchPreviewApp(arguments: [
+            "-UITestLibraryData",
+            "-UITestNoCurrentTrack",
+            "-UITestResetQueuePersistence",
+        ])
+
+        let libraryTab = tabButton("Library", in: app)
+        XCTAssertTrue(libraryTab.waitForExistence(timeout: 10))
+        libraryTab.tap()
+
+        let play = app.buttons["Play Semantic Track by Semantic Artist"]
+        XCTAssertTrue(play.waitForExistence(timeout: 5))
+        play.tap()
+        XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Semantic Track"].exists)
+
+        XCUIDevice.shared.press(.home)
+        let backgrounded = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "state == %d", XCUIApplication.State.runningBackground.rawValue),
+            object: app
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [backgrounded], timeout: 5), .completed)
+        app.terminate()
+
+        app.launchArguments = [
+            "-UITestPreviewData",
+            "-UITestLibraryData",
+            "-UITestNoCurrentTrack",
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.otherElements["MiniPlayer"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Semantic Track"].exists)
     }
 
@@ -443,7 +746,7 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         let playlist = app.buttons["Open playlist Semantic Playlist"]
         XCTAssertTrue(playlist.waitForExistence(timeout: 5))
         playlist.tap()
-        XCTAssertTrue(app.navigationBars["Playlist"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.navigationBars["Semantic Playlist"].waitForExistence(timeout: 3))
     }
 
     func testStandardSearchResultsExposeSemanticActions() throws {
@@ -517,11 +820,10 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         }
         XCTAssertTrue(genre.isHittable)
         XCTAssertLessThanOrEqual(genre.frame.maxY, miniPlayer.frame.minY)
-        XCTAssertGreaterThanOrEqual(genre.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(genre.frame.height, 44)
+        assertMinimumTouchTarget(genre)
         genre.tap()
         XCTAssertTrue(app.navigationBars["Electronic"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["1 tracks"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["1 track"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["Play Semantic Track by Semantic Artist"].exists)
         app.buttons["Done"].tap()
 

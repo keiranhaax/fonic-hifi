@@ -87,10 +87,32 @@ final class AudioMonitorEngineHooksTests: XCTestCase {
 
         XCTAssertEqual(engine.collectMetricsCallCount, countAfterDetach)
     }
+
+    func testUnsupportedEngineIsNotPolled() async throws {
+        let engine = StubEngine(metricsAvailability: .unavailable)
+        let hooks = AudioMonitorEngineHooks(
+            logger: Logger(subsystem: "FonicHiFiTests", category: "AudioMonitorEngineHooksTests"),
+            sleep: { _ in
+                try await Task.sleep(nanoseconds: 1_000_000)
+            }
+        )
+
+        hooks.setEngine(engine)
+        hooks.startMonitoring(interval: 0.01)
+        try await Task.sleep(nanoseconds: 30_000_000)
+
+        XCTAssertEqual(engine.collectMetricsCallCount, 0)
+    }
 }
 
 @MainActor
 private final class StubEngine: AudioEngineService {
+    let metricsAvailability: AudioMetricsAvailability
+
+    init(metricsAvailability: AudioMetricsAvailability = .partial) {
+        self.metricsAvailability = metricsAvailability
+    }
+
     var currentTime: TimeInterval { get async { 0 } }
     var duration: TimeInterval { get async { 0 } }
     var isPlaying: Bool { get async { false } }
@@ -113,7 +135,7 @@ private final class StubEngine: AudioEngineService {
     func prepareNext(url _: URL) async {}
     func crossfade(to _: URL, duration _: TimeInterval, playbackRate _: Double, gainDB _: Float) async throws {}
 
-    func getMetrics() async -> AudioMetrics {
+    func availableMetrics() async -> AudioMetrics? {
         AudioMetrics(cpuUsage: 0, memoryUsage: 0, bufferUnderruns: 0, decodingLatency: 0, bufferFillLevel: 1, droppedFrames: 0, renderLatency: 0)
     }
 

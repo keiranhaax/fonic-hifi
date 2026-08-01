@@ -14,15 +14,10 @@ public enum AudioFormatType: String, CaseIterable, Codable {
     case alac = "ALAC"
     case aiff = "AIFF"
     case wav = "WAV"
-    case ape = "APE"
-    case dsd = "DSD"
-    case wavpack = "WavPack"
 
     // Compressed formats
     case mp3 = "MP3"
     case aac = "AAC"
-    case ogg = "Ogg Vorbis"
-    case opus = "Opus"
 
     // Unknown/unsupported
     case unknown = "Unknown"
@@ -43,20 +38,10 @@ public enum AudioFormatType: String, CaseIterable, Codable {
             ["aiff", "aif"]
         case .wav:
             ["wav"]
-        case .ape:
-            ["ape"]
-        case .dsd:
-            ["dsd", "dsf", "dff"]
-        case .wavpack:
-            ["wv"]
         case .mp3:
             ["mp3"]
         case .aac:
             ["aac", "m4a"]
-        case .ogg:
-            ["ogg"]
-        case .opus:
-            ["opus"]
         case .unknown:
             []
         }
@@ -65,9 +50,9 @@ public enum AudioFormatType: String, CaseIterable, Codable {
     /// Whether this format supports lossless compression
     public var isLossless: Bool {
         switch self {
-        case .flac, .alac, .aiff, .wav, .ape, .dsd, .wavpack:
+        case .flac, .alac, .aiff, .wav:
             true
-        case .mp3, .aac, .ogg, .opus, .unknown:
+        case .mp3, .aac, .unknown:
             false
         }
     }
@@ -75,11 +60,9 @@ public enum AudioFormatType: String, CaseIterable, Codable {
     /// Whether this format supports high-resolution audio
     public var supportsHighResolution: Bool {
         switch self {
-        case .flac, .alac, .aiff, .wav, .dsd:
+        case .flac, .alac, .aiff, .wav:
             true
-        case .ape, .wavpack:
-            true
-        case .mp3, .aac, .ogg, .opus, .unknown:
+        case .mp3, .aac, .unknown:
             false
         }
     }
@@ -89,11 +72,7 @@ public enum AudioFormatType: String, CaseIterable, Codable {
         switch self {
         case .flac, .alac, .aiff, .wav:
             32
-        case .dsd:
-            1 // DSD uses 1-bit encoding
-        case .ape, .wavpack:
-            32
-        case .mp3, .aac, .ogg, .opus:
+        case .mp3, .aac:
             16 // Compressed formats are typically 16-bit equivalent
         case .unknown:
             16
@@ -109,20 +88,10 @@ public enum AudioFormatType: String, CaseIterable, Codable {
             384_000
         case .aiff, .wav:
             192_000 // Common upper limit
-        case .dsd:
-            11_289_600 // DSD256
-        case .ape:
-            192_000
-        case .wavpack:
-            4_294_967_295 // Theoretical limit
         case .mp3:
             48000
         case .aac:
             96000
-        case .ogg:
-            192_000
-        case .opus:
-            48000
         case .unknown:
             48000
         }
@@ -132,15 +101,15 @@ public enum AudioFormatType: String, CaseIterable, Codable {
     /// - Parameter extension: File extension (without dot)
     /// - Returns: Corresponding AudioFormatType or .unknown
     public static func from(fileExtension: String) -> AudioFormatType {
-        let lowercased = fileExtension.lowercased()
-
-        for format in AudioFormatType.allCases {
-            if format.fileExtensions.contains(lowercased) {
-                return format
-            }
+        switch fileExtension.lowercased() {
+        case "flac": .flac
+        case "alac": .alac
+        case "aiff", "aif": .aiff
+        case "wav": .wav
+        case "mp3": .mp3
+        case "aac", "m4a": .aac
+        default: .unknown
         }
-
-        return .unknown
     }
 
     /// Get all lossless formats

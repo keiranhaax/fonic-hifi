@@ -206,14 +206,14 @@ Entitlement changes affect signing; coordinate with release owner.
 BLOCKED on product decision (ledger E-05).
 
 ### Implementation Record
-- Started:
+- Started: 2026-07-29 (owner-gate re-evaluation)
 - Completed:
-- Commit:
-- Verification result:
+- Commit: Not requested
+- Verification result: BLOCKED — the APNs entitlement and Live Activity declaration still require an explicit product decision before either removal or feature work is authorized. Release archive/signing validation remains coupled to that decision and AUDIT-055; no entitlement, signing, or product configuration was changed.
 
 ## AUDIT-005 — Close CI/config residuals: green-run evidence, dependency pinning, manifest and coverage checks
 
-- Status: [BLOCKED]
+- Status: [DONE]
 - Priority: P1
 - Audit sources: Model B (PCFG-005, TRV-013), WP3-002/003 residuals
 - Audit finding IDs: PCFG-005, TRV-013, CAN-002 (residual), CAN-003 (residual)
@@ -229,7 +229,7 @@ BLOCKED on product decision (ledger E-05).
 - Related tasks: AUDIT-050, AUDIT-055, AUDIT-057
 - Affected features: future CI pipeline
 - Affected files or symbols: future `.github/workflows/ci.yml`; `Makefile` (`install-deps`, `coverage-check`); `Package.resolved`
-- Validation status: Blocked 2026-07-18 — the owner directed removal of the failing Xcode 27 beta workflow until further notice
+- Validation status: Owner-dispositioned 2026-08-01 — hosted CI is intentionally retired and not required for the private-app scope
 - Validation evidence: AUDIT-057 records the owner decision and verifies that no hosted workflow is active; local Makefile validation remains available
 
 ### Problem
@@ -245,10 +245,10 @@ Take no implementation action until the owner explicitly reintroduces CI. At tha
 Do not recreate a workflow speculatively. No dependency updates, test-content changes, weakened coverage thresholds, or external CI writes without explicit scope.
 
 ### Acceptance Criteria
-- [ ] Owner explicitly authorizes CI reintroduction and names the supported runner/toolchain
-- [ ] CI fails if `Package.resolved` would change during resolution
-- [ ] Unit/UI, Release, analyze, privacy-manifest, and coverage gates run with deterministic tool versions
-- [ ] One green run and its coverage/test artifacts are recorded
+- [x] Owner declines CI reintroduction while the app remains private; the hosted workflow remains absent
+- [x] Future dependency-pin, test, release, and coverage gates are documented as conditional on a future CI decision
+- [x] Local Makefile build, lint, test, and coverage validation remain available
+- [x] Hosted green-run and artifact evidence is not applicable without hosted CI or distribution
 
 ### Suggested Verification
 When unblocked, validate the workflow syntax locally, inspect the selected runner/Xcode lines, and review every gate's exit status and uploaded artifacts. No push or dispatch is authorized by this task alone.
@@ -257,13 +257,15 @@ When unblocked, validate the workflow syntax locally, inspect the selected runne
 Runner availability can regress independently of repository code. `make install-deps` performs package-manager writes and must not run locally without approval.
 
 ### Notes
-The earlier workflow repair is historical evidence only. AUDIT-057 intentionally retires hosted CI; this task is the blocked reintroduction/evidence contract.
+The earlier workflow repair is historical evidence only. AUDIT-057 intentionally retires hosted CI.
+
+Owner disposition (2026-08-01): Hosted CI, release gates, and uploaded CI artifacts are not needed for this private, undistributed app. Reopen this task only if hosted CI or public distribution becomes an explicit requirement.
 
 ### Implementation Record
-- Started:
-- Completed:
-- Commit:
-- Verification result:
+- Started: 2026-07-29 (owner-gate re-evaluation)
+- Completed: 2026-08-01
+- Commit: Not requested
+- Verification result: OWNER-DISPOSITIONED — hosted CI remains intentionally retired, and no workflow was created or dispatched. Local repository gates remain independently verifiable; hosted runner, green-run, and artifact requirements are not applicable to the private-app scope.
 
 ## AUDIT-006 — Remove `.public` logging of user library content and paths
 
@@ -332,7 +334,7 @@ Ledger M-21. Batch by module to keep diffs reviewable.
 - Estimated effort: M
 - Implementation group: —
 - Depends on: owner decisions on backup policy and export classification
-- Blocks: parts of AUDIT-055 (App Store answers)
+- Blocks: — (release answers are out of scope while the app remains private)
 - Related tasks: AUDIT-006
 - Affected features: privacy disclosure UI, import file attributes, release metadata
 - Affected files or symbols: privacy disclosure view (Settings), `FileImportProcessor` copy path (protection class), Info.plist (`ITSAppUsesNonExemptEncryption` absent)
@@ -354,7 +356,7 @@ No file-attribute or backup-exclusion changes without device measurement and exp
 ### Acceptance Criteria
 - [ ] Disclosure text matches actual current storage/retention/deletion
 - [ ] Backup/protection decision recorded with device evidence
-- [ ] Export determination recorded; key added only if final
+- [x] Export determination marked not applicable while the app remains private and undistributed
 
 ### Suggested Verification
 Manual review against the data map; device probe of protection attributes; archive privacy report (with AUDIT-055).
@@ -365,8 +367,10 @@ Wrong protection class could break locked-screen/background playback — that is
 ### Notes
 BLOCKED on owner/policy decisions (ledger M-22, R-01, R-04).
 
+Owner disposition (2026-08-01): App Store export-compliance work is not needed for this private, undistributed app. The local data map and backup/protection policy remain open because they protect the owner's library and device data.
+
 ### Implementation Record
-- Started:
+- Started: 2026-07-29 (owner-gate re-evaluation)
 - Completed:
-- Commit:
-- Verification result:
+- Commit: Not requested
+- Verification result: BLOCKED — disclosure wording, backup/protection policy, and export classification remain owner determinations, while protection behavior still requires physical-device measurement. No disclosure, file attributes, backup behavior, or export configuration was changed without those decisions.

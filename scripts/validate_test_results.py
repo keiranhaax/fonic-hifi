@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
-"""Fail CI when an xcresult summary has no tests or unexpected skips."""
+"""Fail validation for bad xcresult summaries or incompatible widget contracts."""
 
 import argparse
 import json
+from pathlib import Path
+import subprocess
 import sys
+
+
+def verify_widget_contracts() -> int:
+    verifier = Path(__file__).with_name("verify_widget_contracts.py")
+    result = subprocess.run([sys.executable, str(verifier)], check=False)
+    if result.returncode != 0:
+        print("Widget contract validation failed", file=sys.stderr)
+    return result.returncode
 
 
 def main() -> int:
@@ -29,7 +39,7 @@ def main() -> int:
     if errors:
         print(f"{args.label} validation failed: {'; '.join(errors)}", file=sys.stderr)
         return 1
-    return 0
+    return verify_widget_contracts()
 
 
 if __name__ == "__main__":

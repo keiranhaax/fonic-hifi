@@ -17,12 +17,14 @@ public struct EngineMetricsCollector: EngineMetricsCollecting {
     public init() {}
 
     public func metrics(for engine: AudioEngineService?) async -> EngineMetrics {
-        guard let engine else {
+        guard let engine,
+              engine.metricsAvailability.supportsCollection,
+              let audioMetrics = await engine.availableMetrics()
+        else {
             return .default
         }
 
-        let audioMetrics = await engine.getMetrics()
-        return EngineMetrics(
+        var metrics = EngineMetrics(
             bufferUnderruns: audioMetrics.bufferUnderruns,
             decodingLatency: audioMetrics.decodingLatency,
             bufferFillLevel: audioMetrics.bufferFillLevel,
@@ -49,5 +51,7 @@ public struct EngineMetricsCollector: EngineMetricsCollecting {
             recoverySuccessRate: audioMetrics.recoverySuccessRate,
             lastRecoveryTime: audioMetrics.lastRecoveryTime,
         )
+        metrics.availability = audioMetrics.engineMetricsAvailability
+        return metrics
     }
 }

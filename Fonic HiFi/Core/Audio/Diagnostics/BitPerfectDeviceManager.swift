@@ -313,7 +313,7 @@ public final class BitPerfectDeviceManager: BitPerfectDeviceManaging {
     }
 
     private func saveDACCompatibilityDatabase() {
-        self.logger.debug("Persisted DAC compatibility database entries: \(self.dacCompatibilityCache.count)")
+        self.logger.debug("Persisted DAC compatibility database entries: \(self.dacCompatibilityCache.count, privacy: .public)")
     }
 
     private func defaultDeviceCapabilities() -> DeviceCapabilities {

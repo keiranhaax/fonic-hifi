@@ -327,18 +327,18 @@ public extension QueueState {
     /// UserDefaults key for storing queue state
     private static let persistenceKey = "com.fonichifi.queue.state"
 
-    /// Save queue state to UserDefaults
-    func save() throws {
+    /// Save queue state to the supplied defaults store.
+    func save(to defaults: UserDefaults = .standard) throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(self)
-        UserDefaults.standard.set(data, forKey: Self.persistenceKey)
+        defaults.set(data, forKey: Self.persistenceKey)
     }
 
-    /// Load queue state from UserDefaults
+    /// Load queue state from the supplied defaults store.
     /// - Returns: Saved queue state, or nil if not found or invalid
-    static func load() -> QueueState? {
-        guard let data = UserDefaults.standard.data(forKey: persistenceKey) else {
+    static func load(from defaults: UserDefaults = .standard) -> QueueState? {
+        guard let data = defaults.data(forKey: persistenceKey) else {
             return nil
         }
 
@@ -361,8 +361,8 @@ public extension QueueState {
     }
 
     /// Clear saved queue state
-    static func clear() {
-        UserDefaults.standard.removeObject(forKey: persistenceKey)
+    static func clear(from defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: persistenceKey)
     }
 
     /// Create a persistence-safe version of the queue state
@@ -414,6 +414,7 @@ public extension QueueState {
             },
             shuffleSequence: validShuffleSequence,
             timestamp: Date(),
+            lastPlaybackPosition: lastPlaybackPosition
         )
     }
 }

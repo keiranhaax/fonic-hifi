@@ -14,17 +14,23 @@ struct ImportTestEnvironment {
 @MainActor
 func makeImportTestEnvironment(
     metadataExtractor: MetadataExtracting = TestMetadataExtractor(),
-    fileProcessingConcurrency: Int = 2
+    fileProcessingConcurrency: Int = 2,
+    isStoredInMemoryOnly: Bool = true,
+    musicContainerURL: URL? = nil
 ) throws -> ImportTestEnvironment {
     let schema = Schema([Track.self])
-    let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+    let configuration = ModelConfiguration(isStoredInMemoryOnly: isStoredInMemoryOnly)
     let container = try ModelContainer(for: schema, configurations: [configuration])
     let trackActor = TrackDataActor(modelContainer: container)
 
     var invalidations = 0
-    let service = LibraryImportService(
+    let fileProcessor = FileImportProcessor(
         trackDataActor: trackActor,
         metadataExtractor: metadataExtractor,
+        musicContainerURL: musicContainerURL
+    )
+    let service = LibraryImportService(
+        fileProcessor: fileProcessor,
         fileProcessingConcurrency: fileProcessingConcurrency,
         statisticsInvalidator: { invalidations += 1 }
     )
@@ -35,6 +41,22 @@ func makeImportTestEnvironment(
         trackActor: trackActor,
         invalidationCount: { invalidations }
     )
+}
+
+func makeTemporaryTestDirectory(
+    named name: String,
+    testCase: XCTestCase
+) throws -> URL {
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent(name, isDirectory: true)
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    testCase.addTeardownBlock {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    return directory
 }
 
 func makeTemporaryAudioFiles(

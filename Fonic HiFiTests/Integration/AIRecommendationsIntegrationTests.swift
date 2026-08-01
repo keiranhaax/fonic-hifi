@@ -8,14 +8,14 @@ struct AIRecommendationsIntegrationTests {
 
     @Test("Full recommendation flow with fallback")
     @MainActor
-    func fullRecommendationFlowWorks() async {
+    func fullRecommendationFlowWorks() async throws {
         let service = RecommendationService()
         let trackIDs = (0..<20).map { _ in UUID() }
         let sessions: [ListeningSessionData] = []
         let genres = ["Rock", "Jazz", "Electronic"]
 
         // Should work even without AI (fallback)
-        let greeting = await service.generateTimeBasedGreeting(
+        let greeting = try await service.generateTimeBasedGreeting(
             sessions: sessions,
             availableTrackIDs: trackIDs,
             genres: genres
@@ -24,7 +24,7 @@ struct AIRecommendationsIntegrationTests {
         #expect(!greeting.greeting.isEmpty)
         #expect(!greeting.trackIDs.isEmpty)
 
-        let surprise = await service.generateSurpriseMix(
+        let surprise = try await service.generateSurpriseMix(
             sessions: sessions,
             availableTrackIDs: trackIDs,
             genres: genres

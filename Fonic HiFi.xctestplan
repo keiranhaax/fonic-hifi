@@ -4,7 +4,7 @@
       "id" : "318D5D0E-10F1-4E1E-9AFB-1FB9CA564635",
       "name" : "Default",
       "options" : {
-
+        "testExecutionOrdering" : "random"
       }
     }
   ],
@@ -27,6 +27,7 @@
   },
   "testTargets" : [
     {
+      "parallelizable" : true,
       "target" : {
         "containerPath" : "container:Fonic HiFi.xcodeproj",
         "identifier" : "38D04D142DE571000047CB93",

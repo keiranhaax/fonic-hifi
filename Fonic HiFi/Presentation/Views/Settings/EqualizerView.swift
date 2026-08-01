@@ -8,12 +8,13 @@
 import SwiftUI
 
 struct EqualizerView: View {
-    @Environment(\.audioEngine) private var audioEngine
+    @EnvironmentObject private var audioEngine: AudioEngineFacade
+    @Environment(\.locale) private var locale
     @State private var configuration = EqualizerConfiguration.default
     @State private var selectedPreset: String = "Flat"
     @State private var hasLoadedFromPersistence = false
 
-    private let frequencyLabels = ["32", "64", "125", "250", "500", "1K", "2K", "4K", "8K", "16K"]
+    private let frequencies: [Double] = [32, 64, 125, 250, 500, 1_000, 2_000, 4_000, 8_000, 16_000]
     private let presetNames = Array(EqualizerConfiguration.presets.keys).sorted()
 
     var body: some View {
@@ -27,11 +28,21 @@ struct EqualizerView: View {
                         Text("DSP Active")
                             .font(.subheadline.bold())
                         Spacer()
-                        Text("Bit-perfect disabled")
+                        Text("Not bit-perfect eligible")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
+                }
+            }
+
+            if let unavailableMessage = localizedUnavailableMessage {
+                Section {
+                    Label("Equalizer Unavailable", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(verbatim: unavailableMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -42,14 +53,15 @@ struct EqualizerView: View {
                         applyConfiguration()
                     }
             } footer: {
-                Text("Enabling the equalizer disables bit-perfect playback mode.")
+                Text("Enabling the equalizer makes playback ineligible for bit-perfect output.")
             }
 
             // Preset Picker Section
             Section("Preset") {
                 Picker("Preset", selection: $selectedPreset) {
                     ForEach(presetNames, id: \.self) { name in
-                        Text(name).tag(name)
+                        presetLabel(name)
+                            .tag(name)
                     }
                 }
                 .pickerStyle(.menu)
@@ -96,7 +108,10 @@ struct EqualizerView: View {
                                     VerticalSlider(
                                         value: $configuration.bands[index].gain,
                                         range: -12...12,
-                                        accessibilityLabel: "\(frequencyLabels[index]) Hz"
+                                        accessibilityLabel: LocalizedFormatters.frequency(
+                                            frequencies[index],
+                                            locale: locale
+                                        )
                                     )
                                     .frame(width: 44, height: 140)
                                     .disabled(!configuration.isEnabled)
@@ -106,12 +121,19 @@ struct EqualizerView: View {
                                     }
 
                                     // Frequency label
-                                    Text(frequencyLabels[index])
+                                    Text(verbatim: frequencies[index].formatted(
+                                        .number
+                                            .notation(.compactName)
+                                            .locale(locale)
+                                    ))
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
 
                                     // Gain value
-                                    Text(String(format: "%.1f", configuration.bands[index].gain))
+                                    Text(verbatim: LocalizedFormatters.gainNumber(
+                                        configuration.bands[index].gain,
+                                        locale: locale
+                                    ))
                                         .font(.system(size: 9, weight: .medium, design: .monospaced))
                                         .foregroundStyle(gainColor(for: configuration.bands[index].gain))
                                 }
@@ -137,24 +159,46 @@ struct EqualizerView: View {
         }
         .navigationTitle("Equalizer")
         .task {
-            // Load persisted configuration on appear
+            // The facade restores persistence during audio-service initialization.
             guard !hasLoadedFromPersistence else { return }
             hasLoadedFromPersistence = true
 
-            if let store = audioEngine?.playbackSettingsStore {
-                configuration = await store.equalizerConfiguration()
-                selectedPreset = configuration.presetName ?? "Custom"
-            }
+            configuration = audioEngine.equalizerConfiguration
+            selectedPreset = configuration.presetName ?? "Custom"
         }
     }
 
     private func applyConfiguration() {
         Task {
-            await audioEngine?.applyEQ(configuration)
-            // Persist the configuration
-            if let store = audioEngine?.playbackSettingsStore {
-                await store.setEqualizerConfiguration(configuration)
-            }
+            await audioEngine.applyEQ(configuration)
+        }
+    }
+
+    private var localizedUnavailableMessage: String? {
+        guard case let .unsupported(engine) = audioEngine.equalizerApplicationResult else {
+            return nil
+        }
+        return LocalizedFormatters.equalizerUnavailable(
+            engineName: LocalizedFormatters.audioEngineName(engine, locale: locale),
+            locale: locale
+        )
+    }
+
+    @ViewBuilder
+    private func presetLabel(_ name: String) -> some View {
+        switch name {
+        case "Flat":
+            Text("Flat")
+        case "Bass Boost":
+            Text("Bass Boost")
+        case "Treble Boost":
+            Text("Treble Boost")
+        case "Vocal":
+            Text("Vocal")
+        case "Rock":
+            Text("Rock")
+        default:
+            Text(verbatim: name)
         }
     }
 
@@ -172,6 +216,7 @@ struct EqualizerView: View {
 // MARK: - Vertical Slider
 
 private struct VerticalSlider: View {
+    @Environment(\.locale) private var locale
     @Binding var value: Float
     let range: ClosedRange<Float>
     let accessibilityLabel: String
@@ -220,7 +265,10 @@ private struct VerticalSlider: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue("\(String(format: "%.1f", value)) decibels")
+        .accessibilityValue(LocalizedFormatters.gainAccessibilityValue(
+            value,
+            locale: locale
+        ))
         .accessibilityAdjustableAction { direction in
             switch direction {
             case .increment: setValue(value + 0.5)
@@ -240,4 +288,5 @@ private struct VerticalSlider: View {
     NavigationStack {
         EqualizerView()
     }
+    .audioEngine(AudioEngineFacade())
 }

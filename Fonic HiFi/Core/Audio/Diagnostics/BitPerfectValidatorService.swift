@@ -8,6 +8,42 @@
 import AVFoundation
 import Foundation
 
+/// Software state that can change bit-perfect eligibility independently of the
+/// source file or hardware route.
+public struct BitPerfectEligibilityContext: Sendable, Equatable {
+    public let engineIdentifier: String
+    public let applicationVolume: Float
+    public let playbackRate: Double
+    public let replayGainEnabled: Bool
+    public let equalizerEnabled: Bool
+
+    public init(
+        engineIdentifier: String,
+        applicationVolume: Float,
+        playbackRate: Double,
+        replayGainEnabled: Bool,
+        equalizerEnabled: Bool
+    ) {
+        self.engineIdentifier = engineIdentifier
+        self.applicationVolume = applicationVolume
+        self.playbackRate = playbackRate
+        self.replayGainEnabled = replayGainEnabled
+        self.equalizerEnabled = equalizerEnabled
+    }
+
+    public static let unknown = BitPerfectEligibilityContext(
+        engineIdentifier: "unknown",
+        applicationVolume: 1,
+        playbackRate: 1,
+        replayGainEnabled: false,
+        equalizerEnabled: false
+    )
+
+    public var hasDSP: Bool {
+        playbackRate != 1 || replayGainEnabled || equalizerEnabled
+    }
+}
+
 /// Protocol defining bit-perfect validation methods for audio playback verification
 @MainActor
 public protocol BitPerfectValidatorService: AnyObject, Sendable {
@@ -21,6 +57,7 @@ public protocol BitPerfectValidatorService: AnyObject, Sendable {
     func validateBitPerfectPlayback(
         sourceFormat: AudioFileInfo,
         outputDevice: AudioDevice?,
+        context: BitPerfectEligibilityContext
     ) async -> BitPerfectValidationResult
 
     /// Validate a specific audio format against output capabilities

@@ -36,7 +36,7 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
 
     // MARK: - Private Properties
 
-    private var cancellables = Set<AnyCancellable>()
+    private var interruptionObservationTokens = Set<NotificationCenter.ObservationToken>()
     private var _currentEngine: AudioEngineService?
     private let alertManager: any AudioAlertManaging
     private let performanceProfiler: AudioPerformanceProfiler
@@ -185,6 +185,9 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
 
     deinit {
         MainActor.assumeIsolated {
+            for token in interruptionObservationTokens {
+                NotificationCenter.default.removeObserver(token)
+            }
             runtime.invalidate()
         }
     }
@@ -235,7 +238,7 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
     // MARK: - Engine Integration
 
     public func attachToEngine(_ engine: AudioEngineService) async {
-        logger.info("Attaching to audio engine: \(type(of: engine))")
+        logger.info("Attaching to audio engine: \(type(of: engine), privacy: .public)")
         _currentEngine = engine
         runtime.updateEngine(engine)
         engineHooks.setEngine(engine)
@@ -405,21 +408,45 @@ private extension AudioMonitor {
     }
 
     func setupInterruptionHandling() {
-        NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
-            .sink { [weak self] notification in
-                Task { @MainActor [weak self] in
-                    await self?.handleAudioInterruption(notification)
-                }
+        let notificationCenter = NotificationCenter.default
+        let session = AVAudioSession.sharedInstance()
+
+        let inactiveObservation = notificationCenter.addObserver(
+            of: session,
+            for: .didBecomeInactive
+        ) { [weak self] message in
+            guard case let .systemInterruption(context) = message.deactivationResult else {
+                return
             }
-            .store(in: &cancellables)
+            let interruption = AudioSessionInterruption.from(
+                interruptionReason: context.reason
+            )
+            Self.routeAudioInterruption(interruption, to: self)
+        }
+        interruptionObservationTokens.insert(inactiveObservation)
+
+        let resumptionObservation = notificationCenter.addObserver(
+            of: session,
+            for: .resumptionRecommendation
+        ) { [weak self] message in
+            let interruption = AudioSessionInterruption.from(
+                resumptionRecommendation: message.recommendation
+            )
+            Self.routeAudioInterruption(interruption, to: self)
+        }
+        interruptionObservationTokens.insert(resumptionObservation)
     }
 
-    func handleAudioInterruption(_ notification: Notification) async {
-        guard let interruption = AudioSessionInterruption.from(notification: notification) else {
-            logger.warning("Received audio interruption without parsable payload")
-            return
+    nonisolated static func routeAudioInterruption(
+        _ interruption: AudioSessionInterruption,
+        to owner: AudioMonitor?
+    ) {
+        Task { @MainActor [weak owner] in
+            await owner?.handleAudioInterruption(interruption)
         }
+    }
 
+    func handleAudioInterruption(_ interruption: AudioSessionInterruption) async {
         await interruptionStatsTracker.recordInterruption(interruption)
 
         let severity: AlertSeverity = interruption.type == .began ? .medium : .low

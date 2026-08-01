@@ -41,7 +41,7 @@ public final class DataManager: ObservableObject {
             trackDataActor: trackDataActor,
             metadataExtractor: metadataExtractor,
             statisticsInvalidator: { [weak self] in
-                self?.invalidateLibraryStatisticsCache()
+                self?.invalidateLibrary()
             }
         )
     }()
@@ -60,6 +60,9 @@ public final class DataManager: ObservableObject {
 
     /// Recovery state surfaced to the UI when operating in limited mode
     @Published public private(set) var importRecoveryState: ImportRecoveryState?
+
+    /// Monotonic signal for repository-backed consumers to refresh after writes.
+    @Published public private(set) var libraryRevision: UInt64 = 0
 
     /// Logger for data operations
     let logger = Log.logger(.dataManager)
@@ -85,7 +88,7 @@ public final class DataManager: ObservableObject {
         metadataExtractor = MetadataExtractionService(formatDetectionService: formatDetectionService)
         trackDataActor = TrackDataActor(modelContainer: container)
         recentSearchesActor = RecentSearchesActor(modelContainer: container)
-        logger.info("DataManager initialized\(isFallback ? " in fallback mode" : "") successfully")
+        logger.info("DataManager initialized\(isFallback ? " in fallback mode" : "", privacy: .public) successfully")
     }
 }
 
@@ -110,6 +113,11 @@ extension DataManager: LibraryRepositoryFactory {
                 await repository.invalidateLibraryStatisticsCache()
             }
         }
+    }
+
+    func invalidateLibrary() {
+        libraryRevision &+= 1
+        invalidateLibraryStatisticsCache()
     }
 }
 

@@ -5,19 +5,43 @@
 //  Simplified mini player matching Apple Music's clean approach
 //
 
+import OSLog
 import SwiftUI
 
 /// Simplified Mini Player matching Apple Music's design
 /// Compact layout with artwork, title/artist, and playback controls
 @MainActor
 struct LiquidGlassMiniPlayer: View {
-    @Environment(\.audioEngine) private var audioService
+    struct AccessoryPresentation: Equatable {
+        let isInline: Bool
+
+        var showsArtwork: Bool { !isInline }
+        var showsArtist: Bool { !isInline }
+        var showsNextButton: Bool { !isInline }
+        var horizontalSpacing: CGFloat { isInline ? 8 : 15 }
+        var infoSpacing: CGFloat { isInline ? 6 : 12 }
+        var horizontalPadding: CGFloat { isInline ? 8 : 15 }
+    }
+
+    private let logger = Log.logger(.nowPlaying)
+    @EnvironmentObject private var audioService: AudioEngineFacade
+    @Environment(\.tabViewBottomAccessoryPlacement) private var accessoryPlacement
 
     let namespace: Namespace.ID
     let onOpen: () -> Void
 
+    static func accessoryPresentation(
+        for placement: TabViewBottomAccessoryPlacement?
+    ) -> AccessoryPresentation {
+        AccessoryPresentation(isInline: placement == .inline)
+    }
+
+    private var presentation: AccessoryPresentation {
+        Self.accessoryPresentation(for: accessoryPlacement)
+    }
+
     var body: some View {
-        HStack(spacing: 15) {
+        HStack(spacing: presentation.horizontalSpacing) {
             Button(action: onOpen) {
                 playerInfo
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -31,38 +55,44 @@ struct LiquidGlassMiniPlayer: View {
             Spacer(minLength: 0)
 
             playPauseButton
-                .padding(.trailing, 10)
+                .padding(.trailing, presentation.isInline ? 0 : 10)
 
-            nextButton
+            if presentation.showsNextButton {
+                nextButton
+            }
         }
         .contentShape(.rect)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("MiniPlayer")
         .foregroundStyle(Color.primary)
-        .padding(.horizontal, 15)
+        .padding(.horizontal, presentation.horizontalPadding)
     }
 
     // MARK: - Player Info
 
     private var playerInfo: some View {
-        HStack(spacing: 12) {
-            MorphableArtwork(size: 30, namespace: namespace)
+        HStack(spacing: presentation.infoSpacing) {
+            if presentation.showsArtwork {
+                MorphableArtwork(size: 30, namespace: namespace)
+            }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(audioService?.currentTrack?.title ?? "Not Playing")
+            VStack(alignment: .leading, spacing: presentation.isInline ? 0 : 6) {
+                Text(audioService.currentTrack?.title ?? "Not Playing")
                     .font(.callout)
                     .lineLimit(1)
 
-                Text(audioService?.currentTrack?.artist ?? "No Artist")
-                    .font(.caption2)
-                    .foregroundStyle(.gray)
-                    .lineLimit(1)
+                if presentation.showsArtist {
+                    Text(audioService.currentTrack?.artist ?? "No Artist")
+                        .font(.caption2)
+                        .foregroundStyle(.gray)
+                        .lineLimit(1)
+                }
             }
         }
     }
 
     private var nowPlayingAccessibilityValue: String {
-        guard let track = audioService?.currentTrack else { return "Not playing" }
+        guard let track = audioService.currentTrack else { return "Not playing" }
         return "\(track.title), \(track.artist)"
     }
 
@@ -70,48 +100,60 @@ struct LiquidGlassMiniPlayer: View {
 
     private var playPauseButton: some View {
         Button(action: togglePlayPause) {
-            Image(systemName: audioService?.isPlaying == true ? "pause.fill" : "play.fill")
+            Image(systemName: audioService.isPlaying ? "pause.fill" : "play.fill")
                 .contentShape(.rect)
+                .frame(width: 44, height: 44)
         }
         .buttonStyle(.plain)
-        .disabled(audioService?.currentTrack == nil)
-        .opacity(audioService?.currentTrack == nil ? 0.4 : 1.0)
-        .accessibilityLabel(audioService?.isPlaying == true ? "Pause" : "Play")
+        .disabled(audioService.currentTrack == nil)
+        .opacity(audioService.currentTrack == nil ? 0.4 : 1.0)
+        .accessibilityLabel(audioService.isPlaying ? "Pause" : "Play")
     }
 
     private var nextButton: some View {
         Button(action: playNext) {
             Image(systemName: "forward.fill")
                 .contentShape(.rect)
+                .frame(width: 44, height: 44)
         }
         .buttonStyle(.plain)
-        .disabled(audioService?.currentTrack == nil)
-        .opacity(audioService?.currentTrack == nil ? 0.4 : 1.0)
+        .disabled(audioService.currentTrack == nil)
+        .opacity(audioService.currentTrack == nil ? 0.4 : 1.0)
         .accessibilityLabel("Next Track")
     }
 
     // MARK: - Actions
 
     private func togglePlayPause() {
-        Task {
-            if audioService?.isPlaying == true {
-                await audioService?.pause()
-            } else {
-                try? await audioService?.resume()
+        Task { @MainActor in
+            do {
+                if audioService.isPlaying {
+                    await audioService.pause()
+                } else {
+                    try await audioService.resume()
+                }
+
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred(intensity: 1.0)
+            } catch {
+                logger.error("Mini player toggle failed: \(error.localizedDescription, privacy: .private)")
+                audioService.reportPlaybackControlError(error)
             }
         }
-
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred(intensity: 1.0)
     }
 
     private func playNext() {
-        Task {
-            try? await audioService?.playNext()
-        }
+        Task { @MainActor in
+            do {
+                try await audioService.playNext()
 
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred(intensity: 0.8)
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred(intensity: 0.8)
+            } catch {
+                logger.error("Mini player next-track failed: \(error.localizedDescription, privacy: .private)")
+                audioService.reportPlaybackControlError(error)
+            }
+        }
     }
 }
 
@@ -124,7 +166,7 @@ struct LiquidGlassMiniPlayer: View {
     VStack {
         Spacer()
         LiquidGlassMiniPlayer(namespace: namespace, onOpen: {})
-            .environment(\.audioEngine, audioService)
+            .audioEngine(audioService)
             .padding()
     }
     .background(Color.black)
