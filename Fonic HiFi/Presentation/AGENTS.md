@@ -9,6 +9,7 @@ These instructions extend the repository root guide for `Presentation/`.
 - Keep persistence, metadata extraction, artwork processing, audio work, and model generation outside SwiftUI `body`.
 - Views render state and send user intent through established owners; they must not duplicate playback, queue, library, or persistence authority.
 - Preserve existing navigation, presentation, focus, restoration, and error-state behavior while making local UI changes.
+- Stop timers, polling, and animation-driving work when the owning view disappears; do not leave repeating work running for off-screen features.
 
 ## Accessibility and Visual Behavior
 

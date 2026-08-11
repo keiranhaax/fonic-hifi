@@ -8,6 +8,7 @@ These instructions extend the repository root guide for `Data/`.
 - Pass identifiers or other `Sendable` values across actor boundaries rather than live persistent models.
 - Preserve relationships and any scalar compatibility fields together where the current schema requires both.
 - Never delete the user store, library, bookmarks, or imported media to recover from a persistence or migration failure.
+- Durable track identity is `Track.id`, independent of absolute container paths, display metadata, and array position. Path repair (for example `ManagedMediaURLResolver`) updates the location in place and must preserve the existing ID, playlists, ratings, and history.
 
 ## Schemas and Shared Contracts
 
@@ -22,6 +23,8 @@ These instructions extend the repository root guide for `Data/`.
 - Copy imported audio into the app container before persisting the copied URL.
 - Preserve source bookmarks and hashes used for duplicate detection.
 - Preserve bounded concurrency, cancellation, duplicate handling, partial-failure reporting, cleanup, and already-imported-file behavior.
+- File existence is not validity: treat zero-byte, partial, or undecodable files as failures, and use the library-integrity fields on `Track` to mark unreachable files over consecutive checks instead of deleting user data.
+- Import and scan triggers are idempotent; launch, foreground, and background triggers must not start overlapping workflows. Preserve the established in-progress guard pattern.
 
 ## Verification
 
