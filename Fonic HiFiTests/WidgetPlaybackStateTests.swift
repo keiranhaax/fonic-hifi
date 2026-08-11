@@ -115,4 +115,25 @@ final class WidgetPlaybackStateTests: XCTestCase {
 
         XCTAssertEqual(WidgetPlaybackState.loadOrIdle(from: defaults), .idle)
     }
+
+    func testGoldenFixtureRoundTripsTheWidgetWireContract() throws {
+        let fixture = #"{"isPlaying":true,"currentTime":12.5,"duration":180,"shuffleEnabled":false,"repeatMode":"none","hasNext":true,"hasPrevious":false,"#
+            + #"timestamp":"2026-08-10T12:00:00Z","playbackRate":1}"#
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(WidgetPlaybackState.self, from: Data(fixture.utf8))
+
+        XCTAssertTrue(decoded.isPlaying)
+        XCTAssertEqual(decoded.currentTime, 12.5, accuracy: 0.0001)
+        XCTAssertEqual(decoded.duration, 180, accuracy: 0.0001)
+        XCTAssertEqual(decoded.repeatMode, "none")
+        XCTAssertTrue(decoded.hasNext)
+        XCTAssertFalse(decoded.hasPrevious)
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let encoded = try encoder.encode(decoded)
+        let roundTripped = try decoder.decode(WidgetPlaybackState.self, from: encoded)
+        XCTAssertEqual(roundTripped, decoded)
+    }
 }

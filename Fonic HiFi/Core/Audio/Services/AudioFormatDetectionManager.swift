@@ -57,6 +57,9 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
 
         // Get file size
         let fileSize = try getFileSize(at: url)
+        guard fileSize > 0 else {
+            throw DetectionError.invalidFile(reason: "Audio file is empty")
+        }
 
         // Detect format from file extension
         guard let format = AudioFormat.from(url: url) else {
@@ -70,7 +73,11 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
             try Task.checkCancellation()
 
             if let adapter {
-                return try await adapter.detectFormat(at: url)
+                let info = try await adapter.detectFormat(at: url)
+                guard info.isValid else {
+                    throw DetectionError.invalidFile(reason: "Audio file contains invalid format metadata")
+                }
+                return info
             }
 
             return try await manager.detectUsingAVAsset(url: url, format: format, fileSize: fileSize)
@@ -234,7 +241,7 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
             let bitrate = try? await calculateBitrate(from: audioTrack, duration: duration, fileSize: fileSize)
             let normalizedBitrate = bitrate.map { UInt64($0) }
 
-            return AudioFileInfo(
+            let info = AudioFileInfo(
                 url: url,
                 format: detectedFormat,
                 duration: duration.seconds,
@@ -247,9 +254,22 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
                 container: url.pathExtension.lowercased(),
             )
 
+            guard info.isValid else {
+                throw DetectionError.invalidFile(reason: "Audio file contains invalid format metadata")
+            }
+
+            return info
+
         } catch {
             logger.error("avasset.load_failed url=\(url.lastPathComponent, privacy: .private(mask: .hash)) error=\(error.localizedDescription, privacy: .private)")
-            throw DetectionError.assetLoadingFailed(error)
+            if error is CancellationError {
+                throw error
+            }
+            if let detectionError = error as? DetectionError,
+               case .invalidFile = detectionError {
+                throw detectionError
+            }
+            throw DetectionError.invalidFile(reason: "Audio file could not be decoded")
         }
     }
 

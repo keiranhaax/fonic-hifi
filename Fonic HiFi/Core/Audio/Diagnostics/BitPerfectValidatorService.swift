@@ -16,19 +16,28 @@ public struct BitPerfectEligibilityContext: Sendable, Equatable {
     public let playbackRate: Double
     public let replayGainEnabled: Bool
     public let equalizerEnabled: Bool
+    public let crossfadeEnabled: Bool
+
+    /// Measured engine graph evidence, populated once an engine exists. Its
+    /// load state and formats distinguish pre-load from post-load validation.
+    public let engineEvidence: AudioEngineFormatEvidence?
 
     public init(
         engineIdentifier: String,
         applicationVolume: Float,
         playbackRate: Double,
         replayGainEnabled: Bool,
-        equalizerEnabled: Bool
+        equalizerEnabled: Bool,
+        crossfadeEnabled: Bool = false,
+        engineEvidence: AudioEngineFormatEvidence? = nil
     ) {
         self.engineIdentifier = engineIdentifier
         self.applicationVolume = applicationVolume
         self.playbackRate = playbackRate
         self.replayGainEnabled = replayGainEnabled
         self.equalizerEnabled = equalizerEnabled
+        self.crossfadeEnabled = crossfadeEnabled
+        self.engineEvidence = engineEvidence
     }
 
     public static let unknown = BitPerfectEligibilityContext(
@@ -36,11 +45,12 @@ public struct BitPerfectEligibilityContext: Sendable, Equatable {
         applicationVolume: 1,
         playbackRate: 1,
         replayGainEnabled: false,
-        equalizerEnabled: false
+        equalizerEnabled: false,
+        crossfadeEnabled: false
     )
 
     public var hasDSP: Bool {
-        playbackRate != 1 || replayGainEnabled || equalizerEnabled
+        playbackRate != 1 || replayGainEnabled || equalizerEnabled || crossfadeEnabled
     }
 }
 

@@ -15,6 +15,84 @@ public protocol MetadataExtracting: Sendable {
     func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata]
 }
 
+/// Sendable metadata values captured in one pass from an AVAsset.
+/// Keeping the snapshot value-only makes metadata loading injectable in tests
+/// without sharing AVFoundation objects across concurrency domains.
+struct MetadataItemSnapshot: Sendable {
+    let commonKey: String?
+    let identifier: String?
+    let key: String?
+    let stringValue: String?
+    let dataValue: Data?
+}
+
+struct MetadataAssetSnapshot: Sendable {
+    let duration: TimeInterval
+    let metadata: [MetadataItemSnapshot]
+    let commonMetadata: [MetadataItemSnapshot]
+}
+
+protocol MetadataAssetLoading: Sendable {
+    func load(from url: URL) async throws -> MetadataAssetSnapshot
+}
+
+private struct AVAssetMetadataLoader: MetadataAssetLoading {
+    func load(from url: URL) async throws -> MetadataAssetSnapshot {
+        let asset = AVURLAsset(url: url)
+        let duration = try await asset.load(.duration)
+        let metadata = try await asset.load(.metadata)
+        let commonMetadata = try await asset.load(.commonMetadata)
+
+        return MetadataAssetSnapshot(
+            duration: duration.seconds,
+            metadata: await Self.snapshots(for: metadata),
+            commonMetadata: await Self.snapshots(for: commonMetadata),
+        )
+    }
+
+    private static func snapshots(for items: [AVMetadataItem]) async -> [MetadataItemSnapshot] {
+        var snapshots: [MetadataItemSnapshot] = []
+        snapshots.reserveCapacity(items.count)
+
+        for item in items {
+            let commonKey = item.commonKey?.rawValue
+            let identifier = item.identifier?.rawValue
+            let key = (item.key as? String) ?? (item.key as? NSString).map(String.init)
+            let lowerKeys = [key, identifier]
+                .compactMap { $0?.lowercased() }
+            let needsStringValue = commonKey != nil || lowerKeys.contains { $0.contains("replaygain") }
+            let needsDataValue = commonKey == AVMetadataKey.commonKeyArtwork.rawValue ||
+                identifier == AVMetadataIdentifier.iTunesMetadataTrackNumber.rawValue ||
+                identifier == AVMetadataIdentifier.iTunesMetadataDiscNumber.rawValue
+
+            let stringValue = needsStringValue ? await Self.loadStringValue(from: item) : nil
+            let dataValue = needsDataValue ? await Self.loadDataValue(from: item) : nil
+            snapshots.append(MetadataItemSnapshot(
+                commonKey: commonKey,
+                identifier: identifier,
+                key: key,
+                stringValue: stringValue,
+                dataValue: dataValue,
+            ))
+        }
+
+        return snapshots
+    }
+
+    private static func loadStringValue(from item: AVMetadataItem) async -> String? {
+        guard let value = try? await item.load(.value) else { return nil }
+        if let string = value as? String { return string }
+        if let string = value as? NSString { return String(string) }
+        if let number = value as? NSNumber { return number.stringValue }
+        if let date = value as? Date { return ISO8601DateFormatter().string(from: date) }
+        return nil
+    }
+
+    private static func loadDataValue(from item: AVMetadataItem) async -> Data? {
+        try? await item.load(.dataValue)
+    }
+}
+
 extension MetadataExtracting {
     /// Extract metadata with default concurrency based on CPU cores
     func extractMetadata(from urls: [URL]) async throws -> [TrackMetadata] {
@@ -30,11 +108,23 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
 
     /// Audio format detection service
     private let formatDetectionService: any FormatDetectionService
+    private let metadataLoader: any MetadataAssetLoading
 
     // MARK: - Initialization
 
-    public init(formatDetectionService: any FormatDetectionService) {
+    public convenience init(formatDetectionService: any FormatDetectionService) {
+        self.init(
+            formatDetectionService: formatDetectionService,
+            metadataLoader: AVAssetMetadataLoader(),
+        )
+    }
+
+    init(
+        formatDetectionService: any FormatDetectionService,
+        metadataLoader: any MetadataAssetLoading,
+    ) {
         self.formatDetectionService = formatDetectionService
+        self.metadataLoader = metadataLoader
     }
 
     // MARK: - Public Methods
@@ -56,26 +146,33 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
             throw MetadataExtractionError.fileNotFound(url)
         }
 
-        // Create AVAsset for metadata extraction
+        // Create AVAsset for format fallback. Metadata properties are loaded by
+        // the value-only loader below so each property is requested once.
         let asset = AVURLAsset(url: url)
 
-        // Extract duration
-        let duration = try await asset.load(.duration)
-        let durationInSeconds = CMTimeGetSeconds(duration)
-
-        // Extract metadata
-        let metadata = try await asset.load(.metadata)
-        let commonMetadata = try await asset.load(.commonMetadata)
+        let metadataSnapshot = try await metadataLoader.load(from: url)
+        let durationInSeconds = metadataSnapshot.duration
+        guard durationInSeconds.isFinite, durationInSeconds > 0 else {
+            throw MetadataExtractionError.invalidFormat(url)
+        }
 
         // Extract audio format information
         let audioFormat = try await extractAudioFormat(from: asset, url: url)
 
         // Parse metadata items
-        let metadataValues = try await parseMetadata(metadata: commonMetadata + metadata)
+        let allMetadata = metadataSnapshot.commonMetadata + metadataSnapshot.metadata
+        let metadataValues = parseMetadata(metadata: allMetadata)
 
         // Extract replay gain from all metadata (includes ID3v2 TXXX frames)
-        let replayGain = try await extractReplayGain(from: metadata)
-        let artwork = try await extractArtwork(from: asset)
+        let replayGain = extractReplayGain(from: allMetadata)
+        let artwork = extractArtwork(from: metadataSnapshot.commonMetadata)
+
+        guard audioFormat.sampleRate.isFinite, audioFormat.sampleRate > 0,
+              audioFormat.bitrate >= 0, audioFormat.channels > 0,
+              audioFormat.bitDepth > 0
+        else {
+            throw MetadataExtractionError.invalidFormat(url)
+        }
 
         // Create TrackMetadata with extracted information
         let trackMetadata = TrackMetadata(
@@ -177,7 +274,8 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
 
     private func extractAudioFormat(from asset: AVAsset, url: URL) async throws -> AudioFormatInfo {
         // Try to get format from our format detection service first
-        if let detectedFormat = try? await formatDetectionService.detectFormat(at: url) {
+        do {
+            let detectedFormat = try await formatDetectionService.detectFormat(at: url)
             return AudioFormatInfo(
                 format: detectedFormat.format.rawValue,
                 sampleRate: Double(detectedFormat.sampleRate),
@@ -185,6 +283,10 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
                 bitrate: Int(detectedFormat.bitrate ?? 0),
                 channels: Int(detectedFormat.channels),
                 isLossless: detectedFormat.isLossless,
+            )
+        } catch {
+            logger.warning(
+                "Format detection failed for \(url.lastPathComponent, privacy: .private(mask: .hash)); using AVAsset fallback: \(error.localizedDescription, privacy: .private)"
             )
         }
 
@@ -222,46 +324,33 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
         )
     }
 
-    private func parseMetadata(metadata: [AVMetadataItem]) async throws -> MetadataValues {
+    private func parseMetadata(metadata: [MetadataItemSnapshot]) -> MetadataValues {
         var values = MetadataValues()
-        var customMetadata: [String: String] = [:]
 
         for item in metadata {
-            guard let key = item.commonKey?.rawValue else { continue }
-            guard let value = await loadValue(from: item) else { continue }
+            guard let key = item.commonKey, let value = item.stringValue else { continue }
 
             switch key {
             case "title":
-                values.title = value as? String
+                values.title = value
             case "artist":
-                values.artist = value as? String
+                values.artist = value
             case "albumName":
-                values.album = value as? String
+                values.album = value
             case "albumArtist":
-                values.albumArtist = value as? String
+                values.albumArtist = value
             case "type": // Genre
-                values.genre = value as? String
+                values.genre = value
             case "creationDate":
-                if let dateString = value as? String {
-                    values.year = extractYear(from: dateString)
-                }
+                values.year = extractYear(from: value)
             case "composer":
-                values.composer = value as? String
+                values.composer = value
             case "conductor":
-                values.conductor = value as? String
-            case "lyricist":
-                values.lyricist = value as? String
-            case "copyrights":
-                values.copyright = value as? String
-            case "encodedBy":
-                values.encodedBy = value as? String
+                values.conductor = value
             case "description":
-                values.comment = value as? String
+                values.comment = value
             default:
-                // Store unknown metadata as custom metadata
-                if let stringValue = value as? String {
-                    customMetadata[key] = stringValue
-                }
+                break
             }
         }
 
@@ -269,14 +358,14 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
         for item in metadata {
             if let identifier = item.identifier {
                 switch identifier {
-                case .iTunesMetadataTrackNumber:
-                    if let data = await loadDataValue(from: item) {
+                case AVMetadataIdentifier.iTunesMetadataTrackNumber.rawValue:
+                    if let data = item.dataValue {
                         let tuple = parseITunesNumberTuple(data)
                         values.trackNumber = tuple.number
                         values.trackCount = tuple.total
                     }
-                case .iTunesMetadataDiscNumber:
-                    if let data = await loadDataValue(from: item) {
+                case AVMetadataIdentifier.iTunesMetadataDiscNumber.rawValue:
+                    if let data = item.dataValue {
                         let tuple = parseITunesNumberTuple(data)
                         values.discNumber = tuple.number
                         values.discCount = tuple.total
@@ -287,20 +376,17 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
             }
         }
 
-        values.customMetadata = customMetadata
         return values
     }
 
-    private func extractArtwork(from asset: AVAsset) async throws -> Data? {
-        guard let metadata = try? await asset.load(.commonMetadata) else { return nil }
-
+    private func extractArtwork(from metadata: [MetadataItemSnapshot]) -> Data? {
         for item in metadata {
-            guard item.commonKey == .commonKeyArtwork,
-                  let data = await loadDataValue(from: item)
+            guard item.commonKey == AVMetadataKey.commonKeyArtwork.rawValue,
+                  let data = item.dataValue
             else { continue }
 
-                // Compress before returning (thread-safe CoreGraphics)
-                return ArtworkCompressor.compress(data)
+            // Compress before returning (thread-safe CoreGraphics)
+            return ArtworkCompressor.compress(data)
         }
 
         return nil
@@ -309,7 +395,7 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
     private func extractYear(from dateString: String) -> Int? {
         // Try to extract year from various date formats
         let yearRegex = try? NSRegularExpression(pattern: "\\b(19|20)\\d{2}\\b")
-        let range = NSRange(location: 0, length: dateString.count)
+        let range = NSRange(location: 0, length: dateString.utf16.count)
 
         if let match = yearRegex?.firstMatch(in: dateString, options: [], range: range),
            let matchRange = Range(match.range, in: dateString) {
@@ -330,14 +416,6 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
     private func loadValue(from item: AVMetadataItem) async -> Any? {
         do {
             return try await item.load(.value)
-        } catch {
-            return nil
-        }
-    }
-
-    private func loadDataValue(from item: AVMetadataItem) async -> Data? {
-        do {
-            return try await item.load(.dataValue)
         } catch {
             return nil
         }
@@ -373,36 +451,33 @@ public final class MetadataExtractionService: ObservableObject, Sendable {
         var albumGain: Float?
 
         for item in metadata {
-            // Check for ID3v2 TXXX frames and Vorbis comments
-            if let key = item.key as? String {
-                let keyLower = key.lowercased()
-                let value = await loadValue(from: item) as? String
+            let key = (item.key as? String) ?? (item.key as? NSString).map(String.init)
+            let identifier = item.identifier?.rawValue
+            let candidates = [key, identifier].compactMap { $0?.lowercased() }
+            guard candidates.contains(where: { $0.contains("replaygain") }) else { continue }
+            guard let value = await loadValue(from: item) as? String else { continue }
 
-                if keyLower.contains("replaygain_track_gain") {
-                    if let value {
-                        trackGain = parseReplayGainValue(value)
-                    }
-                } else if keyLower.contains("replaygain_album_gain") {
-                    if let value {
-                        albumGain = parseReplayGainValue(value)
-                    }
-                }
+            if candidates.contains(where: { $0.contains("replaygain_track_gain") }) {
+                trackGain = parseReplayGainValue(value)
+            } else if candidates.contains(where: { $0.contains("replaygain_album_gain") }) {
+                albumGain = parseReplayGainValue(value)
             }
+        }
 
-            // Check string value of key for identifiers
-            if let identifier = item.identifier?.rawValue {
-                let identifierLower = identifier.lowercased()
-                let value = await loadValue(from: item) as? String
+        return (trackGain, albumGain)
+    }
 
-                if identifierLower.contains("replaygain_track_gain") {
-                    if let value {
-                        trackGain = parseReplayGainValue(value)
-                    }
-                } else if identifierLower.contains("replaygain_album_gain") {
-                    if let value {
-                        albumGain = parseReplayGainValue(value)
-                    }
-                }
+    private func extractReplayGain(from metadata: [MetadataItemSnapshot]) -> (track: Float?, album: Float?) {
+        var trackGain: Float?
+        var albumGain: Float?
+
+        for item in metadata {
+            let candidates = [item.key, item.identifier].compactMap { $0?.lowercased() }
+            guard let value = item.stringValue else { continue }
+            if candidates.contains(where: { $0.contains("replaygain_track_gain") }) {
+                trackGain = parseReplayGainValue(value)
+            } else if candidates.contains(where: { $0.contains("replaygain_album_gain") }) {
+                albumGain = parseReplayGainValue(value)
             }
         }
 
@@ -425,20 +500,8 @@ private struct MetadataValues {
     var discCount: Int?
     var composer: String?
     var conductor: String?
-    var lyricist: String?
-    var copyright: String?
-    var encodedBy: String?
-    var encoderSettings: String?
-    var isrc: String?
-    var musicBrainzTrackId: String?
-    var musicBrainzArtistId: String?
-    var musicBrainzAlbumId: String?
-    var musicBrainzAlbumArtistId: String?
-    var musicBrainzReleaseGroupId: String?
-    var acoustidId: String?
     var lyrics: String?
     var comment: String?
-    var customMetadata: [String: String] = [:]
 }
 
 private struct AudioFormatInfo {

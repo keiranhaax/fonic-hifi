@@ -30,7 +30,7 @@ public final class AudioEngineFacade: ObservableObject {
     public let stateManager: PlaybackStateManager
     public let queueManager: AudioQueueManager
     public let validator: BitPerfectValidator
-    public let monitor: any AudioPerformanceMonitoring & AudioDiagnosticsReporting
+    public let monitor: any AudioPerformanceMonitoring & PlaybackHealthEventLogging
     public let playbackSettingsStore: AudioPlaybackSettingsStore
     public let sleepTimerManager: SleepTimerManager
 
@@ -75,6 +75,11 @@ public final class AudioEngineFacade: ObservableObject {
     @Published public var abLoopState = ABLoopState()
 
     public var lastPlaybackErrorMessage: String? { playbackError?.message }
+
+    /// Recent playback-health events recorded for the diagnostics panel (oldest first).
+    public var playbackHealthEvents: [PlaybackHealthEvent] {
+        monitor.playbackHealthEvents
+    }
 
     /// Pending seek position from restored queue state (used on first play after launch)
     private var pendingSeekPosition: TimeInterval?
@@ -153,7 +158,7 @@ public final class AudioEngineFacade: ObservableObject {
         stateManager: PlaybackStateManager? = nil,
         queueManager: AudioQueueManager? = nil,
         validator: BitPerfectValidator? = nil,
-        monitor: (any AudioPerformanceMonitoring & AudioDiagnosticsReporting)? = nil,
+        monitor: (any AudioPerformanceMonitoring & PlaybackHealthEventLogging)? = nil,
         playbackSettingsStore: AudioPlaybackSettingsStore? = nil,
         uiStateStore: AudioUIState? = nil,
         runtimeMonitoringEnabled: Bool? = nil,
@@ -161,11 +166,20 @@ public final class AudioEngineFacade: ObservableObject {
     ) {
         self.sessionManager = sessionManager ?? AudioSessionManager()
         self.formatDetectionManager = formatDetectionManager ?? AudioFormatDetectionManager()
-        self.engineFactory = engineFactory ?? AudioEngineFactory()
         self.stateManager = stateManager ?? PlaybackStateManager()
         self.queueManager = queueManager ?? AudioQueueManager()
         self.validator = validator ?? BitPerfectValidator()
-        self.monitor = monitor ?? AudioMonitor()
+        let selectedMonitor = monitor ?? AudioMonitor()
+        self.monitor = selectedMonitor
+        if let engineFactory {
+            self.engineFactory = engineFactory
+        } else {
+            self.engineFactory = AudioEngineFactory(
+                configurationRecoveryFailureHandler: { [weak selectedMonitor] kind, detail in
+                    selectedMonitor?.recordPlaybackHealthEvent(kind, detail: detail)
+                }
+            )
+        }
         self.playbackSettingsStore = playbackSettingsStore ?? AudioPlaybackSettingsStore()
         self.sleepTimerManager = sleepTimerManager ?? SleepTimerManager()
         self.uiStateStore = uiStateStore ?? AudioUIState()
@@ -181,6 +195,14 @@ public final class AudioEngineFacade: ObservableObject {
         diagnosticsStatus = self.uiStateStore.diagnosticsStatus
 
         setupStateBindings()
+        self.monitor.playbackHealthEventsPublisher
+            .dropFirst()
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.objectWillChange.send()
+                }
+            }
+            .store(in: &cancellables)
         self.sleepTimerManager.objectWillChange
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
@@ -202,8 +224,21 @@ public final class AudioEngineFacade: ObservableObject {
                         wasSkipped: false,
                         wasCompleted: true
                     )
-                    try await self.queueCoordinator.playNextAfterCompletion()
+                    let didAdvance = try await self.queueCoordinator.playNextAfterCompletion()
                     try Task.checkCancellation()
+                    guard didAdvance else {
+                        // Queue exhaustion is a genuine end of playback. The
+                        // coordinator already stopped the engine; release
+                        // audio focus only on this terminal path.
+                        do {
+                            try await self.sessionManager.deactivateAudioSession()
+                        } catch {
+                            self.logger.error(
+                                "Failed to deactivate audio session at end of queue: \(error.localizedDescription, privacy: .private)"
+                            )
+                        }
+                        return
+                    }
                     await self.startSessionForCurrentQueueTrack()
                 }
             } catch {
@@ -393,8 +428,11 @@ public final class AudioEngineFacade: ObservableObject {
             if queueManager.queueState.isEmpty, await queueManager.restoreState() {
                 logger.info("Restored persisted queue state")
                 if let restoredTrack = queueManager.currentTrack {
-                    uiStateStore.currentTrack = createTrackFromAudioTrack(restoredTrack)
-                    uiStateStore.showMiniPlayer = true
+                    // Restore the last track as the launch playback surface. It
+                    // remains paused until the user resumes playback.
+                    uiStateStore.restorePersistedTrack(
+                        PlayableTrackSnapshot(audioTrack: restoredTrack).makeDisplayTrack()
+                    )
 
                     // Capture saved playback position for resume on first play
                     let savedPosition = queueManager.queueState.lastPlaybackPosition
@@ -520,6 +558,9 @@ public final class AudioEngineFacade: ObservableObject {
         preferenceObserver?.invalidate()
         preferenceObserver = nil
         queueManager.delegate = nil
+        // Remove all MPRemoteCommandCenter targets while the facade still owns
+        // the delegate; no late command can reach a torn-down coordinator.
+        await sessionManager.disableRemoteCommands()
         sessionManager.delegate = nil
         cancellables.removeAll()
         isInitialized = false
@@ -537,8 +578,18 @@ public final class AudioEngineFacade: ObservableObject {
             try await self.ensureReadyForPlayback()
             try Task.checkCancellation()
             self.logger.info("Starting selected-track playback")
-            try await self.playbackController.play(track: track)
+            let snapshot = PlayableTrackSnapshot(track: track)
+            let wasAlreadyInQueue = self.queueManager.tracks.contains { $0.id == snapshot.id }
+            try await self.playbackController.play(snapshot: snapshot, queueEntry: nil)
             try Task.checkCancellation()
+
+            guard self.queueManager.setCurrentTrack(snapshot.audioTrack) else {
+                await self.playbackController.stop()
+                throw AudioError.playbackFailed(reason: "Unable to commit selected track to queue")
+            }
+            if !wasAlreadyInQueue {
+                await self.playbackController.prepareUpcomingTrackForCurrentPlayback()
+            }
 
             if let engine = self.engineManager.currentEngine {
                 let duration = await engine.duration
@@ -560,6 +611,32 @@ public final class AudioEngineFacade: ObservableObject {
         try await performLatestPlaybackRequest {
             try await self.ensureReadyForPlayback()
             try Task.checkCancellation()
+
+            if self.stateManager.currentState.isIdle,
+               let track = self.uiStateStore.currentTrack {
+                self.logger.info("Loading restored track before resuming playback")
+                try await self.playbackController.play(
+                    track: track,
+                    queueEntry: self.queueManager.currentTrack
+                )
+                try Task.checkCancellation()
+
+                if let engine = self.engineManager.currentEngine {
+                    let duration = await engine.duration
+                    try Task.checkCancellation()
+                    await self.sessionService?.startSession(trackId: track.id, duration: duration)
+                }
+
+                if let seekPosition = self.pendingSeekPosition {
+                    self.pendingSeekPosition = nil
+                    self.logger.info("Seeking to restored position: \(seekPosition, privacy: .public)s")
+                    self.sessionService?.recordSeek()
+                    try await self.playbackController.seek(to: seekPosition)
+                }
+                self.queueManager.commitRestoredFallbackIfNeeded()
+                return
+            }
+
             try await self.playbackController.resume()
             try Task.checkCancellation()
             self.sessionService?.resumeSession()
@@ -594,6 +671,14 @@ public final class AudioEngineFacade: ObservableObject {
         await queueManager.saveState(playbackPosition: 0)
 
         await playbackController.stop()
+
+        do {
+            try await sessionManager.deactivateAudioSession()
+        } catch {
+            logger.error(
+                "Failed to deactivate audio session after explicit stop: \(error.localizedDescription, privacy: .private)"
+            )
+        }
     }
 
     /// Completes queue persistence before the app is suspended without changing playback state.
@@ -618,6 +703,13 @@ public final class AudioEngineFacade: ObservableObject {
         assertMainThread()
         guard isReady else { return }
         await playbackController.setVolume(volume)
+    }
+
+    /// Narrow route-recovery forwarding seam for StateCoordinator. Keep the
+    /// controller private while allowing the coordinator to re-assert the
+    /// active source rate on a MainActor-owned facade.
+    func renegotiatePreferredSampleRateForRoute() async {
+        await playbackController.renegotiatePreferredSampleRate()
     }
 
     @discardableResult
@@ -699,6 +791,22 @@ public final class AudioEngineFacade: ObservableObject {
         queueCoordinator.enqueueNext(track)
     }
 
+    public func replaceQueue(with tracks: [Track], startIndex: Int? = nil) {
+        queueCoordinator.replaceQueue(with: tracks, startIndex: startIndex)
+    }
+
+    public func moveQueueItem(fromOffsets source: IndexSet, toOffset destination: Int) {
+        queueCoordinator.moveItem(fromOffsets: source, toOffset: destination)
+    }
+
+    public func removeQueueItems(at offsets: IndexSet) {
+        queueCoordinator.removeItem(at: offsets)
+    }
+
+    public func jumpToTrack(_ track: AudioTrack) async throws {
+        try await queueCoordinator.jumpToTrack(track)
+    }
+
     public func setShuffleMode(_ mode: QueueShuffleMode) {
         queueCoordinator.setShuffleMode(mode)
     }
@@ -724,10 +832,6 @@ public final class AudioEngineFacade: ObservableObject {
         }
     }
 
-    public func getCurrentDiagnostics() async -> PlaybackDiagnostics {
-        await monitor.performDiagnosticsCheck()
-    }
-
     public func getCurrentMetrics() async -> AudioMetrics {
         await monitor.getCurrentMetrics()
     }
@@ -739,10 +843,11 @@ public final class AudioEngineFacade: ObservableObject {
             } else {
                 try await formatDetectionManager.detectFormat(at: track.url)
             }
+            let eligibilityContext = await engineManager.bitPerfectEligibilityContext()
             let validation = await validator.validateBitPerfectPlayback(
                 sourceFormat: info,
                 outputDevice: nil,
-                context: await engineManager.bitPerfectEligibilityContext()
+                context: eligibilityContext
             )
 
             let devices = await validator.getAvailableDevicesWithCapabilities()
@@ -753,13 +858,21 @@ public final class AudioEngineFacade: ObservableObject {
             }
 
             let metrics = await monitor.getCurrentMetrics()
+            let updatedAt = Date()
             let status = DiagnosticsStatus(
                 track: trackSummary(for: track),
                 validationResult: validation,
                 device: defaultDevice?.device,
                 dacInfo: dacInfo,
                 metrics: metrics,
-                updatedAt: Date(),
+                signalPath: SignalPathSnapshot(
+                    sourceFormat: info,
+                    context: eligibilityContext,
+                    validationResult: validation,
+                    device: defaultDevice?.device,
+                    updatedAt: updatedAt
+                ),
+                updatedAt: updatedAt,
             )
             uiStateStore.diagnosticsStatus = status
             diagnosticsStatus = status
@@ -787,31 +900,82 @@ public final class AudioEngineFacade: ObservableObject {
             abLoopState.clear()
         }
 
-        uiStateStore.currentTrack = track
+        uiStateStore.setCurrentTrack(track)
         if track == nil {
-            uiStateStore.showMiniPlayer = false
             uiStateStore.diagnosticsStatus = .empty
-        } else {
-            uiStateStore.showMiniPlayer = true
         }
+    }
+
+    /// Restores a library track as the paused launch surface when queue
+    /// persistence cannot provide a usable current item.
+    @discardableResult
+    public func restoreLaunchTrack(_ track: Track) -> Bool {
+        guard queueManager.currentTrack == nil,
+              let resolvedURL = ManagedMediaURLResolver.resolveAvailableURL(track.url)
+        else {
+            return false
+        }
+
+        var snapshot = PlayableTrackSnapshot(track: track)
+        snapshot = PlayableTrackSnapshot(
+            id: snapshot.id,
+            resolvedURL: resolvedURL,
+            replayGainTrack: snapshot.replayGainTrack,
+            replayGainAlbum: snapshot.replayGainAlbum,
+            isAvailable: snapshot.isAvailable,
+            isFavorite: snapshot.isFavorite,
+            title: snapshot.title,
+            artist: snapshot.artist,
+            album: snapshot.album,
+            audioFormat: snapshot.audioFormat,
+            duration: snapshot.duration,
+            sampleRate: snapshot.sampleRate,
+            bitDepth: snapshot.bitDepth,
+            channels: snapshot.channels,
+            isLossless: snapshot.isLossless
+        )
+
+        guard queueManager.restoreFallbackTrack(snapshot.audioTrack) else { return false }
+
+        // Keep the library model as the presentation source so extended
+        // metadata (genre, bitrate, artwork, and user fields) is not lost
+        // while the queue receives only the Sendable snapshot currency.
+        track.url = resolvedURL
+        uiStateStore.restorePersistedTrack(track)
+        return true
     }
 
     // MARK: - Private Helpers
 
     private func setupStateBindings() {
+        // PlaybackStateManager is MainActor-isolated, so forwarding directly
+        // keeps pause/resume/seek/error transitions observable during run-loop
+        // tracking instead of waiting for a deferred RunLoop hop.
+        stateManager.statePublisher
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+
         uiStateStore.$currentTrack
-            .receive(on: RunLoop.main)
-            .sink { [weak self] track in self?.currentTrack = track }
+            .sink { [weak self] track in
+                guard let self, self.currentTrack !== track else { return }
+                self.currentTrack = track
+            }
             .store(in: &cancellables)
 
         uiStateStore.$showMiniPlayer
-            .receive(on: RunLoop.main)
-            .sink { [weak self] visible in self?.showMiniPlayer = visible }
+            .sink { [weak self] visible in
+                guard let self, self.showMiniPlayer != visible else { return }
+                self.showMiniPlayer = visible
+            }
             .store(in: &cancellables)
 
         uiStateStore.$diagnosticsStatus
-            .receive(on: RunLoop.main)
-            .sink { [weak self] status in self?.diagnosticsStatus = status }
+            .sink { [weak self] status in
+                guard let self, self.diagnosticsStatus != status else { return }
+                self.diagnosticsStatus = status
+            }
             .store(in: &cancellables)
 
         lastObservedQueueState = queueManager.queueState
@@ -952,20 +1116,6 @@ public final class AudioEngineFacade: ObservableObject {
         )
     }
 
-    private func createTrackFromAudioTrack(_ audioTrack: AudioTrack) -> Track {
-        let track = Track(
-            url: audioTrack.url,
-            title: audioTrack.title,
-            artist: audioTrack.artist,
-            album: audioTrack.album,
-            audioFormat: audioTrack.audioFormat,
-            duration: audioTrack.duration,
-        )
-        track.replayGainTrack = audioTrack.replayGainTrack
-        track.replayGainAlbum = audioTrack.replayGainAlbum
-        return track
-    }
-
     private func assertMainThread(
         file: StaticString = #file,
         line: UInt = #line,
@@ -993,6 +1143,8 @@ extension AudioEngineFacade: AudioSessionDelegate {
     }
 
     public func audioSessionMediaServicesWereReset() async {
+        monitor.recordPlaybackHealthEvent(.mediaServicesResetDetected)
+
         let preservedPosition = stateManager.currentState.currentTime
             ?? queueManager.queueState.lastPlaybackPosition
 
@@ -1029,10 +1181,20 @@ extension AudioEngineFacade: AudioSessionDelegate {
                 preservedPosition: recoveredPosition
             )
             await queueManager.saveState(playbackPosition: recoveredPosition)
+            monitor.recordPlaybackHealthEvent(
+                .mediaServicesResetRecoverySucceeded,
+                detail: "position=\(String(format: "%.3f", recoveredPosition))"
+            )
             logger.notice("Recovered paused playback after media-services reset")
         } catch {
             stateManager.forceUpdateState(
                 .paused(currentTime: preservedPosition, duration: preservedDuration)
+            )
+            // Error descriptions can embed file paths; record the stable type
+            // name only so the health timeline stays privacy-safe.
+            monitor.recordPlaybackHealthEvent(
+                .mediaServicesResetRecoveryFailed,
+                detail: "reason=\(String(describing: type(of: error)))"
             )
             logger.error(
                 "Failed to rebuild playback after media-services reset: \(error.localizedDescription, privacy: .private)"
@@ -1063,9 +1225,4 @@ private final class FacadeQueueDelegateBridge: AudioQueueDelegate {
     func audioQueue(_: AudioQueue, didEncounterError error: AudioError) {
         stateManager.handleEngineError(error)
     }
-}
-
-extension AudioError {
-    static let engineNotReady = AudioError.engineInitializationFailed
-    static let invalidOperation = AudioError.playbackFailed
 }

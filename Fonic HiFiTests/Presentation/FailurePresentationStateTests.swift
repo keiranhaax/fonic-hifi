@@ -10,6 +10,14 @@ struct FailurePresentationStateTests {
         let expectedMessageFragment: String
     }
 
+    struct ImportAutoDismissScenario: Sendable {
+        let statusMessage: String
+        let totalFiles: Int
+        let hasErrors: Bool
+        let isImportComplete: Bool
+        let expected: Bool
+    }
+
     @Test("Home load failures are distinct from empty content and retryable")
     @MainActor
     func homeLoadFailureInjection() throws {
@@ -112,6 +120,7 @@ struct FailurePresentationStateTests {
             totalFiles: 4,
             statusMessage: "Processed 1 of 4 files",
             isImporting: true,
+            isImportComplete: false,
             errors: []
         )
         let importError = ImportError(
@@ -125,6 +134,7 @@ struct FailurePresentationStateTests {
             totalFiles: 4,
             statusMessage: "Import completed: 3 imported, 0 skipped, 1 failed",
             isImporting: false,
+            isImportComplete: true,
             errors: [importError]
         )
 
@@ -141,32 +151,79 @@ struct FailurePresentationStateTests {
         #expect(firstError.message == "Failed to import file")
     }
 
-    @Test("Observed import start deterministically routes every library state to progress")
-    func importSheetRouting() {
-        #expect(
-            ImportSheetPresentation.resolve(
-                current: .selection,
-                isImporting: true
-            ) == .progress
+    @Test(
+        "Only clean import completion dismisses automatically",
+        arguments: [
+            ImportAutoDismissScenario(
+                statusMessage: "Import completed: 2 imported, 0 skipped, 0 failed",
+                totalFiles: 2,
+                hasErrors: false,
+                isImportComplete: true,
+                expected: true
+            ),
+            ImportAutoDismissScenario(
+                statusMessage: "Import completed: 0 imported, 2 skipped, 0 failed",
+                totalFiles: 2,
+                hasErrors: false,
+                isImportComplete: true,
+                expected: true
+            ),
+            ImportAutoDismissScenario(
+                statusMessage: "Import cancelled",
+                totalFiles: 2,
+                hasErrors: false,
+                isImportComplete: false,
+                expected: false
+            ),
+            ImportAutoDismissScenario(
+                statusMessage: "No audio files found",
+                totalFiles: 0,
+                hasErrors: false,
+                isImportComplete: false,
+                expected: false
+            ),
+            ImportAutoDismissScenario(
+                statusMessage: "Import completed: 1 imported, 0 skipped, 1 failed",
+                totalFiles: 2,
+                hasErrors: true,
+                isImportComplete: true,
+                expected: false
+            ),
+            ImportAutoDismissScenario(
+                statusMessage: "Importation terminée",
+                totalFiles: 2,
+                hasErrors: false,
+                isImportComplete: true,
+                expected: true
+            ),
+            ImportAutoDismissScenario(
+                statusMessage: "Import completed: 2 imported, 0 skipped, 0 failed",
+                totalFiles: 2,
+                hasErrors: false,
+                isImportComplete: false,
+                expected: false
+            ),
+        ]
+    )
+    func importAutoDismissPolicy(_ scenario: ImportAutoDismissScenario) {
+        let errors = scenario.hasErrors ? [
+            ImportError(
+                url: URL(fileURLWithPath: "/tmp/broken.flac"),
+                error: FailurePresentationTestError.injected,
+                message: "Failed to import file"
+            ),
+        ] : []
+        let state = ImportProgressPresentationState(
+            progress: 1,
+            filesProcessed: scenario.totalFiles,
+            totalFiles: scenario.totalFiles,
+            statusMessage: scenario.statusMessage,
+            isImporting: false,
+            isImportComplete: scenario.isImportComplete,
+            errors: errors
         )
-        #expect(
-            ImportSheetPresentation.resolve(
-                current: nil,
-                isImporting: true
-            ) == .progress
-        )
-        #expect(
-            ImportSheetPresentation.resolve(
-                current: .selection,
-                isImporting: false
-            ) == .selection
-        )
-        #expect(
-            ImportSheetPresentation.resolve(
-                current: .progress,
-                isImporting: false
-            ) == .progress
-        )
+
+        #expect(state.shouldAutoDismiss == scenario.expected)
     }
 }
 

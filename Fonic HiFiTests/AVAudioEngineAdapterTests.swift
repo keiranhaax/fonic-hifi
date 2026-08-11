@@ -30,6 +30,294 @@ final class AVAudioEngineAdapterTests: XCTestCase {
         XCTAssertGreaterThan(secondDuration, 0)
     }
 
+    func testConfigurationChangeRecoveryCoalescesNotificationBursts() async {
+        let recovery = expectation(description: "Configuration change recovery")
+        var recoveryCount = 0
+        let scheduler = EngineConfigurationChangeRecoveryScheduler(recoveryDelay: .milliseconds(10)) {
+            recoveryCount += 1
+            recovery.fulfill()
+        }
+
+        scheduler.schedule()
+        scheduler.schedule()
+        scheduler.schedule()
+
+        await fulfillment(of: [recovery], timeout: 1)
+        XCTAssertEqual(recoveryCount, 1)
+    }
+
+    func testConfigurationChangeFilterMatchesOnlyObservedEngine() {
+        let engine = AVAudioEngine()
+        let otherEngine = AVAudioEngine()
+        let engineIdentifier = ObjectIdentifier(engine)
+        let notificationName = Notification.Name.AVAudioEngineConfigurationChange
+
+        XCTAssertTrue(
+            AVAudioEngineAdapter.isConfigurationChangeForEngine(
+                Notification(name: notificationName, object: engine),
+                engineIdentifier: engineIdentifier
+            )
+        )
+        XCTAssertFalse(
+            AVAudioEngineAdapter.isConfigurationChangeForEngine(
+                Notification(name: notificationName, object: otherEngine),
+                engineIdentifier: engineIdentifier
+            )
+        )
+        XCTAssertFalse(
+            AVAudioEngineAdapter.isConfigurationChangeForEngine(
+                Notification(name: notificationName),
+                engineIdentifier: engineIdentifier
+            )
+        )
+    }
+
+    func testConfigurationRecoveryReschedulesRemainderAndPreservesTransportFrame() async throws {
+        let url = try makePCMTestAudioFile(duration: 0.6, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+
+        try await adapter.load(url: url)
+        try await adapter.play()
+        await waitForCurrentTime(adapter, atLeast: 0.05)
+        let frameBeforeRecovery = await adapter.currentTime * 44_100
+
+        adapter.recoverAfterConfigurationChange()
+
+        let recoveredTime = await adapter.currentTime
+        XCTAssertGreaterThanOrEqual(
+            recoveredTime * 44_100,
+            frameBeforeRecovery - 2,
+            "Route recovery must resume at or after the captured source frame"
+        )
+        let isPlayingAfterRecovery = await adapter.isPlaying
+        XCTAssertTrue(isPlayingAfterRecovery)
+        await adapter.stop()
+    }
+
+    func testPlaybackFormatEvidenceReportsLoadStateAndProcessing() async throws {
+        let adapter = try AVAudioEngineAdapter()
+
+        let preLoad = await adapter.playbackFormatEvidence()
+        XCTAssertEqual(preLoad?.isTrackLoaded, false)
+        XCTAssertNil(preLoad?.loadedSampleRate)
+
+        let url = try makePCMTestAudioFile(sampleRate: 44_100, testCase: self)
+        try await adapter.load(url: url)
+
+        let evidence = await adapter.playbackFormatEvidence()
+        XCTAssertEqual(evidence?.isTrackLoaded, true)
+        XCTAssertEqual(evidence?.loadedSampleRate ?? 0, 44_100, accuracy: 0.1)
+        XCTAssertEqual(evidence?.hasEngineProcessing, false)
+        XCTAssertNotNil(evidence?.engineOutputSampleRate)
+
+        await adapter.setPlaybackRate(1.5)
+        let processingEvidence = await adapter.playbackFormatEvidence()
+        XCTAssertEqual(processingEvidence?.hasEngineProcessing, true)
+    }
+
+    func testReplayGainUsesIndependentPerChainStageAndAffectsEligibility() async throws {
+        let url = try makePCMTestAudioFile(testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+        try await adapter.load(url: url)
+
+        await adapter.applyReplayGain(-6)
+
+        let volumes = adapter.chainVolumesForTesting
+        XCTAssertEqual(volumes.primary, pow(10, -6 / 20), accuracy: 0.001)
+        XCTAssertEqual(volumes.secondary, 0, accuracy: 0.001)
+        let evidence = await adapter.playbackFormatEvidence()
+        XCTAssertTrue(evidence?.hasEngineProcessing == true)
+        let bitPerfect = await adapter.isBitPerfect
+        XCTAssertFalse(bitPerfect)
+    }
+
+    func testCrossfadeCancellationLeavesSourceChainCoherent() async throws {
+        let sourceURL = try makePCMTestAudioFile(duration: 0.4, testCase: self)
+        let targetURL = try makePCMTestAudioFile(duration: 0.4, sampleRate: 44_100, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+        try await adapter.load(url: sourceURL)
+        try await adapter.play()
+        adapter.setCrossfadeSleeperForTesting { _ in
+            try await Task.sleep(for: .seconds(10))
+        }
+
+        try await adapter.crossfade(to: targetURL, duration: 0.1, playbackRate: 1, gainDB: -3)
+        await adapter.pause()
+
+        let players = try playerNodes(from: adapter)
+        XCTAssertFalse(players.primary.isPlaying)
+        XCTAssertFalse(players.secondary.isPlaying)
+        XCTAssertEqual(adapter.chainVolumesForTesting.secondary, 0, accuracy: 0.001)
+        let format = await adapter.audioFormat
+        XCTAssertNotNil(format)
+    }
+
+    func testPauseResumeSchedulesTrackExactlyOnce() async throws {
+        let duration: TimeInterval = 0.2
+        let url = try makePCMTestAudioFile(duration: duration, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+        let completion = expectation(description: "Track completed once after resume")
+        completion.expectedFulfillmentCount = 1
+        var completionCount = 0
+        adapter.setCompletionHandler {
+            completionCount += 1
+            completion.fulfill()
+        }
+
+        try await adapter.load(url: url)
+        try await adapter.play()
+        await waitForCurrentTime(adapter, atLeast: 0.02)
+        let timeBeforePause = await adapter.currentTime
+
+        await adapter.pause()
+        let pausedTime = await adapter.currentTime
+        XCTAssertGreaterThanOrEqual(pausedTime, timeBeforePause - (1.0 / 44_100))
+
+        let resumeStart = Date()
+        try await adapter.play()
+        await waitForCurrentTime(
+            adapter,
+            atLeast: max(0, pausedTime - (1.0 / 44_100))
+        )
+        let resumedTime = await adapter.currentTime
+        XCTAssertGreaterThanOrEqual(resumedTime, pausedTime - (1.0 / 44_100))
+
+        await fulfillment(of: [completion], timeout: 0.5)
+        let elapsedAfterResume = Date().timeIntervalSince(resumeStart)
+        XCTAssertEqual(completionCount, 1)
+        XCTAssertLessThan(
+            elapsedAfterResume,
+            duration * 2.5,
+            "A resume must not append a second copy of the scheduled file"
+        )
+        await adapter.stop()
+    }
+
+    func testSeekPauseResumePreservesTimeBase() async throws {
+        let url = try makePCMTestAudioFile(duration: 0.4, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+
+        try await adapter.load(url: url)
+        try await adapter.seek(to: 0.2)
+        let seekedTime = await adapter.currentTime
+        XCTAssertEqual(seekedTime, 0.2, accuracy: 1.0 / 44_100)
+
+        await adapter.pause()
+        try await adapter.play()
+
+        let resumedTime = await adapter.currentTime
+        XCTAssertGreaterThanOrEqual(
+            resumedTime,
+            0.2 - (1.0 / 44_100),
+            "Resuming a sought segment must retain its source-frame base"
+        )
+        await adapter.stop()
+    }
+
+    func testRepeatedPauseResumeDoesNotAccumulateSchedules() async throws {
+        let duration: TimeInterval = 0.2
+        let url = try makePCMTestAudioFile(duration: duration, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+        let completion = expectation(description: "Track completed once after repeated resumes")
+        completion.expectedFulfillmentCount = 1
+        var completionCount = 0
+        adapter.setCompletionHandler {
+            completionCount += 1
+            completion.fulfill()
+        }
+
+        try await adapter.load(url: url)
+        try await adapter.play()
+        await waitForCurrentTime(adapter, atLeast: 0.02)
+
+        for _ in 0 ..< 3 {
+            await adapter.pause()
+            try await adapter.play()
+        }
+
+        let resumeStart = Date()
+        await fulfillment(of: [completion], timeout: 0.5)
+        let elapsedAfterResume = Date().timeIntervalSince(resumeStart)
+        XCTAssertEqual(completionCount, 1)
+        XCTAssertLessThan(
+            elapsedAfterResume,
+            duration * 2.5,
+            "Repeated pause/resume cycles must reuse the one pending schedule"
+        )
+        await adapter.stop()
+    }
+
+    func testPauseDisarmsPreparedTransition() async throws {
+        let sourceURL = try makePCMTestAudioFile(duration: 0.25, testCase: self)
+        let targetURL = try makePCMTestAudioFile(duration: 0.25, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+
+        try await adapter.load(url: sourceURL)
+        try await adapter.play()
+        await waitForCurrentTime(adapter, atLeast: 0.02)
+        await adapter.prepareNext(url: targetURL)
+        XCTAssertTrue(adapter.hasNextPrepared)
+
+        await adapter.pause()
+        XCTAssertFalse(adapter.hasNextPrepared)
+        try await Task.sleep(for: .milliseconds(350))
+
+        let players = try playerNodes(from: adapter)
+        XCTAssertFalse(players.primary.isPlaying)
+        XCTAssertFalse(players.secondary.isPlaying)
+        await adapter.stop()
+    }
+
+    func testPlayAfterPreparedTransitionStopsArmedInactivePlayer() async throws {
+        let sourceURL = try makePCMTestAudioFile(duration: 0.3, testCase: self)
+        let targetURL = try makePCMTestAudioFile(duration: 0.3, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+
+        try await adapter.load(url: sourceURL)
+        try await adapter.play()
+        await waitForCurrentTime(adapter, atLeast: 0.02)
+        await adapter.prepareNext(url: targetURL)
+        XCTAssertTrue(adapter.hasNextPrepared)
+
+        try await adapter.play()
+
+        XCTAssertFalse(adapter.hasNextPrepared)
+        let isPrimaryActive = try isPrimaryActive(for: adapter)
+        let players = try playerNodes(from: adapter)
+        let inactivePlayer = isPrimaryActive ? players.secondary : players.primary
+        XCTAssertFalse(inactivePlayer.isPlaying)
+        await adapter.stop()
+    }
+
+    func testConfigureWhilePlayingDoesNotStopPlayback() async throws {
+        let url = try makePCMTestAudioFile(duration: 0.3, testCase: self)
+        let adapter = try AVAudioEngineAdapter()
+        let completion = expectation(description: "Configured track completes")
+        completion.expectedFulfillmentCount = 1
+        adapter.setCompletionHandler {
+            completion.fulfill()
+        }
+
+        try await adapter.load(url: url)
+        try await adapter.play()
+        await waitForCurrentTime(adapter, atLeast: 0.02)
+        let timeBeforeConfigure = await adapter.currentTime
+
+        let configuration = AudioEngineConfiguration(crossfadeDuration: 0.25)
+        try await adapter.configure(with: configuration)
+
+        let isPlayingAfterConfigure = await adapter.isPlaying
+        XCTAssertTrue(isPlayingAfterConfigure)
+        let timeAfterConfigure = await adapter.currentTime
+        XCTAssertGreaterThanOrEqual(
+            timeAfterConfigure,
+            timeBeforeConfigure - (1.0 / 44_100),
+            "Configuring an active adapter must preserve its scheduled playback"
+        )
+        await fulfillment(of: [completion], timeout: 0.5)
+        await adapter.stop()
+    }
+
     func testPlayAndStopUpdatePlaybackState() async throws {
         let url = try makePCMTestAudioFile(testCase: self)
         let adapter = try AVAudioEngineAdapter()
@@ -343,6 +631,46 @@ final class AVAudioEngineAdapterTests: XCTestCase {
 
         let supportsEQ = await adapter.supportsEQ
         XCTAssertTrue(supportsEQ, "AVAudioEngineAdapter should support EQ")
+    }
+
+    private func waitForCurrentTime(
+        _ adapter: AVAudioEngineAdapter,
+        atLeast target: TimeInterval
+    ) async {
+        for _ in 0 ..< 200 {
+            if await adapter.currentTime >= target {
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        XCTFail("Audio adapter did not render to \(target) seconds in time")
+    }
+
+    private func playerNodes(
+        from adapter: AVAudioEngineAdapter
+    ) throws -> (primary: AVAudioPlayerNode, secondary: AVAudioPlayerNode) {
+        let children: [String: AVAudioPlayerNode] = Dictionary(
+            uniqueKeysWithValues: Mirror(reflecting: adapter).children.compactMap { child in
+                guard let label = child.label,
+                      let player = child.value as? AVAudioPlayerNode
+                else {
+                    return nil
+                }
+                return (label, player)
+            }
+        )
+        return (
+            primary: try XCTUnwrap(children["primaryPlayerNode"]),
+            secondary: try XCTUnwrap(children["secondaryPlayerNode"])
+        )
+    }
+
+    private func isPrimaryActive(for adapter: AVAudioEngineAdapter) throws -> Bool {
+        try XCTUnwrap(
+            Mirror(reflecting: adapter).children
+                .first(where: { $0.label == "isPrimaryActive" })?
+                .value as? Bool
+        )
     }
 }
 

@@ -69,6 +69,7 @@ struct ImportProgressPresentationState: Equatable {
     let totalFiles: Int
     let statusMessage: String
     let isImporting: Bool
+    let isImportComplete: Bool
     let errors: [ImportError]
 
     @MainActor
@@ -79,6 +80,7 @@ struct ImportProgressPresentationState: Equatable {
             totalFiles: importService.totalFiles,
             statusMessage: importService.statusMessage,
             isImporting: importService.isImporting,
+            isImportComplete: importService.isImportComplete,
             errors: importService.importErrors
         )
     }
@@ -89,6 +91,7 @@ struct ImportProgressPresentationState: Equatable {
         totalFiles: Int,
         statusMessage: String,
         isImporting: Bool,
+        isImportComplete: Bool,
         errors: [ImportError]
     ) {
         self.progress = progress
@@ -96,28 +99,20 @@ struct ImportProgressPresentationState: Equatable {
         self.totalFiles = totalFiles
         self.statusMessage = statusMessage
         self.isImporting = isImporting
+        self.isImportComplete = isImportComplete
         self.errors = errors
     }
 
     var failedFileCount: Int {
         errors.count
     }
-}
 
-enum ImportSheetDestination: String, Identifiable {
-    case selection
-    case progress
-
-    var id: Self {
-        self
-    }
-}
-
-enum ImportSheetPresentation {
-    static func resolve(
-        current: ImportSheetDestination?,
-        isImporting: Bool
-    ) -> ImportSheetDestination? {
-        isImporting ? .progress : current
+    /// Only a completed, error-free pipeline should dismiss hands-free.
+    /// Cancellation and empty discovery remain visible so their status is not lost.
+    var shouldAutoDismiss: Bool {
+        !isImporting &&
+            isImportComplete &&
+            totalFiles > 0 &&
+            errors.isEmpty
     }
 }

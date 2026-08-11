@@ -29,7 +29,7 @@ struct NowPlayingEntry: TimelineEntry {
 
     /// Whether playback is active
     var isPlaying: Bool {
-        playbackState.isPlaying
+        playbackState.isPlaying && !playbackState.isStale
     }
 
     /// Progress as 0.0-1.0 value

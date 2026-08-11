@@ -15,6 +15,7 @@ protocol FileSystemServicing: Sendable {
 
 enum FileSystemServiceError: LocalizedError, Equatable, Sendable {
     case outsideRoot
+    case libraryOwnedMedia
     case invalidFolderName
     case listFailed
     case createDirectoryFailed
@@ -25,6 +26,8 @@ enum FileSystemServiceError: LocalizedError, Equatable, Sendable {
         switch self {
         case .outsideRoot:
             "The requested location is outside the File Manager root."
+        case .libraryOwnedMedia:
+            "Music is managed by the library and cannot be changed here."
         case .invalidFolderName:
             "Enter a folder name without path separators."
         case .listFailed:
@@ -80,13 +83,32 @@ actor FileSystemService: FileSystemServicing {
         }
 
         let fallback = FileManager.default.temporaryDirectory
-        Log.logger(.presentation).error(
+        Log.logger(.data).error(
             "Documents directory unavailable; using temporary directory fallback"
         )
         return fallback
     }()
 
     private static let defaultCopyBufferSize = 1_048_576
+
+    /// The import pipeline stores managed media in the Documents/Music subtree.
+    /// Keep this derivation in one place so file-manager protection and import
+    /// recovery agree about which files are library-owned.
+    nonisolated static func managedMediaRoot(for rootDirectory: URL) -> URL {
+        rootDirectory.standardizedFileURL
+            .appendingPathComponent("Music", isDirectory: true)
+            .standardizedFileURL
+    }
+
+    nonisolated static func isLibraryManaged(_ url: URL, under rootDirectory: URL) -> Bool {
+        let managedRoot = managedMediaRoot(for: rootDirectory)
+            .resolvingSymlinksInPath()
+            .standardizedFileURL
+        let candidate = url.standardizedFileURL
+            .resolvingSymlinksInPath()
+            .standardizedFileURL
+        return isSameOrDescendant(candidate, of: managedRoot)
+    }
 
     private let rootDirectory: URL
     private let fileManager: FileManager
@@ -140,6 +162,7 @@ actor FileSystemService: FileSystemServicing {
 
     func createDirectory(named name: String, in directory: URL) async throws {
         let directory = try validatedURL(directory)
+        try validateMutationDestination(directory)
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty,
               name != ".",
@@ -151,6 +174,7 @@ actor FileSystemService: FileSystemServicing {
         }
 
         let destination = try validatedURL(directory.appendingPathComponent(name))
+        try validateMutationDestination(destination)
         try Task.checkCancellation()
 
         do {
@@ -165,6 +189,7 @@ actor FileSystemService: FileSystemServicing {
 
     func copyItems(at sourceURLs: [URL], to directory: URL) async throws {
         let directory = try validatedURL(directory)
+        try validateMutationDestination(directory)
 
         for sourceURL in sourceURLs {
             try Task.checkCancellation()
@@ -181,6 +206,7 @@ actor FileSystemService: FileSystemServicing {
             else {
                 throw FileSystemServiceError.outsideRoot
             }
+            try validateMutationDestination(target)
 
             do {
                 try fileManager.removeItem(at: target)
@@ -192,6 +218,12 @@ actor FileSystemService: FileSystemServicing {
 
     private var resolvedRootDirectory: URL {
         rootDirectory.resolvingSymlinksInPath().standardizedFileURL
+    }
+
+    private func validateMutationDestination(_ url: URL) throws {
+        guard !Self.isLibraryManaged(url, under: rootDirectory) else {
+            throw FileSystemServiceError.libraryOwnedMedia
+        }
     }
 
     private func validatedURL(_ url: URL) throws -> URL {
@@ -281,6 +313,7 @@ actor FileSystemService: FileSystemServicing {
         var destination = try validatedURL(
             directory.appendingPathComponent(source.lastPathComponent)
         )
+        try validateMutationDestination(destination)
         guard fileManager.fileExists(atPath: destination.path) else {
             return destination
         }
@@ -296,9 +329,16 @@ actor FileSystemService: FileSystemServicing {
                 ? directory.appendingPathComponent(name)
                 : directory.appendingPathComponent(name).appendingPathExtension(fileExtension)
             destination = try validatedURL(candidate)
+            try validateMutationDestination(destination)
             attempt += 1
         } while fileManager.fileExists(atPath: destination.path)
 
         return destination
+    }
+
+    private static func isSameOrDescendant(_ candidate: URL, of root: URL) -> Bool {
+        let rootComponents = root.pathComponents
+        let candidateComponents = candidate.pathComponents
+        return candidateComponents.starts(with: rootComponents)
     }
 }

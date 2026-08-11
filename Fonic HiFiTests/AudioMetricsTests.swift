@@ -36,6 +36,20 @@ final class AudioMetricsTests: XCTestCase {
         XCTAssertEqual(critical.healthStatus, .critical)
     }
 
+    func testUnavailableEngineMetricsDoNotClaimHealthOrCriticalFailure() {
+        let unavailable = makeMetrics(
+            engineMetricsAvailability: .unavailable,
+            cpuUsage: 0,
+            bufferFillLevel: 1,
+            performanceScore: 1,
+            criticalErrors: 99
+        )
+
+        XCTAssertFalse(unavailable.isHealthy)
+        XCTAssertFalse(unavailable.hasCriticalIssues)
+        XCTAssertEqual(unavailable.healthStatus, .poor)
+    }
+
     func testFormattedOutputs() {
         let metrics = makeMetrics(
             cpuUsage: 32,
@@ -157,6 +171,7 @@ final class AudioMetricsTests: XCTestCase {
     // MARK: - Helpers
 
     private func makeMetrics(
+        engineMetricsAvailability: AudioMetricsAvailability = .available,
         cpuUsage: Float,
         bufferUnderruns: Int = 0,
         droppedFrames: Int = 0,
@@ -178,6 +193,7 @@ final class AudioMetricsTests: XCTestCase {
         timestamp: Date = Date()
     ) -> AudioMetrics {
         AudioMetrics(
+            engineMetricsAvailability: engineMetricsAvailability,
             cpuUsage: cpuUsage,
             memoryUsage: memoryUsage,
             bufferUnderruns: bufferUnderruns,

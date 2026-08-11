@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "" : {
+
+    },
     " " : {
 
     },
@@ -210,9 +213,6 @@
         }
       }
     },
-    "%lld items selected" : {
-
-    },
     "%lld percent" : {
 
     },
@@ -338,12 +338,6 @@
     "Active Timer" : {
 
     },
-    "Add Files & Folders" : {
-
-    },
-    "Add More" : {
-
-    },
     "Add to favorites" : {
 
     },
@@ -369,6 +363,9 @@
 
     },
     "All app data, including your music library metadata and preferences, is stored locally on your device.\nThis data is not shared with third parties." : {
+
+    },
+    "App Volume" : {
 
     },
     "Appearance" : {
@@ -424,6 +421,9 @@
     "Artwork Theming" : {
 
     },
+    "Assessment" : {
+
+    },
     "Audio Engine" : {
 
     },
@@ -440,6 +440,12 @@
 
     },
     "Bass Boost" : {
+
+    },
+    "Bit Depth" : {
+
+    },
+    "Bit Depths" : {
 
     },
     "Bit-Perfect Eligibility" : {
@@ -463,6 +469,18 @@
     "Cancel Timer" : {
 
     },
+    "Capabilities are reported or estimated for the active route; physical output is not measured." : {
+
+    },
+    "Capability Status" : {
+
+    },
+    "Channel Limit" : {
+
+    },
+    "Channels" : {
+
+    },
     "Checks configuration; physical output is not measured" : {
 
     },
@@ -482,6 +500,12 @@
 
     },
     "Close lyrics" : {
+
+    },
+    "Codec" : {
+
+    },
+    "Connection" : {
 
     },
     "Continue Listening" : {
@@ -506,6 +530,9 @@
 
     },
     "Date Modified" : {
+
+    },
+    "Decoded by %@" : {
 
     },
     "Delete" : {
@@ -558,6 +585,15 @@
     "Description (optional)" : {
 
     },
+    "Detected Issues" : {
+
+    },
+    "Device Capabilities" : {
+
+    },
+    "Diagnostics" : {
+
+    },
     "Dismiss" : {
 
     },
@@ -568,6 +604,9 @@
 
     },
     "Done" : {
+
+    },
+    "DSP" : {
 
     },
     "DSP Active" : {
@@ -588,7 +627,13 @@
     "Enabling the equalizer makes playback ineligible for bit-perfect output." : {
 
     },
+    "Engine" : {
+
+    },
     "Engine and playback settings" : {
+
+    },
+    "Engine Output" : {
 
     },
     "Enter a name for the new folder." : {
@@ -598,6 +643,9 @@
 
     },
     "Equalizer Unavailable" : {
+
+    },
+    "Events Recorded" : {
 
     },
     "Every library track is already in this playlist." : {
@@ -642,6 +690,9 @@
     "Folder Name" : {
 
     },
+    "Fonic checks software eligibility. iOS, the active route, and connected hardware can still alter output. Physical output is not measured." : {
+
+    },
     "Fonic HiFi" : {
       "shouldTranslate" : false
     },
@@ -658,6 +709,9 @@
 
     },
     "Fonic HiFi only accesses your music files with your explicit permission.\nWe do not collect, store, or transmit any personal data or music files to external servers." : {
+
+    },
+    "Fonic keeps up to 200 events in memory for this app session. Track names and file locations are never recorded." : {
 
     },
     "Frequency Bands" : {
@@ -687,8 +741,11 @@
     "Home" : {
 
     },
-    "Import" : {
-
+    "Import cancelled" : {
+      "comment" : "Import progress status after the user cancels an import"
+    },
+    "Import completed: %lld imported, %lld skipped, %lld failed" : {
+      "comment" : "Import completion summary with imported, duplicate, and failed file counts"
     },
     "Import Errors" : {
 
@@ -714,8 +771,11 @@
     "Import to Library" : {
 
     },
-    "Import Your Music" : {
-
+    "Importing %lld files (concurrency %lld)" : {
+      "comment" : "Import progress status with discovered file and worker counts"
+    },
+    "Importing 1 file (concurrency %lld)" : {
+      "comment" : "Import progress status after discovering the first audio file"
     },
     "Importing Music" : {
 
@@ -738,6 +798,9 @@
     "Library View" : {
 
     },
+    "Library-managed music" : {
+
+    },
     "Loading metadata..." : {
 
     },
@@ -754,6 +817,12 @@
 
     },
     "Lyrics" : {
+
+    },
+    "Managed by the music library and unavailable for file operations." : {
+
+    },
+    "Media Service Resets" : {
 
     },
     "Modified" : {
@@ -780,6 +849,9 @@
     "Next Track" : {
 
     },
+    "No audio files found" : {
+      "comment" : "Import progress status when discovery finds no supported audio files"
+    },
     "No lyrics available" : {
 
     },
@@ -787,6 +859,9 @@
 
     },
     "No metadata available" : {
+
+    },
+    "No Playback Events" : {
 
     },
     "No Playlists" : {
@@ -835,6 +910,9 @@
     "Open playlist %@" : {
 
     },
+    "Opens technical playback details" : {
+
+    },
     "Operation Cancelled" : {
 
     },
@@ -845,6 +923,9 @@
 
     },
     "Pause" : {
+
+    },
+    "Paused" : {
 
     },
     "Play" : {
@@ -860,6 +941,12 @@
         }
       }
     },
+    "Play a track to collect source, engine, processing, and output evidence." : {
+
+    },
+    "Play a track to start building your queue." : {
+
+    },
     "Play or Pause" : {
 
     },
@@ -869,19 +956,25 @@
     "Playback Features" : {
 
     },
+    "Playback Health" : {
+
+    },
     "Playback progress" : {
 
     },
-    "Playback Speed" : {
+    "Playback signal path" : {
 
     },
-    "Playback Volume" : {
+    "Playback Speed" : {
 
     },
     "Playback will pause when the timer ends." : {
 
     },
     "Playback, appearance, haptics, file display, and artwork theme preferences return to defaults. Your music library and imported files are not deleted." : {
+
+    },
+    "Playing" : {
 
     },
     "Playlist Name" : {
@@ -908,16 +1001,40 @@
     "Privacy Policy" : {
 
     },
+    "Processed %lld of %lld files" : {
+      "comment" : "Import progress status with processed and discovered file counts"
+    },
+    "Processing" : {
+
+    },
     "Queue" : {
 
     },
+    "Queue is Empty" : {
+
+    },
     "Ready" : {
+
+    },
+    "Recent Events" : {
+
+    },
+    "Recent recovery and reliability events" : {
 
     },
     "Recent Searches" : {
 
     },
     "Recently Added" : {
+
+    },
+    "Recoveries Succeeded" : {
+
+    },
+    "Recovery and reliability events will appear here when they occur." : {
+
+    },
+    "Recovery Failures" : {
 
     },
     "Rediscover" : {
@@ -956,6 +1073,18 @@
     "Rock" : {
 
     },
+    "Route" : {
+
+    },
+    "Sample Rate" : {
+
+    },
+    "Sample Rates" : {
+
+    },
+    "Scanning for audio files..." : {
+      "comment" : "Import progress status while the app discovers supported audio files"
+    },
     "Search" : {
 
     },
@@ -989,9 +1118,6 @@
     "Select AirPlay device" : {
       "comment" : "AirPlay route picker"
     },
-    "Select audio files or folders to import into your library" : {
-
-    },
     "Set Timer" : {
 
     },
@@ -1020,6 +1146,12 @@
 
     },
     "Shuffle All" : {
+
+    },
+    "Signal Path" : {
+
+    },
+    "Signal Path Unverified" : {
 
     },
     "Size" : {
@@ -1064,13 +1196,25 @@
     "Sort files" : {
 
     },
+    "Source" : {
+
+    },
+    "Source, processing, and output evidence" : {
+
+    },
     "Standard Search" : {
+
+    },
+    "Starts playback" : {
 
     },
     "Storage" : {
 
     },
     "Surprise Me" : {
+
+    },
+    "System Volume" : {
 
     },
     "Technical Details" : {
@@ -1104,6 +1248,9 @@
 
     },
     "Theme in Light Mode" : {
+
+    },
+    "This Session" : {
 
     },
     "Time Remaining" : {

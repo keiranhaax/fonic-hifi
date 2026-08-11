@@ -18,6 +18,16 @@ struct QueueView: View {
             List {
                 nowPlayingSection
                 upNextSection
+                if audioService.queueState.currentTrack == nil,
+                   audioService.queueState.remainingTracks.isEmpty {
+                    Section {
+                        ContentUnavailableView(
+                            "Queue is Empty",
+                            systemImage: "music.note.list",
+                            description: Text("Play a track to start building your queue.")
+                        )
+                    }
+                }
             }
             .navigationTitle("Queue")
             .navigationBarTitleDisplayMode(.inline)
@@ -37,7 +47,11 @@ struct QueueView: View {
     private var nowPlayingSection: some View {
         if let current = audioService.queueManager.queueState.currentTrack {
             Section("Now Playing") {
-                QueueRowView(track: current, isPlaying: true)
+                QueueRowView(track: current, isPlaying: audioService.isPlaying) {
+                    Task {
+                        try? await audioService.jumpToTrack(current)
+                    }
+                }
             }
         }
     }
@@ -46,9 +60,13 @@ struct QueueView: View {
     private var upNextSection: some View {
         let remaining = audioService.queueManager.queueState.remainingTracks
         if !remaining.isEmpty {
-            Section {
-                ForEach(Array(remaining.enumerated()), id: \.element.id) { _, track in
-                    QueueRowView(track: track, isPlaying: false)
+                Section {
+                    ForEach(Array(remaining.enumerated()), id: \.element.id) { _, track in
+                    QueueRowView(track: track, isPlaying: false) {
+                        Task {
+                            try? await audioService.jumpToTrack(track)
+                        }
+                    }
                 }
                 .onMove(perform: moveTrack)
                 .onDelete(perform: deleteTrack)
@@ -62,12 +80,12 @@ struct QueueView: View {
     }
 
     private func moveTrack(from source: IndexSet, to destination: Int) {
-        audioService.queueManager.moveRemaining(fromOffsets: source, toOffset: destination)
+        audioService.moveQueueItem(fromOffsets: source, toOffset: destination)
         Log.logger(.audioQueue).info("Moved track in queue")
     }
 
     private func deleteTrack(at offsets: IndexSet) {
-        audioService.queueManager.removeRemaining(at: offsets)
+        audioService.removeQueueItems(at: offsets)
         Log.logger(.audioQueue).info("Removed track from queue")
     }
 }

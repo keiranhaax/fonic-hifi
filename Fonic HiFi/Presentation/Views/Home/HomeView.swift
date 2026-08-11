@@ -221,7 +221,9 @@ struct HomeView: View {
                     album: album,
                     onTrackTap: { track in
                         playTrack(track)
-                    }
+                    },
+                    onPlay: playAlbum,
+                    onShuffle: shuffleAlbum
                 )
             }
             .sheet(item: $selectedGenre) { selection in
@@ -504,8 +506,7 @@ struct HomeView: View {
             }
 
             do {
-                let audioTracks = tracks.map { $0.toAudioTrack() }
-                audioEngine.queueManager.replaceQueue(with: audioTracks, startIndex: 0)
+                audioEngine.replaceQueue(with: tracks, startIndex: 0)
                 try await audioEngine.play(track: firstTrack)
                 showingNowPlaying.wrappedValue = true
             } catch {
@@ -544,12 +545,23 @@ struct HomeView: View {
             throw HomeActionError.noPlayableTracks
         }
 
-        audioEngine.queueManager.replaceQueue(
-            with: shuffledTracks.map { $0.toAudioTrack() },
-            startIndex: 0
-        )
+        audioEngine.replaceQueue(with: shuffledTracks, startIndex: 0)
         try await audioEngine.play(track: firstTrack)
         showingNowPlaying.wrappedValue = true
+    }
+
+    private func playAlbum(_ tracks: [Track], startIndex: Int) {
+        guard tracks.indices.contains(startIndex) else { return }
+        let selectedTrack = tracks[startIndex]
+        audioEngine.replaceQueue(with: tracks, startIndex: startIndex)
+        playTrack(selectedTrack)
+    }
+
+    private func shuffleAlbum(_ tracks: [Track]) {
+        guard let selectedTrack = tracks.randomElement() else { return }
+        audioEngine.setShuffleMode(.random)
+        audioEngine.replaceQueue(with: tracks, startIndex: 0)
+        playTrack(selectedTrack)
     }
 
     private func playTrack(_ track: Track) {

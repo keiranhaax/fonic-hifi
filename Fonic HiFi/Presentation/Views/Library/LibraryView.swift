@@ -55,7 +55,9 @@ struct LibraryView: View {
 
     @State private var selectedTab = LibraryTab.tracks
     @State private var searchText = ""
-    @State private var importSheet: ImportSheetDestination?
+    @State private var showingFilePicker = false
+    @State private var showingImportProgress = false
+    @State private var pickerFailure: ImportPickerFailure?
     @State private var showingCreatePlaylist = false
     @State private var selectedTrack: TrackEntity?
     @State private var selectedAlbum: AlbumEntity?
@@ -95,8 +97,10 @@ struct LibraryView: View {
 
                     if shouldShowEmptyState {
                         EmptyLibraryView {
-                            importSheet = .selection
+                            guard !isReadOnly, !importService.isImporting else { return }
+                            showingFilePicker = true
                         }
+                        .disabled(isReadOnly || importService.isImporting)
                     }
                 }
             }
@@ -106,20 +110,33 @@ struct LibraryView: View {
                     Button(action: primaryToolbarAction) {
                         Image(systemName: selectedTab == .playlists ? "plus" : "plus.circle.fill")
                     }
+                    .disabled(isReadOnly || (selectedTab != .playlists && importService.isImporting))
                 }
             }
         }
         .searchable(text: $searchText, prompt: "Search \(selectedTab.rawValue)")
-        .sheet(item: $importSheet) { sheet in
-            switch sheet {
-            case .selection:
-                FileImportView()
-                    .importService(importService)
-            case .progress:
-                ImportProgressView()
-                    .importService(importService)
-                    .interactiveDismissDisabled(importService.isImporting)
-            }
+        .fileImporter(
+            isPresented: $showingFilePicker,
+            allowedContentTypes: AudioImportContentTypes.all + [.folder],
+            allowsMultipleSelection: true
+        ) { result in
+            handleFileSelection(result)
+        }
+        .alert(item: $pickerFailure) { failure in
+            Alert(
+                title: Text(failure.title),
+                message: Text(failure.message),
+                primaryButton: .default(Text("Try Again")) {
+                    guard !isReadOnly, !importService.isImporting else { return }
+                    showingFilePicker = true
+                },
+                secondaryButton: .cancel()
+            )
+        }
+        .sheet(isPresented: $showingImportProgress) {
+            ImportProgressView()
+                .importService(importService)
+                .interactiveDismissDisabled(importService.isImporting)
         }
         .sheet(isPresented: $showingCreatePlaylist) {
             CreatePlaylistView { _ in
@@ -160,10 +177,9 @@ struct LibraryView: View {
             Text(error.errorDescription ?? "An unknown error occurred")
         }
         .onChange(of: importService.isImporting) { _, isImporting in
-            importSheet = ImportSheetPresentation.resolve(
-                current: importSheet,
-                isImporting: isImporting
-            )
+            if isImporting {
+                showingImportProgress = true
+            }
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             searchTask?.cancel()
@@ -186,10 +202,9 @@ struct LibraryView: View {
             }
         }
         .task {
-            importSheet = ImportSheetPresentation.resolve(
-                current: importSheet,
-                isImporting: importService.isImporting
-            )
+            if importService.isImporting {
+                showingImportProgress = true
+            }
             await ensureInitialLoad()
         }
         .onDisappear {
@@ -346,11 +361,33 @@ struct LibraryView: View {
             .eraseToAnyPublisher()
     }
 
+    private var isReadOnly: Bool {
+        dataManager?.mutationPolicy == .readOnly
+    }
+
     private func primaryToolbarAction() {
+        guard !isReadOnly else { return }
         if selectedTab == .playlists {
             showingCreatePlaylist = true
-        } else {
-            importSheet = .selection
+        } else if !importService.isImporting {
+            showingFilePicker = true
+        }
+    }
+
+    private func handleFileSelection(_ result: Result<[URL], Error>) {
+        guard !isReadOnly, !importService.isImporting else { return }
+        switch ImportPickerSelection.resolve(result, surface: .fileSelection) {
+        case let .selected(urls):
+            guard !urls.isEmpty else { return }
+            showingImportProgress = true
+            importService.importFiles(from: urls)
+        case let .failed(failure):
+            if case let .failure(error) = result {
+                Log.logger(.library).error(
+                    "File selection failed: \(error.localizedDescription, privacy: .private)"
+                )
+            }
+            pickerFailure = failure
         }
     }
 
@@ -390,6 +427,9 @@ struct LibraryView: View {
             do {
                 try await audioEngine.play(track: playableTrack)
             } catch {
+                audioEngine.reportPlaybackControlError(error)
+                audioEngine.setCurrentTrack(nil)
+                showingNowPlaying.wrappedValue = false
                 Log.logger(.library).error("Failed to play track: \(error.localizedDescription, privacy: .private)")
             }
         }

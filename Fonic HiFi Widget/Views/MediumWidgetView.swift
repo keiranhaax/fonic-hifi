@@ -100,7 +100,7 @@ struct MediumWidgetView: View {
 
             // Time labels
             HStack {
-                Text(formatTime(entry.playbackState.currentTime))
+                Text(formatTime(entry.playbackState.projectedCurrentTime))
                     .font(fonts.monospacedTime(size: 9))
                     .foregroundStyle(colors.secondary)
 

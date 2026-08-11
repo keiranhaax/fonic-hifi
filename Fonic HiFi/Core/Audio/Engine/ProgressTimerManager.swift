@@ -12,6 +12,10 @@ import Foundation
 final class ProgressTimerManager {
     private var task: Task<Void, Never>?
 
+    deinit {
+        task?.cancel()
+    }
+
     func start(pollInterval: TimeInterval = 0.5, update: @escaping @MainActor () async -> Void) {
         task?.cancel()
         task = Task { @MainActor [pollInterval] in

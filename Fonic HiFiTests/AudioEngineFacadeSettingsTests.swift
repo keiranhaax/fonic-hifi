@@ -342,6 +342,7 @@ private final class MockAudioEngineService: AudioEngineService {
         configurations.append(configuration)
     }
     func prepareNext(url _: URL) async {}
+    func invalidatePreparedTransition() async {}
     func crossfade(to url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float) async throws {
         crossfadeCalls.append((url, duration, playbackRate, gainDB))
         await setPlaybackRate(playbackRate)

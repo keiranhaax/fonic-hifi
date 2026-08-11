@@ -43,6 +43,11 @@ public actor AudioPlaybackSettingsStore {
         // Apply gapless setting (defaults to true if not explicitly set)
         config = config.with(enableGapless: isGaplessEnabled())
 
+        // Engine selection must see the persisted EQ capability requirement,
+        // otherwise an AudioKit preference can win before the facade applies
+        // the stored band configuration.
+        config = config.with(equalizerEnabled: equalizerConfiguration().isEnabled)
+
         return config
     }
 

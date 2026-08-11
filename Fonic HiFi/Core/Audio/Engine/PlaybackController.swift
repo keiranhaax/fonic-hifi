@@ -15,6 +15,26 @@ protocol PlaybackQueueHandling: AnyObject {
     func play(track: Track, queueEntry: AudioTrack?) async throws
     func crossfade(to audioTrack: AudioTrack, displayTrack: Track) async throws
     func stop() async
+    func prepareUpcomingTrackForCurrentPlayback() async
+}
+
+/// Snapshot overloads keep queue orchestration on Sendable values. The
+/// compatibility defaults are intentionally limited to the protocol boundary;
+/// the concrete controller overrides them without creating a detached model.
+@MainActor
+extension PlaybackQueueHandling {
+    func play(snapshot: PlayableTrackSnapshot, queueEntry: AudioTrack?) async throws {
+        try await play(track: snapshot.makeDisplayTrack(), queueEntry: queueEntry)
+    }
+
+    func crossfade(to snapshot: PlayableTrackSnapshot, queueEntry: AudioTrack?) async throws {
+        try await crossfade(
+            to: queueEntry ?? snapshot.audioTrack,
+            displayTrack: snapshot.makeDisplayTrack()
+        )
+    }
+
+    func prepareUpcomingTrackForCurrentPlayback() async {}
 }
 
 @MainActor
@@ -37,6 +57,12 @@ final class PlaybackController {
     private let nowProvider: @Sendable () -> Date
     private let nowPlayingSyncInterval: TimeInterval
     private var lastNowPlayingSyncDate: Date?
+    private var nowPlayingArtworkCache: [UUID: MPMediaItemArtwork] = [:]
+    private let maxNowPlayingArtworkCacheEntries = 32
+    /// Source rate for the track currently owning transport. Route changes
+    /// must re-assert this preference without re-detecting or replacing the
+    /// track, and a stop clears it so focus/session teardown cannot renegotiate.
+    private var activeSourceSampleRate: Double?
 
     /// Callback invoked when a track finishes playing naturally (not stopped by user)
     var onTrackComplete: TrackCompletionHandler?
@@ -75,79 +101,113 @@ final class PlaybackController {
     // MARK: - Playback Commands
 
     func play(track: Track, queueEntry: AudioTrack? = nil) async throws {
-        let info = try await formatDetectionManager.detectFormat(at: track.url)
-        try Task.checkCancellation()
-        await sessionManager.setPreferredSampleRate(info.sampleRate)
-        try Task.checkCancellation()
-        try await sessionManager.activateAudioSession()
-        try Task.checkCancellation()
-        logger.info("Detected format for playback: \(info.format.displayName, privacy: .public)")
-
-        let audioTrack = queueEntry ?? track.toAudioTrack()
-        let preparedEngine = engineManager.currentEngine
-        let preparedTransition = if let preparedEngine {
-            await preparedEngine.consumePreparedTransition(to: audioTrack.url)
+        let snapshot = if let queueEntry {
+            PlayableTrackSnapshot(track: track, queueEntry: queueEntry)
         } else {
-            PreparedTrackTransition.none
+            PlayableTrackSnapshot(track: track)
         }
-        let adoptedPreparedTransition = preparedTransition.wasAdopted
-        let engine: AudioEngineService
-        if adoptedPreparedTransition, let preparedEngine {
-            engine = preparedEngine
-            if preparedTransition == .preloadedFallback {
-                logger.info(
-                    "Adopted preloaded track with a stop/start fallback; no render-boundary gapless claim"
+        try await play(snapshot: snapshot, queueEntry: queueEntry)
+    }
+
+    /// Plays an immutable snapshot. Queue/UI state is published only after the
+    /// engine has loaded and started successfully; callers commit queue index
+    /// changes after this method returns.
+    func play(snapshot: PlayableTrackSnapshot, queueEntry: AudioTrack? = nil) async throws {
+        let audioTrack = queueEntry ?? snapshot.audioTrack
+        let previousState = stateManager.currentState
+        let previousTrack = uiState.currentTrack
+        var activeEngine: AudioEngineService?
+
+        do {
+            let info = try await formatDetectionManager.detectFormat(at: audioTrack.url)
+            try Task.checkCancellation()
+            await sessionManager.setPreferredSampleRate(info.sampleRate)
+            try Task.checkCancellation()
+            try await sessionManager.activateAudioSession()
+            try Task.checkCancellation()
+            logger.info("Detected format for playback: \(info.format.displayName, privacy: .public)")
+
+            let preparedEngine = engineManager.currentEngine
+            let preparedTransition = if let preparedEngine {
+                await preparedEngine.consumePreparedTransition(to: audioTrack.url)
+            } else {
+                PreparedTrackTransition.none
+            }
+            let adoptedPreparedTransition = preparedTransition.wasAdopted
+            let engine: AudioEngineService
+            if adoptedPreparedTransition, let preparedEngine {
+                engine = preparedEngine
+                if preparedTransition == .preloadedFallback {
+                    logger.info(
+                        "Adopted preloaded track with a stop/start fallback; no render-boundary gapless claim"
+                    )
+                }
+            } else {
+                engine = try await engineManager.ensureEngine(for: info)
+            }
+            activeEngine = engine
+            try Task.checkCancellation()
+
+            if engineManager.configuration.performanceMode == .quality {
+                let validation = await validator.validateBitPerfectPlayback(
+                    sourceFormat: info,
+                    outputDevice: nil,
+                    context: await engineManager.bitPerfectEligibilityContext()
                 )
+                try Task.checkCancellation()
+                if !validation.isValid {
+                    logger.warning("Bit-perfect eligibility check failed: \(validation.mismatchReason?.userFriendlyDescription ?? "Unknown", privacy: .private)")
+                }
             }
-        } else {
-            engine = try await engineManager.ensureEngine(for: info)
-        }
-        try Task.checkCancellation()
 
-        if engineManager.configuration.performanceMode == .quality {
-            let validation = await validator.validateBitPerfectPlayback(
-                sourceFormat: info,
-                outputDevice: nil,
-                context: await engineManager.bitPerfectEligibilityContext()
+            stateManager.forceUpdateState(.loading())
+
+            if !adoptedPreparedTransition {
+                try await engine.load(url: audioTrack.url)
+                try Task.checkCancellation()
+            }
+            await applyPlaybackParameters(for: audioTrack, engine: engine)
+            try Task.checkCancellation()
+
+            // Set completion handler for auto-advance.
+            engine.setCompletionHandler(Self.makeCompletionHandler(owner: self))
+
+            if !adoptedPreparedTransition {
+                try await engine.play()
+                try Task.checkCancellation()
+            }
+
+            activeSourceSampleRate = info.sampleRate
+
+            let displayTrack = snapshot.makeDisplayTrack()
+            uiState.setCurrentTrack(displayTrack)
+            stateManager.forceUpdateState(.playing(currentTime: 0, duration: info.duration))
+            await updateNowPlayingInfo(track: displayTrack, duration: info.duration)
+            try Task.checkCancellation()
+
+            startProgressTracking(engine: engine)
+            await diagnosticsHandler(displayTrack, info)
+            try Task.checkCancellation()
+            await prepareUpcomingTrack(engine: engine, after: audioTrack.id)
+            try Task.checkCancellation()
+        } catch {
+            progressTimer.stop()
+            activeSourceSampleRate = nil
+            if let activeEngine {
+                await activeEngine.stop()
+            }
+
+            // Keep the prior library/queue selection, but surface one coherent
+            // stopped/error state rather than leaving loading attached to a
+            // stopped engine.
+            uiState.setCurrentTrack(previousTrack)
+            let playbackError = error as? AudioError
+                ?? AudioError.playbackFailed(reason: "Playback could not be started")
+            stateManager.forceUpdateState(
+                .error(playbackError, lastKnownTime: previousState.currentTime)
             )
-            try Task.checkCancellation()
-            if !validation.isValid {
-                logger.warning("Bit-perfect eligibility check failed: \(validation.mismatchReason?.userFriendlyDescription ?? "Unknown", privacy: .private)")
-            }
+            throw error
         }
-
-        if queueManager.currentTrack?.id != audioTrack.id {
-            queueManager.setCurrentTrack(audioTrack)
-        }
-
-        uiState.currentTrack = track
-        uiState.showMiniPlayer = true
-        stateManager.updateState(.loading())
-
-        if !adoptedPreparedTransition {
-            try await engine.load(url: audioTrack.url)
-            try Task.checkCancellation()
-        }
-        await applyPlaybackParameters(for: audioTrack, engine: engine)
-        try Task.checkCancellation()
-
-        // Set completion handler for auto-advance
-        engine.setCompletionHandler(Self.makeCompletionHandler(owner: self))
-
-        if !adoptedPreparedTransition {
-            try await engine.play()
-            try Task.checkCancellation()
-        }
-
-        stateManager.updateState(.playing(currentTime: 0, duration: info.duration))
-        await updateNowPlayingInfo(track: track, duration: info.duration)
-        try Task.checkCancellation()
-
-        startProgressTracking(engine: engine)
-        await diagnosticsHandler(track, info)
-        try Task.checkCancellation()
-        await prepareUpcomingTrack(engine: engine)
-        try Task.checkCancellation()
     }
 
     func resume() async throws {
@@ -210,8 +270,22 @@ final class PlaybackController {
 
         stateManager.updateState(.stopped)
         uiState.reset()
+        activeSourceSampleRate = nil
         await sessionManager.clearNowPlayingInfo()
         lastNowPlayingSyncDate = nil
+    }
+
+    /// Re-assert the source track's preferred sample rate after the system
+    /// changes output hardware. This intentionally does not activate or
+    /// deactivate the session and is a no-op when no track owns transport.
+    func renegotiatePreferredSampleRate() async {
+        guard let activeSourceSampleRate,
+              activeSourceSampleRate > 0,
+              activeSourceSampleRate.isFinite
+        else {
+            return
+        }
+        await sessionManager.setPreferredSampleRate(activeSourceSampleRate)
     }
 
     func seek(to time: TimeInterval) async throws {
@@ -259,32 +333,55 @@ final class PlaybackController {
     }
 
     func crossfade(to audioTrack: AudioTrack, displayTrack: Track) async throws {
+        try await crossfade(
+            to: PlayableTrackSnapshot(track: displayTrack, queueEntry: audioTrack),
+            queueEntry: audioTrack
+        )
+    }
+
+    func crossfade(to snapshot: PlayableTrackSnapshot, queueEntry: AudioTrack?) async throws {
+        let audioTrack = queueEntry ?? snapshot.audioTrack
         guard let engine = engineManager.currentEngine else {
-            try await play(track: displayTrack, queueEntry: audioTrack)
+            try await play(snapshot: snapshot, queueEntry: audioTrack)
             return
         }
 
-        uiState.currentTrack = displayTrack
-        uiState.showMiniPlayer = true
-        stateManager.updateState(.loading())
+        let previousState = stateManager.currentState
+        let previousTrack = uiState.currentTrack
+        do {
+            let gain = replayGainValue(for: audioTrack, mode: engineManager.configuration.replayGainMode)
+            try await engine.crossfade(
+                to: audioTrack.url,
+                duration: engineManager.configuration.crossfadeDuration,
+                playbackRate: engineManager.configuration.playbackRate,
+                gainDB: gain,
+            )
+            try Task.checkCancellation()
 
-        let gain = replayGainValue(for: audioTrack, mode: engineManager.configuration.replayGainMode)
-        try await engine.crossfade(
-            to: audioTrack.url,
-            duration: engineManager.configuration.crossfadeDuration,
-            playbackRate: engineManager.configuration.playbackRate,
-            gainDB: gain,
-        )
-        try Task.checkCancellation()
-
-        stateManager.updateState(.playing(currentTime: 0, duration: audioTrack.duration))
-        await updateNowPlayingInfo(track: displayTrack, duration: audioTrack.duration)
-        try Task.checkCancellation()
-        startProgressTracking(engine: engine)
-        await diagnosticsHandler(displayTrack, nil)
-        try Task.checkCancellation()
-        await prepareUpcomingTrack(engine: engine)
-        try Task.checkCancellation()
+            let displayTrack = snapshot.makeDisplayTrack()
+            if snapshot.sampleRate > 0, snapshot.sampleRate.isFinite {
+                activeSourceSampleRate = snapshot.sampleRate
+            }
+            uiState.setCurrentTrack(displayTrack)
+            stateManager.forceUpdateState(.playing(currentTime: 0, duration: audioTrack.duration))
+            await updateNowPlayingInfo(track: displayTrack, duration: audioTrack.duration)
+            try Task.checkCancellation()
+            startProgressTracking(engine: engine)
+            await diagnosticsHandler(displayTrack, nil)
+            try Task.checkCancellation()
+            await prepareUpcomingTrack(engine: engine, after: audioTrack.id)
+            try Task.checkCancellation()
+        } catch {
+            progressTimer.stop()
+            await engine.stop()
+            uiState.setCurrentTrack(previousTrack)
+            let playbackError = error as? AudioError
+                ?? AudioError.playbackFailed(reason: "Crossfade could not be started")
+            stateManager.forceUpdateState(
+                .error(playbackError, lastKnownTime: previousState.currentTime)
+            )
+            throw error
+        }
     }
 
     /// Rebuild playback after AVFoundation resets media services.
@@ -314,8 +411,8 @@ final class PlaybackController {
         }
         await engine.pause()
 
-        uiState.currentTrack = track
-        uiState.showMiniPlayer = true
+        uiState.setCurrentTrack(track)
+        activeSourceSampleRate = info.sampleRate
         stateManager.forceUpdateState(.paused(currentTime: position, duration: duration))
         await updateNowPlayingInfo(
             track: track,
@@ -355,15 +452,37 @@ final class PlaybackController {
         }
     }
 
-    private func prepareUpcomingTrack(engine: AudioEngineService) async {
+    private func prepareUpcomingTrack(
+        engine: AudioEngineService,
+        after trackID: UUID? = nil
+    ) async {
         guard engineManager.configuration.enableGapless,
               engineManager.configuration.crossfadeDuration == 0,
-              let nextTrack = queueManager.getNextTrack()
+              let nextTrack = nextQueueTrack(after: trackID)
         else {
             return
         }
 
         await engine.prepareNext(url: nextTrack.url)
+    }
+
+    private func nextQueueTrack(after trackID: UUID?) -> AudioTrack? {
+        if let trackID,
+           let index = queueManager.tracks.firstIndex(where: { $0.id == trackID }),
+           queueManager.tracks.indices.contains(index + 1) {
+            return queueManager.tracks[index + 1]
+        }
+        guard trackID == nil else { return nil }
+        return queueManager.getNextTrack()
+    }
+
+    func prepareUpcomingTrackForCurrentPlayback() async {
+        guard let engine = engineManager.currentEngine,
+              let currentTrack = queueManager.currentTrack
+        else {
+            return
+        }
+        await prepareUpcomingTrack(engine: engine, after: currentTrack.id)
     }
 
     private func startProgressTracking(engine: AudioEngineService) {
@@ -434,7 +553,7 @@ final class PlaybackController {
 
         var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = engineManager.configuration.playbackRate
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = Float(engineManager.configuration.playbackRate)
         await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
         lastNowPlayingSyncDate = now
     }
@@ -445,20 +564,43 @@ final class PlaybackController {
         currentTime: TimeInterval = 0,
         playbackRate: Float? = nil
     ) async {
-        var artworkImage: UIImage?
-        if let data = track.artwork {
-            artworkImage = UIImage(data: data)
-        }
-
         var nowPlayingInfo = track.toNowPlayingInfo(
             currentTime: currentTime,
             playbackRate: playbackRate ?? Float(engineManager.configuration.playbackRate),
-            artwork: artworkImage,
+            artwork: nil,
         )
+        if let artwork = await nowPlayingArtwork(for: track) {
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+        }
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
 
         await sessionManager.updateNowPlayingInfo(nowPlayingInfo)
         lastNowPlayingSyncDate = nowProvider()
+    }
+
+    private func nowPlayingArtwork(for track: Track) async -> MPMediaItemArtwork? {
+        if let cached = nowPlayingArtworkCache[track.id] {
+            return cached
+        }
+        guard let data = track.artwork else { return nil }
+        let image = await Task.detached(priority: .utility) {
+            UIImage(data: data)
+        }.value
+        guard let image, !Task.isCancelled else { return nil }
+
+        let artwork = MPMediaItemArtwork(boundsSize: image.size) { requestedSize in
+            guard requestedSize.width > 0, requestedSize.height > 0 else { return image }
+            let renderer = UIGraphicsImageRenderer(size: requestedSize)
+            return renderer.image { _ in
+                image.draw(in: CGRect(origin: .zero, size: requestedSize))
+            }
+        }
+        nowPlayingArtworkCache[track.id] = artwork
+        if nowPlayingArtworkCache.count > maxNowPlayingArtworkCacheEntries,
+           let oldestKey = nowPlayingArtworkCache.keys.first {
+            nowPlayingArtworkCache.removeValue(forKey: oldestKey)
+        }
+        return artwork
     }
 
     /// Handle track completion - called when engine finishes playing naturally

@@ -37,48 +37,67 @@ public final class QueueCoordinator {
     // MARK: - Queue Navigation
 
     /// Play the next track in the queue
-    public func playNext() async throws {
-        try await playNext(queueManager.nextManually())
+    @discardableResult
+    public func playNext() async throws -> Bool {
+        try await playNext(
+            queueManager.peekNextManually(),
+            expectedCurrentID: queueManager.currentTrack?.id
+        )
     }
 
     /// Play the repeat-aware next track after natural completion.
-    func playNextAfterCompletion() async throws {
-        try await playNext(queueManager.next())
+    @discardableResult
+    func playNextAfterCompletion() async throws -> Bool {
+        try await playNext(
+            queueManager.peekNextAfterCompletion(),
+            expectedCurrentID: queueManager.currentTrack?.id
+        )
     }
 
-    private func playNext(_ nextTrack: AudioTrack?) async throws {
+    private func playNext(
+        _ nextTrack: AudioTrack?,
+        expectedCurrentID: UUID?
+    ) async throws -> Bool {
         guard let nextTrack else {
             logger.info("No next track available")
             await playbackController.stop()
-            return
+            return false
         }
 
-        queueManager.setCurrentTrack(nextTrack)
-
-        let track = createTrackFromAudioTrack(nextTrack)
+        let snapshot = PlayableTrackSnapshot(audioTrack: nextTrack)
         if engineManager.configuration.crossfadeDuration > 0,
            stateManager.currentState.isPlaying {
-            try await playbackController.crossfade(to: nextTrack, displayTrack: track)
+            try await playbackController.crossfade(to: snapshot, queueEntry: nextTrack)
         } else {
-            try await playbackController.play(track: track, queueEntry: nextTrack)
+            try await playbackController.play(snapshot: snapshot, queueEntry: nextTrack)
         }
+
+        guard queueManager.commitNext(nextTrack, expectedCurrentID: expectedCurrentID) else {
+            await playbackController.stop()
+            throw AudioError.playbackFailed(reason: "Queue changed during playback")
+        }
+        return true
     }
 
     /// Play the previous track in the queue
     public func playPrevious() async throws {
-        guard let previousTrack = queueManager.previousManually() else {
+        let expectedCurrentID = queueManager.currentTrack?.id
+        guard let previousTrack = queueManager.peekPreviousManually() else {
             logger.info("No previous track available")
             return
         }
 
-        queueManager.setCurrentTrack(previousTrack)
-
-        let track = createTrackFromAudioTrack(previousTrack)
+        let snapshot = PlayableTrackSnapshot(audioTrack: previousTrack)
         if engineManager.configuration.crossfadeDuration > 0,
            stateManager.currentState.isPlaying {
-            try await playbackController.crossfade(to: previousTrack, displayTrack: track)
+            try await playbackController.crossfade(to: snapshot, queueEntry: previousTrack)
         } else {
-            try await playbackController.play(track: track, queueEntry: previousTrack)
+            try await playbackController.play(snapshot: snapshot, queueEntry: previousTrack)
+        }
+
+        guard queueManager.commitPrevious(previousTrack, expectedCurrentID: expectedCurrentID) else {
+            await playbackController.stop()
+            throw AudioError.playbackFailed(reason: "Queue changed during playback")
         }
     }
 
@@ -97,6 +116,50 @@ public final class QueueCoordinator {
     public func enqueueNext(_ track: Track) {
         queueManager.enqueueNext(tracks: [track.toAudioTrack()])
         logger.info("Enqueued selected track to play next")
+    }
+
+    /// Replace the queue and optionally select the starting item.
+    /// Queue mutation remains owned by the coordinator so views cannot bypass
+    /// playback state propagation.
+    public func replaceQueue(with tracks: [Track], startIndex: Int? = nil) {
+        queueManager.replaceQueue(
+            with: tracks.map { $0.toAudioTrack() },
+            startIndex: startIndex
+        )
+    }
+
+    /// Reorder items in the up-next portion of the queue.
+    public func moveItem(fromOffsets source: IndexSet, toOffset destination: Int) {
+        queueManager.moveRemaining(fromOffsets: source, toOffset: destination)
+    }
+
+    /// Remove items from the up-next portion of the queue.
+    public func removeItem(at offsets: IndexSet) {
+        queueManager.removeRemaining(at: offsets)
+    }
+
+    /// Start a queued item and commit it only after playback has started.
+    public func jumpToTrack(_ track: AudioTrack) async throws {
+        guard queueManager.tracks.contains(where: { $0.id == track.id }) else {
+            throw AudioError.playbackFailed(reason: "Track is not in the queue")
+        }
+
+        let expectedCurrentID = queueManager.currentTrack?.id
+        try await playbackController.play(
+            snapshot: PlayableTrackSnapshot(audioTrack: track),
+            queueEntry: track
+        )
+
+        guard queueManager.setCurrentTrack(track),
+              queueManager.currentTrack?.id == track.id
+        else {
+            await playbackController.stop()
+            throw AudioError.playbackFailed(reason: "Queue changed during playback")
+        }
+
+        if expectedCurrentID != track.id {
+            logger.info("Jumped to queued track")
+        }
     }
 
     // MARK: - Queue Modes
@@ -166,21 +229,4 @@ public final class QueueCoordinator {
         queueManager.hasPrevious
     }
 
-    // MARK: - Private Helpers
-
-    /// Helper method to create a Track from AudioTrack data
-    /// This is a temporary solution for type conversion compatibility
-    private func createTrackFromAudioTrack(_ audioTrack: AudioTrack) -> Track {
-        let track = Track(
-            url: audioTrack.url,
-            title: audioTrack.title,
-            artist: audioTrack.artist,
-            album: audioTrack.album,
-            audioFormat: audioTrack.audioFormat,
-            duration: audioTrack.duration,
-        )
-        track.replayGainTrack = audioTrack.replayGainTrack
-        track.replayGainAlbum = audioTrack.replayGainAlbum
-        return track
-    }
 }

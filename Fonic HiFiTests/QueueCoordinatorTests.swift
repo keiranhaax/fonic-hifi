@@ -117,11 +117,60 @@ final class QueueCoordinatorTests: XCTestCase {
             crossfadeDuration: 1,
         )
 
-        try? await coordination.coordinator.playNext()
+        let didAdvance = try? await coordination.coordinator.playNext()
 
+        XCTAssertFalse(didAdvance ?? true)
         XCTAssertEqual(coordination.playback.stopCalls, 1)
         XCTAssertTrue(coordination.playback.playCalls.isEmpty)
         XCTAssertTrue(coordination.playback.crossfadeCalls.isEmpty)
+    }
+
+    func testPlayNextFailureLeavesQueueAndHistoryUnchanged() async {
+        let queueManager = AudioQueueManager()
+        let stateManager = PlaybackStateManager()
+        let coordination = makeCoordinator(
+            queueManager: queueManager,
+            stateManager: stateManager,
+            crossfadeDuration: 0,
+        )
+
+        let tracks = makeQueue()
+        queueManager.enqueue(tracks: tracks)
+        XCTAssertTrue(queueManager.setCurrentTrack(tracks[0]))
+        coordination.playback.playError = AudioError.playbackFailed(reason: "injected")
+
+        do {
+            try await coordination.coordinator.playNext()
+            XCTFail("Expected the injected playback failure")
+        } catch {
+            XCTAssertEqual(queueManager.currentTrack?.id, tracks[0].id)
+            XCTAssertTrue(queueManager.history.isEmpty)
+            XCTAssertEqual(coordination.playback.playCalls.count, 1)
+        }
+    }
+
+    func testSnapshotRoundTripPreservesIdentityAndReplayGain() {
+        let id = UUID()
+        let track = LegacyTrack(
+            id: id,
+            title: "Stable",
+            artist: "Artist",
+            album: "Album",
+            url: URL(fileURLWithPath: "/tmp/stable.flac"),
+            duration: 120,
+            format: .flac,
+        )
+        var source = track
+        source.replayGainTrack = -3
+        source.replayGainAlbum = -2
+
+        let snapshot = PlayableTrackSnapshot(audioTrack: source)
+        let roundTrip = snapshot.audioTrack
+
+        XCTAssertEqual(snapshot.id, id)
+        XCTAssertEqual(roundTrip.id, id)
+        XCTAssertEqual(roundTrip.replayGainTrack, -3)
+        XCTAssertEqual(roundTrip.replayGainAlbum, -2)
     }
 
     // MARK: - Helpers
@@ -190,13 +239,24 @@ private final class MockPlaybackQueueHandler: PlaybackQueueHandling {
     private(set) var playCalls: [PlayCall] = []
     private(set) var crossfadeCalls: [CrossfadeCall] = []
     private(set) var stopCalls = 0
+    var playError: (any Error)?
+    var crossfadeError: (any Error)?
 
     func play(track: Track, queueEntry: AudioTrack?) async throws {
         playCalls.append(PlayCall(track: track, queueEntry: queueEntry))
+        if let playError {
+            throw playError
+        }
     }
 
     func crossfade(to audioTrack: AudioTrack, displayTrack: Track) async throws {
         crossfadeCalls.append(CrossfadeCall(audioTrack: audioTrack, displayTrack: displayTrack))
+        if let crossfadeError {
+            throw crossfadeError
+        }
+    }
+
+    func prepareUpcomingTrackForCurrentPlayback() async {
     }
 
     func stop() async {

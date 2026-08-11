@@ -24,7 +24,6 @@ public protocol PerformanceMonitoring: Sendable {
     // Performance Metrics
     func recordAppLaunchTime(_ duration: TimeInterval) async
     func recordSearchLatency(_ duration: TimeInterval, resultCount: Int) async
-    func recordImportPerformance(_ metrics: ImportMetrics) async
 
     // Error Tracking
     func recordError(_ error: Error, context: String) async
@@ -64,9 +63,6 @@ public struct AppPerformanceMetrics: Sendable {
     public let appLaunchTime: TimeInterval?
     public let averageSearchLatency: TimeInterval
     public let p95SearchLatency: TimeInterval
-    public let totalImports: Int
-    public let averageImportTime: TimeInterval
-    public let failedImports: Int
 }
 
 public struct ErrorMetrics: Sendable {
@@ -114,7 +110,6 @@ public actor PerformanceMonitor: PerformanceMonitoring {
     // Performance metrics storage
     private var appLaunchTime: TimeInterval?
     private var searchLatencies: [(duration: TimeInterval, resultCount: Int)] = []
-    private var importMetrics: [ImportMetrics] = []
 
     // Error metrics storage
     private var errors: [(error: Error, context: String, timestamp: Date)] = []
@@ -212,11 +207,6 @@ public actor PerformanceMonitor: PerformanceMonitoring {
         }
     }
 
-    public func recordImportPerformance(_ metrics: ImportMetrics) async {
-        self.importMetrics.append(metrics)
-        self.logger.info("Import completed: \(metrics.successfulImports, privacy: .public)/\(metrics.totalFiles, privacy: .public) files in \(metrics.totalImportTime, privacy: .public)s")
-    }
-
     // MARK: - Error Tracking
 
     public func recordError(_ error: Error, context: String) async {
@@ -259,9 +249,6 @@ public actor PerformanceMonitor: PerformanceMonitoring {
             appLaunchTime: self.appLaunchTime,
             averageSearchLatency: self.searchLatencies.isEmpty ? 0 : self.searchLatencies.map(\.duration).reduce(0, +) / Double(self.searchLatencies.count),
             p95SearchLatency: searchLatencyValues.isEmpty ? 0 : searchLatencyValues[min(p95Index, searchLatencyValues.count - 1)],
-            totalImports: self.importMetrics.count,
-            averageImportTime: self.importMetrics.isEmpty ? 0 : self.importMetrics.map(\.totalImportTime).reduce(0, +) / Double(self.importMetrics.count),
-            failedImports: self.importMetrics.map(\.failedImports).reduce(0, +),
         )
 
         // Calculate error metrics
@@ -301,7 +288,6 @@ public actor PerformanceMonitor: PerformanceMonitoring {
 
         self.appLaunchTime = nil
         self.searchLatencies.removeAll()
-        self.importMetrics.removeAll()
 
         self.errors.removeAll()
         self.crashes.removeAll()

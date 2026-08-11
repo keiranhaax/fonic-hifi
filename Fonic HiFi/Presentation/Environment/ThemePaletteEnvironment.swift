@@ -21,12 +21,3 @@ extension EnvironmentValues {
         set { self[ThemePaletteKey.self] = newValue }
     }
 }
-
-// MARK: - View Extension
-
-extension View {
-    /// Injects the theme palette into the environment
-    func themePalette(_ palette: ThemePalette) -> some View {
-        environment(\.themePalette, palette)
-    }
-}

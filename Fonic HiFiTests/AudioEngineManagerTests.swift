@@ -100,6 +100,7 @@ final class AudioEngineManagerTests: XCTestCase {
 
         let initialResult = await manager.updateEqualizerConfiguration(persistedConfiguration)
         XCTAssertEqual(initialResult, .waitingForEngine)
+        XCTAssertTrue(manager.configuration.equalizerEnabled)
 
         let initialEngine = try await manager.ensureEngine(for: makeInfo(format: .wav))
         let nativeEngine = try XCTUnwrap(initialEngine as? RecordingAudioEngine)
@@ -341,6 +342,7 @@ private final class RecordingAudioEngine: AudioEngineService {
     }
 
     func prepareNext(url _: URL) async {}
+    func invalidatePreparedTransition() async {}
 
     func crossfade(to _: URL, duration _: TimeInterval, playbackRate _: Double, gainDB _: Float) async throws {}
 

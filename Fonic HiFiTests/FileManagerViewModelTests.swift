@@ -68,13 +68,13 @@ final class FileManagerViewModelTests: XCTestCase {
         try contents.write(to: source)
 
         let service = FileSystemService(rootDirectory: rootDirectory)
-        try await service.createDirectory(named: "Music", in: rootDirectory)
+        try await service.createDirectory(named: "Inbox", in: rootDirectory)
         try await service.copyItems(at: [source, source], to: rootDirectory)
 
         let items = try await service.listDirectory(at: rootDirectory)
         XCTAssertEqual(
             Set(items.map(\.name)),
-            Set(["Music", "Track.mp3", "Track copy 1.mp3"])
+            Set(["Inbox", "Track.mp3", "Track copy 1.mp3"])
         )
         XCTAssertEqual(
             try Data(contentsOf: rootDirectory.appendingPathComponent("Track copy 1.mp3")),
@@ -209,6 +209,49 @@ final class FileManagerViewModelTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
     }
 
+    func testManagedMediaIsExposedAndExcludedFromSelection() async throws {
+        let unrelatedFile = rootDirectory.appendingPathComponent("Unrelated.mp3")
+        try Data("fixture".utf8).write(to: unrelatedFile)
+        let musicDirectory = rootDirectory.appendingPathComponent("Music", isDirectory: true)
+        try FileManager.default.createDirectory(at: musicDirectory, withIntermediateDirectories: true)
+        let albumDirectory = musicDirectory.appendingPathComponent("Album", isDirectory: true)
+        try FileManager.default.createDirectory(at: albumDirectory, withIntermediateDirectories: true)
+        let managedFile = albumDirectory.appendingPathComponent("Managed.mp3")
+        try Data("managed fixture".utf8).write(to: managedFile)
+
+        let viewModel = makeViewModel()
+        await viewModel.loadDirectoryContents()
+        let rootItem = try XCTUnwrap(
+            viewModel.directoryContents.first { $0.url == unrelatedFile }
+        )
+        let musicItem = try XCTUnwrap(
+            viewModel.directoryContents.first { $0.url == musicDirectory }
+        )
+
+        XCTAssertFalse(viewModel.isLibraryManaged(rootItem))
+        XCTAssertTrue(viewModel.isLibraryManaged(musicItem))
+        viewModel.selectedItems = [rootItem, musicItem]
+        XCTAssertEqual(viewModel.selectedItems, [rootItem])
+        viewModel.requestDeleteSelectedFiles()
+        XCTAssertTrue(viewModel.showingDeleteConfirmation)
+
+        await viewModel.open(musicItem)
+        let albumItem = try XCTUnwrap(
+            viewModel.directoryContents.first { $0.url == albumDirectory }
+        )
+        XCTAssertTrue(viewModel.isLibraryManaged(albumItem))
+        viewModel.selectedItems = [albumItem]
+        XCTAssertTrue(viewModel.selectedItems.isEmpty)
+
+        await viewModel.open(albumItem)
+        let managedItem = try XCTUnwrap(
+            viewModel.directoryContents.first { $0.url == managedFile }
+        )
+        XCTAssertTrue(viewModel.isLibraryManaged(managedItem))
+        viewModel.selectedItems = [managedItem]
+        XCTAssertTrue(viewModel.selectedItems.isEmpty)
+    }
+
     func testFailureSurfacesTypedPresentationState() async {
         let viewModel = FileManagerViewModel(
             rootDirectory: rootDirectory,
@@ -223,6 +266,31 @@ final class FileManagerViewModelTests: XCTestCase {
             FileSystemServiceError.listFailed.errorDescription
         )
         XCTAssertEqual(viewModel.failure?.isCancellation, false)
+    }
+
+    func testLibraryOwnedFailureSurfacesDistinctPresentationState() async {
+        let viewModel = FileManagerViewModel(
+            rootDirectory: rootDirectory,
+            service: LibraryOwnedFailureFileSystemService()
+        )
+        let item = FileItem(
+            id: "library-owned-fixture",
+            name: "Fixture.flac",
+            url: rootDirectory.appendingPathComponent("Fixture.flac"),
+            isDirectory: false,
+            size: 0,
+            dateModified: .distantPast
+        )
+        viewModel.selectedItems = [item]
+
+        await viewModel.deleteSelectedFiles()
+
+        XCTAssertEqual(viewModel.failure?.operation, .delete)
+        XCTAssertEqual(
+            viewModel.failure?.message,
+            FileSystemServiceError.libraryOwnedMedia.errorDescription
+        )
+        XCTAssertFalse(viewModel.failure?.isCancellation ?? true)
     }
 
     func testFailedDirectoryNavigationKeepsPreviousDirectory() async {
@@ -303,4 +371,18 @@ private struct SuspendedFileSystemService: FileSystemServicing {
     }
 
     func deleteItems(at _: [URL]) async throws {}
+}
+
+private struct LibraryOwnedFailureFileSystemService: FileSystemServicing {
+    func listDirectory(at _: URL) async throws -> [FileItem] {
+        []
+    }
+
+    func createDirectory(named _: String, in _: URL) async throws {}
+
+    func copyItems(at _: [URL], to _: URL) async throws {}
+
+    func deleteItems(at _: [URL]) async throws {
+        throw FileSystemServiceError.libraryOwnedMedia
+    }
 }

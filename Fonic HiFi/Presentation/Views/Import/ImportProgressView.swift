@@ -70,6 +70,21 @@ struct ImportProgressView: View {
             }
         }
         .accessibilityIdentifier("ImportProgressView")
+        .onAppear {
+            dismissAfterCleanCompletionIfNeeded()
+        }
+        .onChange(of: importService.isImporting) { wasImporting, isImporting in
+            // Successful imports finish hands-free; the sheet stays up only
+            // when cancellation, errors, or empty discovery need review.
+            guard wasImporting, !isImporting else { return }
+            dismissAfterCleanCompletionIfNeeded()
+        }
+    }
+
+    private func dismissAfterCleanCompletionIfNeeded() {
+        let completion = ImportProgressPresentationState(importService: importService)
+        guard completion.shouldAutoDismiss else { return }
+        dismiss()
     }
 }
 

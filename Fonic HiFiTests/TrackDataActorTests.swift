@@ -283,6 +283,84 @@ final class TrackDataActorTests: XCTestCase {
         XCTAssertTrue(storedArtist.tracks.isEmpty)
     }
 
+    @MainActor
+    func testCleanupMissingFilesRepairsRebasedManagedURLWithoutRemovingTrack() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let oldDocumentsDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("OldContainer-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("Documents", isDirectory: true)
+        let currentDocumentsDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CurrentContainer-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("Documents", isDirectory: true)
+        let oldMusicDirectory = oldDocumentsDirectory.appendingPathComponent("Music", isDirectory: true)
+        let currentMusicDirectory = currentDocumentsDirectory.appendingPathComponent("Music", isDirectory: true)
+        try FileManager.default.createDirectory(at: oldMusicDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: currentMusicDirectory, withIntermediateDirectories: true)
+        let sourceAudioURL = try makePCMTestAudioFile(fileExtension: "wav", testCase: self)
+        let oldURL = oldMusicDirectory.appendingPathComponent("rebased.wav")
+        let currentURL = currentMusicDirectory.appendingPathComponent(oldURL.lastPathComponent)
+        try FileManager.default.copyItem(at: sourceAudioURL, to: currentURL)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: oldDocumentsDirectory.deletingLastPathComponent())
+            try? FileManager.default.removeItem(at: currentDocumentsDirectory.deletingLastPathComponent())
+        }
+
+        let identifier = try await environment.actor.createTrack(from: makeMetadata(url: oldURL))
+        let context = ModelContext(environment.container)
+        let track = try XCTUnwrap(context.fetch(FetchDescriptor<Track>()).first)
+        let playlist = Playlist(name: "Preserved Playlist")
+        playlist.trackIds = [track.id]
+        playlist.tracks = [track]
+        track.isFavorite = true
+        track.playCount = 4
+        context.insert(playlist)
+        try context.save()
+
+        let removed = try await environment.actor.cleanupMissingFiles(
+            policy: MissingFileQuarantinePolicy(
+                requiredConsecutiveMisses: 1,
+                minimumUnavailableDuration: 0
+            ),
+            now: Date(timeIntervalSince1970: 1_700_000_000),
+            documentsDirectory: currentDocumentsDirectory
+        )
+
+        XCTAssertEqual(removed, 0)
+        let verificationContext = ModelContext(environment.container)
+        let stored = try XCTUnwrap(verificationContext.fetch(FetchDescriptor<Track>()).first)
+        XCTAssertEqual(stored.id, track.id)
+        XCTAssertEqual(stored.persistentModelID, identifier)
+        XCTAssertEqual(stored.url.standardizedFileURL, currentURL.standardizedFileURL)
+        XCTAssertEqual(stored.unavailableCheckCount, 0)
+        XCTAssertNil(stored.unavailableSince)
+        XCTAssertNil(stored.availabilityLastCheckedAt)
+        XCTAssertTrue(stored.isFavorite)
+        XCTAssertEqual(stored.playCount, 4)
+        XCTAssertEqual(stored.playlists.first?.trackIds, [stored.id])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: currentURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: oldURL.path))
+    }
+
+    func testReadOnlyPolicyRejectsTrackDeletionBeforeSaving() async throws {
+        let environment = try makeEnvironment(testCase: self)
+        let fileURL = try makeTemporaryFile(named: "read-only-track.flac", testCase: self)
+        let identifier = try await environment.actor.createTrack(from: makeMetadata(url: fileURL))
+        let readOnlyActor = TrackDataActor(
+            modelContainer: environment.container,
+            mutationPolicy: .readOnly
+        )
+
+        do {
+            try await readOnlyActor.deleteTrack(identifier)
+            XCTFail("Read-only actors must reject deletion before changing the model context")
+        } catch {
+            XCTAssertEqual(error as? DataMutationError, .readOnly)
+        }
+
+        let trackCount = try await readOnlyActor.getTracksCount()
+        XCTAssertEqual(trackCount, 1)
+    }
+
     func testWithSourceInfoPopulatesHashes() {
         let fileURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("hash-source.flac")
         let bookmark = Data([0x01, 0x02, 0x03])

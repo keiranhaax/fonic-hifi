@@ -39,6 +39,7 @@ struct FileManagerView: View {
             } else {
                 List(selection: $viewModel.selectedItems) {
                     ForEach(viewModel.filteredContents, id: \.id) { item in
+                        let isLibraryManaged = viewModel.isLibraryManaged(item)
                         FileRowView(
                             item: item,
                             isEditing: editMode?.wrappedValue.isEditing == true,
@@ -52,6 +53,23 @@ struct FileManagerView: View {
                             }
                         )
                         .tag(item)
+                        .selectionDisabled(isLibraryManaged)
+                        .overlay(alignment: .topTrailing) {
+                            if isLibraryManaged {
+                                Image(systemName: "lock.shield.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .accessibilityValue(
+                            isLibraryManaged ? "Library-managed music" : ""
+                        )
+                        .accessibilityHint(
+                            isLibraryManaged
+                                ? "Managed by the music library and unavailable for file operations."
+                                : ""
+                        )
                     }
                 }
                 .refreshable {

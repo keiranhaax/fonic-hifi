@@ -23,6 +23,11 @@ struct ContentView: View {
     @Namespace private var miniPlayerNamespace
     @State private var showingNowPlaying = false
     @State private var searchText = ""
+    @State private var isMiniPlayerVisible = false
+
+    private var miniPlayerActive: Bool {
+        audioService.showMiniPlayer && audioService.currentTrack != nil
+    }
 
     var body: some View {
         TabView {
@@ -63,18 +68,26 @@ struct ContentView: View {
         }
         .preferredColorScheme(.dark)
         .tabBarMinimizeBehavior(.onScrollDown)
-        .tabViewBottomAccessory {
-            if audioService.currentTrack != nil {
-                LiquidGlassMiniPlayer(
-                    namespace: miniPlayerNamespace,
-                    onOpen: {
-                        showingNowPlaying = true
-                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                        generator.impactOccurred(intensity: 0.9)
-                    }
-                )
+        .tabViewBottomAccessory(isEnabled: isMiniPlayerVisible) {
+            LiquidGlassMiniPlayer(
+                onOpen: {
+                    showingNowPlaying = true
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred(intensity: 0.9)
+                }
+            )
                 .audioEngine(audioService)
                 .matchedTransitionSource(id: "miniplayer", in: miniPlayerNamespace)
+        }
+        .onChange(of: miniPlayerActive, initial: true) { _, active in
+            // The accessory only animates its glass insertion/removal when the
+            // change happens inside an explicit animated transaction.
+            if reduceMotion {
+                isMiniPlayerVisible = active
+            } else {
+                withAnimation(.smooth(duration: 0.35)) {
+                    isMiniPlayerVisible = active
+                }
             }
         }
         .playbackErrorOverlay(
@@ -86,7 +99,6 @@ struct ContentView: View {
             ScrollView {}
                 .safeAreaInset(edge: .top, spacing: 0) {
                     NowPlayingContent(
-                        namespace: miniPlayerNamespace,
                         dismiss: { showingNowPlaying = false }
                     )
                     .audioEngine(audioService)
@@ -113,6 +125,12 @@ struct ContentView: View {
             colorService.updateColorScheme(colorScheme)
             colorService.updateThemingEnabled(artworkThemingEnabled)
             colorService.updateLightModeThemingEnabled(artworkThemingLightMode)
+        }
+        .onOpenURL { url in
+            guard url.scheme == "fonichifi", url.host == "nowplaying", url.path.isEmpty else {
+                return
+            }
+            showingNowPlaying = true
         }
     }
 

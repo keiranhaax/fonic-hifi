@@ -5,6 +5,35 @@ import XCTest
 
 @MainActor
 final class SwiftDataLibraryRepositoryTests: XCTestCase {
+    func testTrackProjectionPreservesIdentityAndPlaybackMetadata() {
+        let id = UUID()
+        let track = Track(
+            id: id,
+            url: URL(fileURLWithPath: "/tmp/projection.flac"),
+            title: "Projection",
+            artist: "Artist",
+            album: "Album",
+            audioFormat: "FLAC",
+            duration: 180,
+            sampleRate: 96_000,
+            bitDepth: 24,
+            channels: 2,
+            isLossless: true,
+        )
+        track.replayGainTrack = -4
+        track.replayGainAlbum = -2
+        track.isFavorite = true
+
+        let entity = TrackEntity(track: track)
+        let representation = entity.asTrackRepresentation()
+
+        XCTAssertEqual(entity.id, id)
+        XCTAssertEqual(representation.id, id)
+        XCTAssertEqual(representation.replayGainTrack, -4)
+        XCTAssertEqual(representation.replayGainAlbum, -2)
+        XCTAssertTrue(representation.isFavorite)
+    }
+
     func testTenThousandTrackStoreReturnsPrefetchedAlbumAndArtistCounts() async throws {
         let storeDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

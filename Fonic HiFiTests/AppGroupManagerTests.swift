@@ -49,7 +49,7 @@ final class AppGroupManagerTests: XCTestCase {
         XCTAssertNotNil(manager.lastSyncDate)
     }
 
-    func testUpdatePlaybackStateSkipsMeaninglessProgressOnlyChanges() {
+    func testUpdatePlaybackStatePersistsProgressOnlyChanges() {
         let baseline = WidgetPlaybackState(
             isPlaying: true,
             currentTime: 10,
@@ -70,10 +70,10 @@ final class AppGroupManagerTests: XCTestCase {
             hasNext: true,
             hasPrevious: false
         )
-        manager.updatePlaybackState(progressOnly)
+        XCTAssertTrue(manager.updatePlaybackState(progressOnly))
 
         let loaded = manager.loadPlaybackState()
-        XCTAssertEqual(loaded.currentTime, baseline.currentTime, accuracy: 0.0001)
+        XCTAssertEqual(loaded.currentTime, progressOnly.currentTime, accuracy: 0.0001)
         XCTAssertEqual(loaded.duration, baseline.duration, accuracy: 0.0001)
     }
 

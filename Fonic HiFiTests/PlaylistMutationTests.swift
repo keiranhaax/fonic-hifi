@@ -126,6 +126,24 @@ final class PlaylistMutationTests: XCTestCase {
         XCTAssertTrue(state.playlist.tracks.isEmpty)
     }
 
+    func testReadOnlyPolicyRejectsPlaylistCreationBeforeSaving() async throws {
+        let container = try makeInMemoryContainer()
+        let actor = TrackDataActor(modelContainer: container, mutationPolicy: .readOnly)
+
+        do {
+            _ = try await actor.createPlaylist(
+                name: "Read-only playlist",
+                description: nil,
+                isSmart: false
+            )
+            XCTFail("Read-only actors must reject playlist creation before inserting a model")
+        } catch {
+            XCTAssertEqual(error as? DataMutationError, .readOnly)
+        }
+
+        XCTAssertEqual(try container.mainContext.fetchCount(FetchDescriptor<Playlist>()), 0)
+    }
+
     func testAddTracksValidatesAllIDsBeforeChangingPlaylist() async throws {
         let container = try makeInMemoryContainer()
         let track = makeTrack(title: "Available")

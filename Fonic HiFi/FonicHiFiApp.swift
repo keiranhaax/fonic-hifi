@@ -174,6 +174,7 @@ struct FonicHiFiApp: App {
             // Initialize audio service with proper error handling
             try await audioService.initialize()
             logger.info("Audio service initialized successfully")
+            await restoreRecentTrackIfNeeded()
 
             // Configure intent dependency provider for widget/Live Activity intents
             IntentDependencyProvider.shared.configure(
@@ -205,6 +206,25 @@ struct FonicHiFiApp: App {
             await performanceMonitor.recordError(error, context: "App initialization")
 
             logger.warning("Continuing in limited mode after startup failure")
+        }
+    }
+
+    @MainActor
+    private func restoreRecentTrackIfNeeded() async {
+        guard audioService.currentTrack == nil, let dataManager else { return }
+
+        do {
+            guard let recentTrack = try await dataManager.getRecentlyPlayedTracks(limit: 1).first,
+                  audioService.restoreLaunchTrack(recentTrack)
+            else {
+                return
+            }
+            logger.info("Restored launch track from listening history")
+        } catch {
+            // Listening history is a recovery source, not a launch requirement.
+            logger.warning(
+                "Unable to restore launch track from listening history: \(error.localizedDescription, privacy: .private)"
+            )
         }
     }
 
@@ -292,6 +312,7 @@ private extension FonicHiFiApp {
         performanceMonitor: PerformanceMonitor,
         initLogger: Logger,
     ) -> InitializationResult {
+        #if DEBUG
         let processInfo = ProcessInfo.processInfo
         if processInfo.arguments.contains("-UITestPreviewData"),
            let previewServices = makePreviewServices(performanceMonitor: performanceMonitor) {
@@ -307,6 +328,7 @@ private extension FonicHiFiApp {
                 fallbackError: previewServices.recoveryError
             )
         }
+        #endif
 
         do {
             let services = try makePrimaryServices(performanceMonitor: performanceMonitor)
@@ -353,10 +375,10 @@ private extension FonicHiFiApp {
             queueManager: queueManager,
             monitor: audioMonitor,
         )
-        let importService = LibraryImportService(
-            trackDataActor: dataManager.trackDataActor,
-            metadataExtractor: dataManager.metadataExtractor,
-        )
+        // DataManager's import service is wired to invalidateLibrary(), which
+        // bumps libraryRevision so repository-backed views refresh after imports.
+        // A standalone LibraryImportService would silently skip that signal.
+        let importService = dataManager.importService
         let artworkService = ArtworkService(container: dataManager.container)
         let widgetCoordinator = WidgetDataCoordinator(
             stateManager: playbackStateManager,
@@ -373,6 +395,7 @@ private extension FonicHiFiApp {
         )
     }
 
+    #if DEBUG
     static func makePreviewServices(
         performanceMonitor: PerformanceMonitor
     ) -> AppServices? {
@@ -403,8 +426,8 @@ private extension FonicHiFiApp {
         if ProcessInfo.processInfo.arguments.contains("-UITestLibraryData") {
             let fixtureURL = FileManager.default.temporaryDirectory.appendingPathComponent("semantic-track.wav")
             if let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2),
-               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 4_410) {
-                buffer.frameLength = 4_410
+               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 441_000) {
+                buffer.frameLength = 441_000
                 try? FileManager.default.removeItem(at: fixtureURL)
                 if let file = try? AVAudioFile(forWriting: fixtureURL, settings: format.settings) {
                     try? file.write(from: buffer)
@@ -416,7 +439,7 @@ private extension FonicHiFiApp {
                 artist: "Semantic Artist",
                 album: "Semantic Album",
                 audioFormat: "WAV",
-                duration: 1,
+                duration: 10,
                 sampleRate: 44_100,
                 bitDepth: 16,
                 channels: 2,
@@ -472,14 +495,14 @@ private extension FonicHiFiApp {
         if !ProcessInfo.processInfo.arguments.contains("-UITestNoCurrentTrack") {
             queueManager.setCurrentTrack(previewTrack.toAudioTrack())
             audioService.setCurrentTrack(previewTrack)
+            playbackStateManager.forceUpdateState(
+                .playing(currentTime: 0, duration: previewTrack.duration)
+            )
         }
         if ProcessInfo.processInfo.arguments.contains("-UITestPlaybackError") {
             audioService.reportPlaybackControlError(AudioError.playbackFailed(reason: "UI testing."))
         }
-        let importService = LibraryImportService(
-            trackDataActor: dataManager.trackDataActor,
-            metadataExtractor: dataManager.metadataExtractor
-        )
+        let importService = dataManager.importService
         let artworkService = ArtworkService(container: dataManager.container)
         let widgetCoordinator = WidgetDataCoordinator(
             stateManager: playbackStateManager,
@@ -496,6 +519,7 @@ private extension FonicHiFiApp {
             recoveryError: nil
         )
     }
+    #endif
 
     static func makeFallbackServices(
         performanceMonitor: PerformanceMonitor,
@@ -510,12 +534,8 @@ private extension FonicHiFiApp {
             monitor: audioMonitor,
         )
 
-        if let fallbackManager = DataManager.makeFallbackDataManager()
-            ?? DataManager.makePreviewDataManager() {
-            let importService = LibraryImportService(
-                trackDataActor: fallbackManager.trackDataActor,
-                metadataExtractor: fallbackManager.metadataExtractor,
-            )
+        if let fallbackManager = DataManager.makeFallbackDataManager() {
+            let importService = fallbackManager.importService
             let artworkService = ArtworkService(container: fallbackManager.container)
             let widgetCoordinator = WidgetDataCoordinator(
                 stateManager: playbackStateManager,
@@ -534,10 +554,7 @@ private extension FonicHiFiApp {
 
         do {
             let resilientManager = try DataManager.ensureFallbackDataManager()
-            let importService = LibraryImportService(
-                trackDataActor: resilientManager.trackDataActor,
-                metadataExtractor: resilientManager.metadataExtractor,
-            )
+            let importService = resilientManager.importService
             let artworkService = ArtworkService(container: resilientManager.container)
             let widgetCoordinator = WidgetDataCoordinator(
                 stateManager: playbackStateManager,

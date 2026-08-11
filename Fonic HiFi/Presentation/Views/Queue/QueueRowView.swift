@@ -10,9 +10,17 @@ import SwiftUI
 struct QueueRowView: View {
     let track: AudioTrack
     let isPlaying: Bool
+    var onTap: (() -> Void)?
+
+    init(track: AudioTrack, isPlaying: Bool, onTap: (() -> Void)? = nil) {
+        self.track = track
+        self.isPlaying = isPlaying
+        self.onTap = onTap
+    }
 
     var body: some View {
-        HStack(spacing: 12) {
+        Button(action: { onTap?() }) {
+            HStack(spacing: 12) {
             // Artwork placeholder (AudioTrack doesn't store artwork)
             RoundedRectangle(cornerRadius: 6)
                 .fill(.quaternary)
@@ -43,8 +51,14 @@ struct QueueRowView: View {
                     .symbolEffect(.variableColor.iterative)
                     .foregroundStyle(.tint)
             }
+            }
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
+        .frame(minHeight: 44)
+        .accessibilityLabel(Text(track.title))
+        .accessibilityValue(Text(isPlaying ? "Playing" : "Paused"))
+        .accessibilityHint(onTap == nil ? Text(verbatim: "") : Text("Starts playback"))
     }
 }
 

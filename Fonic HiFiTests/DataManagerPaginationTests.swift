@@ -174,4 +174,26 @@ final class DataManagerPaginationTests: XCTestCase {
 
         XCTAssertEqual(dataManager.libraryRevision, 1)
     }
+
+    func testSuccessfulImportInvalidatesLibraryAndRepositoryReturnsTrack() async throws {
+        let container = try makeInMemoryContainer()
+        let dataManager = await makeDataManager(container: container)
+        let sourceURL = try makePCMTestAudioFile(fileExtension: "wav", testCase: self)
+
+        XCTAssertEqual(dataManager.libraryRevision, 0)
+
+        await dataManager.importService.executeImportPipeline(urls: [sourceURL])
+
+        XCTAssertEqual(dataManager.libraryRevision, 1)
+        let page = try await dataManager.makeLibraryRepository().tracks(
+            page: 0,
+            pageSize: 20,
+            searchQuery: nil
+        )
+        let importedTrack = try XCTUnwrap(page.items.first)
+        XCTAssertEqual(page.items.count, 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: importedTrack.fileURL.path))
+
+        try? FileManager.default.removeItem(at: importedTrack.fileURL)
+    }
 }

@@ -22,6 +22,11 @@ public final class LibraryImportService: ObservableObject {
     /// Whether an import is currently in progress
     @Published public private(set) var isImporting: Bool = false
 
+    /// Whether the most recent pipeline reached a terminal completion state.
+    /// This is independent from the localized status text so presentation code
+    /// never has to parse a translated sentence.
+    @Published public private(set) var isImportComplete: Bool = false
+
     /// Current status message
     @Published public private(set) var statusMessage: String = ""
 
@@ -43,14 +48,12 @@ public final class LibraryImportService: ObservableObject {
     private let logger = Log.logger(.importService)
     private let statisticsInvalidator: () -> Void
     private let fileProcessingConcurrency: Int
+    private let mutationPolicy: DataMutationPolicy
 
     // MARK: - Private Properties
 
     private var importTask: Task<Void, Never>?
     private var importGeneration: UUID?
-
-    // Transaction tracking
-    private var currentTransaction: ImportTransaction?
 
     // MARK: - Initialization
 
@@ -58,6 +61,7 @@ public final class LibraryImportService: ObservableObject {
         trackDataActor: TrackDataActor,
         metadataExtractor: MetadataExtracting,
         fileProcessingConcurrency: Int = 4,
+        mutationPolicy: DataMutationPolicy = .normal,
         statisticsInvalidator: @escaping () -> Void = {},
     ) {
         self.fileProcessor = FileImportProcessor(
@@ -66,34 +70,43 @@ public final class LibraryImportService: ObservableObject {
         )
         self.statisticsInvalidator = statisticsInvalidator
         self.fileProcessingConcurrency = max(1, fileProcessingConcurrency)
+        self.mutationPolicy = mutationPolicy
     }
 
     init(
         fileProcessor: FileImportProcessor,
         fileProcessingConcurrency: Int = 4,
+        mutationPolicy: DataMutationPolicy = .normal,
         statisticsInvalidator: @escaping () -> Void = {},
     ) {
         self.fileProcessor = fileProcessor
         self.statisticsInvalidator = statisticsInvalidator
         self.fileProcessingConcurrency = max(1, fileProcessingConcurrency)
+        self.mutationPolicy = mutationPolicy
     }
 
     // MARK: - Public Methods
 
     /// Import files from selected URLs (handles security-scoped resources)
     public func importFiles(from urls: [URL]) {
+        guard mutationPolicy == .normal else {
+            rejectReadOnlyImport(url: urls.first)
+            return
+        }
+
         guard !isImporting else {
             logger.warning("Import already in progress")
             return
         }
 
         importProgress = 0.0
+        isImportComplete = false
         filesProcessed = 0
         totalFiles = 0
         importErrors.removeAll()
         recentlyImported.removeAll()
         isImporting = true
-        statusMessage = "Scanning for audio files..."
+        statusMessage = ImportStatus.scanning
 
         let generation = UUID()
         importGeneration = generation
@@ -108,18 +121,26 @@ public final class LibraryImportService: ObservableObject {
             guard self.importGeneration == generation else { return }
             self.importTask = nil
             self.importGeneration = nil
+            self.isImporting = false
         }
         importTask = task
     }
 
     /// Cancel the current import operation
     public func cancelImport() {
-        let task = importTask
-        importGeneration = nil
-        importTask = nil
-        task?.cancel()
-        isImporting = false
-        statusMessage = "Import cancelled"
+        guard let task = importTask else {
+            isImporting = false
+            isImportComplete = false
+            statusMessage = ImportStatus.cancelled
+            return
+        }
+
+        // Keep the generation and task owned until the cancelled pipeline has
+        // drained discovery and worker cleanup. This prevents a retrigger from
+        // overlapping the previous import.
+        task.cancel()
+        isImportComplete = false
+        statusMessage = ImportStatus.cancelled
 
         self.logger.info("Import operation cancelled")
     }
@@ -131,6 +152,11 @@ public final class LibraryImportService: ObservableObject {
 
     /// Import a single file (for testing or manual import)
     public func importSingleFile(_ url: URL) async -> PersistentIdentifier? {
+        guard mutationPolicy == .normal else {
+            rejectReadOnlyImport(url: url)
+            return nil
+        }
+
         do {
             let hasSecurityScope = url.startAccessingSecurityScopedResource()
             defer {
@@ -168,9 +194,16 @@ public final class LibraryImportService: ObservableObject {
     }
 
     private func executeImportPipeline(urls: [URL], generation: UUID?) async {
+        guard mutationPolicy == .normal else {
+            rejectReadOnlyImport(url: urls.first)
+            return
+        }
+
         guard ownsImportState(generation) else { return }
 
+        isImportComplete = false
         let concurrency = fileProcessingConcurrency
+        let pipelineLogger = logger
         let discoveryStarted = Date()
         var successes = 0
         defer {
@@ -183,28 +216,35 @@ public final class LibraryImportService: ObservableObject {
         var accumulatedDuration: TimeInterval = 0
         var totalDiscovered = 0
 
-        self.statusMessage = "Scanning for audio files..."
+        self.statusMessage = ImportStatus.scanning
 
+        let queueCapacity = max(1, concurrency * 4)
+        let queueSemaphore = AsyncSemaphore(value: queueCapacity)
         let (queueStream, queueContinuation) = AsyncStream<FileImportProcessor.DiscoveredAudioFile>.makeStream(
-            bufferingPolicy: .bufferingOldest(concurrency * 4)
+            bufferingPolicy: .bufferingOldest(queueCapacity)
         )
 
         @Sendable
         func enqueue(_ file: FileImportProcessor.DiscoveredAudioFile) async -> Bool {
-            var pending = file
+            do {
+                try await queueSemaphore.acquire()
+            } catch {
+                return false
+            }
 
-            while true {
-                switch queueContinuation.yield(pending) {
-                case .enqueued:
-                    return true
-                case let .dropped(dropped):
-                    pending = dropped
-                    await Task.yield()
-                case .terminated:
-                    return false
-                @unknown default:
-                    return false
-                }
+            switch queueContinuation.yield(file) {
+            case .enqueued:
+                return true
+            case .dropped:
+                await queueSemaphore.release()
+                pipelineLogger.error("Import queue dropped a discovered file")
+                return false
+            case .terminated:
+                await queueSemaphore.release()
+                return false
+            @unknown default:
+                await queueSemaphore.release()
+                return false
             }
         }
 
@@ -221,9 +261,12 @@ public final class LibraryImportService: ObservableObject {
                     totalDiscovered += 1
                     self.totalFiles = totalDiscovered
                     if totalDiscovered == 1 {
-                        self.statusMessage = "Importing 1 file (concurrency \(concurrency))"
+                        self.statusMessage = ImportStatus.importingSingleFile(concurrency: concurrency)
                     } else {
-                        self.statusMessage = "Importing \(totalDiscovered) files (concurrency \(concurrency))"
+                        self.statusMessage = ImportStatus.importingFiles(
+                            totalDiscovered,
+                            concurrency: concurrency
+                        )
                         if totalDiscovered % 25 == 0 {
                             self.logger.info("import.discovery.progress discovered=\(totalDiscovered, privacy: .public) concurrency=\(concurrency, privacy: .public)")
                         }
@@ -251,13 +294,21 @@ public final class LibraryImportService: ObservableObject {
         )
 
         for await result in stream {
+            // A permit represents one discovered file waiting for a result.
+            // Release it before handling cancellation so discovery cannot
+            // remain blocked behind a result that will no longer be consumed.
+            await queueSemaphore.release()
+
             if Task.isCancelled {
                 discoveryTask.cancel()
                 queueContinuation.finish()
                 _ = await discoveryTask.result
                 if ownsImportState(generation) {
-                    self.statusMessage = "Import cancelled"
-                    self.isImporting = false
+                    self.isImportComplete = false
+                    self.statusMessage = ImportStatus.cancelled
+                    if generation == nil {
+                        self.isImporting = false
+                    }
                     self.logger.info("Import task cancelled")
                 }
                 return
@@ -326,21 +377,30 @@ public final class LibraryImportService: ObservableObject {
         guard ownsImportState(generation) else { return }
 
         if Task.isCancelled {
-            self.statusMessage = "Import cancelled"
-            self.isImporting = false
+            self.isImportComplete = false
+            self.statusMessage = ImportStatus.cancelled
+            if generation == nil {
+                self.isImporting = false
+            }
             self.logger.info("Import task cancelled")
             return
         }
 
         guard totalDiscovered > 0 else {
-            self.statusMessage = "No audio files found"
+            self.isImportComplete = false
+            self.statusMessage = ImportStatus.noAudioFiles
             self.isImporting = false
             return
         }
 
         let elapsed = Date().timeIntervalSince(processingStarted)
-        let summary = "Import completed: \(successes) imported, \(duplicates) skipped, \(failures) failed"
+        let summary = ImportStatus.completed(
+            imported: successes,
+            skipped: duplicates,
+            failed: failures
+        )
         self.statusMessage = summary
+        self.isImportComplete = true
         self.isImporting = false
         let averageDuration = self.totalFiles > 0 ? accumulatedDuration / Double(self.totalFiles) : 0
         self.logger.info(
@@ -371,23 +431,76 @@ public final class LibraryImportService: ObservableObject {
     private func updateProgress() {
         self.filesProcessed += 1
         self.importProgress = self.totalFiles > 0 ? Double(self.filesProcessed) / Double(self.totalFiles) : 0.0
-        self.statusMessage = "Processed \(self.filesProcessed) of \(self.totalFiles) files"
+        self.statusMessage = ImportStatus.processed(
+            self.filesProcessed,
+            total: self.totalFiles
+        )
     }
 
     private func ownsImportState(_ generation: UUID?) -> Bool {
         guard let generation else { return true }
         return importGeneration == generation
     }
+
+    private func rejectReadOnlyImport(url: URL?) {
+        let error = ImportServiceError.readOnly
+        importErrors.append(ImportError(
+            url: url,
+            error: error,
+            message: error.localizedDescription
+        ))
+        isImportComplete = false
+        statusMessage = error.localizedDescription
+        isImporting = false
+    }
+}
+
+private enum ImportStatus {
+    static let scanning = String(
+        localized: "Scanning for audio files...",
+        comment: "Import progress status while the app discovers supported audio files"
+    )
+
+    static let cancelled = String(
+        localized: "Import cancelled",
+        comment: "Import progress status after the user cancels an import"
+    )
+
+    static let noAudioFiles = String(
+        localized: "No audio files found",
+        comment: "Import progress status when discovery finds no supported audio files"
+    )
+
+    static func importingSingleFile(concurrency: Int) -> String {
+        String(
+            localized: "Importing 1 file (concurrency \(concurrency))",
+            comment: "Import progress status after discovering the first audio file"
+        )
+    }
+
+    static func importingFiles(_ count: Int, concurrency: Int) -> String {
+        String(
+            localized: "Importing \(count) files (concurrency \(concurrency))",
+            comment: "Import progress status with discovered file and worker counts"
+        )
+    }
+
+    static func processed(_ count: Int, total: Int) -> String {
+        String(
+            localized: "Processed \(count) of \(total) files",
+            comment: "Import progress status with processed and discovered file counts"
+        )
+    }
+
+    static func completed(imported: Int, skipped: Int, failed: Int) -> String {
+        String(
+            localized: "Import completed: \(imported) imported, \(skipped) skipped, \(failed) failed",
+            comment: "Import completion summary with imported, duplicate, and failed file counts"
+        )
+    }
 }
 
 // MARK: - Supporting Types
-
-/// Track import transaction for rollback support
-private final class ImportTransaction {
-    var importedFiles: [URL] = []
-    var copiedFiles: [URL] = []
-    var importedTracks: [PersistentIdentifier] = []
-}
 
 /// Error information for import failures
 public struct ImportError: Identifiable, Equatable {
@@ -404,7 +517,19 @@ public struct ImportError: Identifiable, Equatable {
 
 // MARK: - Extensions
 
-enum ImportServiceError: Error {
+public enum ImportServiceError: Error, LocalizedError, Equatable, Sendable {
     case serviceUnavailable
     case processingFailed(String)
+    case readOnly
+
+    public var errorDescription: String? {
+        switch self {
+        case .serviceUnavailable:
+            "The library import service is unavailable."
+        case let .processingFailed(message):
+            message
+        case .readOnly:
+            "Import is unavailable while Fonic HiFi is in read-only recovery mode."
+        }
+    }
 }

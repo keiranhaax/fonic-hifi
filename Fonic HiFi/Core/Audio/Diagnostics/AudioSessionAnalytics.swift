@@ -151,23 +151,4 @@ final class AudioSessionAnalytics {
         return currentDate.timeIntervalSince(sessionStart)
     }
 
-    func sessionSummary(alertHistory: [PlaybackAlert], currentDate: Date = Date()) -> AudioSessionSummary {
-        guard let sessionStart = sessionStartTime else {
-            return .empty
-        }
-
-        let alertsByType = Dictionary(grouping: alertHistory, by: { $0.type }).mapValues { $0.count }
-
-        return AudioSessionSummary(
-            sessionStart: sessionStart,
-            duration: sessionDuration(currentDate: currentDate),
-            averageMetrics: averageMetrics(),
-            peakMetrics: peakMetrics(),
-            totalAlerts: alertHistory.count,
-            alertsByType: alertsByType,
-            healthRating: overallHealth(),
-            sampleCount: metricsCount,
-            performanceScore: sessionPerformanceScore()
-        )
-    }
 }

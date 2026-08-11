@@ -122,6 +122,84 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertFalse(nowPlayingHeader.waitForExistence(timeout: 1))
     }
 
+    func testSignalPathNavigationShowsHonestUnverifiedState() throws {
+        let app = launchPreviewApp(arguments: [
+            "-UITestNoCurrentTrack",
+            "-UITestResetQueuePersistence",
+        ])
+
+        let settingsTab = tabButton("Settings", in: app)
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10), "Settings tab not found")
+        settingsTab.tap()
+
+        let signalPath = app.staticTexts["Signal Path"]
+        XCTAssertTrue(signalPath.waitForExistence(timeout: 5), "Signal Path setting not found")
+        signalPath.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["Signal Path"].waitForExistence(timeout: 5),
+            "Signal Path view did not appear"
+        )
+        XCTAssertTrue(app.staticTexts["Signal Path Unverified"].exists)
+        XCTAssertTrue(
+            app.staticTexts[
+                "Play a track to collect source, engine, processing, and output evidence."
+            ].exists
+        )
+        attachScreenshot(of: app, named: "Signal Path - Unverified")
+    }
+
+    func testPlaybackHealthNavigationShowsEmptySessionState() throws {
+        let app = launchPreviewApp(arguments: [
+            "-UITestNoCurrentTrack",
+            "-UITestResetQueuePersistence",
+        ])
+
+        let settingsTab = tabButton("Settings", in: app)
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10), "Settings tab not found")
+        settingsTab.tap()
+
+        let playbackHealth = app.staticTexts["Playback Health"]
+        XCTAssertTrue(playbackHealth.waitForExistence(timeout: 5), "Playback Health setting not found")
+        playbackHealth.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["Playback Health"].waitForExistence(timeout: 5),
+            "Playback Health view did not appear"
+        )
+        XCTAssertTrue(app.staticTexts["No Playback Events"].exists)
+        XCTAssertTrue(
+            app.staticTexts[
+                "Recovery and reliability events will appear here when they occur."
+            ].exists
+        )
+        attachScreenshot(of: app, named: "Playback Health - Empty")
+    }
+
+    func testNowPlayingSignalPathBadgeIsAccessibleAndOpensInspector() throws {
+        let app = launchPreviewApp()
+
+        let miniPlayer = app.otherElements["MiniPlayer"]
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10), "Mini player not visible")
+        miniPlayer.tap()
+
+        let badge = app.buttons["Playback signal path"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "Signal-path badge not exposed")
+        XCTAssertTrue(badge.isHittable)
+        assertMinimumTouchTarget(badge)
+        XCTAssertTrue(
+            (badge.value as? String)?.contains("Physical output is not measured") == true ||
+                (badge.value as? String)?.contains("has not been verified") == true
+        )
+        badge.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["Signal Path"].waitForExistence(timeout: 5),
+            "Signal Path inspector did not open"
+        )
+        attachScreenshot(of: app, named: "Signal Path - Now Playing Entry")
+    }
+
     func testNowPlayingAX5SmallPhoneInitialViewports() throws {
         addTeardownBlock {
             XCUIDevice.shared.orientation = .portrait
@@ -152,7 +230,9 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
             XCTAssertTrue(app.buttons["Previous track"].exists)
             XCTAssertTrue(app.buttons["Next track"].exists)
             XCTAssertTrue(app.buttons["RepeatButton"].exists)
-            XCTAssertTrue(app.sliders["PlaybackVolumeSlider"].exists)
+            let volumeControl = app.otherElements["PlaybackVolumeControl"]
+            XCTAssertTrue(volumeControl.exists)
+            XCTAssertTrue(volumeControl.sliders.firstMatch.exists)
 
             attachScreenshot(
                 of: app,
@@ -407,10 +487,12 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
         miniPlayer.tap()
 
-        let volume = app.sliders["PlaybackVolumeSlider"]
-        XCTAssertTrue(volume.waitForExistence(timeout: 5), "Playback volume slider is not labeled")
-        XCTAssertEqual(volume.label, "Playback Volume")
-        XCTAssertTrue((volume.value as? String)?.contains("percent") == true)
+        let volumeControl = app.otherElements["PlaybackVolumeControl"]
+        XCTAssertTrue(volumeControl.waitForExistence(timeout: 5), "Playback volume control is not labeled")
+        let volume = volumeControl.sliders.firstMatch
+        XCTAssertTrue(volume.waitForExistence(timeout: 5), "Native system volume slider is unavailable")
+        XCTAssertFalse(volume.label.isEmpty)
+        XCTAssertNotNil(volume.value)
 
         app.buttons["More options"].tap()
         let sleepTimer = app.buttons["Sleep Timer"]
@@ -646,9 +728,9 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
 
         let openNowPlaying = app.buttons["Open Now Playing"]
         XCTAssertTrue(openNowPlaying.waitForExistence(timeout: 10))
-        let play = app.buttons["Play"]
+        let pause = app.buttons["Pause"]
         let next = app.buttons["Next Track"]
-        XCTAssertTrue(play.exists)
+        XCTAssertTrue(pause.exists)
         XCTAssertTrue(next.exists)
 
         openNowPlaying.tap()
@@ -657,7 +739,7 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         app.buttons["DismissNowPlayingButton"].tap()
         XCTAssertFalse(nowPlaying.waitForExistence(timeout: 1))
 
-        play.tap()
+        pause.tap()
         XCTAssertFalse(nowPlaying.exists)
         next.tap()
         XCTAssertFalse(nowPlaying.exists)
@@ -684,7 +766,7 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Semantic Track"].exists)
     }
 
-    func testQueueRestoresAfterBackgroundTerminationAndRelaunch() throws {
+    func testRelaunchRestoresLatestTrackInMiniPlayer() throws {
         let app = launchPreviewApp(arguments: [
             "-UITestLibraryData",
             "-UITestNoCurrentTrack",
@@ -716,8 +798,30 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         ]
         app.launch()
 
-        XCTAssertTrue(app.otherElements["MiniPlayer"].waitForExistence(timeout: 10))
+        // The latest persisted track is the launch playback surface. It is
+        // paused, so the mini player exposes Play until the user resumes it.
+        XCTAssertTrue(tabButton("Home", in: app).waitForExistence(timeout: 10))
+        let restoredMiniPlayer = app.otherElements["MiniPlayer"]
+        XCTAssertTrue(restoredMiniPlayer.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Semantic Track"].exists)
+        let restoredPlay = app.buttons["Play"]
+        XCTAssertTrue(restoredPlay.exists)
+
+        let openNowPlaying = app.buttons["Open Now Playing"]
+        XCTAssertTrue(openNowPlaying.waitForExistence(timeout: 5))
+        app.otherElements["MiniPlayer"].tap()
+        XCTAssertTrue(app.staticTexts["Now Playing"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Semantic Track"].exists)
+        let dismiss = app.buttons["DismissNowPlayingButton"]
+        XCTAssertTrue(dismiss.waitForExistence(timeout: 5))
+        dismiss.tap()
+        XCTAssertTrue(app.otherElements["MiniPlayer"].waitForExistence(timeout: 5))
+        app.buttons["Play"].tap()
+        XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.otherElements["MiniPlayer"].waitForExistence(timeout: 5),
+            "Mini player did not appear after playback resumed"
+        )
     }
 
     func testLibraryCollectionsExposeSemanticDetailActions() throws {
@@ -849,7 +953,13 @@ final class LibraryNowPlayingSmokeTests: XCTestCase {
         let importMusic = app.buttons["Import Music"]
         XCTAssertTrue(importMusic.waitForExistence(timeout: 5))
         importMusic.tap()
-        XCTAssertTrue(app.navigationBars["Import Music"].waitForExistence(timeout: 3))
+
+        // The streamlined flow opens the system document picker directly.
+        let pickerTabBar = app.tabBars["DOC.browsingModeTabBar"]
+        XCTAssertTrue(
+            pickerTabBar.waitForExistence(timeout: 5),
+            "System file importer did not present"
+        )
     }
 
     func testNowPlayingArtworkExposesTrackInformationAction() throws {

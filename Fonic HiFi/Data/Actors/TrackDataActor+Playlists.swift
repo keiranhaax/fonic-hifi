@@ -64,6 +64,7 @@ extension TrackDataActor: PlaylistMutationStore {
         description: String?,
         isSmart: Bool
     ) async throws -> PlaylistMutationSnapshot {
+        try requireMutationAllowed()
         let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedName.isEmpty else {
             throw PlaylistMutationError.emptyName
@@ -91,6 +92,7 @@ extension TrackDataActor: PlaylistMutationStore {
         trackIDs: [UUID],
         toPlaylist playlistID: UUID
     ) async throws -> PlaylistEditorState {
+        try requireMutationAllowed()
         let playlist = try resolveStaticPlaylist(with: playlistID)
         let requestedIDs = trackIDs.reduce(into: [UUID]()) { result, trackID in
             if !result.contains(trackID) {
@@ -136,6 +138,7 @@ extension TrackDataActor: PlaylistMutationStore {
         trackIDs: [UUID],
         fromPlaylist playlistID: UUID
     ) async throws -> PlaylistEditorState {
+        try requireMutationAllowed()
         let playlist = try resolveStaticPlaylist(with: playlistID)
         let removedIDs = Set(trackIDs)
         guard !removedIDs.isEmpty, playlist.trackIds.contains(where: removedIDs.contains) else {
@@ -155,6 +158,7 @@ extension TrackDataActor: PlaylistMutationStore {
         fromOffsets: [Int],
         toOffset: Int
     ) async throws -> PlaylistEditorState {
+        try requireMutationAllowed()
         let playlist = try resolveStaticPlaylist(with: playlistID)
         let offsets = Array(Set(fromOffsets)).sorted()
 

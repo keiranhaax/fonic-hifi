@@ -9,7 +9,6 @@ final class AudioMonitorRuntime {
     private let metricsCollector: AudioMonitorMetricsCollector
     private let alertManager: any AudioAlertManaging
     private var performanceMonitor: PerformanceMonitor?
-    private let performanceProfiler: AudioPerformanceProfiler
     private let logger: Logger
     private let publishMetrics: (AudioMetrics) -> Void
     private let publishHealthStatus: (PlaybackHealthStatus) -> Void
@@ -17,10 +16,8 @@ final class AudioMonitorRuntime {
 
     private var engine: AudioEngineService?
     private var lastUnderrunDate: Date?
-    private var profilingStopTask: Task<Void, Never>?
     private(set) var updateInterval: TimeInterval = 1.0
     private(set) var isMonitoring = false
-    private(set) var isProfiling = false
 
     init(
         scheduler: AudioMetricsScheduler,
@@ -28,7 +25,6 @@ final class AudioMonitorRuntime {
         metricsCollector: AudioMonitorMetricsCollector,
         alertManager: any AudioAlertManaging,
         performanceMonitor: PerformanceMonitor?,
-        performanceProfiler: AudioPerformanceProfiler,
         logger: Logger,
         publishMetrics: @escaping (AudioMetrics) -> Void,
         publishHealthStatus: @escaping (PlaybackHealthStatus) -> Void,
@@ -39,7 +35,6 @@ final class AudioMonitorRuntime {
         self.metricsCollector = metricsCollector
         self.alertManager = alertManager
         self.performanceMonitor = performanceMonitor
-        self.performanceProfiler = performanceProfiler
         self.logger = logger
         self.publishMetrics = publishMetrics
         self.publishHealthStatus = publishHealthStatus
@@ -73,7 +68,6 @@ final class AudioMonitorRuntime {
 
         isMonitoring = false
         scheduler.stopMonitoring()
-        await stopProfiling()
     }
 
     func updateMonitoringInterval(to interval: TimeInterval) {
@@ -95,51 +89,6 @@ final class AudioMonitorRuntime {
             analytics: analytics,
             timeSinceLastUnderrun: lastUnderrunDate.map { Date().timeIntervalSince($0) }
         )
-    }
-
-    func evaluateAlerts() async {
-        let metrics = await collectCurrentMetrics()
-        processAlerts(for: metrics)
-    }
-
-    func startProfiling(duration: TimeInterval?) async {
-        logger.info("Starting performance profiling")
-
-        profilingStopTask?.cancel()
-        profilingStopTask = nil
-        isProfiling = true
-        performanceProfiler.beginProfiling(duration: duration)
-
-        scheduler.startProfiling(every: 0.1) { [weak self] in
-            await self?.collectProfilingSample()
-        }
-
-        if let duration {
-            profilingStopTask = Task { @MainActor [weak self] in
-                do {
-                    try await Task.sleep(for: .seconds(max(0, duration)))
-                } catch {
-                    return
-                }
-                guard !Task.isCancelled else { return }
-                await self?.stopProfiling()
-            }
-        }
-    }
-
-    func stopProfiling() async {
-        guard isProfiling else { return }
-
-        logger.info("Stopping performance profiling")
-
-        let scheduledStop = profilingStopTask
-        profilingStopTask = nil
-        scheduledStop?.cancel()
-        isProfiling = false
-        performanceProfiler.markStop()
-        scheduler.stopProfiling()
-
-        await finalizeProfilingData()
     }
 
     func invalidate() {
@@ -190,24 +139,6 @@ private extension AudioMonitorRuntime {
             publishAlert(alert)
             logger.warning("Alert triggered: \(alert.type.rawValue, privacy: .public) - \(alert.message, privacy: .private)")
         }
-    }
-
-    func collectProfilingSample() async {
-        let metrics = await collectCurrentMetrics()
-        performanceProfiler.collectSample(from: metrics, at: Date())
-    }
-
-    func finalizeProfilingData() async {
-        performanceProfiler.finalize()
-
-        guard let profilingData = performanceProfiler.profilingData else { return }
-
-        let durationSeconds = performanceProfiler.profilingDuration ?? 0
-        let sampleCount = profilingData.sampleTimestamps.count
-        let formattedDuration = String(format: "%.2f", durationSeconds)
-        logger.info(
-            "Profiling finalized with \(sampleCount, privacy: .public) samples over \(formattedDuration, privacy: .public)s"
-        )
     }
 
     func audioOutputLatency() async -> TimeInterval {

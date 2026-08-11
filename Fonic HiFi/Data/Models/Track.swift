@@ -248,9 +248,14 @@ public final class Track: TrackProtocol {
         )
     }
 
+    public var isAvailable: Bool {
+        fileAvailability.isAvailable
+    }
+
     // MARK: - Initialization
 
     public init(
+        id: UUID = UUID(),
         url: URL,
         title: String = "",
         artist: String = "",
@@ -263,7 +268,7 @@ public final class Track: TrackProtocol {
         isLossless: Bool = false,
     ) {
         // Initialize basic properties first
-        id = UUID()
+        self.id = id
         self.url = url
 
         // Compute derived values
@@ -406,6 +411,8 @@ public extension Track {
         )
         track.replayGainTrack = replayGainTrack
         track.replayGainAlbum = replayGainAlbum
+        track.isFavorite = isFavorite
+        track.isAvailable = isAvailable
         return track
     }
 }

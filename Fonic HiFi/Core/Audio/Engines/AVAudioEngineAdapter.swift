@@ -12,6 +12,14 @@ import OSLog
     import Mach
 #endif
 
+/// Main-actor callback used by the owning diagnostics surface when route
+/// recovery cannot be completed. The adapter passes only a stable event kind
+/// and privacy-safe detail; it never forwards URLs or localized error text.
+public typealias ConfigurationRecoveryFailureHandler = @MainActor (
+    PlaybackHealthEvent.Kind,
+    String?
+) -> Void
+
 public struct ProcessMetricsSnapshot: Sendable, Equatable {
     public let cpuUsage: Float?
     public let residentMemoryBytes: Int64?
@@ -93,6 +101,12 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// Secondary time pitch node for gapless playback
     private let secondaryTimePitchNode = AVAudioUnitTimePitch()
 
+    /// Independent per-chain gain stages. ReplayGain and crossfade ramps must
+    /// not share the master submix volume, otherwise one chain can attenuate
+    /// the other while both are rendered.
+    private let primaryGainNode = AVAudioMixerNode()
+    private let secondaryGainNode = AVAudioMixerNode()
+
     /// 10-band parametric equalizer
     private let eqNode = AVAudioUnitEQ(numberOfBands: 10)
 
@@ -148,6 +162,28 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     private var preparedTransition: PreparedGaplessTransition?
     private var unconsumedPreparedURL: URL?
 
+    private var currentGainDB: Float = 0
+    private var crossfadeTask: Task<Void, Never>?
+    private var crossfadeGeneration: UUID?
+    private var crossfadeSourceGeneration: UUID?
+    private var crossfadeTargetGeneration: UUID?
+    private var crossfadeTargetFile: AVAudioFile?
+    private var crossfadeTargetGainDB: Float = 0
+    private var crossfadeTargetCompleted = false
+    private var crossfadeSleeper: @MainActor (Swift.Duration) async throws -> Void = {
+        try await Task.sleep(for: $0)
+    }
+
+    /// True when pause() suspended a node that still owns its unrendered schedule.
+    /// A resume must not schedule the file again because doing so appends a second
+    /// copy of the track behind the paused segment.
+    private var isSuspendedWithPendingSchedule = false
+
+    /// Absolute source frame observed at pause while the node's render clock
+    /// catches up after resume. This is an observation floor only; it never
+    /// changes the scheduled segment or playback generation.
+    private var suspendedPlaybackFrame: AVAudioFramePosition?
+
     // Progress updates are handled by AudioEngineFacade's ProgressTimerManager
     // No local timer needed
 
@@ -168,14 +204,31 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     private var metricsStartTime: Date?
     private let bufferUnderruns = BufferUnderrunTracker()
 
+    /// Coalesces configuration-change bursts before restarting the graph.
+    private var configurationRecoveryScheduler: EngineConfigurationChangeRecoveryScheduler?
+
+    /// Observer for route or hardware changes that stop this engine.
+    private var configurationChangeObserver: NSObjectProtocol?
+
+    private let configurationRecoveryFailureHandler: ConfigurationRecoveryFailureHandler?
+    private var pendingConfigurationRecoveryFrame: AVAudioFramePosition?
+    private var pendingConfigurationRecoveryWasPlaying: Bool?
+    private var monitoringTapInstalled = false
+
     // MARK: - Initialization
 
     public init(
-        processMetricsProvider: any ProcessMetricsProviding = MachProcessMetricsProvider()
+        processMetricsProvider: any ProcessMetricsProviding = MachProcessMetricsProvider(),
+        configurationRecoveryFailureHandler: ConfigurationRecoveryFailureHandler? = nil
     ) throws {
         self.processMetricsProvider = processMetricsProvider
+        self.configurationRecoveryFailureHandler = configurationRecoveryFailureHandler
         super.init()
+        configurationRecoveryScheduler = EngineConfigurationChangeRecoveryScheduler { [weak self] in
+            self?.recoverAfterConfigurationChange()
+        }
         try setupEngine()
+        observeConfigurationChanges()
     }
 
     // MARK: - AudioEngineService Implementation
@@ -184,22 +237,41 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         get async {
             guard let file = audioFile else { return 0 }
 
-            let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
-            let nodeSampleTime: AVAudioFramePosition
-            if let renderTime = activePlayer.lastRenderTime,
-               let playerTime = activePlayer.playerTime(forNodeTime: renderTime) {
-                nodeSampleTime = playerTime.sampleTime
+            let absoluteFrame = currentAbsolutePlaybackFrame()
+            let visibleFrame: AVAudioFramePosition
+            if let suspendedPlaybackFrame {
+                if !isSuspendedWithPendingSchedule,
+                   absoluteFrame >= suspendedPlaybackFrame {
+                    self.suspendedPlaybackFrame = nil
+                    visibleFrame = absoluteFrame
+                } else {
+                    visibleFrame = suspendedPlaybackFrame
+                }
             } else {
-                nodeSampleTime = 0
+                visibleFrame = absoluteFrame
             }
 
-            let absoluteFrame = Self.absolutePlaybackFrame(
-                scheduledStartFrame: scheduledStartFrame,
-                nodeSampleTime: nodeSampleTime,
-                totalFrames: totalFrames
-            )
-            return Double(absoluteFrame) / file.processingFormat.sampleRate
+            return Double(visibleFrame) / file.processingFormat.sampleRate
         }
+    }
+
+    private func currentAbsolutePlaybackFrame() -> AVAudioFramePosition {
+        guard audioFile != nil else { return 0 }
+
+        let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
+        let nodeSampleTime: AVAudioFramePosition
+        if let renderTime = activePlayer.lastRenderTime,
+           let playerTime = activePlayer.playerTime(forNodeTime: renderTime) {
+            nodeSampleTime = playerTime.sampleTime
+        } else {
+            nodeSampleTime = 0
+        }
+
+        return Self.absolutePlaybackFrame(
+            scheduledStartFrame: scheduledStartFrame,
+            nodeSampleTime: nodeSampleTime,
+            totalFrames: totalFrames
+        )
     }
 
     public var duration: TimeInterval {
@@ -237,13 +309,31 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
             return file.processingFormat.sampleRate == outputFormat.sampleRate &&
                 primaryPlayerNode.volume == 1.0 &&
+                abs(currentGainDB) < .ulpOfOne &&
                 !hasAudioProcessing()
         }
     }
 
+    public func playbackFormatEvidence() async -> AudioEngineFormatEvidence? {
+        let outputFormat = engine.outputNode.outputFormat(forBus: 0)
+        return AudioEngineFormatEvidence(
+            isTrackLoaded: audioFile != nil,
+            loadedSampleRate: audioFile?.processingFormat.sampleRate,
+            loadedChannelCount: audioFile.map { Int($0.processingFormat.channelCount) },
+            engineOutputSampleRate: outputFormat.sampleRate > 0 ? outputFormat.sampleRate : nil,
+            engineOutputChannelCount: outputFormat.channelCount > 0 ? Int(outputFormat.channelCount) : nil,
+            hasEngineProcessing: hasAudioProcessing()
+        )
+    }
+
     public func load(url: URL) async throws {
         await unloadTrack()
+        setupMonitoring()
         await bufferUnderruns.reset()
+        isSuspendedWithPendingSchedule = false
+        suspendedPlaybackFrame = nil
+        pendingConfigurationRecoveryFrame = nil
+        pendingConfigurationRecoveryWasPlaying = nil
 
         do {
             // Create audio file
@@ -251,10 +341,6 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             guard let file = audioFile else {
                 throw AudioError.fileNotFound(url)
             }
-
-            #if DEBUG
-                logger.debug("=== AVAUDIOENGINE PREPARE DEBUG ===")
-            #endif
 
             // Store total frames for duration calculation
             totalFrames = file.length
@@ -266,17 +352,6 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             if !engine.isRunning {
                 try startEngine()
             }
-
-            #if DEBUG
-                let format = file.processingFormat
-                logger.debug("1. Attached player node")
-                logger.debug("2. Connected player to mixer with format: \(String(describing: format), privacy: .public)")
-                logger.debug("3. Sample rate: \(format.sampleRate, privacy: .public)")
-                logger.debug("4. Channels: \(format.channelCount, privacy: .public)")
-                logger.debug("5. Main mixer connected to output: \(self.engine.mainMixerNode.numberOfOutputs > 0, privacy: .public)")
-                logger.debug("6. Engine prepared")
-                logger.debug("=== END PREPARE DEBUG ===")
-            #endif
 
             playbackState = .idle
 
@@ -292,31 +367,38 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
         let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
 
-        #if DEBUG
-            logger.debug("=== AVAUDIOENGINE PLAY DEBUG ===")
-            logger.debug("1. Engine running before start: \(self.engine.isRunning, privacy: .public)")
-        #endif
-
         // Audio session is managed by AudioSessionManager, not here
 
         // Start playback
         if !engine.isRunning {
             try startEngine()
-            #if DEBUG
-                logger.debug("2. Engine started")
-            #endif
         }
 
-        #if DEBUG
-            logger.debug("3. Engine running after start: \(self.engine.isRunning, privacy: .public)")
-            logger.debug("4. Player node playing state: \(activePlayer.isPlaying, privacy: .public)")
-        #endif
+        // A paused player still owns the unrendered remainder of its schedule.
+        // Re-scheduling here would append another copy of the current file and
+        // reset any source-frame base established by a seek.
+        if isSuspendedWithPendingSchedule,
+           playbackGeneration != nil,
+           scheduledStartFrame <= totalFrames {
+            try activePlayer.playAudio()
+            activeGainNode.outputVolume = linearGain(for: currentGainDB)
+            isSuspendedWithPendingSchedule = false
+            playbackState = await .playing(currentTime: currentTime, duration: duration)
+            metricsStartTime = Date()
+            return
+        }
 
         let generation = UUID()
         playbackGeneration = generation
-        preparedTransition = nil
-        unconsumedPreparedURL = nil
+        crossfadeTask?.cancel()
+        crossfadeTask = nil
+        crossfadeGeneration = nil
+        invalidateArmedInactivePlayer()
+        isSuspendedWithPendingSchedule = false
+        suspendedPlaybackFrame = nil
         scheduledStartFrame = 0
+        activeGainNode.outputVolume = linearGain(for: currentGainDB)
+        inactiveGainNode.outputVolume = 0
         activePlayer.scheduleFile(
             file,
             at: nil,
@@ -325,13 +407,6 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         )
 
         try activePlayer.playAudio()
-        #if DEBUG
-            logger.debug("6. Called activePlayer.play()")
-            logger.debug("7. Player node playing after play: \(activePlayer.isPlaying, privacy: .public)")
-            logger.debug("8. Output volume: \(activePlayer.volume, privacy: .public)")
-            logger.debug("9. Engine output node volume: \(self.engine.mainMixerNode.outputVolume, privacy: .public)")
-            logger.debug("=== END AVAUDIOENGINE DEBUG ===")
-        #endif
 
         playbackState = await .playing(currentTime: currentTime, duration: duration)
 
@@ -342,7 +417,13 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
 
     public func pause() async {
+        cancelCrossfade(rearmSourceCompletion: false)
         let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
+        let hasPendingSchedule = audioFile != nil && playbackGeneration != nil
+        let pausedFrame = suspendedPlaybackFrame ?? currentAbsolutePlaybackFrame()
+        isSuspendedWithPendingSchedule = hasPendingSchedule
+        suspendedPlaybackFrame = hasPendingSchedule ? pausedFrame : nil
+        invalidateArmedInactivePlayer()
         activePlayer.pause()
         playbackState = await .paused(currentTime: currentTime, duration: duration)
         // Progress timer is managed by AudioEngineFacade
@@ -350,10 +431,13 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
     public func stop() async {
         await unloadTrack()
+        engine.stop()
+        removeMonitoringTap()
         await bufferUnderruns.reset()
     }
 
     private func unloadTrack() async {
+        cancelCrossfade(rearmSourceCompletion: false)
         // Stop both players
         primaryPlayerNode.stop()
         secondaryPlayerNode.stop()
@@ -370,6 +454,13 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         playbackGeneration = nil
         hasNextPrepared = false
         isPrimaryActive = true
+        currentGainDB = 0
+        primaryGainNode.outputVolume = 1
+        secondaryGainNode.outputVolume = 0
+        isSuspendedWithPendingSchedule = false
+        suspendedPlaybackFrame = nil
+        pendingConfigurationRecoveryFrame = nil
+        pendingConfigurationRecoveryWasPlaying = nil
     }
 
     public func seek(to time: TimeInterval) async throws {
@@ -377,6 +468,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
             throw AudioError.invalidSeekPosition(time)
         }
 
+        cancelCrossfade(rearmSourceCompletion: false)
         let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
         let wasPlaying = activePlayer.isPlaying
 
@@ -404,6 +496,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         preparedTransition = nil
         unconsumedPreparedURL = nil
         hasNextPrepared = false
+        isSuspendedWithPendingSchedule = false
+        suspendedPlaybackFrame = nil
 
         // Create new segment
         let framesToPlay = file.length - framePosition
@@ -412,6 +506,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         let generation = UUID()
         playbackGeneration = generation
         scheduledStartFrame = framePosition
+        activeGainNode.outputVolume = linearGain(for: currentGainDB)
+        inactiveGainNode.outputVolume = 0
         activePlayer.scheduleSegment(
             file,
             startingFrame: framePosition,
@@ -436,12 +532,6 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
     public func configure(with configuration: AudioEngineConfiguration) async throws {
         self.configuration = configuration
-
-        // If engine is running, we need to stop and reconfigure
-        if engine.isRunning {
-            engine.stop()
-            try startEngine()
-        }
     }
 
     public func prepareNext(url: URL) async {
@@ -523,14 +613,7 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
 
     public func invalidatePreparedTransition() async {
-        guard preparedTransition != nil || hasNextPrepared else { return }
-
-        let inactivePlayer = isPrimaryActive ? secondaryPlayerNode : primaryPlayerNode
-        inactivePlayer.stop()
-        preparedFile = nil
-        preparedTransition = nil
-        hasNextPrepared = false
-        unconsumedPreparedURL = nil
+        invalidateArmedInactivePlayer()
     }
 
     public func consumePreparedTransition(to url: URL) async -> PreparedTrackTransition {
@@ -549,6 +632,13 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     /// but not decoder latency, buffer fill, dropped frames, or process CPU.
     public func availableMetrics() async -> AudioMetrics? {
         let processMetrics = processMetricsProvider.currentProcessMetrics()
+        guard let cpuUsage = processMetrics.cpuUsage,
+              let residentMemoryBytes = processMetrics.residentMemoryBytes else {
+            // A partial process provider cannot support the full snapshot
+            // contract. Returning nil keeps EngineMetricsCollector from
+            // turning unavailable values into fabricated zeros.
+            return nil
+        }
         let outputFormat = engine.outputNode.outputFormat(forBus: 0)
         let streamDescription = outputFormat.streamDescription.pointee
         let sampleRate = outputFormat.sampleRate
@@ -559,8 +649,8 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
 
         return AudioMetrics(
             engineMetricsAvailability: .partial,
-            cpuUsage: processMetrics.cpuUsage ?? 0,
-            memoryUsage: processMetrics.residentMemoryBytes ?? 0,
+            cpuUsage: cpuUsage,
+            memoryUsage: residentMemoryBytes,
             bufferUnderruns: await bufferUnderruns.value(),
             decodingLatency: 0,
             bufferFillLevel: 0,
@@ -588,6 +678,9 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         engine.attach(secondaryPlayerNode)
         engine.attach(secondaryTimePitchNode)
 
+        engine.attach(primaryGainNode)
+        engine.attach(secondaryGainNode)
+
         // Attach EQ and submix nodes
         engine.attach(submixNode)
         engine.attach(eqNode)
@@ -595,13 +688,17 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         // Connect chains to mixer
         let format = engine.outputNode.outputFormat(forBus: 0)
 
-        // Primary chain: primaryPlayer → primaryTimePitch → submix
+        // Primary chain: primaryPlayer → primaryTimePitch → primaryGain → submix
         try engine.connectNode(primaryPlayerNode, to: primaryTimePitchNode, format: nil)
-        try engine.connectNode(primaryTimePitchNode, to: submixNode, format: format)
+        try engine.connectNode(primaryTimePitchNode, to: primaryGainNode, format: format)
+        try engine.connectNode(primaryGainNode, to: submixNode, format: format)
 
-        // Secondary chain: secondaryPlayer → secondaryTimePitch → submix
+        // Secondary chain: secondaryPlayer → secondaryTimePitch → secondaryGain → submix
         try engine.connectNode(secondaryPlayerNode, to: secondaryTimePitchNode, format: nil)
-        try engine.connectNode(secondaryTimePitchNode, to: submixNode, format: format)
+        try engine.connectNode(secondaryTimePitchNode, to: secondaryGainNode, format: format)
+        try engine.connectNode(secondaryGainNode, to: submixNode, format: format)
+        primaryGainNode.outputVolume = 1
+        secondaryGainNode.outputVolume = 0
 
         // Master chain: submix → EQ → mainMixer
         try engine.connectNode(submixNode, to: eqNode, format: format)
@@ -689,6 +786,150 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         }
     }
 
+    /// Stop and clear any future render scheduled on the inactive gapless node.
+    /// This is required before a fresh schedule and whenever playback pauses;
+    /// an absolute host-time schedule is not cancelled by pausing the active
+    /// node alone.
+    private func invalidateArmedInactivePlayer() {
+        let inactivePlayer = isPrimaryActive ? secondaryPlayerNode : primaryPlayerNode
+        inactivePlayer.stop()
+        inactivePlayer.volume = primaryPlayerNode.volume
+        inactiveGainNode.outputVolume = 0
+        preparedFile = nil
+        preparedTransition = nil
+        unconsumedPreparedURL = nil
+        hasNextPrepared = false
+    }
+
+    private func observeConfigurationChanges() {
+        let engineIdentifier = ObjectIdentifier(engine)
+        configurationChangeObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: engine,
+            queue: nil
+        ) { [weak self, engineIdentifier] notification in
+            guard Self.isConfigurationChangeForEngine(
+                notification,
+                engineIdentifier: engineIdentifier
+            ) else {
+                return
+            }
+
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // Capture transport before the debounce gives the route a
+                // chance to invalidate player render time. The scheduler only
+                // coalesces the subsequent graph rebuild.
+                self.pendingConfigurationRecoveryFrame = self.currentAbsolutePlaybackFrame()
+                self.pendingConfigurationRecoveryWasPlaying = self.playbackState.isPlaying
+                self.configurationRecoveryScheduler?.schedule()
+            }
+        }
+    }
+
+    nonisolated static func isConfigurationChangeForEngine(
+        _ notification: Notification,
+        engineIdentifier: ObjectIdentifier
+    ) -> Bool {
+        guard let notificationObject = notification.object as AnyObject? else {
+            return false
+        }
+        return ObjectIdentifier(notificationObject) == engineIdentifier
+    }
+
+    /// Restart the existing graph after AVAudioEngine stopped for a hardware
+    /// or route configuration change. Capture the source frame before touching
+    /// the graph, then install one fresh generation for only the unrendered
+    /// remainder. Route and interruption intent remain owned by StateCoordinator.
+    // Internal for deterministic contract tests; production notifications
+    // still enter through the debounced observer above.
+    func recoverAfterConfigurationChange() {
+        guard let file = audioFile else { return }
+
+        let wasPlaying = pendingConfigurationRecoveryWasPlaying ?? playbackState.isPlaying
+        let capturedFrame = min(
+            max(
+                0,
+                pendingConfigurationRecoveryFrame
+                    ?? suspendedPlaybackFrame
+                    ?? currentAbsolutePlaybackFrame()
+            ),
+            totalFrames
+        )
+        pendingConfigurationRecoveryFrame = nil
+        pendingConfigurationRecoveryWasPlaying = nil
+        let remainingFrames = totalFrames - capturedFrame
+        let recoveryGeneration = UUID()
+
+        do {
+            primaryPlayerNode.stop()
+            secondaryPlayerNode.stop()
+            preparedFile = nil
+            preparedTransition = nil
+            unconsumedPreparedURL = nil
+            hasNextPrepared = false
+
+            try reconnectPlayerNodesIfNeeded(for: file.processingFormat)
+            engine.prepare()
+            try startEngine()
+
+            guard remainingFrames > 0 else {
+                playbackGeneration = nil
+                scheduledStartFrame = totalFrames
+                isSuspendedWithPendingSchedule = false
+                suspendedPlaybackFrame = nil
+                playbackState = .stopped
+                logger.info("AVAudioEngine configuration recovery reached track end")
+                return
+            }
+
+            let activePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
+            playbackGeneration = recoveryGeneration
+            scheduledStartFrame = capturedFrame
+            suspendedPlaybackFrame = capturedFrame
+            isSuspendedWithPendingSchedule = !wasPlaying
+            activePlayer.scheduleSegment(
+                file,
+                startingFrame: capturedFrame,
+                frameCount: AVAudioFrameCount(remainingFrames),
+                at: nil,
+                completionCallbackType: .dataPlayedBack,
+                completionHandler: Self.makeCompletionCallback(
+                    owner: self,
+                    generation: recoveryGeneration
+                )
+            )
+
+            if wasPlaying {
+                try activePlayer.playAudio()
+                isSuspendedWithPendingSchedule = false
+            }
+
+            let recoveredTime = Double(capturedFrame) / file.processingFormat.sampleRate
+            let recoveredDuration = Double(totalFrames) / file.processingFormat.sampleRate
+            playbackState = wasPlaying
+                ? .playing(currentTime: recoveredTime, duration: recoveredDuration)
+                : .paused(currentTime: recoveredTime, duration: recoveredDuration)
+            logger.info("Recovered AVAudioEngine after configuration change")
+        } catch {
+            playbackGeneration = nil
+            isSuspendedWithPendingSchedule = false
+            suspendedPlaybackFrame = capturedFrame
+            playbackState = .paused(
+                currentTime: Double(capturedFrame) / file.processingFormat.sampleRate,
+                duration: Double(totalFrames) / file.processingFormat.sampleRate
+            )
+            let detail = "reason=\(String(describing: type(of: error)))"
+            configurationRecoveryFailureHandler?(
+                .audioEngineConfigurationRecoveryFailed,
+                detail
+            )
+            logger.error(
+                "Failed to recover AVAudioEngine after configuration change: \(error.localizedDescription, privacy: .private)"
+            )
+        }
+    }
+
     private func reconnectPlayerNodesIfNeeded(for fileFormat: AVAudioFormat) throws {
         let primaryInput = primaryTimePitchNode.inputFormat(forBus: 0)
         let secondaryInput = secondaryTimePitchNode.inputFormat(forBus: 0)
@@ -731,14 +972,18 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     private func hasAudioProcessing() -> Bool {
         // Check if any effects or processing nodes are active
         // Time pitch node is active if rate is not 1.0
-        // EQ is active if enabled
-        currentPlaybackRate != 1.0 || isEQEnabled
+        // EQ and either gain/crossfade stage are active processing paths.
+        currentPlaybackRate != 1.0 ||
+            isEQEnabled ||
+            abs(currentGainDB) >= .ulpOfOne ||
+            crossfadeGeneration != nil
     }
 
     // Progress timer functionality moved to AudioEngineFacade's ProgressTimerManager
     // This eliminates race conditions and centralizes progress updates
 
     private func setupMonitoring() {
+        guard !monitoringTapInstalled else { return }
         // Install tap on output for monitoring buffer underruns
         let format = engine.mainMixerNode.outputFormat(forBus: 0)
         let tracker = bufferUnderruns
@@ -750,11 +995,26 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
                 format: format,
                 tapProvider: Self.makeMonitoringTap(tracker: tracker)
             )
+            monitoringTapInstalled = true
         } catch {
             logger.warning(
                 "Audio underrun monitoring is unavailable: \(error.localizedDescription, privacy: .private)"
             )
         }
+    }
+
+    private func removeMonitoringTap() {
+        guard monitoringTapInstalled else { return }
+        engine.mainMixerNode.removeTap(onBus: 0)
+        monitoringTapInstalled = false
+    }
+
+    var isMonitoringTapInstalledForTesting: Bool {
+        monitoringTapInstalled
+    }
+
+    var isEngineRunningForTesting: Bool {
+        engine.isRunning
     }
 
     private nonisolated static func makeMonitoringTap(
@@ -798,6 +1058,22 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         return AVAudioFrameCount(max(duration * sampleRate, 0))
     }
 
+    private var activeGainNode: AVAudioMixerNode {
+        isPrimaryActive ? primaryGainNode : secondaryGainNode
+    }
+
+    private var inactiveGainNode: AVAudioMixerNode {
+        isPrimaryActive ? secondaryGainNode : primaryGainNode
+    }
+
+    private func linearGain(for gainDB: Float) -> Float {
+        guard gainDB.isFinite else { return 1 }
+        // AVAudioMixerNode outputVolume is a linear scalar. Keep the stage in
+        // its documented range; positive replay gain is represented by the
+        // target ceiling rather than overflowing the node.
+        return min(1, max(0, pow(10, gainDB / 20)))
+    }
+
     // MARK: - Playback Rate
 
     /// Set the playback rate (0.5 to 2.0, where 1.0 is normal speed)
@@ -807,6 +1083,169 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         primaryTimePitchNode.rate = Float(clampedRate)
         secondaryTimePitchNode.rate = Float(clampedRate)
         currentPlaybackRate = clampedRate
+    }
+
+    public func applyReplayGain(_ gainDB: Float) async {
+        currentGainDB = gainDB.isFinite ? gainDB : 0
+        guard crossfadeGeneration == nil else { return }
+        activeGainNode.outputVolume = linearGain(for: currentGainDB)
+    }
+
+    /// Render a bounded equal-power transition on the two independent player
+    /// chains. The transition UUID is separate from each player schedule
+    /// generation, so a late callback from an abandoned target cannot commit
+    /// queue state or replace the source track.
+    public func crossfade(
+        to url: URL,
+        duration: TimeInterval,
+        playbackRate: Double,
+        gainDB: Float
+    ) async throws {
+        guard let sourceFile = audioFile else {
+            try await load(url: url)
+            await setPlaybackRate(playbackRate)
+            await applyReplayGain(gainDB)
+            try await play()
+            return
+        }
+
+        cancelCrossfade(rearmSourceCompletion: true)
+
+        let targetFile = try AVAudioFile(forReading: url)
+        guard !formatsDiffer(sourceFile.processingFormat, targetFile.processingFormat) else {
+            // A crossfade between incompatible processing formats cannot be
+            // rendered by this graph. Keep the transition honest and use the
+            // established load/restart path instead.
+            try await load(url: url)
+            await setPlaybackRate(playbackRate)
+            await applyReplayGain(gainDB)
+            try await play()
+            return
+        }
+
+        let sourceGeneration = playbackGeneration
+        let targetGeneration = UUID()
+        let transitionGeneration = UUID()
+        let inactivePlayer = isPrimaryActive ? secondaryPlayerNode : primaryPlayerNode
+
+        inactivePlayer.stop()
+        inactivePlayer.volume = primaryPlayerNode.volume
+        inactiveGainNode.outputVolume = 0
+        inactivePlayer.scheduleFile(
+            targetFile,
+            at: nil,
+            completionCallbackType: .dataPlayedBack,
+            completionHandler: Self.makeCompletionCallback(owner: self, generation: targetGeneration)
+        )
+        try inactivePlayer.playAudio()
+
+        currentPlaybackRate = max(0.5, min(2.0, playbackRate))
+        primaryTimePitchNode.rate = Float(currentPlaybackRate)
+        secondaryTimePitchNode.rate = Float(currentPlaybackRate)
+        let targetGainDB = gainDB.isFinite ? gainDB : 0
+        activeGainNode.outputVolume = linearGain(for: currentGainDB)
+        inactiveGainNode.outputVolume = 0
+        crossfadeSourceGeneration = sourceGeneration
+        crossfadeTargetGeneration = targetGeneration
+        crossfadeTargetFile = targetFile
+        crossfadeTargetGainDB = targetGainDB
+        crossfadeTargetCompleted = false
+        crossfadeGeneration = transitionGeneration
+        isSuspendedWithPendingSchedule = false
+        suspendedPlaybackFrame = nil
+
+        if duration <= 0 {
+            finishCrossfade(generation: transitionGeneration)
+            return
+        }
+
+        let boundedDuration = max(0, duration)
+        crossfadeTask = Task { @MainActor [weak self] in
+            await self?.performCrossfade(duration: boundedDuration, generation: transitionGeneration)
+        }
+    }
+
+    private func performCrossfade(duration: TimeInterval, generation: UUID) async {
+        let stepDuration = min(0.05, max(duration, 0.001))
+        let steps = max(1, Int(ceil(duration / stepDuration)))
+
+        for step in 1 ... steps {
+            guard !Task.isCancelled, crossfadeGeneration == generation else {
+                return
+            }
+
+            let progress = min(1, Double(step) / Double(steps))
+            let sourceWeight = Float(cos(progress * .pi / 2))
+            let targetWeight = Float(sin(progress * .pi / 2))
+            activeGainNode.outputVolume = linearGain(for: currentGainDB) * sourceWeight
+            inactiveGainNode.outputVolume = linearGain(for: crossfadeTargetGainDB) * targetWeight
+
+            do {
+                try await crossfadeSleeper(.milliseconds(Int(stepDuration * 1_000)))
+            } catch {
+                return
+            }
+        }
+
+        guard crossfadeGeneration == generation else { return }
+        finishCrossfade(generation: generation)
+    }
+
+    private func finishCrossfade(generation: UUID) {
+        guard crossfadeGeneration == generation,
+              let targetFile = crossfadeTargetFile,
+              let targetGeneration = crossfadeTargetGeneration else { return }
+
+        let sourcePlayer = isPrimaryActive ? primaryPlayerNode : secondaryPlayerNode
+        sourcePlayer.stop()
+        isPrimaryActive.toggle()
+        audioFile = targetFile
+        totalFrames = targetFile.length
+        scheduledStartFrame = 0
+        playbackGeneration = targetGeneration
+        currentGainDB = crossfadeTargetGainDB
+        activeGainNode.outputVolume = linearGain(for: currentGainDB)
+        inactiveGainNode.outputVolume = 0
+        preparedFile = nil
+        preparedTransition = nil
+        unconsumedPreparedURL = nil
+        hasNextPrepared = false
+        crossfadeTask = nil
+        crossfadeGeneration = nil
+        crossfadeSourceGeneration = nil
+        crossfadeTargetGeneration = nil
+        crossfadeTargetFile = nil
+        crossfadeTargetGainDB = 0
+        let targetCompleted = crossfadeTargetCompleted
+        crossfadeTargetCompleted = false
+        playbackState = .playing(
+            currentTime: 0,
+            duration: Double(targetFile.length) / targetFile.processingFormat.sampleRate
+        )
+        if targetCompleted {
+            playbackState = .stopped
+            playbackGeneration = nil
+            completionHandler?()
+        }
+    }
+
+    private func cancelCrossfade(rearmSourceCompletion: Bool) {
+        guard crossfadeTask != nil || crossfadeGeneration != nil else { return }
+        crossfadeTask?.cancel()
+        crossfadeTask = nil
+        crossfadeGeneration = nil
+        crossfadeTargetFile = nil
+        crossfadeSourceGeneration = nil
+        crossfadeTargetGeneration = nil
+        crossfadeTargetGainDB = 0
+        crossfadeTargetCompleted = false
+        let inactivePlayer = isPrimaryActive ? secondaryPlayerNode : primaryPlayerNode
+        inactivePlayer.stop()
+        activeGainNode.outputVolume = linearGain(for: currentGainDB)
+        inactiveGainNode.outputVolume = 0
+        if !rearmSourceCompletion {
+            playbackGeneration = nil
+        }
     }
 
     // MARK: - Equalizer
@@ -859,6 +1298,16 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         completionHandler = handler
     }
 
+    var chainVolumesForTesting: (primary: Float, secondary: Float) {
+        (primaryGainNode.outputVolume, secondaryGainNode.outputVolume)
+    }
+
+    func setCrossfadeSleeperForTesting(
+        _ sleeper: @escaping @MainActor (Swift.Duration) async throws -> Void
+    ) {
+        crossfadeSleeper = sleeper
+    }
+
     private nonisolated static func makeCompletionCallback(
         owner: AVAudioEngineAdapter,
         generation: UUID
@@ -871,7 +1320,22 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
     }
 
     private func handlePlaybackCompletion(generation: UUID) {
+        // A crossfade owns both schedules until the transition commits. The
+        // source callback is intentionally ignored (it only marks the old
+        // node complete), while a target callback cannot supersede the
+        // transition generation or queue state.
+        if crossfadeGeneration != nil {
+            if generation == crossfadeSourceGeneration {
+                return
+            }
+            if generation == crossfadeTargetGeneration {
+                crossfadeTargetCompleted = true
+                return
+            }
+        }
         guard playbackGeneration == generation else { return }
+        isSuspendedWithPendingSchedule = false
+        suspendedPlaybackFrame = nil
 
         if let transition = preparedTransition,
            transition.sourceGeneration == generation {
@@ -903,8 +1367,49 @@ public final class AVAudioEngineAdapter: NSObject, AudioEngineService {
         playbackState = .playing(currentTime: 0, duration: Double(transition.file.length) / transition.file.processingFormat.sampleRate)
     }
 
+    @MainActor deinit {
+        crossfadeTask?.cancel()
+        configurationRecoveryScheduler?.cancel()
+        removeMonitoringTap()
+        engine.stop()
+        if let configurationChangeObserver {
+            NotificationCenter.default.removeObserver(configurationChangeObserver)
+        }
+    }
+}
+
+/// MainActor-owned debounce scheduler for engine configuration recovery.
+@MainActor
+final class EngineConfigurationChangeRecoveryScheduler {
+    private let recoveryDelay: Duration
+    private let recoveryHandler: @MainActor () -> Void
+    private var task: Task<Void, Never>?
+
+    init(
+        recoveryDelay: Duration = .milliseconds(100),
+        recoveryHandler: @escaping @MainActor () -> Void
+    ) {
+        self.recoveryDelay = recoveryDelay
+        self.recoveryHandler = recoveryHandler
+    }
+
+    func schedule() {
+        task?.cancel()
+        let recoveryDelay = self.recoveryDelay
+        let recoveryHandler = self.recoveryHandler
+        task = Task { @MainActor [recoveryDelay, recoveryHandler] in
+            try? await Task.sleep(for: recoveryDelay)
+            guard !Task.isCancelled else { return }
+            recoveryHandler()
+        }
+    }
+
+    func cancel() {
+        task?.cancel()
+        task = nil
+    }
+
     deinit {
-        // Swift 6 strict concurrency prevents accessing non-Sendable properties in deinit
-        // Cleanup should be done explicitly via stop() method before deallocation
+        task?.cancel()
     }
 }

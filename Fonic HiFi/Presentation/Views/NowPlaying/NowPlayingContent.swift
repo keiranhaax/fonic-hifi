@@ -19,7 +19,6 @@ struct NowPlayingContent: View {
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    let namespace: Namespace.ID
     let dismiss: () -> Void
 
     // UI State
@@ -27,18 +26,18 @@ struct NowPlayingContent: View {
     @State private var trackDetailItem: TrackDetailItem?
     @State private var showSleepTimerSheet = false
     @State private var showingLyrics = false
+    @State private var showingSignalPath = false
     @AccessibilityFocusState private var overflowMenuFocused: Bool
 
     /// Shared color service for gradient
     @ObservedObject private var colorService = DominantColorService.shared
 
-    /// Persistence
-    @AppStorage("volume") private var volumeStorage: Double = 1.0
-
-    private var volume: Float {
-        get { Float(volumeStorage) }
-        set { volumeStorage = Double(newValue) }
-    }
+    #if targetEnvironment(simulator)
+    /// Simulator-only volume state. The simulator has no system volume service,
+    /// so the volume row drives the engine mixer directly there; on device the
+    /// system volume control owns volume and this storage is unused.
+    @AppStorage("volume") private var simulatorVolumeStorage: Double = 1.0
+    #endif
 
     private var sleepTimerManager: SleepTimerManager {
         audioService.sleepTimerManager
@@ -58,6 +57,10 @@ struct NowPlayingContent: View {
 
     private var isFavorite: Bool {
         audioService.currentTrack?.isFavorite ?? false
+    }
+
+    private var signalPathEligibility: SignalPathEligibility {
+        audioService.diagnosticsStatus.signalPath?.eligibility ?? .unavailable
     }
 
     static func lyricsTransitionAnimation(reduceMotion: Bool) -> Animation? {
@@ -114,7 +117,7 @@ struct NowPlayingContent: View {
             dismiss: { id in audioService.dismissPlaybackControlError(id: id) }
         )
         .animation(Self.lyricsTransitionAnimation(reduceMotion: reduceMotion), value: showingLyrics)
-        .task {
+        .task(id: audioService.currentTrack?.id) {
             await colorService.extractColor(for: audioService.currentTrack)
         }
         .onChange(of: showingLyrics) { wasShowing, isShowing in
@@ -141,6 +144,18 @@ struct NowPlayingContent: View {
         }
         .sheet(isPresented: $showingQueue) {
             QueueView()
+        }
+        .sheet(isPresented: $showingSignalPath) {
+            NavigationStack {
+                SignalPathView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showingSignalPath = false
+                            }
+                        }
+                    }
+            }
         }
         .accessibilityAction(.escape) {
             dismiss()
@@ -383,6 +398,12 @@ struct NowPlayingContent: View {
 
             Divider()
 
+            Button {
+                showingSignalPath = true
+            } label: {
+                Label("Signal Path", systemImage: "waveform.path.ecg")
+            }
+
             // Lyrics Toggle
             Button {
                 showingLyrics.toggle()
@@ -427,7 +448,7 @@ struct NowPlayingContent: View {
             guard let track = audioService.currentTrack else { return }
             trackDetailItem = TrackDetailItem(track: track)
         } label: {
-            MorphableArtwork(size: artworkSize, namespace: namespace, isSource: false)
+            MorphableArtwork(size: artworkSize)
                 .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
         }
         .buttonStyle(.plain)
@@ -447,7 +468,7 @@ struct NowPlayingContent: View {
             : AnyLayout(HStackLayout(alignment: .center, spacing: DesignTokens.Spacing.medium))
 
         return layout {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xSmall) {
                 Text(audioService.currentTrack?.title ?? "Not Playing")
                     .font(.headline)
                     .fontWeight(.semibold)
@@ -460,6 +481,10 @@ struct NowPlayingContent: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if !dynamicTypeSize.isAccessibilitySize {
+                    signalPathBadge()
+                }
             }
 
             Spacer()
@@ -488,6 +513,13 @@ struct NowPlayingContent: View {
         }
         .padding(.horizontal, DesignTokens.Spacing.large)
         .padding(.vertical, DesignTokens.Spacing.small)
+    }
+
+    private func signalPathBadge() -> some View {
+        SignalPathBadge(
+            eligibility: signalPathEligibility,
+            action: { showingSignalPath = true }
+        )
     }
 
     // MARK: - Progress View
@@ -692,12 +724,16 @@ struct NowPlayingContent: View {
             Image(systemName: "speaker.fill")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
 
+            #if targetEnvironment(simulator)
+            // The simulator has no system volume service, so MPVolumeView
+            // exposes no slider there. Drive the engine mixer directly instead.
             Slider(
                 value: Binding(
-                    get: { volume },
+                    get: { simulatorVolumeStorage },
                     set: { newValue in
-                        volumeStorage = Double(newValue)
+                        simulatorVolumeStorage = newValue
                         Task {
                             await audioService.setVolume(Float(newValue))
                         }
@@ -707,14 +743,22 @@ struct NowPlayingContent: View {
             )
             .tint(theme.accent)
             .accessibilityLabel("Playback Volume")
-            .accessibilityValue("\(Int((volume * 100).rounded())) percent")
-            .accessibilityIdentifier("PlaybackVolumeSlider")
+            .accessibilityValue("\(Int((simulatorVolumeStorage * 100).rounded())) percent")
+            #else
+            // System volume, not the engine mixer: it tracks hardware-button
+            // changes bidirectionally and keeps digital gain at unity.
+            SystemVolumeSlider()
+                .tint(theme.accent)
+            #endif
 
             Image(systemName: "speaker.wave.3.fill")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, DesignTokens.Spacing.large)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("PlaybackVolumeControl")
     }
 
     // MARK: - Helpers
@@ -935,7 +979,6 @@ private struct TrackDetailItem: Identifiable {
 // MARK: - Preview
 
 #Preview {
-    @Previewable @Namespace var namespace
-    NowPlayingContent(namespace: namespace, dismiss: {})
+    NowPlayingContent(dismiss: {})
         .audioEngine(AudioEngineFacade())
 }

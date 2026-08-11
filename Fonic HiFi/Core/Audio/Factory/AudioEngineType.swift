@@ -64,6 +64,17 @@ public enum AudioEngineType: String, CaseIterable, Sendable {
             .low // AudioKit is optimized and runs on audio thread
         }
     }
+
+    /// Whether this engine type exposes an implemented EQ processing path.
+    /// AudioKit remains deliberately false until its graph owns the DSP node.
+    public var supportsEQ: Bool {
+        switch self {
+        case .avAudioEngine:
+            true
+        case .audioKitEngine:
+            false
+        }
+    }
 }
 
 /// Typed interpretation of the persisted engine preference.

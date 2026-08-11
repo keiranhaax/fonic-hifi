@@ -111,7 +111,7 @@ struct LargeWidgetView: View {
             .frame(height: sizes.progressHeight)
 
             HStack {
-                Text(formatTime(entry.playbackState.currentTime))
+                Text(formatTime(entry.playbackState.projectedCurrentTime))
                     .font(fonts.monospacedTime(size: 10))
                     .foregroundStyle(colors.secondary)
 

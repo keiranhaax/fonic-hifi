@@ -23,6 +23,47 @@ public enum PreparedTrackTransition: Sendable, Equatable {
     }
 }
 
+/// Measured snapshot of an engine's loaded format and engine-side processing
+/// state. Captured after `load(url:)` so eligibility validation can use graph
+/// evidence instead of session-only inference; also serves as cache-key input
+/// so pre-load and post-load validations are never conflated.
+public struct AudioEngineFormatEvidence: Sendable, Equatable {
+    /// Whether the engine currently has a track loaded.
+    public let isTrackLoaded: Bool
+
+    /// Sample rate of the loaded file's decoded processing format, in Hz.
+    public let loadedSampleRate: Double?
+
+    /// Channel count of the loaded file's decoded processing format.
+    public let loadedChannelCount: Int?
+
+    /// Sample rate of the engine's output node, in Hz.
+    public let engineOutputSampleRate: Double?
+
+    /// Channel count of the engine's output node.
+    public let engineOutputChannelCount: Int?
+
+    /// Whether the engine graph applies processing (playback-rate, EQ, or gain
+    /// stages). Engine volume is reported separately through `volume`.
+    public let hasEngineProcessing: Bool
+
+    public init(
+        isTrackLoaded: Bool,
+        loadedSampleRate: Double?,
+        loadedChannelCount: Int?,
+        engineOutputSampleRate: Double?,
+        engineOutputChannelCount: Int?,
+        hasEngineProcessing: Bool
+    ) {
+        self.isTrackLoaded = isTrackLoaded
+        self.loadedSampleRate = loadedSampleRate
+        self.loadedChannelCount = loadedChannelCount
+        self.engineOutputSampleRate = engineOutputSampleRate
+        self.engineOutputChannelCount = engineOutputChannelCount
+        self.hasEngineProcessing = hasEngineProcessing
+    }
+}
+
 /// Core protocol defining the interface for all audio playback engines.
 /// Implementations may use AVAudioEngine, AudioKit, or other vetted engines
 /// based on format requirements and performance characteristics.
@@ -47,7 +88,17 @@ public protocol AudioEngineService: Sendable {
 
     /// Indicates whether the current software configuration is eligible for
     /// bit-perfect playback. This is not physical-output measurement.
+    ///
+    /// Unified contract for every engine: `true` only when a track is loaded,
+    /// the engine's own graph applies no processing (playback rate 1.0, no
+    /// active EQ or gain stage), engine volume is at unity, and no sample-rate
+    /// conversion is detectable between the loaded file and the engine output.
+    /// Engines that cannot verify their graph state must return `false`.
     var isBitPerfect: Bool { get async }
+
+    /// Measured evidence of the engine's current graph state for eligibility
+    /// validation. Returns `nil` when the engine cannot report its graph.
+    func playbackFormatEvidence() async -> AudioEngineFormatEvidence?
 
     /// Declares whether this engine can provide measured diagnostics.
     var metricsAvailability: AudioMetricsAvailability { get }
@@ -144,6 +195,11 @@ public extension AudioEngineService {
         get async { false }
     }
 
+    /// Default implementation reports no measurable graph evidence
+    func playbackFormatEvidence() async -> AudioEngineFormatEvidence? {
+        nil
+    }
+
     var metricsAvailability: AudioMetricsAvailability {
         .unavailable
     }
@@ -157,10 +213,6 @@ public extension AudioEngineService {
         // Optional implementation
     }
 
-    func invalidatePreparedTransition() async {
-        // Optional implementation
-    }
-
     func consumePreparedTransition(to _: URL) async -> PreparedTrackTransition {
         .none
     }
@@ -168,19 +220,6 @@ public extension AudioEngineService {
     /// Default playback rate setter does nothing
     func setPlaybackRate(_: Double) async {
         // Optional implementation
-    }
-
-    /// Default replay gain application does nothing
-    func applyReplayGain(_: Float) async {
-        // Optional implementation
-    }
-
-    /// Default crossfade loads and plays the new track immediately
-    func crossfade(to url: URL, duration _: TimeInterval, playbackRate: Double, gainDB: Float) async throws {
-        try await load(url: url)
-        await setPlaybackRate(playbackRate)
-        await applyReplayGain(gainDB)
-        try await play()
     }
 
     /// Default implementation does nothing for collectMetrics

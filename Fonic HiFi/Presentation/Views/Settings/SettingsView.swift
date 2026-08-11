@@ -53,6 +53,32 @@ struct SettingsView: View {
                     }
                 }
 
+                // MARK: - Diagnostics
+
+                Section("Diagnostics") {
+                    NavigationLink {
+                        SignalPathView()
+                    } label: {
+                        SettingsRow(
+                            icon: "waveform.path.ecg",
+                            iconColor: .green,
+                            title: "Signal Path",
+                            subtitle: "Source, processing, and output evidence"
+                        )
+                    }
+
+                    NavigationLink {
+                        PlaybackHealthView()
+                    } label: {
+                        SettingsRow(
+                            icon: "waveform.path",
+                            iconColor: .orange,
+                            title: "Playback Health",
+                            subtitle: "Recent recovery and reliability events"
+                        )
+                    }
+                }
+
                 // MARK: - Appearance
 
                 Section("Appearance") {

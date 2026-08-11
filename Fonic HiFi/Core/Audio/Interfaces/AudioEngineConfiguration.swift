@@ -45,6 +45,10 @@ public struct AudioEngineConfiguration: Sendable {
     /// Playback rate multiplier (1.0 = normal speed)
     public let playbackRate: Double
 
+    /// Whether the active engine must provide an equalizer processing path.
+    /// The retained band configuration remains owned by AudioEngineManager.
+    public let equalizerEnabled: Bool
+
     /// Default initializer with sensible defaults
     public init(
         bufferSize: Int = 512,
@@ -59,6 +63,7 @@ public struct AudioEngineConfiguration: Sendable {
         crossfadeDuration: TimeInterval = 0,
         replayGainMode: ReplayGainMode = .off,
         playbackRate: Double = 1.0,
+        equalizerEnabled: Bool = false,
     ) {
         self.bufferSize = bufferSize
         self.sampleRate = sampleRate
@@ -72,6 +77,7 @@ public struct AudioEngineConfiguration: Sendable {
         self.crossfadeDuration = crossfadeDuration
         self.replayGainMode = replayGainMode
         self.playbackRate = playbackRate
+        self.equalizerEnabled = equalizerEnabled
     }
 
     /// Default configuration with balanced settings
@@ -115,6 +121,7 @@ public struct AudioEngineConfiguration: Sendable {
             crossfadeDuration: crossfadeDuration,
             replayGainMode: replayGainMode,
             playbackRate: playbackRate,
+            equalizerEnabled: equalizerEnabled,
         )
     }
 
@@ -133,6 +140,7 @@ public struct AudioEngineConfiguration: Sendable {
             crossfadeDuration: crossfadeDuration,
             replayGainMode: replayGainMode,
             playbackRate: playbackRate,
+            equalizerEnabled: equalizerEnabled,
         )
     }
 
@@ -151,6 +159,7 @@ public struct AudioEngineConfiguration: Sendable {
             crossfadeDuration: crossfadeDuration,
             replayGainMode: replayGainMode,
             playbackRate: playbackRate,
+            equalizerEnabled: equalizerEnabled,
         )
     }
 
@@ -169,6 +178,7 @@ public struct AudioEngineConfiguration: Sendable {
             crossfadeDuration: crossfadeDuration,
             replayGainMode: replayGainMode,
             playbackRate: playbackRate,
+            equalizerEnabled: equalizerEnabled,
         )
     }
 
@@ -187,6 +197,26 @@ public struct AudioEngineConfiguration: Sendable {
             crossfadeDuration: crossfadeDuration,
             replayGainMode: replayGainMode,
             playbackRate: playbackRate,
+            equalizerEnabled: equalizerEnabled,
+        )
+    }
+
+    /// Create a copy with modified equalizer capability requirement.
+    public func with(equalizerEnabled: Bool) -> AudioEngineConfiguration {
+        AudioEngineConfiguration(
+            bufferSize: bufferSize,
+            sampleRate: sampleRate,
+            bitDepth: bitDepth,
+            enableBitPerfect: enableBitPerfect,
+            enableGapless: enableGapless,
+            performanceMode: performanceMode,
+            maxBufferMemoryMB: maxBufferMemoryMB,
+            enableHardwareAcceleration: enableHardwareAcceleration,
+            fadeDuration: fadeDuration,
+            crossfadeDuration: crossfadeDuration,
+            replayGainMode: replayGainMode,
+            playbackRate: playbackRate,
+            equalizerEnabled: equalizerEnabled,
         )
     }
 }

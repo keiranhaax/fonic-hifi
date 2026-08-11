@@ -54,7 +54,13 @@ struct FileManagerFailure: Identifiable, Equatable {
 final class FileManagerViewModel {
     private(set) var currentDirectory: URL
     private(set) var directoryContents: [FileItem] = []
-    var selectedItems: Set<FileItem> = []
+    private var selectedItemsStorage: Set<FileItem> = []
+    var selectedItems: Set<FileItem> {
+        get { selectedItemsStorage }
+        set {
+            selectedItemsStorage = newValue.filter { !isLibraryManaged($0) }
+        }
+    }
     private(set) var isLoading = false
     var showingDeleteConfirmation = false
     var showingFileImporter = false
@@ -116,6 +122,18 @@ final class FileManagerViewModel {
         currentDirectory.standardizedFileURL == rootDirectory.standardizedFileURL
     }
 
+    var managedMediaRoot: URL {
+        FileSystemService.managedMediaRoot(for: rootDirectory)
+    }
+
+    func isLibraryManaged(_ item: FileItem) -> Bool {
+        isLibraryManaged(item.url)
+    }
+
+    func isLibraryManaged(_ url: URL) -> Bool {
+        FileSystemService.isLibraryManaged(url, under: rootDirectory)
+    }
+
     func loadDirectoryContents() async {
         await loadDirectoryContents(at: currentDirectory)
     }
@@ -162,12 +180,19 @@ final class FileManagerViewModel {
     }
 
     func requestDeleteSelectedFiles() {
-        guard !selectedItems.isEmpty else { return }
+        let deletableItems = selectedItems.filter { !isLibraryManaged($0) }
+        guard !deletableItems.isEmpty else {
+            selectedItems.removeAll()
+            return
+        }
+        selectedItems = Set(deletableItems)
         showingDeleteConfirmation = true
     }
 
     func deleteSelectedFiles() async {
-        let urls = selectedItems.map(\.url)
+        let urls = selectedItems
+            .filter { !isLibraryManaged($0) }
+            .map(\.url)
         guard !urls.isEmpty else { return }
 
         do {

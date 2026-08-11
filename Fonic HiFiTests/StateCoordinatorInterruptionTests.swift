@@ -121,6 +121,7 @@ private final class StateCoordinatorOwnerSpy: AudioStateCoordinatorOwner {
     func playNext() async throws {}
     func playPrevious() async throws {}
     func seek(to _: TimeInterval) async throws {}
+    func renegotiatePreferredSampleRate() async {}
     func reportPlaybackControlError(_: Error) {}
 }
 
@@ -172,7 +173,4 @@ private final class StateCoordinatorMonitorStub: AudioPerformanceMonitoring {
     func detachFromEngine() async {}
     func startProfiling(duration _: TimeInterval?) async {}
     func stopProfiling() async {}
-    func getProfilingResults() async -> PerformanceProfile? {
-        nil
-    }
 }

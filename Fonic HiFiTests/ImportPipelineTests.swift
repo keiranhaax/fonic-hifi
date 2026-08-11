@@ -22,8 +22,8 @@ final class ImportPipelineTests: XCTestCase {
 
         var urls: [URL] = []
         for index in 0 ..< count {
-            let url = directory.appendingPathComponent("test-track-\(index).flac")
-            try Data("test-data".utf8).write(to: url)
+            let url = directory.appendingPathComponent("test-track-\(index).wav")
+            try makeValidPCMTestWAVData(frameCount: max(441, (index + 1) * 256)).write(to: url)
             urls.append(url)
         }
 
@@ -125,8 +125,8 @@ final class ImportPipelineTests: XCTestCase {
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
 
-        let audioFile = tempDirectory.appendingPathComponent("sample.flac")
-        try Data([0x00, 0x01, 0x02]).write(to: audioFile)
+        let audioFile = tempDirectory.appendingPathComponent("sample.wav")
+        try makeValidPCMTestWAVData(frameCount: 441).write(to: audioFile)
 
         let discovered = await processor.discoverAudioFiles(from: [tempDirectory])
         XCTAssertEqual(discovered.count, 1)
@@ -197,8 +197,8 @@ final class ImportPipelineTests: XCTestCase {
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
-        let successFile = try makeDiscoveredAudioFile(name: "success.flac", in: directory)
-        let failingFile = try makeDiscoveredAudioFile(name: "fail.flac", in: directory)
+        let successFile = try makeDiscoveredAudioFile(name: "success.wav", in: directory)
+        let failingFile = try makeDiscoveredAudioFile(name: "fail.wav", in: directory)
 
         let stream = await processor.processFilesStream([successFile, failingFile], maxConcurrentTasks: 2)
         var successes = 0
@@ -239,7 +239,7 @@ final class ImportPipelineTests: XCTestCase {
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
-        let audioFile = try makeDiscoveredAudioFile(name: "duplicate.flac", in: directory)
+        let audioFile = try makeDiscoveredAudioFile(name: "duplicate.wav", in: directory)
 
         let initialStream = await processor.processFilesStream([audioFile], maxConcurrentTasks: 1)
         var initialResults: [FileImportProcessor.ProcessedFileResult] = []
@@ -330,7 +330,7 @@ private final class MockMetadataExtractor: MetadataExtracting {
                 discNumber: nil,
                 composer: nil,
                 conductor: nil,
-                audioFormat: "FLAC",
+                audioFormat: "WAV",
                 duration: 120,
                 sampleRate: 48_000,
                 bitDepth: 24,
@@ -411,7 +411,7 @@ private func makeMetadata(for url: URL) -> TrackMetadata {
         title: url.deletingPathExtension().lastPathComponent,
         artist: "Artist",
         album: "Album",
-        audioFormat: "FLAC",
+        audioFormat: "WAV",
         duration: 180,
         sampleRate: 48_000,
         bitDepth: 24,
@@ -423,7 +423,7 @@ private func makeMetadata(for url: URL) -> TrackMetadata {
 
 private func makeDiscoveredAudioFile(name: String, in directory: URL) throws -> FileImportProcessor.DiscoveredAudioFile {
     let url = directory.appendingPathComponent(name)
-    try Data("test-data".utf8).write(to: url)
+    try makeValidPCMTestWAVData(frameCount: 441).write(to: url)
     return FileImportProcessor.DiscoveredAudioFile(originalURL: url, securityScopedBookmark: nil)
 }
 

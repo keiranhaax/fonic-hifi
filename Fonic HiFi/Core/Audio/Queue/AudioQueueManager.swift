@@ -96,6 +96,12 @@ public final class AudioQueueManager: AudioQueue {
     @ObservationIgnored
     private var queueStateEmissionPending = false
 
+    @ObservationIgnored
+    private var queueStatePersistenceSuppressionDepth = 0
+
+    @ObservationIgnored
+    private var restoredFallbackNeedsPersistence = false
+
     // MARK: - Computed Properties
 
     /// Current track being played
@@ -402,6 +408,63 @@ public final class AudioQueueManager: AudioQueue {
 
     // MARK: - Navigation
 
+    /// Returns the next track without changing queue state or persistence.
+    /// Playback callers use this to prepare audio before committing a queue
+    /// transition, so a failed load/play cannot advance the persisted queue.
+    public func peekNext() -> AudioTrack? {
+        peekNext(using: repeatMode)
+    }
+
+    /// Returns the next manually-requested track without changing queue state.
+    public func peekNextManually() -> AudioTrack? {
+        peekNext(using: repeatMode.manualNavigationMode)
+    }
+
+    /// Returns the next natural-completion track without changing queue state.
+    public func peekNextAfterCompletion() -> AudioTrack? {
+        peekNext(using: repeatMode)
+    }
+
+    /// Returns the previous manually-requested track without changing queue state.
+    public func peekPreviousManually() -> AudioTrack? {
+        guard let index = calculatePreviousIndex(using: repeatMode.manualNavigationMode),
+              tracks.indices.contains(index)
+        else {
+            return nil
+        }
+        return tracks[index]
+    }
+
+    /// Commits a previously peeked next track after playback has succeeded.
+    /// The expected ID prevents a stale async playback request from overwriting
+    /// a newer queue mutation.
+    @discardableResult
+    public func commitNext(
+        _ track: AudioTrack,
+        expectedCurrentID: UUID?
+    ) -> Bool {
+        commitNavigation(
+            to: track,
+            expectedCurrentID: expectedCurrentID,
+            addCurrentToHistory: true,
+            action: "next"
+        )
+    }
+
+    /// Commits a previously peeked previous track after playback has succeeded.
+    @discardableResult
+    public func commitPrevious(
+        _ track: AudioTrack,
+        expectedCurrentID: UUID?
+    ) -> Bool {
+        commitNavigation(
+            to: track,
+            expectedCurrentID: expectedCurrentID,
+            addCurrentToHistory: false,
+            action: "previous"
+        )
+    }
+
     public func next() -> AudioTrack? {
         beginQueueStateMutation()
         defer { endQueueStateMutation() }
@@ -429,6 +492,41 @@ public final class AudioQueueManager: AudioQueue {
         setCurrentIndex(index)
         recordQueueMutation("next")
         return currentTrack
+    }
+
+    private func peekNext(using navigationRepeatMode: QueueRepeatMode) -> AudioTrack? {
+        guard let index = calculateNextIndex(using: navigationRepeatMode),
+              tracks.indices.contains(index)
+        else {
+            return nil
+        }
+        return tracks[index]
+    }
+
+    @discardableResult
+    private func commitNavigation(
+        to track: AudioTrack,
+        expectedCurrentID: UUID?,
+        addCurrentToHistory: Bool,
+        action: String
+    ) -> Bool {
+        beginQueueStateMutation()
+        defer { endQueueStateMutation() }
+
+        guard currentTrack?.id == expectedCurrentID,
+              let index = tracks.firstIndex(where: { $0.id == track.id })
+        else {
+            return false
+        }
+
+        if addCurrentToHistory, let currentTrack, currentTrack.id != track.id {
+            addToHistory(track: currentTrack)
+        }
+
+        guard setCurrentIndex(index) else { return false }
+        recordQueueMutation(action)
+        markQueueStateEmissionPending()
+        return true
     }
 
     public func previous() -> AudioTrack? {
@@ -494,6 +592,27 @@ public final class AudioQueueManager: AudioQueue {
         // Track not in queue - append it and select
         enqueue(track: track)
         return setCurrentIndex(tracks.count - 1)
+    }
+
+    /// Installs a launch fallback without replacing a persisted queue that may
+    /// only be temporarily unavailable. The fallback becomes durable once the
+    /// user successfully resumes playback.
+    @discardableResult
+    func restoreFallbackTrack(_ track: AudioTrack) -> Bool {
+        queueStatePersistenceSuppressionDepth += 1
+        defer { queueStatePersistenceSuppressionDepth -= 1 }
+
+        let didRestore = setCurrentTrack(track)
+        if didRestore {
+            restoredFallbackNeedsPersistence = true
+        }
+        return didRestore
+    }
+
+    func commitRestoredFallbackIfNeeded() {
+        guard restoredFallbackNeedsPersistence else { return }
+        restoredFallbackNeedsPersistence = false
+        queueStatePersister.requestSave(queueState)
     }
 
     // MARK: - Queue Manipulation
@@ -617,6 +736,8 @@ public final class AudioQueueManager: AudioQueue {
         queueStateEmissionPending = false
         let finalState = queueState
         queueStateSubject.send(finalState)
+        guard queueStatePersistenceSuppressionDepth == 0 else { return }
+        restoredFallbackNeedsPersistence = false
         queueStatePersister.requestSave(finalState)
     }
 
@@ -826,12 +947,14 @@ public final class AudioQueueManager: AudioQueue {
     /// - Returns: true if state was restored, false otherwise
     @discardableResult
     public func restoreState() async -> Bool {
-        beginQueueStateMutation()
-        defer { endQueueStateMutation() }
-
-        guard let validatedState = await queueStatePersister.load() else {
+        guard let validatedState = await queueStatePersister.load(),
+              !validatedState.isEmpty
+        else {
             return false
         }
+
+        beginQueueStateMutation()
+        defer { endQueueStateMutation() }
 
         // Set modes before restoring tracks so shuffle observers cannot reorder persisted traversal.
         shuffleMode = validatedState.shuffleMode

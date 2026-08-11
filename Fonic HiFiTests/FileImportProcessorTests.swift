@@ -304,8 +304,9 @@ private func makeTemporaryFiles(count: Int, testCase: XCTestCase) throws -> [URL
 
     var urls: [URL] = []
     for index in 0..<count {
-        let url = directory.appendingPathComponent("track\(index).flac")
-        try Data([0, 1, 2, 3]).write(to: url)
+        let url = directory.appendingPathComponent("track\(index).wav")
+        let frameCount = max(441, (index + 1) * 256)
+        try makeValidPCMTestWAVData(frameCount: frameCount).write(to: url)
         urls.append(url)
     }
 
@@ -334,7 +335,12 @@ private struct StubMetadataExtractor: MetadataExtracting {
     }
 
     func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
-        try await urls.asyncMap { try await extractTrackMetadata(from: $0) }
+        var results: [TrackMetadata] = []
+        results.reserveCapacity(urls.count)
+        for url in urls {
+            results.append(try await extractTrackMetadata(from: url))
+        }
+        return results
     }
 }
 
@@ -357,7 +363,12 @@ private struct ConditionalMetadataExtractor: MetadataExtracting, Sendable {
     }
 
     func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
-        try await urls.asyncMap { try await extractTrackMetadata(from: $0) }
+        var results: [TrackMetadata] = []
+        results.reserveCapacity(urls.count)
+        for url in urls {
+            results.append(try await extractTrackMetadata(from: url))
+        }
+        return results
     }
 }
 

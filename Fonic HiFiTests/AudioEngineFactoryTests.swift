@@ -20,6 +20,36 @@ final class AudioEngineFactoryTests: XCTestCase {
         XCTAssertTrue(factory.isEngineAvailable(.audioKitEngine))
     }
 
+    func testEnabledEQRequiresAVAudioEngineForCompatibleFormat() throws {
+        let preferences = try makePreferences()
+        preferences.set(AudioEngineType.audioKitEngine.rawValue, forKey: preferenceKey)
+        let factory = AudioEngineFactory(preferences: preferences)
+        let configuration = AudioEngineConfiguration(
+            performanceMode: .balanced,
+            equalizerEnabled: true
+        )
+
+        XCTAssertEqual(
+            factory.selectEngineType(for: .aac, configuration: configuration),
+            .avAudioEngine
+        )
+    }
+
+    func testEnabledEQPreservesFormatFallbackWhenNoEQEngineCanDecode() throws {
+        let preferences = try makePreferences()
+        preferences.set(AudioEngineType.avAudioEngine.rawValue, forKey: preferenceKey)
+        let factory = AudioEngineFactory(preferences: preferences)
+        let configuration = AudioEngineConfiguration(equalizerEnabled: true)
+
+        // AVAudioEngine intentionally does not claim FLAC decoding. The
+        // factory keeps AudioKit for format compatibility and the manager
+        // reports EQ unsupported rather than lying about capability.
+        XCTAssertEqual(
+            factory.selectEngineType(for: .flac, configuration: configuration),
+            .audioKitEngine
+        )
+    }
+
     func testEfficiencyModeFavorsNativeEngine() {
         let factory = AudioEngineFactory()
         let configuration = AudioEngineConfiguration(performanceMode: .efficiency)

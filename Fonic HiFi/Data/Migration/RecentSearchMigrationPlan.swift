@@ -14,7 +14,7 @@ enum SchemaV1: VersionedSchema {
 
     static var models: [any PersistentModel.Type] {
         [
-            TrackV1.self,
+            SchemaV1.Track.self,
             SchemaV1.Artist.self,
             SchemaV1.Album.self,
             SchemaV1.Playlist.self
@@ -22,7 +22,7 @@ enum SchemaV1: VersionedSchema {
     }
 
     @Model
-    final class TrackV1 {
+    final class Track {
         var id: UUID
         var url: URL
         var fileName: String
@@ -148,8 +148,8 @@ enum SchemaV1: VersionedSchema {
         @Relationship(deleteRule: .nullify)
         var albums: [SchemaV1.Album] = []
 
-        @Relationship(deleteRule: .nullify, inverse: \SchemaV1.TrackV1.artistRelation)
-        var tracks: [SchemaV1.TrackV1] = []
+        @Relationship(deleteRule: .nullify, inverse: \SchemaV1.Track.artistRelation)
+        var tracks: [SchemaV1.Track] = []
 
         init(name: String) {
             id = UUID()
@@ -192,8 +192,8 @@ enum SchemaV1: VersionedSchema {
         var hasHiResTracks: Bool
         var supportsGapless: Bool
 
-        @Relationship(deleteRule: .nullify, inverse: \SchemaV1.TrackV1.albumRelation)
-        var tracks: [SchemaV1.TrackV1] = []
+        @Relationship(deleteRule: .nullify, inverse: \SchemaV1.Track.albumRelation)
+        var tracks: [SchemaV1.Track] = []
 
         @Relationship(deleteRule: .nullify, inverse: \SchemaV1.Artist.albums)
         var artistRelation: SchemaV1.Artist?
@@ -250,7 +250,7 @@ enum SchemaV1: VersionedSchema {
         var userTags: [String]
 
         @Relationship(deleteRule: .nullify)
-        var tracks: [SchemaV1.TrackV1] = []
+        var tracks: [SchemaV1.Track] = []
 
         init(name: String) {
             id = UUID()

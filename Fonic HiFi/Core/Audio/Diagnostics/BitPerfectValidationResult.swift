@@ -59,11 +59,14 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
     /// Expected source bit depth
     public let expectedBitDepth: Int
 
-    /// Actual output bit depth
+    /// Reported or estimated output bit depth
     public let actualBitDepth: Int
 
-    /// Whether bit depths match exactly
+    /// Whether the output word length can preserve the source without truncation
     public let bitDepthMatches: Bool
+
+    /// Whether `actualBitDepth` was inferred rather than reported by the output path
+    public let actualBitDepthIsEstimated: Bool
 
     // MARK: - Channel Configuration
 
@@ -94,6 +97,9 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
 
     /// Whether the device supports the required format natively
     public let deviceSupportsFormat: Bool
+
+    /// Whether device format support was inferred from route type or cached metadata
+    public let deviceCapabilitiesAreEstimated: Bool
 
     // MARK: - Processing Chain Analysis
 
@@ -131,6 +137,7 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
         actualSampleRate: Int,
         expectedBitDepth: Int,
         actualBitDepth: Int,
+        actualBitDepthIsEstimated: Bool = false,
         expectedChannels: Int = 2,
         actualChannels: Int = 2,
         mismatchReason: BitPerfectMismatchReason? = nil,
@@ -138,6 +145,7 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
         warnings: [ValidationWarning] = [],
         deviceInfo: DeviceValidationInfo? = nil,
         deviceSupportsFormat: Bool = true,
+        deviceCapabilitiesAreEstimated: Bool = false,
         hasAudioProcessing: Bool = false,
         processingStages: [AudioProcessingStage] = [],
         systemVolume: Float = 1.0,
@@ -146,24 +154,48 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
         alternatives: [AlternativeConfiguration] = [],
         performanceImpact: PerformanceImpact = .low,
     ) {
-        self.isValid = isValid
+        let sampleRateMatches = expectedSampleRate == actualSampleRate
+        let bitDepthMatches = expectedBitDepth <= actualBitDepth
+        let channelCountMatches = expectedChannels == actualChannels
+        let inferredMismatchReason: BitPerfectMismatchReason? = if !sampleRateMatches {
+            .sampleRateMismatch
+        } else if !bitDepthMatches {
+            .bitDepthMismatch
+        } else if !channelCountMatches {
+            .channelCountMismatch
+        } else if !deviceSupportsFormat {
+            .deviceNotCapable
+        } else if systemVolume != 1 {
+            .systemVolumeNotUnity
+        } else if applicationVolume != 1 {
+            .applicationVolumeNotUnity
+        } else if hasAudioProcessing {
+            .audioProcessingActive
+        } else {
+            nil
+        }
+        let resolvedMismatchReason = inferredMismatchReason ?? mismatchReason
+
+        self.isValid = isValid && resolvedMismatchReason == nil
         self.measurementEvidence = measurementEvidence
         self.confidence = confidence
         self.timestamp = timestamp
         self.expectedSampleRate = expectedSampleRate
         self.actualSampleRate = actualSampleRate
-        sampleRateMatches = expectedSampleRate == actualSampleRate
+        self.sampleRateMatches = sampleRateMatches
         self.expectedBitDepth = expectedBitDepth
         self.actualBitDepth = actualBitDepth
-        bitDepthMatches = expectedBitDepth == actualBitDepth
+        self.bitDepthMatches = bitDepthMatches
+        self.actualBitDepthIsEstimated = actualBitDepthIsEstimated
         self.expectedChannels = expectedChannels
         self.actualChannels = actualChannels
-        channelCountMatches = expectedChannels == actualChannels
-        self.mismatchReason = mismatchReason
+        self.channelCountMatches = channelCountMatches
+        self.mismatchReason = resolvedMismatchReason
         self.validationIssues = validationIssues
         self.warnings = warnings
         self.deviceInfo = deviceInfo
         self.deviceSupportsFormat = deviceSupportsFormat
+        self.deviceCapabilitiesAreEstimated = deviceCapabilitiesAreEstimated
         self.hasAudioProcessing = hasAudioProcessing
         self.processingStages = processingStages
         self.systemVolume = systemVolume
@@ -237,14 +269,16 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
 
         report += "Format Comparison:\n"
         report += "- Sample Rate: \(expectedSampleRate)Hz → \(actualSampleRate)Hz (\(sampleRateMatches ? "MATCH" : "MISMATCH"))\n"
-        report += "- Bit Depth: \(expectedBitDepth)-bit → \(actualBitDepth)-bit (\(bitDepthMatches ? "MATCH" : "MISMATCH"))\n"
+        let bitDepthQualifier = actualBitDepthIsEstimated ? " (estimated)" : ""
+        report += "- Bit Depth\(bitDepthQualifier): \(expectedBitDepth)-bit → \(actualBitDepth)-bit (\(bitDepthMatches ? "SUPPORTED" : "INSUFFICIENT"))\n"
         report += "- Channels: \(expectedChannels) → \(actualChannels) (\(channelCountMatches ? "MATCH" : "MISMATCH"))\n\n"
 
         if let deviceInfo {
             report += "Output Device:\n"
             report += "- Name: \(deviceInfo.name)\n"
             report += "- Type: \(deviceInfo.type.displayName)\n"
-            report += "- Supports Format: \(deviceSupportsFormat ? "YES" : "NO")\n\n"
+            let capabilitiesQualifier = deviceCapabilitiesAreEstimated ? " (estimated)" : ""
+            report += "- Supports Format\(capabilitiesQualifier): \(deviceSupportsFormat ? "YES" : "NO")\n\n"
         }
 
         report += "Audio Processing:\n"

@@ -133,6 +133,7 @@ private final class StubEngine: AudioEngineService {
     func applyReplayGain(_: Float) async {}
     func configure(with _: AudioEngineConfiguration) async throws {}
     func prepareNext(url _: URL) async {}
+    func invalidatePreparedTransition() async {}
     func crossfade(to _: URL, duration _: TimeInterval, playbackRate _: Double, gainDB _: Float) async throws {}
 
     func availableMetrics() async -> AudioMetrics? {

@@ -123,3 +123,7 @@ log.md
 
 # Local embedded skill checkouts
 /.agents/skills/ios-simulator-skill/
+
+# Local environments and audit snapshots
+venv/
+audits-1/

@@ -81,21 +81,34 @@ public final class AudioEngineManager {
     /// Update engine configuration and propagate to active engine if possible.
     /// - Parameter configuration: New configuration to apply.
     public func updateConfiguration(_ configuration: AudioEngineConfiguration) async {
-        self.configuration = configuration
+        // EQ is a capability requirement, not a transient engine setting. Keep
+        // it attached when callers update playback preferences so a later
+        // engine selection cannot silently return AudioKit while EQ is active.
+        let updatedConfiguration = configuration.with(equalizerEnabled: equalizerConfiguration.isEnabled)
+        let requiresEngineSwitch = currentEngine != nil &&
+            currentEngineType != selectedEngineType(for: currentFormat, configuration: updatedConfiguration)
+        self.configuration = updatedConfiguration
+        if requiresEngineSwitch {
+            pendingEngineSwitch = true
+        }
         guard let engine = currentEngine else { return }
 
         do {
-            try await engine.configure(with: configuration)
+            try await engine.configure(with: updatedConfiguration)
         } catch {
             logger.warning("Failed to live-update engine configuration: \(error.localizedDescription, privacy: .private)")
         }
     }
 
     func bitPerfectEligibilityContext() async -> BitPerfectEligibilityContext {
-        let applicationVolume = if let currentEngine {
-            await currentEngine.volume
+        let applicationVolume: Float
+        let engineEvidence: AudioEngineFormatEvidence?
+        if let currentEngine {
+            applicationVolume = await currentEngine.volume
+            engineEvidence = await currentEngine.playbackFormatEvidence()
         } else {
-            Float(1)
+            applicationVolume = 1
+            engineEvidence = nil
         }
 
         return BitPerfectEligibilityContext(
@@ -103,7 +116,9 @@ public final class AudioEngineManager {
             applicationVolume: applicationVolume,
             playbackRate: configuration.playbackRate,
             replayGainEnabled: configuration.replayGainMode != .off,
-            equalizerEnabled: equalizerConfiguration.isEnabled
+            equalizerEnabled: equalizerConfiguration.isEnabled,
+            crossfadeEnabled: configuration.crossfadeDuration > 0,
+            engineEvidence: engineEvidence
         )
     }
 
@@ -116,6 +131,25 @@ public final class AudioEngineManager {
         _ configuration: EqualizerConfiguration
     ) async -> EqualizerApplicationResult {
         equalizerConfiguration = configuration
+        let updatedConfiguration = self.configuration.with(equalizerEnabled: configuration.isEnabled)
+        if updatedConfiguration.equalizerEnabled != self.configuration.equalizerEnabled {
+            self.configuration = updatedConfiguration
+            if let currentEngine {
+                let selectedType = selectedEngineType(for: currentFormat, configuration: updatedConfiguration)
+                let engineSupportsEQ = await currentEngine.supportsEQ
+                let requiresEQEngine = configuration.isEnabled && !engineSupportsEQ
+                if requiresEQEngine || selectedType != currentEngineType {
+                    pendingEngineSwitch = true
+                }
+            }
+        } else if configuration.isEnabled,
+                  let currentEngine {
+            let engineSupportsEQ = await currentEngine.supportsEQ
+            if !engineSupportsEQ,
+               selectedEngineType(for: currentFormat, configuration: updatedConfiguration) != currentEngineType {
+                pendingEngineSwitch = true
+            }
+        }
 
         guard let engine = currentEngine else {
             return recordEqualizerApplicationResult(.waitingForEngine)
@@ -214,6 +248,14 @@ public final class AudioEngineManager {
         ])
 
         return engine
+    }
+
+    private func selectedEngineType(
+        for format: AudioFormat?,
+        configuration: AudioEngineConfiguration
+    ) -> AudioEngineType? {
+        guard let format else { return nil }
+        return engineFactory.selectEngineType(for: format, configuration: configuration)
     }
 
     @discardableResult

@@ -34,11 +34,13 @@ COVERAGE_DIR := $(BUILD_DIR)/Coverage
 RESULT_BUNDLE := $(RESULTS_DIR)/TestResults.xcresult
 UNIT_RESULT_BUNDLE := $(RESULTS_DIR)/UnitTestResults.xcresult
 UI_RESULT_BUNDLE := $(RESULTS_DIR)/UITestResults.xcresult
+FOCUS_RESULT_BUNDLE := $(RESULTS_DIR)/FocusTestResults.xcresult
 # Skip inventory for the shared lanes. Capability-only coverage belongs in an
 # explicit dedicated lane instead of silently widening these gates.
 ALL_TEST_ALLOWED_SKIPS := 0
 UNIT_TEST_ALLOWED_SKIPS := 0
 UI_TEST_ALLOWED_SKIPS := 0
+FOCUS_TEST_ALLOWED_SKIPS := 0
 OVERALL_COVERAGE_THRESHOLD ?= 0
 APP_COVERAGE_THRESHOLD ?= 0
 COVERAGE_MIN_PERCENT ?= 40
@@ -57,7 +59,7 @@ XCODE_COMMON_FLAGS = \
 	-derivedDataPath "$(DERIVED_DATA)" \
 	-onlyUsePackageVersionsFromResolvedFile
 
-.PHONY: help check-deps install-deps clean lint format build build-release test test-unit test-ui coverage coverage-check analyze open run
+.PHONY: help check-deps install-deps clean lint format build build-release test test-unit test-ui test-focus coverage coverage-check analyze open run
 .PHONY: simulator-list simulator-boot simulator-shutdown logs-show logs-stream logs-errors logs-audio
 
 help: ## Show the canonical local commands
@@ -147,6 +149,19 @@ test-unit: check-deps ## Run only the app unit and integration test target
 		2>&1 | tee "$(RESULTS_DIR)/test-unit.log" | $(XCBEAUTIFY)
 	@$(XCRUN) xcresulttool get test-results summary --path "$(UNIT_RESULT_BUNDLE)" --format json | \
 		$(PYTHON) scripts/validate_test_results.py --label "Unit tests" --allow-skips "$(UNIT_TEST_ALLOWED_SKIPS)"
+
+test-focus: check-deps ## Run focused tests: make test-focus ONLY="Fonic HiFiTests/SomeTests[/testCase]"
+	@test -n "$(ONLY)" || { echo "Usage: make test-focus ONLY=\"Fonic HiFiTests/SomeTests[/testCase]\""; exit 1; }
+	@mkdir -p "$(RESULTS_DIR)"
+	@rm -rf "$(FOCUS_RESULT_BUNDLE)"
+	@set -o pipefail; $(XCODEBUILD) test \
+		$(XCODE_COMMON_FLAGS) \
+		-configuration "$(CONFIGURATION_DEBUG)" \
+		-only-testing:"$(ONLY)" \
+		-resultBundlePath "$(FOCUS_RESULT_BUNDLE)" \
+		2>&1 | tee "$(RESULTS_DIR)/test-focus.log" | $(XCBEAUTIFY)
+	@$(XCRUN) xcresulttool get test-results summary --path "$(FOCUS_RESULT_BUNDLE)" --format json | \
+		$(PYTHON) scripts/validate_test_results.py --label "Focused tests" --allow-skips "$(FOCUS_TEST_ALLOWED_SKIPS)"
 
 test-ui: check-deps ## Run only the UI test target
 	@mkdir -p "$(RESULTS_DIR)"

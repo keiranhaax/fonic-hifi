@@ -10,12 +10,33 @@ import Foundation
 import OSLog
 import SwiftData
 
+/// Controls whether persistence authorities may save user-visible changes.
+public enum DataMutationPolicy: Equatable, Sendable {
+    case normal
+    case readOnly
+}
+
+/// Typed failure returned when a recovery-mode authority cannot save changes.
+public enum DataMutationError: Equatable, LocalizedError, Sendable {
+    case readOnly
+
+    public var errorDescription: String? {
+        switch self {
+        case .readOnly:
+            "Changes cannot be saved while Fonic HiFi is in read-only recovery mode."
+        }
+    }
+}
+
 /// Centralized data management for the Fonic HiFi app
 @MainActor
 public final class DataManager: ObservableObject {
     // MARK: - Properties
 
     public let isFallback: Bool
+
+    /// Immutable policy shared by all persistence and import authorities.
+    public let mutationPolicy: DataMutationPolicy
 
     /// The SwiftData model container
     public let container: ModelContainer
@@ -40,6 +61,7 @@ public final class DataManager: ObservableObject {
         LibraryImportService(
             trackDataActor: trackDataActor,
             metadataExtractor: metadataExtractor,
+            mutationPolicy: mutationPolicy,
             statisticsInvalidator: { [weak self] in
                 self?.invalidateLibrary()
             }
@@ -74,11 +96,13 @@ public final class DataManager: ObservableObject {
         container: ModelContainer,
         isFallback: Bool,
         importRecoveryState: ImportRecoveryState? = nil,
+        mutationPolicy: DataMutationPolicy = .normal,
     ) {
         self.container = container
         mainContext = container.mainContext
         backgroundContext = ModelContext(container)
         self.isFallback = isFallback
+        self.mutationPolicy = mutationPolicy
         self.importRecoveryState = importRecoveryState
 
         mainContext.autosaveEnabled = true
@@ -86,8 +110,8 @@ public final class DataManager: ObservableObject {
 
         let formatDetectionService = AudioFormatDetectionManager()
         metadataExtractor = MetadataExtractionService(formatDetectionService: formatDetectionService)
-        trackDataActor = TrackDataActor(modelContainer: container)
-        recentSearchesActor = RecentSearchesActor(modelContainer: container)
+        trackDataActor = TrackDataActor(modelContainer: container, mutationPolicy: mutationPolicy)
+        recentSearchesActor = RecentSearchesActor(modelContainer: container, mutationPolicy: mutationPolicy)
         logger.info("DataManager initialized\(isFallback ? " in fallback mode" : "", privacy: .public) successfully")
     }
 }

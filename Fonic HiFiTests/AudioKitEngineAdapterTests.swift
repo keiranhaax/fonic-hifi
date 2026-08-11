@@ -30,7 +30,7 @@ final class AudioKitEngineAdapterTests: XCTestCase {
         XCTAssertEqual(lowVolume, 0.0, accuracy: 0.0001)
     }
 
-    func testIsBitPerfectReflectsConfigurationAndReplayGain() async throws {
+    func testIsBitPerfectRequiresLoadedTrackAndUnityGain() async throws {
         let adapter = AudioKitEngineAdapter()
         XCTAssertTrue(adapter.isInitialized, "AudioKit engine should initialize in the standard test environment")
         guard adapter.isInitialized else {
@@ -39,6 +39,15 @@ final class AudioKitEngineAdapterTests: XCTestCase {
 
         try await adapter.configure(with: .bitPerfect)
 
+        let noTrackLoaded = await adapter.isBitPerfect
+        XCTAssertFalse(noTrackLoaded, "Eligibility requires a loaded track, not just a quality-mode preference")
+
+        guard let outputSampleRate = await adapter.playbackFormatEvidence()?.engineOutputSampleRate else {
+            throw XCTSkip("Engine output format unavailable in this test environment")
+        }
+        let url = try makePCMTestAudioFile(sampleRate: outputSampleRate, testCase: self)
+        try await adapter.load(url: url)
+
         await adapter.applyReplayGain(0)
         let bitPerfect = await adapter.isBitPerfect
         XCTAssertTrue(bitPerfect)
@@ -46,6 +55,30 @@ final class AudioKitEngineAdapterTests: XCTestCase {
         await adapter.applyReplayGain(-6)
         let notBitPerfect = await adapter.isBitPerfect
         XCTAssertFalse(notBitPerfect)
+    }
+
+    func testPlaybackFormatEvidenceReportsLoadedFormat() async throws {
+        let adapter = AudioKitEngineAdapter()
+        XCTAssertTrue(adapter.isInitialized, "AudioKit engine should initialize in the standard test environment")
+        guard adapter.isInitialized else {
+            return
+        }
+
+        let preLoad = await adapter.playbackFormatEvidence()
+        XCTAssertEqual(preLoad?.isTrackLoaded, false)
+        XCTAssertNil(preLoad?.loadedSampleRate)
+
+        let url = try makePCMTestAudioFile(sampleRate: 44_100, testCase: self)
+        try await adapter.load(url: url)
+
+        let evidence = await adapter.playbackFormatEvidence()
+        XCTAssertEqual(evidence?.isTrackLoaded, true)
+        XCTAssertEqual(evidence?.loadedSampleRate ?? 0, 44_100, accuracy: 0.1)
+        XCTAssertEqual(evidence?.hasEngineProcessing, false)
+
+        await adapter.applyReplayGain(-3)
+        let processingEvidence = await adapter.playbackFormatEvidence()
+        XCTAssertEqual(processingEvidence?.hasEngineProcessing, true)
     }
 
     func testLoadInitializesDurationAndResetsTime() async throws {
@@ -104,6 +137,24 @@ final class AudioKitEngineAdapterTests: XCTestCase {
         XCTAssertEqual(secondTransition, .none)
     }
 
+    func testInvalidatePreparedTransitionStopsInactiveAndClearsPendingURL() async throws {
+        let adapter = AudioKitEngineAdapter()
+        XCTAssertTrue(adapter.isInitialized)
+        guard adapter.isInitialized else { return }
+
+        let sourceURL = try makePCMTestAudioFile(testCase: self)
+        let targetURL = try makePCMTestAudioFile(testCase: self)
+        try await adapter.load(url: sourceURL)
+        try await adapter.play()
+        await adapter.prepareNext(url: targetURL)
+        await adapter.invalidatePreparedTransition()
+
+        let transition = await adapter.consumePreparedTransition(to: targetURL)
+        XCTAssertEqual(transition, .none)
+        XCTAssertEqual(adapter.activePlayerCountForTesting, 1)
+        XCTAssertEqual(adapter.currentFileURLForTesting, sourceURL)
+    }
+
     func testCrossfadeTransitionsToNewTrack() async throws {
         let adapter = AudioKitEngineAdapter()
         XCTAssertTrue(adapter.isInitialized, "AudioKit engine should initialize in the standard test environment")
@@ -152,6 +203,12 @@ final class AudioKitEngineAdapterTests: XCTestCase {
         }
 
         try await adapter.configure(with: .bitPerfect)
+
+        guard let outputSampleRate = await adapter.playbackFormatEvidence()?.engineOutputSampleRate else {
+            throw XCTSkip("Engine output format unavailable in this test environment")
+        }
+        let url = try makePCMTestAudioFile(sampleRate: outputSampleRate, testCase: self)
+        try await adapter.load(url: url)
 
         // Zero gain should maintain bit-perfect
         await adapter.applyReplayGain(0)

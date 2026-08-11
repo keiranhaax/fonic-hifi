@@ -27,7 +27,6 @@ struct LiquidGlassMiniPlayer: View {
     @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.tabViewBottomAccessoryPlacement) private var accessoryPlacement
 
-    let namespace: Namespace.ID
     let onOpen: () -> Void
 
     static func accessoryPresentation(
@@ -45,6 +44,7 @@ struct LiquidGlassMiniPlayer: View {
             Button(action: onOpen) {
                 playerInfo
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: 44)
                     .contentShape(.rect)
             }
             .buttonStyle(.plain)
@@ -73,7 +73,7 @@ struct LiquidGlassMiniPlayer: View {
     private var playerInfo: some View {
         HStack(spacing: presentation.infoSpacing) {
             if presentation.showsArtwork {
-                MorphableArtwork(size: 30, namespace: namespace)
+                MorphableArtwork(size: 30)
             }
 
             VStack(alignment: .leading, spacing: presentation.isInline ? 0 : 6) {
@@ -160,12 +160,11 @@ struct LiquidGlassMiniPlayer: View {
 // MARK: - Preview
 
 #Preview {
-    @Previewable @Namespace var namespace
     @Previewable @State var audioService = AudioEngineFacade()
 
     VStack {
         Spacer()
-        LiquidGlassMiniPlayer(namespace: namespace, onOpen: {})
+        LiquidGlassMiniPlayer(onOpen: {})
             .audioEngine(audioService)
             .padding()
     }

@@ -6,7 +6,26 @@ public struct DiagnosticsStatus: Sendable, Equatable {
     public let device: AudioDevice?
     public let dacInfo: DACCompatibilityInfo?
     public let metrics: AudioMetrics?
+    public let signalPath: SignalPathSnapshot?
     public let updatedAt: Date
+
+    public init(
+        track: TrackSummary?,
+        validationResult: BitPerfectValidationResult?,
+        device: AudioDevice?,
+        dacInfo: DACCompatibilityInfo?,
+        metrics: AudioMetrics?,
+        signalPath: SignalPathSnapshot? = nil,
+        updatedAt: Date
+    ) {
+        self.track = track
+        self.validationResult = validationResult
+        self.device = device
+        self.dacInfo = dacInfo
+        self.metrics = metrics
+        self.signalPath = signalPath
+        self.updatedAt = updatedAt
+    }
 
     public static var empty: DiagnosticsStatus {
         DiagnosticsStatus(
@@ -15,6 +34,7 @@ public struct DiagnosticsStatus: Sendable, Equatable {
             device: nil,
             dacInfo: nil,
             metrics: nil,
+            signalPath: nil,
             updatedAt: Date(),
         )
     }

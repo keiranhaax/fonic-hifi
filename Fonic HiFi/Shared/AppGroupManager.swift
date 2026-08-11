@@ -76,18 +76,9 @@ public final class AppGroupManager: ObservableObject {
     public func updatePlaybackState(_ state: WidgetPlaybackState) -> Bool {
         guard isAvailable, let defaults else { return false }
 
-        // Skip if state hasn't meaningfully changed
-        if let last = lastPlaybackState,
-           last.isPlaying == state.isPlaying,
-           last.hasNext == state.hasNext,
-           last.hasPrevious == state.hasPrevious,
-           last.shuffleEnabled == state.shuffleEnabled,
-           last.repeatMode == state.repeatMode,
-           abs(last.duration - state.duration) < 0.1 {
-            // Only time changed - skip write for efficiency
-            // Progress updates happen through Live Activity, not widgets
-            return false
-        }
+        // Timestamp/current-time changes are meaningful: widgets interpolate
+        // progress from this snapshot and must receive fresh transport state.
+        if lastPlaybackState == state { return false }
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

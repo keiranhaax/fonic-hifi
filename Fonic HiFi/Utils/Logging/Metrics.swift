@@ -54,9 +54,11 @@ enum Metrics {
         }
     }
 
+    #if DEBUG
     static func setSinkForTesting(_ handler: MetricsSink?) {
         sinkLock.withLock { state in
             state = handler
         }
     }
+    #endif
 }

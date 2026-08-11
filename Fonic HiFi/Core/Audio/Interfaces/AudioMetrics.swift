@@ -276,7 +276,8 @@ public struct AudioMetrics: Sendable, Equatable {
 
     /// Indicates if playback performance is healthy
     public var isHealthy: Bool {
-        bufferUnderruns == 0 &&
+        guard engineMetricsAvailability != .unavailable else { return false }
+        return bufferUnderruns == 0 &&
             droppedFrames == 0 &&
             bufferFillLevel > 0.5 &&
             cpuUsage < 80 &&
@@ -286,6 +287,10 @@ public struct AudioMetrics: Sendable, Equatable {
 
     /// Overall health status based on metrics
     public var healthStatus: PlaybackHealthStatus {
+        // An unavailable provider is an unknown state, not a zero-valued
+        // healthy snapshot. `.poor` keeps existing wire/UI enums stable while
+        // preventing a false excellent/good/critical claim.
+        guard engineMetricsAvailability != .unavailable else { return .poor }
         let score = performanceScore
 
         if score >= 0.9, isHealthy {
@@ -339,7 +344,8 @@ public struct AudioMetrics: Sendable, Equatable {
 
     /// Whether there are any critical issues
     public var hasCriticalIssues: Bool {
-        criticalErrors > 0 ||
+        guard engineMetricsAvailability != .unavailable else { return false }
+        return criticalErrors > 0 ||
             cpuUsage > 95 ||
             bufferFillLevel < 0.1 ||
             thermalPressure > 0.8

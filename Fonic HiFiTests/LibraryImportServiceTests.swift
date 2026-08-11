@@ -58,6 +58,7 @@ final class LibraryImportServiceTests: XCTestCase {
         XCTAssertEqual(checkpointSnapshot.cancelledCount, 1)
         XCTAssertNil(checkpointSnapshot.unexpectedErrorDescription)
         XCTAssertEqual(service.statusMessage, "Import cancelled")
+        XCTAssertFalse(service.isImportComplete)
         XCTAssertFalse(service.isImporting)
         XCTAssertTrue(FileManager.default.fileExists(atPath: sourceURL.path))
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: managedDirectory.path).isEmpty)
@@ -88,6 +89,37 @@ final class LibraryImportServiceTests: XCTestCase {
         }
     }
 
+    func testReadOnlyPolicyRejectsBulkAndSingleImportBeforeCopying() async throws {
+        let root = try makeTemporaryTestDirectory(named: "read-only-import", testCase: self)
+        let musicDirectory = root.appendingPathComponent("Music", isDirectory: true)
+        try FileManager.default.createDirectory(at: musicDirectory, withIntermediateDirectories: true)
+        let sourceURL = try makePCMTestAudioFile(fileExtension: "wav", testCase: self)
+        let schema = Schema([Track.self])
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [configuration])
+        let trackActor = TrackDataActor(modelContainer: container, mutationPolicy: .readOnly)
+        let processor = FileImportProcessor(
+            trackDataActor: trackActor,
+            metadataExtractor: TestMetadataExtractor(),
+            musicContainerURL: musicDirectory
+        )
+        let service = LibraryImportService(
+            fileProcessor: processor,
+            fileProcessingConcurrency: 1,
+            mutationPolicy: .readOnly
+        )
+
+        service.importFiles(from: [sourceURL])
+        XCTAssertEqual(service.importErrors.first?.error as? ImportServiceError, .readOnly)
+        XCTAssertTrue(service.statusMessage.localizedCaseInsensitiveContains("read-only"))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: musicDirectory.path), [])
+
+        let singleImport = await service.importSingleFile(sourceURL)
+        XCTAssertNil(singleImport)
+        XCTAssertEqual(service.importErrors.last?.error as? ImportServiceError, .readOnly)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: musicDirectory.path), [])
+    }
+
     func testCancelImportStopsProcessing() async throws {
         let metadataExtractor = ControlledMetadataExtractor()
         let environment = try makeImportTestEnvironment(metadataExtractor: metadataExtractor)
@@ -108,10 +140,14 @@ final class LibraryImportServiceTests: XCTestCase {
         service.cancelImport()
 
         XCTAssertEqual(service.statusMessage, "Import cancelled")
-        XCTAssertFalse(service.isImporting)
+        XCTAssertFalse(service.isImportComplete)
+        XCTAssertTrue(service.isImporting)
         XCTAssertLessThan(service.filesProcessed, service.totalFiles)
 
         await metadataExtractor.releaseAll()
+        try await waitForCancellation(service)
+        XCTAssertFalse(service.isImporting)
+        XCTAssertFalse(service.isImportComplete)
     }
 
     func testImportPipelineStreamsDiscoveryCounts() async throws {
@@ -127,6 +163,7 @@ final class LibraryImportServiceTests: XCTestCase {
         XCTAssertEqual(service.filesProcessed, files.count)
         XCTAssertEqual(environment.invalidationCount(), 1)
         XCTAssertFalse(service.isImporting)
+        XCTAssertTrue(service.isImportComplete)
     }
 
     func testImportPipelineHandlesNestedDirectoriesAndLargeVolume() async throws {
@@ -147,7 +184,7 @@ final class LibraryImportServiceTests: XCTestCase {
         )
         var enumeratedAudio = 0
         while let url = enumerator?.nextObject() as? URL {
-            if url.pathExtension.lowercased() == "flac" {
+            if url.pathExtension.lowercased() == "wav" {
                 enumeratedAudio += 1
             }
         }
@@ -169,6 +206,7 @@ final class LibraryImportServiceTests: XCTestCase {
         XCTAssertEqual(environment.invalidationCount(), 1)
         XCTAssertEqual(service.importProgress, 1.0, accuracy: 0.0001)
         XCTAssertTrue(service.statusMessage.contains("Import completed"))
+        XCTAssertTrue(service.isImportComplete)
     }
 
     func testImportMetricsEmitsDiscoveryAndCompletionCounters() async throws {
@@ -265,7 +303,12 @@ private struct PartiallyFailingMetadataExtractor: MetadataExtracting {
     }
 
     func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
-        try await urls.asyncMap { try await extractTrackMetadata(from: $0) }
+        var results: [TrackMetadata] = []
+        results.reserveCapacity(urls.count)
+        for url in urls {
+            results.append(try await extractTrackMetadata(from: url))
+        }
+        return results
     }
 }
 

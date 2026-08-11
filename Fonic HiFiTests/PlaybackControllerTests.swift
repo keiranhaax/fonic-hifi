@@ -26,8 +26,8 @@ struct PlaybackControllerTests {
     func stopRoutesToEngine() async throws {
         let harness = makeHarness()
         let track = makeDisplayTrack(name: "stop-track")
-        harness.uiState.currentTrack = track
-        harness.uiState.showMiniPlayer = true
+        harness.uiState.setCurrentTrack(track)
+        harness.uiState.revealMiniPlayerAfterPlaybackStarted()
         harness.stateManager.forceUpdateState(.playing(currentTime: 3, duration: 120))
 
         await harness.controller.stop()
@@ -36,6 +36,36 @@ struct PlaybackControllerTests {
         #expect(harness.stateManager.currentState == .stopped)
         #expect(harness.uiState.currentTrack == nil)
         #expect(harness.uiState.showMiniPlayer == false)
+    }
+
+    @Test("Failed playback never reveals the mini player")
+    @MainActor
+    func failedPlaybackKeepsMiniPlayerHidden() async throws {
+        let track = makeDisplayTrack(name: "failed-playback")
+        let info = AudioFileInfo(
+            url: track.url,
+            format: .flac,
+            duration: track.duration,
+            bitDepth: 24,
+            sampleRate: 48_000,
+            channels: 2,
+            fileSize: 1_024
+        )
+        let harness = makeHarness(
+            formatDetectionManager: PlaybackControllerFormatDetectionServiceStub(info: info)
+        )
+        harness.engine.playError = AudioError.playbackFailed(reason: "Injected failure")
+
+        await #expect(throws: (any Error).self) {
+            try await harness.controller.play(track: track)
+        }
+
+        #expect(harness.uiState.currentTrack == nil)
+        #expect(harness.uiState.showMiniPlayer == false)
+        #expect(harness.stateManager.currentState == .error(
+            .playbackFailed(reason: "Injected failure"),
+            lastKnownTime: nil
+        ))
     }
 
     @Test("seek routes to engine and updates playing state on success")
@@ -198,6 +228,66 @@ struct PlaybackControllerTests {
         )
     }
 
+    @Test("Route renegotiation reuses the active source sample rate")
+    @MainActor
+    func renegotiatePreferredSampleRateUsesActiveSourceRate() async throws {
+        let track = makeDisplayTrack(name: "route-renegotiation")
+        let sessionManager = PlaybackControllerSessionServiceStub()
+        let detectedInfo = AudioFileInfo(
+            url: track.url,
+            format: .alac,
+            duration: 183,
+            bitDepth: 24,
+            sampleRate: 96_000,
+            channels: 2,
+            fileSize: 1_024
+        )
+        let harness = makeHarness(
+            sessionManager: sessionManager,
+            formatDetectionManager: PlaybackControllerFormatDetectionServiceStub(info: detectedInfo)
+        )
+
+        try await harness.controller.play(track: track)
+        await harness.controller.renegotiatePreferredSampleRate()
+
+        #expect(sessionManager.preferredSampleRates == [96_000, 96_000])
+    }
+
+    @Test("restored playback detects format from the resolved queue URL")
+    @MainActor
+    func restoredPlaybackUsesResolvedQueueURL() async throws {
+        let displayTrack = makeDisplayTrack(name: "stale-display-url")
+        let resolvedURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("resolved-queue-url")
+            .appendingPathExtension("flac")
+        let queueEntry = LegacyTrack(
+            id: displayTrack.id,
+            title: displayTrack.title,
+            artist: displayTrack.artist,
+            album: displayTrack.album,
+            url: resolvedURL,
+            duration: displayTrack.duration,
+            audioFormat: displayTrack.audioFormat
+        )
+        let detectedInfo = AudioFileInfo(
+            url: resolvedURL,
+            format: .flac,
+            duration: displayTrack.duration,
+            bitDepth: 24,
+            sampleRate: 96_000,
+            channels: 2,
+            fileSize: 1_024
+        )
+        let formatDetectionManager = PlaybackControllerFormatDetectionServiceStub(info: detectedInfo)
+        let harness = makeHarness(formatDetectionManager: formatDetectionManager)
+
+        try await harness.controller.play(track: displayTrack, queueEntry: queueEntry)
+
+        let detectedURLs = await formatDetectionManager.detectedURLs
+        #expect(detectedURLs == [resolvedURL])
+        #expect(harness.engine.loadedURLs == [resolvedURL])
+    }
+
     @Test("Media-services reset restores track and position in paused state")
     @MainActor
     func mediaServicesResetRestoresPausedPlaybackAndNowPlaying() async throws {
@@ -211,8 +301,8 @@ struct PlaybackControllerTests {
         let queueEntry = track.toAudioTrack()
         harness.queueManager.enqueue(tracks: [queueEntry])
         _ = harness.queueManager.setCurrentTrack(queueEntry)
-        harness.uiState.currentTrack = track
-        harness.uiState.showMiniPlayer = true
+        harness.uiState.setCurrentTrack(track)
+        harness.uiState.revealMiniPlayerAfterPlaybackStarted()
         harness.stateManager.forceUpdateState(
             .playing(currentTime: 37, duration: 120)
         )
@@ -457,7 +547,6 @@ private final class PlaybackControllerMonitorStub: AudioPerformanceMonitoring {
     var currentEngine: AudioEngineService? { get async { nil } }
     func startProfiling(duration _: TimeInterval?) async {}
     func stopProfiling() async {}
-    func getProfilingResults() async -> PerformanceProfile? { nil }
     var isProfiling: Bool { get async { false } }
 }
 
@@ -498,6 +587,7 @@ private final class PlaybackControllerEngineStub: AudioEngineService {
     var preparedURLs: [URL] = []
     var crossfadeCalls: [CrossfadeCall] = []
     var seekError: (any Error)?
+    var playError: (any Error)?
 
     var currentTime: TimeInterval { get async { currentTimeValue } }
     var duration: TimeInterval { get async { durationValue } }
@@ -510,6 +600,9 @@ private final class PlaybackControllerEngineStub: AudioEngineService {
     }
 
     func play() async throws {
+        if let playError {
+            throw playError
+        }
         isPlayingValue = true
     }
 
@@ -542,6 +635,8 @@ private final class PlaybackControllerEngineStub: AudioEngineService {
     func prepareNext(url: URL) async {
         preparedURLs.append(url)
     }
+
+    func invalidatePreparedTransition() async {}
 
     func crossfade(to url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float) async throws {
         crossfadeCalls.append(

@@ -21,6 +21,7 @@ protocol AudioStateCoordinatorOwner: AnyObject {
     func playNext() async throws
     func playPrevious() async throws
     func seek(to time: TimeInterval) async throws
+    func renegotiatePreferredSampleRate() async
     func reportPlaybackControlError(_ error: Error)
 }
 
@@ -99,17 +100,19 @@ public final class StateCoordinator {
 
     // MARK: - State Updates
 
-    /// Update the current track and show mini player
+    /// Update the current track without revealing playback UI prematurely.
     public func setCurrentTrack(_ track: Track?) {
-        uiStateStore.currentTrack = track
-        uiStateStore.showMiniPlayer = true
+        uiStateStore.setCurrentTrack(track)
     }
 
     /// Handle playback state changes and update UI accordingly
     public func handlePlaybackStateChange(_ change: PlaybackStateChange) {
-        // Always keep mini player visible (Apple Music style)
-        // Don't hide it based on state - it shows placeholder when idle
-        uiStateStore.showMiniPlayer = true
+        // Reveal the mini player only once playback is actually running.
+        // Paused/idle transitions (such as restored launch state) must not
+        // surface it, and it stays visible after a pause mid-session.
+        if change.nextState.isPlaying {
+            uiStateStore.revealMiniPlayerAfterPlaybackStarted()
+        }
 
         // Log state transitions for debugging
         logger.debug(
@@ -134,7 +137,6 @@ public final class StateCoordinator {
     /// Setup observation of playback state changes for UI updates
     private func setupStateObservation() {
         stateManager.statePublisher
-            .receive(on: RunLoop.main)
             .sink { [weak self] change in
                 // Update derived UI state when playback state changes
                 self?.handlePlaybackStateChange(change)
@@ -231,12 +233,24 @@ public final class StateCoordinator {
         switch change.reason {
         case .oldDeviceUnavailable:
             logger.info("Output device became unavailable")
-            guard stateManager.currentState.isPlaying, let facade else { return }
+            // On iOS 17+ an unplug also interrupts active Now Playing sessions
+            // (prefersInterruptionOnRouteDisconnect defaults to true), so the
+            // interruption path may already have paused and armed the resume
+            // intent before this route change arrives. Clear the intent even
+            // when playback is no longer running; otherwise an interruption
+            // .ended(shouldResume:) would resume onto the new route.
             shouldResumeAfterInterruption = false
+            guard stateManager.currentState.isPlaying, let facade else { return }
             await facade.pause()
         case .newDeviceAvailable:
             // New device connected
             logger.info("New output device available")
+            await facade?.renegotiatePreferredSampleRate()
+        case .routeConfigurationChange:
+            // The route may have retained the track while changing the
+            // hardware clock. Re-assert the active source rate without
+            // deactivating the session or changing transport state.
+            await facade?.renegotiatePreferredSampleRate()
         default:
             break
         }
@@ -258,6 +272,17 @@ public final class StateCoordinator {
             }
         case .pause:
             await facade.pause()
+        case .togglePlayPause:
+            if stateManager.currentState.isPlaying {
+                await facade.pause()
+            } else {
+                do {
+                    try await facade.resume()
+                } catch {
+                    logger.error("Remote toggle command failed: \(error.localizedDescription, privacy: .private)")
+                    facade.reportPlaybackControlError(error)
+                }
+            }
         case .stop:
             await facade.stop()
         case .nextTrack:
@@ -290,5 +315,9 @@ public final class StateCoordinator {
 extension AudioEngineFacade: AudioStateCoordinatorOwner {
     var stateCoordinatorMonitor: any AudioPerformanceMonitoring {
         monitor
+    }
+
+    func renegotiatePreferredSampleRate() async {
+        await renegotiatePreferredSampleRateForRoute()
     }
 }

@@ -52,9 +52,28 @@ public struct MissingFileQuarantinePolicy: Equatable, Sendable {
 public actor TrackDataActor {
     static let listeningSessionRetentionInterval: TimeInterval = 365 * 24 * 60 * 60
 
+    // The macro-generated initializer uses the normal policy. The explicit policy
+    // initializer below sets this once for recovery-mode authorities.
+    private var mutationPolicy: DataMutationPolicy = .normal
     private let logger = Log.logger(.dataTrackActor)
     private let unknownArtistName = "Unknown Artist"
     private let unknownAlbumTitle = "Unknown Album"
+
+    public init(
+        modelContainer: ModelContainer,
+        mutationPolicy: DataMutationPolicy
+    ) {
+        let modelContext = ModelContext(modelContainer)
+        self.modelExecutor = DefaultSerialModelExecutor(modelContext: modelContext)
+        self.modelContainer = modelContainer
+        self.mutationPolicy = mutationPolicy
+    }
+
+    func requireMutationAllowed() throws {
+        guard mutationPolicy == .normal else {
+            throw DataMutationError.readOnly
+        }
+    }
 
     // MARK: - Helpers
 
@@ -348,6 +367,7 @@ public actor TrackDataActor {
     /// - Returns: PersistentIdentifier of the created Track
     /// - Throws: TrackDataError if creation fails
     public func createTrack(from metadata: TrackMetadata) throws -> PersistentIdentifier {
+        try requireMutationAllowed()
         logger.info("Creating imported track record")
 
         var artistCache: [String: Artist] = [:]
@@ -370,6 +390,7 @@ public actor TrackDataActor {
 
     /// Atomically checks and claims an imported source within this actor's save boundary.
     func claimImportedTrack(from metadata: TrackMetadata) throws -> TrackImportClaimResult {
+        try requireMutationAllowed()
         if let sourceURL = metadata.sourceURL,
            try trackExists(for: sourceURL, bookmark: metadata.sourceBookmark) != nil {
             logger.notice("Duplicate imported source claim rejected")
@@ -399,6 +420,7 @@ public actor TrackDataActor {
     /// - Returns: Array of PersistentIdentifiers for created tracks
     /// - Throws: TrackDataError if any creation fails
     public func createTracks(from metadataArray: [TrackMetadata]) throws -> [PersistentIdentifier] {
+        try requireMutationAllowed()
         logger.info("Creating \(metadataArray.count, privacy: .public) tracks")
 
         var identifiers: [PersistentIdentifier] = []
@@ -428,6 +450,7 @@ public actor TrackDataActor {
     /// - Parameter batchSize: Number of updated tracks to save per transaction.
     /// - Returns: Summary of backfill work performed.
     public func backfillAlbumArtistRelationships(batchSize: Int = 200) throws -> AlbumArtistBackfillResult {
+        try requireMutationAllowed()
         let effectiveBatchSize = max(1, batchSize)
         logger.info("Starting relationship backfill (batch size: \(effectiveBatchSize, privacy: .public))")
 
@@ -682,6 +705,7 @@ public actor TrackDataActor {
     /// - Parameter id: PersistentIdentifier of the track to delete
     /// - Throws: TrackDataError if deletion fails
     public func deleteTrack(_ id: PersistentIdentifier) throws {
+        try requireMutationAllowed()
         let track = try resolveTrack(with: id)
 
         modelContext.delete(track)
@@ -766,8 +790,10 @@ public actor TrackDataActor {
     public func cleanupMissingFiles(
         checker: TrackFileAvailabilityChecker = .live,
         policy: MissingFileQuarantinePolicy = .default,
-        now: Date = Date()
+        now: Date = Date(),
+        documentsDirectory: URL? = nil
     ) throws -> Int {
+        try requireMutationAllowed()
         let fetchDescriptor = FetchDescriptor<Track>()
 
         do {
@@ -785,6 +811,19 @@ public actor TrackDataActor {
                         track.availabilityLastCheckedAt = nil
                         changedCount += 1
                     }
+                    continue
+                }
+
+                if let rebasedURL = ManagedMediaURLResolver.resolveAvailableURL(
+                    track.url,
+                    documentsDirectory: documentsDirectory
+                ),
+                    rebasedURL.standardizedFileURL != track.url.standardizedFileURL {
+                    track.url = rebasedURL
+                    track.unavailableCheckCount = 0
+                    track.unavailableSince = nil
+                    track.availabilityLastCheckedAt = nil
+                    changedCount += 1
                     continue
                 }
 
@@ -835,6 +874,7 @@ public actor TrackDataActor {
     ///   - playCount: New play count
     ///   - lastPlayed: Last played date
     public func updatePlaybackStats(for id: PersistentIdentifier, playCount: Int, lastPlayed: Date) throws {
+        try requireMutationAllowed()
         let track = try resolveTrack(with: id)
 
         track.playCount = playCount
@@ -856,6 +896,7 @@ public actor TrackDataActor {
     ///   - isFavorite: Favorite status
     ///   - userTags: User-defined tags
     public func updateUserData(for id: PersistentIdentifier, rating: Int?, isFavorite: Bool, userTags: [String]) throws {
+        try requireMutationAllowed()
         let track = try resolveTrack(with: id)
 
         track.rating = rating
@@ -877,6 +918,7 @@ public actor TrackDataActor {
     /// - Throws: TrackDataError if track not found or update fails
     @discardableResult
     public func toggleFavorite(trackId: PersistentIdentifier) throws -> Bool {
+        try requireMutationAllowed()
         let track = try resolveTrack(with: trackId)
         track.isFavorite.toggle()
 
@@ -902,6 +944,7 @@ public actor TrackDataActor {
         wasSkipped: Bool,
         wasCompleted: Bool
     ) throws {
+        try requireMutationAllowed()
         let session = ListeningSession(
             trackId: trackId,
             startedAt: startedAt,
@@ -1006,6 +1049,7 @@ public actor TrackDataActor {
     /// Increment play count and update last played for a track
     /// - Parameter trackId: UUID of the track
     public func incrementPlayCount(for trackId: UUID) throws {
+        try requireMutationAllowed()
         var descriptor = FetchDescriptor<Track>(
             predicate: #Predicate<Track> { track in
                 track.id == trackId

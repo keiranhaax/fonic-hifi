@@ -94,11 +94,26 @@ private actor QueueStatePersistenceWorker {
         try Task.checkCancellation()
         let validatedState = state.validateForPersistence()
         try Task.checkCancellation()
+
+        // A transient container-path or file-provider failure must not replace
+        // a recoverable queue snapshot with an empty or unselected queue.
+        guard state.tracks.isEmpty || !validatedState.tracks.isEmpty else { return }
+        guard state.currentTrack?.id == validatedState.currentTrack?.id else { return }
+
         try validatedState.save(to: defaults)
     }
 
     func load() -> QueueState? {
-        QueueState.load(from: defaults)?.validateForPersistence()
+        guard let persistedState = QueueState.load(from: defaults),
+              !persistedState.tracks.isEmpty
+        else {
+            return nil
+        }
+
+        let validatedState = persistedState.validateForPersistence()
+        guard !validatedState.tracks.isEmpty else { return nil }
+        guard persistedState.currentTrack?.id == validatedState.currentTrack?.id else { return nil }
+        return validatedState
     }
 
     func clear() {

@@ -71,15 +71,35 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
 
     public var audioFormat: AudioFormat? {
         get async {
-            guard let file = currentFile else { return nil }
-            return AudioFormat.from(avAudioFormat: file.fileFormat)
+            guard let url = currentFile?.url else { return nil }
+            return AudioFormat.from(url: url) ?? .unknown
         }
     }
 
     public var isBitPerfect: Bool {
         get async {
-            configuration.performanceMode == .quality && abs(currentGainDB) < .ulpOfOne
+            // Unified engine contract: loaded track, no engine-side processing,
+            // unity volume, and no detectable file-to-output rate conversion.
+            // Performance mode is a preference, not signal-path evidence.
+            guard let file = currentFile else { return false }
+            let outputSampleRate = engine.avEngine.outputNode.outputFormat(forBus: 0).sampleRate
+            return file.processingFormat.sampleRate == outputSampleRate &&
+                currentPlaybackRate == 1 &&
+                abs(currentGainDB) < .ulpOfOne &&
+                _volume == 1
         }
+    }
+
+    public func playbackFormatEvidence() async -> AudioEngineFormatEvidence? {
+        let outputFormat = engine.avEngine.outputNode.outputFormat(forBus: 0)
+        return AudioEngineFormatEvidence(
+            isTrackLoaded: currentFile != nil,
+            loadedSampleRate: currentFile?.processingFormat.sampleRate,
+            loadedChannelCount: currentFile.map { Int($0.processingFormat.channelCount) },
+            engineOutputSampleRate: outputFormat.sampleRate > 0 ? outputFormat.sampleRate : nil,
+            engineOutputChannelCount: outputFormat.channelCount > 0 ? Int(outputFormat.channelCount) : nil,
+            hasEngineProcessing: currentPlaybackRate != 1 || abs(currentGainDB) >= .ulpOfOne
+        )
     }
 
     // MARK: - Initialization
@@ -171,6 +191,7 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         invalidatePlaybackCompletion()
         activePlayer.stop()
         inactivePlayer.stop()
+        engine.stop()
         _isPlaying = false
         _currentTime = 0
     }
@@ -228,6 +249,16 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         }
     }
 
+    /// Cancel any transition and discard the inactive prepared track without
+    /// disturbing the currently audible source player.
+    public func invalidatePreparedTransition() async {
+        cancelCrossfade(rearmSourceCompletion: true)
+        inactivePlayer.stop()
+        inactivePlayer.volume = 0
+        inactiveFile = nil
+        pendingNextURL = nil
+    }
+
     public func consumePreparedTransition(to url: URL) async -> PreparedTrackTransition {
         guard pendingNextURL == url, let preparedFile = inactiveFile else {
             return .none
@@ -266,6 +297,10 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     public func applyReplayGain(_ gainDB: Float) async {
         currentGainDB = gainDB
         applyReplayGainImmediately(gainDB)
+    }
+
+    public var supportsEQ: Bool {
+        get async { false }
     }
 
     public func crossfade(to url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float) async throws {
@@ -558,19 +593,4 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         crossfadeSleeper = sleeper
     }
 
-}
-
-// MARK: - AudioFormat Extension
-
-extension AudioFormat {
-    static func from(avAudioFormat: AVAudioFormat) -> AudioFormat {
-        let sampleRate = avAudioFormat.sampleRate
-        let channels = avAudioFormat.channelCount
-
-        if sampleRate > 48000 || channels > 2 {
-            return .flac
-        } else {
-            return .aac
-        }
-    }
 }

@@ -153,7 +153,11 @@ final class FormatDetectionServiceConcurrencyTests: XCTestCase {
         var urls: [URL] = []
         for index in 0 ..< 6 {
             let url = temporaryDirectory.appendingPathComponent("concurrency-test-\(index).flac")
-            FileManager.default.createFile(atPath: url.path, contents: Data(), attributes: nil)
+            FileManager.default.createFile(
+                atPath: url.path,
+                contents: makeValidPCMTestWAVData(frameCount: 441),
+                attributes: nil,
+            )
             urls.append(url)
         }
 
@@ -179,7 +183,11 @@ final class FormatDetectionServiceConcurrencyTests: XCTestCase {
         await manager.clearAdapters()
 
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("cancel-test.flac")
-        FileManager.default.createFile(atPath: url.path, contents: Data(), attributes: nil)
+        FileManager.default.createFile(
+            atPath: url.path,
+            contents: makeValidPCMTestWAVData(frameCount: 441),
+            attributes: nil,
+        )
 
         let adapter = StubDetectionAdapter(tracker: tracker, delay: 1.0)
         await manager.registerAdapter(adapter)
@@ -207,7 +215,11 @@ final class FormatDetectionServiceConcurrencyTests: XCTestCase {
         await manager.clearAdapters()
 
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("timeout-test.flac")
-        FileManager.default.createFile(atPath: url.path, contents: Data(), attributes: nil)
+        FileManager.default.createFile(
+            atPath: url.path,
+            contents: makeValidPCMTestWAVData(frameCount: 441),
+            attributes: nil,
+        )
 
         let adapter = StubDetectionAdapter(tracker: tracker, delay: 0.2)
         await manager.registerAdapter(adapter)

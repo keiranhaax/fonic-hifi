@@ -108,6 +108,49 @@ final class AudioSessionServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testRemoteCommandRegistrationIsIdempotentAndUnregistersEveryOwnedCommand() async {
+        let manager = AudioSessionManager()
+
+        await manager.enableRemoteCommands()
+        let firstRegistration = manager.registeredRemoteCommandDescriptions
+        let firstGeneration = manager.remoteCommandRegistrationGeneration
+
+        await manager.enableRemoteCommands()
+
+        XCTAssertEqual(manager.registeredRemoteCommandDescriptions, firstRegistration)
+        XCTAssertEqual(
+            manager.remoteCommandRegistrationGeneration,
+            firstGeneration + 1
+        )
+        XCTAssertTrue(firstRegistration.contains("stop"))
+        XCTAssertTrue(firstRegistration.contains("togglePlayPause"))
+
+        await manager.disableRemoteCommands()
+        XCTAssertTrue(manager.registeredRemoteCommandDescriptions.isEmpty)
+    }
+
+    @MainActor
+    func testRegisteredRemoteCommandTestingRouteDeliversStopAndToggleOnlyWhileRegistered() async {
+        let manager = AudioSessionManager()
+        let delegate = MediaServicesResetDelegateSpy()
+        let commandHandled = expectation(description: "registered remote commands handled")
+        commandHandled.expectedFulfillmentCount = 2
+        delegate.onCommand = { commandHandled.fulfill() }
+        manager.delegate = delegate
+
+        await manager.enableRemoteCommands()
+        manager.dispatchRegisteredRemoteCommandForTesting(.stop)
+        manager.dispatchRegisteredRemoteCommandForTesting(.togglePlayPause)
+        await fulfillment(of: [commandHandled], timeout: 2)
+        XCTAssertEqual(delegate.commandCount, 2)
+
+        await manager.disableRemoteCommands()
+        manager.dispatchRegisteredRemoteCommandForTesting(.stop)
+        await Task.yield()
+        XCTAssertEqual(delegate.commandCount, 2)
+    }
+
+    @MainActor
     func testMediaServicesResetRebuildsCommandsAndNotifiesPlaybackOwner() async throws {
         let notificationCenter = NotificationCenter()
         let manager = AudioSessionManager(notificationCenter: notificationCenter)
@@ -215,6 +258,7 @@ private final class MediaServicesResetDelegateSpy: AudioSessionDelegate {
     private(set) var lastInterruption: AudioInterruptionType?
     private(set) var lastRouteChange: AudioRouteChange?
     private(set) var lastCommand: RemoteCommand?
+    private(set) var commandCount = 0
 
     func audioSessionDidInterrupt(_ interruption: AudioInterruptionType) async {
         lastInterruption = interruption
@@ -228,6 +272,7 @@ private final class MediaServicesResetDelegateSpy: AudioSessionDelegate {
 
     func audioSessionDidReceiveCommand(_ command: RemoteCommand) async {
         lastCommand = command
+        commandCount += 1
         onCommand?()
     }
 

@@ -41,6 +41,14 @@ private actor StubFormatDetectionService: FormatDetectionService {
     }
 }
 
+private struct StubMetadataAssetLoader: MetadataAssetLoading {
+    let snapshot: MetadataAssetSnapshot
+
+    func load(from _: URL) async throws -> MetadataAssetSnapshot {
+        snapshot
+    }
+}
+
 @MainActor
 final class MetadataExtractionServiceTests: XCTestCase {
     func testExtractTrackMetadataUsesFormatDetectionResults() async throws {
@@ -109,6 +117,40 @@ final class MetadataExtractionServiceTests: XCTestCase {
         XCTAssertEqual(metadata.audioFormat, AudioFormatType.unknown.rawValue)
         XCTAssertGreaterThan(metadata.sampleRate, 0)
         XCTAssertGreaterThan(metadata.duration, 0)
+    }
+
+    func testExtractYearUsesUTF16RangeForUnicodeMetadata() async throws {
+        let url = try makePCMTestAudioFile(testCase: self)
+        let detected = AudioFileInfo.create(
+            url: url,
+            format: .wav,
+            sampleRate: 44_100,
+            bitDepth: 16,
+            channels: 2,
+            bitrate: 1_411_200,
+            duration: 0.25
+        )
+        let snapshot = MetadataAssetSnapshot(
+            duration: 0.25,
+            metadata: [
+                MetadataItemSnapshot(
+                    commonKey: "creationDate",
+                    identifier: nil,
+                    key: nil,
+                    stringValue: "Música 2024",
+                    dataValue: nil
+                ),
+            ],
+            commonMetadata: []
+        )
+        let service = MetadataExtractionService(
+            formatDetectionService: StubFormatDetectionService(results: [url: detected]),
+            metadataLoader: StubMetadataAssetLoader(snapshot: snapshot)
+        )
+
+        let metadata = try await service.extractTrackMetadata(from: url)
+
+        XCTAssertEqual(metadata.year, 2024)
     }
 
     func testExtractTrackMetadataThrowsForMissingFile() async {
