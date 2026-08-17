@@ -126,3 +126,28 @@ public struct EqualizerConfiguration: Codable, Equatable, Sendable {
         ),
     ]
 }
+
+/// The observable outcome of applying the desired equalizer configuration.
+///
+/// A configuration can be retained while no engine exists, then applied when
+/// the playback engine is created. Engines without EQ support report that
+/// limitation explicitly when an enabled configuration is requested.
+public enum EqualizerApplicationResult: Equatable, Sendable {
+    case waitingForEngine
+    case applied(engine: AudioEngineType?)
+    case unsupported(engine: AudioEngineType?)
+    case failed(engine: AudioEngineType?)
+
+    public var unavailableMessage: String? {
+        switch self {
+        case .unsupported(let engine):
+            let engineName = engine?.displayName ?? "The current audio engine"
+            return "\(engineName) does not support equalizer processing. Your setting is saved and will be reapplied when a compatible engine is used."
+        case .failed(let engine):
+            let engineName = engine?.displayName ?? "The current audio engine"
+            return "\(engineName) could not apply the equalizer setting. Your setting is saved and can be retried."
+        case .waitingForEngine, .applied:
+            return nil
+        }
+    }
+}

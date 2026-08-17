@@ -11,6 +11,7 @@ import WidgetKit
 /// Inline Lock Screen widget showing single line "Track - Artist"
 /// Widget family: `.accessoryInline` [Verified-Apple]
 struct AccessoryInlineView: View {
+    @Environment(\.locale) private var locale
     let entry: NowPlayingEntry
 
     var body: some View {
@@ -19,13 +20,13 @@ struct AccessoryInlineView: View {
             ViewThatFits {
                 // Full version: Icon + Track - Artist
                 Label {
-                    Text("\(entry.trackInfo.title) - \(entry.trackInfo.artist)")
+                    Text(verbatim: titleArtist)
                 } icon: {
                     Image(systemName: entry.isPlaying ? "waveform" : "play.fill")
                 }
 
                 // Medium version: Track - Artist (no icon)
-                Text("\(entry.trackInfo.title) - \(entry.trackInfo.artist)")
+                Text(verbatim: titleArtist)
 
                 // Short version: Track only
                 Label {
@@ -42,6 +43,14 @@ struct AccessoryInlineView: View {
             Label("Fonic HiFi", systemImage: "music.note")
                 .widgetURL(URL(string: "fonichifi://library"))
         }
+    }
+
+    private var titleArtist: String {
+        LocalizedWidgetText.titleArtist(
+            title: entry.trackInfo.title,
+            artist: entry.trackInfo.artist,
+            locale: locale
+        )
     }
 }
 

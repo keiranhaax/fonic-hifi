@@ -17,7 +17,6 @@ final class AudioMonitorRuntimeTests: XCTestCase {
             suggestedActions: []
         )
         let alertManager = StubAlertManager(alerts: [alert])
-        let profiler = AudioPerformanceProfiler()
         let logger = Logger(subsystem: "FonicHiFiTests", category: "AudioMonitorRuntime")
 
         var publishedMetrics: [AudioMetrics] = []
@@ -33,7 +32,6 @@ final class AudioMonitorRuntimeTests: XCTestCase {
             metricsCollector: metricsCollector,
             alertManager: alertManager,
             performanceMonitor: nil,
-            performanceProfiler: profiler,
             logger: logger,
             publishMetrics: { metrics in
                 publishedMetrics.append(metrics)
@@ -65,83 +63,11 @@ final class AudioMonitorRuntimeTests: XCTestCase {
         XCTAssertFalse(runtime.isMonitoring)
     }
 
-    func testProfilingLifecycleStartsAndStops() async {
-        let scheduler = AudioMetricsScheduler()
-        let analytics = AudioSessionAnalytics()
-        let metricsCollector = makeMetricsCollector()
-        let alertManager = StubAlertManager(alerts: [])
-        let profiler = AudioPerformanceProfiler()
-        let logger = Logger(subsystem: "FonicHiFiTests", category: "AudioMonitorRuntime")
-
-        let runtime = AudioMonitorRuntime(
-            scheduler: scheduler,
-            analytics: analytics,
-            metricsCollector: metricsCollector,
-            alertManager: alertManager,
-            performanceMonitor: nil,
-            performanceProfiler: profiler,
-            logger: logger,
-            publishMetrics: { _ in },
-            publishHealthStatus: { _ in },
-            publishAlert: { _ in }
-        )
-
-        await runtime.startMonitoring(updateInterval: 0.05, engine: nil)
-        await runtime.startProfiling(duration: 0.1)
-
-        XCTAssertTrue(runtime.isProfiling)
-
-        try? await Task.sleep(nanoseconds: 200_000_000)
-
-        XCTAssertFalse(runtime.isProfiling)
-        XCTAssertNotNil(profiler.profilingData)
-        XCTAssertNotNil(profiler.profilingDuration)
-
-        await runtime.stopMonitoring()
-    }
-
-    func testEvaluateAlertsPublishesWithoutScheduler() async {
-        let scheduler = AudioMetricsScheduler()
-        let analytics = AudioSessionAnalytics()
-        let metricsCollector = makeMetricsCollector()
-        let alert = PlaybackAlert(
-            type: .bufferUnderrun,
-            severity: .medium,
-            message: "Underrun",
-            technicalDetails: "",
-            triggerValues: [:],
-            suggestedActions: []
-        )
-        let alertManager = StubAlertManager(alerts: [alert])
-        let profiler = AudioPerformanceProfiler()
-        let logger = Logger(subsystem: "FonicHiFiTests", category: "AudioMonitorRuntime")
-
-        var publishedAlerts: [PlaybackAlert] = []
-
-        let runtime = AudioMonitorRuntime(
-            scheduler: scheduler,
-            analytics: analytics,
-            metricsCollector: metricsCollector,
-            alertManager: alertManager,
-            performanceMonitor: nil,
-            performanceProfiler: profiler,
-            logger: logger,
-            publishMetrics: { _ in },
-            publishHealthStatus: { _ in },
-            publishAlert: { publishedAlerts.append($0) }
-        )
-
-        await runtime.evaluateAlerts()
-
-        XCTAssertEqual(publishedAlerts.count, 1)
-    }
-
     func testUpdateMonitoringIntervalWhileActive() async {
         let scheduler = AudioMetricsScheduler()
         let analytics = AudioSessionAnalytics()
         let metricsCollector = makeMetricsCollector()
         let alertManager = StubAlertManager(alerts: [])
-        let profiler = AudioPerformanceProfiler()
         let logger = Logger(subsystem: "FonicHiFiTests", category: "AudioMonitorRuntime")
 
         let runtime = AudioMonitorRuntime(
@@ -150,7 +76,6 @@ final class AudioMonitorRuntimeTests: XCTestCase {
             metricsCollector: metricsCollector,
             alertManager: alertManager,
             performanceMonitor: nil,
-            performanceProfiler: profiler,
             logger: logger,
             publishMetrics: { _ in },
             publishHealthStatus: { _ in },
@@ -170,7 +95,6 @@ final class AudioMonitorRuntimeTests: XCTestCase {
         let analytics = AudioSessionAnalytics()
         let metricsCollector = makeMetricsCollector()
         let alertManager = StubAlertManager(alerts: [])
-        let profiler = AudioPerformanceProfiler()
         let logger = Logger(subsystem: "FonicHiFiTests", category: "AudioMonitorRuntime")
 
         let runtime = AudioMonitorRuntime(
@@ -179,7 +103,6 @@ final class AudioMonitorRuntimeTests: XCTestCase {
             metricsCollector: metricsCollector,
             alertManager: alertManager,
             performanceMonitor: nil,
-            performanceProfiler: profiler,
             logger: logger,
             publishMetrics: { _ in },
             publishHealthStatus: { _ in },
@@ -190,37 +113,6 @@ final class AudioMonitorRuntimeTests: XCTestCase {
         XCTAssertEqual(runtime.updateInterval, 1.0)
     }
 
-    func testStopMonitoringStopsProfiling() async {
-        let scheduler = AudioMetricsScheduler()
-        let analytics = AudioSessionAnalytics()
-        let metricsCollector = makeMetricsCollector()
-        let alertManager = StubAlertManager(alerts: [])
-        let profiler = AudioPerformanceProfiler()
-        let logger = Logger(subsystem: "FonicHiFiTests", category: "AudioMonitorRuntime")
-
-        let runtime = AudioMonitorRuntime(
-            scheduler: scheduler,
-            analytics: analytics,
-            metricsCollector: metricsCollector,
-            alertManager: alertManager,
-            performanceMonitor: nil,
-            performanceProfiler: profiler,
-            logger: logger,
-            publishMetrics: { _ in },
-            publishHealthStatus: { _ in },
-            publishAlert: { _ in }
-        )
-
-        await runtime.startMonitoring(updateInterval: 0.05, engine: nil)
-        await runtime.startProfiling(duration: nil)
-
-        XCTAssertTrue(runtime.isProfiling)
-
-        await runtime.stopMonitoring()
-
-        XCTAssertFalse(runtime.isMonitoring)
-        XCTAssertFalse(runtime.isProfiling)
-    }
 }
 
 // MARK: - Test Helpers

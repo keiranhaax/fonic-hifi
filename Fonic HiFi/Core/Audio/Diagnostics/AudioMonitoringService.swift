@@ -2,43 +2,19 @@
 //  AudioMonitoringService.swift
 //  Fonic HiFi
 //
-//  Created by Claude on 5/27/25.
+//  Live monitoring models shared by the runtime collectors and alert manager.
 //
 
 import Foundation
 
-/// Backward-compatible monitoring surface composed from focused protocol roles.
-public typealias AudioMonitoringService =
-    AudioHealthMonitoring &
-    AudioPerformanceMonitoring &
-    AudioDiagnosticsReporting &
-    AudioSessionMonitoring
-
-// MARK: - Supporting Types
-
-// PlaybackHealthStatus is defined in AudioMetrics.swift
-
-/// Critical playback alerts
+/// Critical playback alert emitted by the monitoring runtime.
 public struct PlaybackAlert: Sendable, Equatable {
-    /// Type of alert
     public let type: AlertType
-
-    /// Alert severity level
     public let severity: AlertSeverity
-
-    /// Human-readable message
     public let message: String
-
-    /// Technical details for debugging
     public let technicalDetails: String
-
-    /// Timestamp when alert was triggered
     public let timestamp: Date
-
-    /// Associated metric values that triggered the alert
     public let triggerValues: [String: Double]
-
-    /// Suggested actions to resolve the issue
     public let suggestedActions: [String]
 
     public init(
@@ -48,7 +24,7 @@ public struct PlaybackAlert: Sendable, Equatable {
         technicalDetails: String,
         timestamp: Date = Date(),
         triggerValues: [String: Double] = [:],
-        suggestedActions: [String] = [],
+        suggestedActions: [String] = []
     ) {
         self.type = type
         self.severity = severity
@@ -60,7 +36,6 @@ public struct PlaybackAlert: Sendable, Equatable {
     }
 }
 
-/// Types of monitoring alerts
 public enum AlertType: String, Sendable, CaseIterable {
     case bufferUnderrun = "buffer_underrun"
     case highCPUUsage = "high_cpu_usage"
@@ -73,41 +48,28 @@ public enum AlertType: String, Sendable, CaseIterable {
     case formatMismatch = "format_mismatch"
     case engineError = "engine_error"
 
-    /// Display name for UI
     public var displayName: String {
         switch self {
-        case .bufferUnderrun:
-            "Buffer Underrun"
-        case .highCPUUsage:
-            "High CPU Usage"
-        case .highMemoryUsage:
-            "High Memory Usage"
-        case .lowBufferFill:
-            "Low Buffer Fill"
-        case .audioDropout:
-            "Audio Dropout"
-        case .latencySpike:
-            "Latency Spike"
-        case .thermalThrottling:
-            "Thermal Throttling"
-        case .audioInterruption:
-            "Audio Interruption"
-        case .formatMismatch:
-            "Format Mismatch"
-        case .engineError:
-            "Engine Error"
+        case .bufferUnderrun: "Buffer Underrun"
+        case .highCPUUsage: "High CPU Usage"
+        case .highMemoryUsage: "High Memory Usage"
+        case .lowBufferFill: "Low Buffer Fill"
+        case .audioDropout: "Audio Dropout"
+        case .latencySpike: "Latency Spike"
+        case .thermalThrottling: "Thermal Throttling"
+        case .audioInterruption: "Audio Interruption"
+        case .formatMismatch: "Format Mismatch"
+        case .engineError: "Engine Error"
         }
     }
 }
 
-/// Alert severity levels
 public enum AlertSeverity: String, Sendable, CaseIterable {
     case low
     case medium
     case high
     case critical
 
-    /// Priority level for handling
     public var priority: Int {
         switch self {
         case .low: 1
@@ -118,165 +80,13 @@ public enum AlertSeverity: String, Sendable, CaseIterable {
     }
 }
 
-/// Session summary statistics
-public struct AudioSessionSummary: Sendable {
-    /// Session start time
-    public let sessionStart: Date
-
-    /// Session duration
-    public let duration: TimeInterval
-
-    /// Average metrics over the session
-    public let averageMetrics: AudioMetrics
-
-    /// Peak metrics observed
-    public let peakMetrics: AudioMetrics
-
-    /// Total number of alerts triggered
-    public let totalAlerts: Int
-
-    /// Breakdown of alerts by type
-    public let alertsByType: [AlertType: Int]
-
-    /// Overall session health rating
-    public let healthRating: PlaybackHealthStatus
-
-    /// Number of metric samples collected
-    public let sampleCount: Int
-
-    /// Session performance score (0.0 to 1.0)
-    public let performanceScore: Double
-
-    public init(
-        sessionStart: Date,
-        duration: TimeInterval,
-        averageMetrics: AudioMetrics,
-        peakMetrics: AudioMetrics,
-        totalAlerts: Int,
-        alertsByType: [AlertType: Int],
-        healthRating: PlaybackHealthStatus,
-        sampleCount: Int,
-        performanceScore: Double,
-    ) {
-        self.sessionStart = sessionStart
-        self.duration = duration
-        self.averageMetrics = averageMetrics
-        self.peakMetrics = peakMetrics
-        self.totalAlerts = totalAlerts
-        self.alertsByType = alertsByType
-        self.healthRating = healthRating
-        self.sampleCount = sampleCount
-        self.performanceScore = performanceScore
-    }
-
-    public static var empty: AudioSessionSummary {
-        AudioSessionSummary(
-            sessionStart: Date(),
-            duration: 0,
-            averageMetrics: .empty,
-            peakMetrics: .empty,
-            totalAlerts: 0,
-            alertsByType: [:],
-            healthRating: .excellent,
-            sampleCount: 0,
-            performanceScore: 1.0
-        )
-    }
-}
-
-/// Performance improvement recommendations
-public struct PerformanceRecommendation: Sendable, Equatable {
-    /// Type of recommendation
-    public let type: RecommendationType
-
-    /// Priority level
-    public let priority: RecommendationPriority
-
-    /// User-friendly title
-    public let title: String
-
-    /// Detailed description
-    public let description: String
-
-    /// Expected performance improvement
-    public let expectedImprovement: String
-
-    /// Technical implementation details
-    public let technicalDetails: String
-
-    /// Whether this can be automatically applied
-    public let canAutoApply: Bool
-
-    public init(
-        type: RecommendationType,
-        priority: RecommendationPriority,
-        title: String,
-        description: String,
-        expectedImprovement: String,
-        technicalDetails: String,
-        canAutoApply: Bool = false,
-    ) {
-        self.type = type
-        self.priority = priority
-        self.title = title
-        self.description = description
-        self.expectedImprovement = expectedImprovement
-        self.technicalDetails = technicalDetails
-        self.canAutoApply = canAutoApply
-    }
-}
-
-/// Types of performance recommendations
-public enum RecommendationType: String, Sendable {
-    case bufferSizeOptimization = "buffer_size_optimization"
-    case audioSessionConfiguration = "audio_session_configuration"
-    case performanceModeAdjustment = "performance_mode_adjustment"
-    case backgroundAppManagement = "background_app_management"
-    case thermalManagement = "thermal_management"
-    case memoryOptimization = "memory_optimization"
-    case engineSelection = "engine_selection"
-    case formatOptimization = "format_optimization"
-}
-
-/// Recommendation priority levels
-public enum RecommendationPriority: String, Sendable, CaseIterable {
-    case low
-    case medium
-    case high
-    case critical
-
-    /// Sorting order
-    public var sortOrder: Int {
-        switch self {
-        case .critical: 4
-        case .high: 3
-        case .medium: 2
-        case .low: 1
-        }
-    }
-}
-
-/// Alert threshold configuration
 public struct AlertConfiguration: Sendable, Equatable {
-    /// CPU usage threshold (percentage)
     public let cpuThreshold: Float
-
-    /// Memory usage threshold (bytes)
     public let memoryThreshold: Int64
-
-    /// Buffer fill level threshold
     public let bufferFillThreshold: Float
-
-    /// Maximum allowed buffer underruns
     public let maxBufferUnderruns: Int
-
-    /// Latency spike threshold (seconds)
     public let latencyThreshold: TimeInterval
-
-    /// Whether to enable thermal monitoring
     public let enableThermalMonitoring: Bool
-
-    /// Alert cooldown period to prevent spam
     public let alertCooldownSeconds: TimeInterval
 
     public init(
@@ -284,9 +94,9 @@ public struct AlertConfiguration: Sendable, Equatable {
         memoryThreshold: Int64 = PerformanceThresholds.targetMemoryUsage,
         bufferFillThreshold: Float = 0.3,
         maxBufferUnderruns: Int = 0,
-        latencyThreshold: TimeInterval = 0.050, // 50ms
+        latencyThreshold: TimeInterval = 0.050,
         enableThermalMonitoring: Bool = true,
-        alertCooldownSeconds: TimeInterval = 30.0,
+        alertCooldownSeconds: TimeInterval = 30.0
     ) {
         self.cpuThreshold = cpuThreshold
         self.memoryThreshold = memoryThreshold
@@ -297,42 +107,28 @@ public struct AlertConfiguration: Sendable, Equatable {
         self.alertCooldownSeconds = alertCooldownSeconds
     }
 
-    /// Default configuration for production use
     public static var `default`: AlertConfiguration {
         AlertConfiguration()
     }
 
-    /// Sensitive configuration for debugging
     public static var sensitive: AlertConfiguration {
         AlertConfiguration(
             cpuThreshold: 50.0,
-            memoryThreshold: 50_000_000, // 50MB
+            memoryThreshold: 50_000_000,
             bufferFillThreshold: 0.5,
             maxBufferUnderruns: 0,
-            latencyThreshold: 0.020, // 20ms
-            alertCooldownSeconds: 10.0,
+            latencyThreshold: 0.020,
+            alertCooldownSeconds: 10.0
         )
     }
 }
 
-/// System-wide audio resource metrics
 public struct SystemAudioMetrics: Sendable {
-    /// Total system audio CPU usage
     public let systemAudioCPU: Float
-
-    /// Number of active audio sessions
     public let activeAudioSessions: Int
-
-    /// System audio memory usage
     public let systemAudioMemory: Int64
-
-    /// Audio device information
     public let deviceInfo: AudioDeviceInfo
-
-    /// System audio interruptions count
     public let interruptionCount: Int
-
-    /// Audio unit load average
     public let audioUnitLoad: Float
 
     public init(
@@ -341,7 +137,7 @@ public struct SystemAudioMetrics: Sendable {
         systemAudioMemory: Int64,
         deviceInfo: AudioDeviceInfo,
         interruptionCount: Int,
-        audioUnitLoad: Float,
+        audioUnitLoad: Float
     ) {
         self.systemAudioCPU = systemAudioCPU
         self.activeAudioSessions = activeAudioSessions
@@ -352,27 +148,13 @@ public struct SystemAudioMetrics: Sendable {
     }
 }
 
-/// Audio device information for monitoring
 public struct AudioDeviceInfo: Sendable {
-    /// Device identifier
     public let deviceID: String
-
-    /// Device name
     public let name: String
-
-    /// Current sample rate
     public let sampleRate: Double
-
-    /// Current bit depth
     public let bitDepth: Int
-
-    /// Number of channels
     public let channels: Int
-
-    /// Device buffer size
     public let bufferSize: Int
-
-    /// Device latency
     public let latency: TimeInterval
 
     public init(
@@ -382,7 +164,7 @@ public struct AudioDeviceInfo: Sendable {
         bitDepth: Int,
         channels: Int,
         bufferSize: Int,
-        latency: TimeInterval,
+        latency: TimeInterval
     ) {
         self.deviceID = deviceID
         self.name = name
@@ -394,21 +176,11 @@ public struct AudioDeviceInfo: Sendable {
     }
 }
 
-/// Thermal monitoring information
 public struct ThermalMonitoringInfo: Sendable {
-    /// Current thermal state
     public let thermalState: ThermalState
-
-    /// CPU temperature (if available)
     public let cpuTemperature: Double?
-
-    /// Whether thermal throttling is active
     public let isThrottling: Bool
-
-    /// Recommended performance adjustments
     public let recommendedAdjustments: [String]
-
-    /// Timestamp of measurement
     public let timestamp: Date
 
     public init(
@@ -416,7 +188,7 @@ public struct ThermalMonitoringInfo: Sendable {
         cpuTemperature: Double? = nil,
         isThrottling: Bool,
         recommendedAdjustments: [String],
-        timestamp: Date = Date(),
+        timestamp: Date = Date()
     ) {
         self.thermalState = thermalState
         self.cpuTemperature = cpuTemperature
@@ -426,46 +198,28 @@ public struct ThermalMonitoringInfo: Sendable {
     }
 }
 
-/// Device thermal states
 public enum ThermalState: String, Sendable, CaseIterable {
     case nominal
     case fair
     case serious
     case critical
 
-    /// Impact on audio performance
     public var performanceImpact: String {
         switch self {
-        case .nominal:
-            "No impact"
-        case .fair:
-            "Minor performance reduction"
-        case .serious:
-            "Noticeable performance impact"
-        case .critical:
-            "Severe performance throttling"
+        case .nominal: "No impact"
+        case .fair: "Minor performance reduction"
+        case .serious: "Noticeable performance impact"
+        case .critical: "Severe performance throttling"
         }
     }
 }
 
-/// Audio session interruption statistics
 public struct InterruptionStatistics: Sendable {
-    /// Total number of interruptions
     public let totalInterruptions: Int
-
-    /// Interruptions by type
     public let interruptionsByType: [InterruptionType: Int]
-
-    /// Average interruption duration
     public let averageInterruptionDuration: TimeInterval
-
-    /// Longest interruption duration
     public let longestInterruptionDuration: TimeInterval
-
-    /// Recovery success rate
     public let recoverySuccessRate: Double
-
-    /// Last interruption time
     public let lastInterruptionTime: Date?
 
     public init(
@@ -474,7 +228,7 @@ public struct InterruptionStatistics: Sendable {
         averageInterruptionDuration: TimeInterval,
         longestInterruptionDuration: TimeInterval,
         recoverySuccessRate: Double,
-        lastInterruptionTime: Date?,
+        lastInterruptionTime: Date?
     ) {
         self.totalInterruptions = totalInterruptions
         self.interruptionsByType = interruptionsByType
@@ -483,428 +237,4 @@ public struct InterruptionStatistics: Sendable {
         self.recoverySuccessRate = recoverySuccessRate
         self.lastInterruptionTime = lastInterruptionTime
     }
-}
-
-// InterruptionType is defined in AudioSessionInterruption.swift
-
-/// Detailed performance profile from profiling session
-public struct PerformanceProfile: Sendable {
-    /// Profiling session start time
-    public let startTime: Date
-
-    /// Profiling duration
-    public let duration: TimeInterval
-
-    /// Detailed CPU usage breakdown
-    public let cpuProfile: CPUProfile
-
-    /// Memory allocation patterns
-    public let memoryProfile: MemoryProfile
-
-    /// Audio latency analysis
-    public let latencyProfile: LatencyProfile
-
-    /// Buffer management analysis
-    public let bufferProfile: BufferProfile
-
-    /// Performance bottlenecks identified
-    public let bottlenecks: [PerformanceBottleneck]
-
-    /// Optimization opportunities
-    public let optimizations: [OptimizationOpportunity]
-
-    public init(
-        startTime: Date,
-        duration: TimeInterval,
-        cpuProfile: CPUProfile,
-        memoryProfile: MemoryProfile,
-        latencyProfile: LatencyProfile,
-        bufferProfile: BufferProfile,
-        bottlenecks: [PerformanceBottleneck],
-        optimizations: [OptimizationOpportunity],
-    ) {
-        self.startTime = startTime
-        self.duration = duration
-        self.cpuProfile = cpuProfile
-        self.memoryProfile = memoryProfile
-        self.latencyProfile = latencyProfile
-        self.bufferProfile = bufferProfile
-        self.bottlenecks = bottlenecks
-        self.optimizations = optimizations
-    }
-}
-
-/// CPU usage profiling information
-public struct CPUProfile: Sendable {
-    /// Average CPU usage
-    public let averageUsage: Float
-
-    /// Peak CPU usage
-    public let peakUsage: Float
-
-    /// CPU usage distribution
-    public let usageDistribution: [Float]
-
-    /// Time spent in different performance states
-    public let performanceStates: [PerformanceState: TimeInterval]
-
-    public init(
-        averageUsage: Float,
-        peakUsage: Float,
-        usageDistribution: [Float],
-        performanceStates: [PerformanceState: TimeInterval],
-    ) {
-        self.averageUsage = averageUsage
-        self.peakUsage = peakUsage
-        self.usageDistribution = usageDistribution
-        self.performanceStates = performanceStates
-    }
-}
-
-/// Memory usage profiling information
-public struct MemoryProfile: Sendable {
-    /// Average memory usage
-    public let averageUsage: Int64
-
-    /// Peak memory usage
-    public let peakUsage: Int64
-
-    /// Memory allocation patterns
-    public let allocationPatterns: [MemoryAllocation]
-
-    /// Memory leak indicators
-    public let leakIndicators: [MemoryLeakIndicator]
-
-    public init(
-        averageUsage: Int64,
-        peakUsage: Int64,
-        allocationPatterns: [MemoryAllocation],
-        leakIndicators: [MemoryLeakIndicator],
-    ) {
-        self.averageUsage = averageUsage
-        self.peakUsage = peakUsage
-        self.allocationPatterns = allocationPatterns
-        self.leakIndicators = leakIndicators
-    }
-}
-
-/// Latency profiling information
-public struct LatencyProfile: Sendable {
-    /// Average latency
-    public let averageLatency: TimeInterval
-
-    /// Maximum latency observed
-    public let maxLatency: TimeInterval
-
-    /// Latency distribution
-    public let latencyDistribution: [TimeInterval]
-
-    /// Latency spikes (above threshold)
-    public let spikes: [LatencySpike]
-
-    public init(
-        averageLatency: TimeInterval,
-        maxLatency: TimeInterval,
-        latencyDistribution: [TimeInterval],
-        spikes: [LatencySpike],
-    ) {
-        self.averageLatency = averageLatency
-        self.maxLatency = maxLatency
-        self.latencyDistribution = latencyDistribution
-        self.spikes = spikes
-    }
-}
-
-/// Buffer management profiling information
-public struct BufferProfile: Sendable {
-    /// Average buffer fill level
-    public let averageBufferFill: Float
-
-    /// Minimum buffer fill observed
-    public let minBufferFill: Float
-
-    /// Number of buffer underruns
-    public let underrunCount: Int
-
-    /// Buffer fill distribution
-    public let fillDistribution: [Float]
-
-    public init(
-        averageBufferFill: Float,
-        minBufferFill: Float,
-        underrunCount: Int,
-        fillDistribution: [Float],
-    ) {
-        self.averageBufferFill = averageBufferFill
-        self.minBufferFill = minBufferFill
-        self.underrunCount = underrunCount
-        self.fillDistribution = fillDistribution
-    }
-}
-
-/// Performance bottleneck identification
-public struct PerformanceBottleneck: Sendable {
-    /// Type of bottleneck
-    public let type: BottleneckType
-
-    /// Description of the issue
-    public let description: String
-
-    /// Severity of the bottleneck
-    public let severity: BottleneckSeverity
-
-    /// Performance impact percentage
-    public let impactPercentage: Float
-
-    public init(type: BottleneckType, description: String, severity: BottleneckSeverity, impactPercentage: Float) {
-        self.type = type
-        self.description = description
-        self.severity = severity
-        self.impactPercentage = impactPercentage
-    }
-}
-
-/// Types of performance bottlenecks
-public enum BottleneckType: String, Sendable {
-    case cpu
-    case memory
-    case io
-    case thermal
-    case buffer
-}
-
-/// Bottleneck severity levels
-public enum BottleneckSeverity: String, Sendable {
-    case minor
-    case moderate
-    case major
-    case critical
-}
-
-/// Optimization opportunity identification
-public struct OptimizationOpportunity: Sendable {
-    /// Type of optimization
-    public let type: OptimizationType
-
-    /// Description of the opportunity
-    public let description: String
-
-    /// Expected performance gain
-    public let expectedGain: Float
-
-    /// Implementation complexity
-    public let complexity: OptimizationComplexity
-
-    public init(type: OptimizationType, description: String, expectedGain: Float, complexity: OptimizationComplexity) {
-        self.type = type
-        self.description = description
-        self.expectedGain = expectedGain
-        self.complexity = complexity
-    }
-}
-
-/// Types of optimization opportunities
-public enum OptimizationType: String, Sendable {
-    case bufferSizing = "buffer_sizing"
-    case engineSelection = "engine_selection"
-    case formatOptimization = "format_optimization"
-    case resourceManagement = "resource_management"
-}
-
-/// Optimization implementation complexity
-public enum OptimizationComplexity: String, Sendable {
-    case low
-    case medium
-    case high
-}
-
-/// Performance states for profiling
-public enum PerformanceState: String, Sendable {
-    case idle
-    case decoding
-    case rendering
-    case buffering
-}
-
-/// Memory allocation information
-public struct MemoryAllocation: Sendable {
-    /// Allocation size
-    public let size: Int64
-
-    /// Allocation timestamp
-    public let timestamp: Date
-
-    /// Allocation type
-    public let type: MemoryAllocationType
-
-    public init(size: Int64, timestamp: Date, type: MemoryAllocationType) {
-        self.size = size
-        self.timestamp = timestamp
-        self.type = type
-    }
-}
-
-/// Types of memory allocations
-public enum MemoryAllocationType: String, Sendable {
-    case buffer
-    case decoder
-    case metadata
-    case temporary
-}
-
-/// Memory leak indicator
-public struct MemoryLeakIndicator: Sendable {
-    /// Suspected leak location
-    public let location: String
-
-    /// Leak size estimate
-    public let estimatedSize: Int64
-
-    /// Confidence level (0.0 to 1.0)
-    public let confidence: Double
-
-    public init(location: String, estimatedSize: Int64, confidence: Double) {
-        self.location = location
-        self.estimatedSize = estimatedSize
-        self.confidence = confidence
-    }
-}
-
-/// Latency spike information
-public struct LatencySpike: Sendable {
-    /// Spike timestamp
-    public let timestamp: Date
-
-    /// Spike duration
-    public let duration: TimeInterval
-
-    /// Peak latency during spike
-    public let peakLatency: TimeInterval
-
-    /// Possible cause
-    public let possibleCause: String?
-
-    public init(timestamp: Date, duration: TimeInterval, peakLatency: TimeInterval, possibleCause: String?) {
-        self.timestamp = timestamp
-        self.duration = duration
-        self.peakLatency = peakLatency
-        self.possibleCause = possibleCause
-    }
-}
-
-/// Export format options
-public enum ExportFormat: String, Sendable, CaseIterable {
-    case json
-    case csv
-    case xml
-    case binary
-
-    /// File extension for the format
-    public var fileExtension: String {
-        switch self {
-        case .json: "json"
-        case .csv: "csv"
-        case .xml: "xml"
-        case .binary: "bin"
-        }
-    }
-
-    /// MIME type for the format
-    public var mimeType: String {
-        switch self {
-        case .json: "application/json"
-        case .csv: "text/csv"
-        case .xml: "application/xml"
-        case .binary: "application/octet-stream"
-        }
-    }
-}
-
-/// Comprehensive monitoring report
-public struct MonitoringReport: Sendable {
-    /// Report generation timestamp
-    public let generatedAt: Date
-
-    /// Time range covered by the report
-    public let timeRange: DateInterval
-
-    /// Executive summary
-    public let summary: String
-
-    /// Key findings and insights
-    public let keyFindings: [String]
-
-    /// Performance trends
-    public let trends: [PerformanceTrend]
-
-    /// Recommendations for improvement
-    public let recommendations: [PerformanceRecommendation]
-
-    /// Raw metrics data summary
-    public let metricsData: AudioSessionSummary
-
-    /// Alert history during the period
-    public let alertHistory: [PlaybackAlert]
-
-    public init(
-        generatedAt: Date,
-        timeRange: DateInterval,
-        summary: String,
-        keyFindings: [String],
-        trends: [PerformanceTrend],
-        recommendations: [PerformanceRecommendation],
-        metricsData: AudioSessionSummary,
-        alertHistory: [PlaybackAlert],
-    ) {
-        self.generatedAt = generatedAt
-        self.timeRange = timeRange
-        self.summary = summary
-        self.keyFindings = keyFindings
-        self.trends = trends
-        self.recommendations = recommendations
-        self.metricsData = metricsData
-        self.alertHistory = alertHistory
-    }
-}
-
-/// Performance trend information
-public struct PerformanceTrend: Sendable {
-    /// Metric being tracked
-    public let metric: String
-
-    /// Trend direction
-    public let direction: TrendDirection
-
-    /// Trend magnitude (percentage change)
-    public let magnitude: Double
-
-    /// Statistical significance
-    public let significance: TrendSignificance
-
-    /// Description of the trend
-    public let description: String
-
-    public init(metric: String, direction: TrendDirection, magnitude: Double, significance: TrendSignificance, description: String) {
-        self.metric = metric
-        self.direction = direction
-        self.magnitude = magnitude
-        self.significance = significance
-        self.description = description
-    }
-}
-
-/// Trend direction indicators
-public enum TrendDirection: String, Sendable {
-    case improving
-    case degrading
-    case stable
-    case volatile
-}
-
-/// Trend statistical significance
-public enum TrendSignificance: String, Sendable {
-    case low
-    case medium
-    case high
-    case veryHigh = "very_high"
 }

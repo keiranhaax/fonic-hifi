@@ -9,8 +9,8 @@ final class DataManagerRecentTests: XCTestCase {
     private var manager: DataManager!
     private var temporaryDirectory: URL!
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
 
         temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -28,14 +28,14 @@ final class DataManagerRecentTests: XCTestCase {
         manager = DataManager(container: container, isFallback: false)
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         if let temporaryDirectory {
             try? FileManager.default.removeItem(at: temporaryDirectory)
         }
         manager = nil
         container = nil
         temporaryDirectory = nil
-        try super.tearDownWithError()
+        try await super.tearDown()
     }
 
     func testGetRecentlyAddedTracksReturnsNewestFirst() async throws {

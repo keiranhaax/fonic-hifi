@@ -11,11 +11,32 @@ import SwiftData
 /// Actor for managing recent searches using @ModelActor pattern
 @ModelActor
 public actor RecentSearchesActor {
+    // The macro-generated initializer uses the normal policy. The explicit policy
+    // initializer below sets this once for recovery-mode authorities.
+    private var mutationPolicy: DataMutationPolicy = .normal
+
+    public init(
+        modelContainer: ModelContainer,
+        mutationPolicy: DataMutationPolicy
+    ) {
+        let modelContext = ModelContext(modelContainer)
+        self.modelExecutor = DefaultSerialModelExecutor(modelContext: modelContext)
+        self.modelContainer = modelContainer
+        self.mutationPolicy = mutationPolicy
+    }
+
+    private func requireMutationAllowed() throws {
+        guard mutationPolicy == .normal else {
+            throw DataMutationError.readOnly
+        }
+    }
+
     // @ModelActor provides modelExecutor and modelContainer
     // No need for manual ModelContext - it's provided as modelContext
 
     /// Add a new search query to recent searches
     public func addSearch(_ query: String) async throws {
+        try requireMutationAllowed()
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedQuery.isEmpty else { return }
 
@@ -62,6 +83,7 @@ public actor RecentSearchesActor {
 
     /// Clear all recent searches
     public func clearAllSearches() async throws {
+        try requireMutationAllowed()
         let descriptor = FetchDescriptor<RecentSearch>()
         let allSearches = try modelContext.fetch(descriptor)
         for search in allSearches {
@@ -72,6 +94,7 @@ public actor RecentSearchesActor {
 
     /// Remove a specific recent search
     public func removeSearch(_ search: RecentSearchData) async throws {
+        try requireMutationAllowed()
         if let match = modelContext.model(for: search.id) as? RecentSearch {
             modelContext.delete(match)
             try modelContext.save()
@@ -80,6 +103,7 @@ public actor RecentSearchesActor {
 
     /// Update the result count for a search query
     public func updateResultCount(for query: String, count: Int) async throws {
+        try requireMutationAllowed()
         let normalizedQuery = normalize(query)
         let descriptor = FetchDescriptor<RecentSearch>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)],

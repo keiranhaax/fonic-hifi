@@ -23,15 +23,31 @@ public final class SleepTimerManager: ObservableObject {
     // MARK: - Private
 
     private let logger = Log.logger(.audio)
+    private let clock: any Clock<Duration>
+    private let now: () -> Date
     private var timerTask: Task<Void, Never>?
+    private var volumeRestoreTask: Task<Void, Never>?
+    private var deadline: Date?
     private var originalVolume: Float = 1.0
+    private var needsVolumeRestore = false
 
     // MARK: - Init
 
-    public init() {}
+    public convenience init() {
+        self.init(clock: ContinuousClock())
+    }
+
+    init(
+        clock: any Clock<Duration>,
+        now: @escaping () -> Date = Date.init
+    ) {
+        self.clock = clock
+        self.now = now
+    }
 
     deinit {
         timerTask?.cancel()
+        volumeRestoreTask?.cancel()
     }
 
     // MARK: - Public API
@@ -39,18 +55,26 @@ public final class SleepTimerManager: ObservableObject {
     /// Start sleep timer with specified duration.
     /// - Parameter seconds: Total timer duration
     /// - Parameter currentVolume: Current audio volume for fade-out restoration
-    public func start(seconds: Int, currentVolume: Float = 1.0) {
+    public func start(seconds: Int, currentVolume: Float) {
         stop()
-        remainingSeconds = seconds
-        originalVolume = currentVolume
+        let duration = max(1, seconds)
+        remainingSeconds = duration
+        deadline = now().addingTimeInterval(TimeInterval(duration))
+        originalVolume = min(max(currentVolume, 0), 1)
+        needsVolumeRestore = true
         isActive = true
-        logger.debug("Sleep timer started: \(seconds)s, fade: \(self.fadeOutDuration)s")
+        logger.debug("Sleep timer started: \(duration, privacy: .public)s, fade: \(self.fadeOutDuration, privacy: .public)s")
 
+        let clock = clock
         timerTask = Task { @MainActor [weak self] in
             while let self, self.isActive, self.remainingSeconds > 0 {
-                try? await Task.sleep(for: .seconds(1))
-                guard !Task.isCancelled else { break }
-                self.remainingSeconds -= 1
+                do {
+                    try await clock.sleep(for: .seconds(1))
+                    try Task.checkCancellation()
+                } catch {
+                    return
+                }
+                self.refreshRemainingTime()
 
                 // Handle fade-out
                 if self.fadeOutDuration > 0, self.remainingSeconds <= self.fadeOutDuration {
@@ -68,12 +92,19 @@ public final class SleepTimerManager: ObservableObject {
 
     /// Stop and reset the timer.
     public func stop() {
+        cancel(restoreVolume: true)
+    }
+
+    func cancel(restoreVolume: Bool) {
         timerTask?.cancel()
         timerTask = nil
-        if isActive {
-            // Restore original volume if stopped mid-fade
+        volumeRestoreTask?.cancel()
+        volumeRestoreTask = nil
+        deadline = nil
+        if restoreVolume, needsVolumeRestore {
             onVolumeChange?(originalVolume)
         }
+        needsVolumeRestore = false
         isActive = false
         remainingSeconds = 0
         logger.debug("Sleep timer stopped")
@@ -83,14 +114,31 @@ public final class SleepTimerManager: ObservableObject {
 
     private func timerComplete() {
         logger.info("Sleep timer complete")
+        timerTask = nil
+        deadline = nil
         isActive = false
         onComplete?()
+
         // Restore volume after a brief delay (for next play)
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(500))
-            if let self {
-                self.onVolumeChange?(self.originalVolume)
+        let clock = clock
+        volumeRestoreTask = Task { @MainActor [weak self] in
+            do {
+                try await clock.sleep(for: .milliseconds(500))
+                try Task.checkCancellation()
+            } catch {
+                return
             }
+
+            guard let self, self.needsVolumeRestore else { return }
+            self.needsVolumeRestore = false
+            self.volumeRestoreTask = nil
+            self.onVolumeChange?(self.originalVolume)
         }
+    }
+
+    private func refreshRemainingTime() {
+        guard let deadline else { return }
+        let wallClockRemaining = max(0, Int(ceil(deadline.timeIntervalSince(now()))))
+        remainingSeconds = min(remainingSeconds, wallClockRemaining)
     }
 }

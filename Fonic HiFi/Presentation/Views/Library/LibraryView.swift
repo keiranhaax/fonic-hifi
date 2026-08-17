@@ -6,6 +6,7 @@
 //
 
 import Combine
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -45,16 +46,18 @@ struct LibraryView: View {
     }
 
     @StateObject private var viewModel: LibraryViewModel
-    @Environment(\.importService) private var importService
-    @Environment(\.audioEngine) private var audioEngine
+    @EnvironmentObject private var importService: LibraryImportService
+    @EnvironmentObject private var audioEngine: AudioEngineFacade
+    @Environment(\.dataManager) private var dataManager
     @Environment(\.showingNowPlaying) private var showingNowPlaying
     @Environment(\.artworkService) private var artworkService
     @Environment(\.themePalette) private var theme
 
     @State private var selectedTab = LibraryTab.tracks
     @State private var searchText = ""
-    @State private var showingImportView = false
+    @State private var showingFilePicker = false
     @State private var showingImportProgress = false
+    @State private var pickerFailure: ImportPickerFailure?
     @State private var showingCreatePlaylist = false
     @State private var selectedTrack: TrackEntity?
     @State private var selectedAlbum: AlbumEntity?
@@ -69,10 +72,9 @@ struct LibraryView: View {
 
     static func loadingOverlayMessage(
         selectedTab: LibraryTab,
-        loadingSection: LibraryViewModel.Section?,
-        itemCount: Int
+        phase: LibraryViewModel.LoadPhase
     ) -> String? {
-        guard loadingSection == selectedTab.section, itemCount == 0 else { return nil }
+        guard phase == .initial else { return nil }
         return selectedTab.loadingDescription
     }
 
@@ -95,8 +97,10 @@ struct LibraryView: View {
 
                     if shouldShowEmptyState {
                         EmptyLibraryView {
-                            showingImportView = true
+                            guard !isReadOnly, !importService.isImporting else { return }
+                            showingFilePicker = true
                         }
+                        .disabled(isReadOnly || importService.isImporting)
                     }
                 }
             }
@@ -106,35 +110,43 @@ struct LibraryView: View {
                     Button(action: primaryToolbarAction) {
                         Image(systemName: selectedTab == .playlists ? "plus" : "plus.circle.fill")
                     }
+                    .disabled(isReadOnly || (selectedTab != .playlists && importService.isImporting))
                 }
             }
         }
         .searchable(text: $searchText, prompt: "Search \(selectedTab.rawValue)")
-        .sheet(isPresented: $showingImportView) {
-            if let importService {
-                FileImportView()
-                    .importService(importService)
-            } else {
-                RecoveryUnavailableView(
-                    launchError: LaunchError(message: "Import service unavailable."),
-                    fallbackError: nil
-                )
-            }
+        .fileImporter(
+            isPresented: $showingFilePicker,
+            allowedContentTypes: AudioImportContentTypes.all + [.folder],
+            allowsMultipleSelection: true
+        ) { result in
+            handleFileSelection(result)
+        }
+        .alert(item: $pickerFailure) { failure in
+            Alert(
+                title: Text(failure.title),
+                message: Text(failure.message),
+                primaryButton: .default(Text("Try Again")) {
+                    guard !isReadOnly, !importService.isImporting else { return }
+                    showingFilePicker = true
+                },
+                secondaryButton: .cancel()
+            )
         }
         .sheet(isPresented: $showingImportProgress) {
-            if let importService {
-                ImportProgressView()
-                    .importService(importService)
-                    .interactiveDismissDisabled(importService.isImporting)
-            } else {
-                RecoveryUnavailableView(
-                    launchError: LaunchError(message: "Import service unavailable."),
-                    fallbackError: nil
-                )
-            }
+            ImportProgressView()
+                .importService(importService)
+                .interactiveDismissDisabled(importService.isImporting)
         }
         .sheet(isPresented: $showingCreatePlaylist) {
-            CreatePlaylistView()
+            CreatePlaylistView { _ in
+                Task { @MainActor in
+                    await viewModel.refresh(
+                        section: .playlists,
+                        query: normalized(searchText)
+                    )
+                }
+            }
         }
         .sheet(item: $selectedTrack) { track in
             TrackEntityDetailView(track: track)
@@ -164,28 +176,40 @@ struct LibraryView: View {
         } message: { error in
             Text(error.errorDescription ?? "An unknown error occurred")
         }
-        .onChange(of: importService?.isImporting) { _, isImporting in
-            if isImporting == true {
-                showingImportView = false
+        .onChange(of: importService.isImporting) { _, isImporting in
+            if isImporting {
                 showingImportProgress = true
             }
         }
-        .onChange(of: selectedTab) { _, newValue in
+        .onChange(of: selectedTab) { oldValue, newValue in
+            searchTask?.cancel()
+            viewModel.cancelRequest(for: oldValue.section)
             Task { @MainActor in
                 await refresh(for: newValue)
             }
         }
         .onChange(of: searchText) { _, newValue in
+            viewModel.cancelRequest(for: selectedTab.section)
             scheduleSearchRefresh(for: newValue)
         }
         .onReceive(viewModel.$lastError) { error in
             showingErrorAlert = error != nil
         }
+        .onReceive(libraryRevisionPublisher) { _ in
+            searchTask?.cancel()
+            Task { @MainActor in
+                await refresh(for: selectedTab, resetExisting: false)
+            }
+        }
         .task {
+            if importService.isImporting {
+                showingImportProgress = true
+            }
             await ensureInitialLoad()
         }
         .onDisappear {
             searchTask?.cancel()
+            viewModel.cancelRequest(for: selectedTab.section)
         }
     }
 
@@ -216,7 +240,7 @@ struct LibraryView: View {
                 }
             }
 
-            if viewModel.isLoadingSection == .tracks {
+            if viewModel.loadPhase(for: .tracks) == .pagination {
                 LoadingListRow()
             }
         }
@@ -253,7 +277,7 @@ struct LibraryView: View {
             }
             .padding()
 
-            if viewModel.isLoadingSection == .albums {
+            if viewModel.loadPhase(for: .albums) == .pagination {
                 ProgressView()
                     .padding(.vertical, DesignTokens.Spacing.xLarge)
             }
@@ -276,7 +300,7 @@ struct LibraryView: View {
                     }
             }
 
-            if viewModel.isLoadingSection == .artists {
+            if viewModel.loadPhase(for: .artists) == .pagination {
                 LoadingListRow()
             }
         }
@@ -299,7 +323,7 @@ struct LibraryView: View {
                     }
             }
 
-            if viewModel.isLoadingSection == .playlists {
+            if viewModel.loadPhase(for: .playlists) == .pagination {
                 LoadingListRow()
             }
         }
@@ -307,7 +331,7 @@ struct LibraryView: View {
     }
 
     private var shouldShowEmptyState: Bool {
-        guard loadingMessage == nil else { return false }
+        guard selectedLoadPhase == .idle else { return false }
 
         switch selectedTab {
         case .tracks: return viewModel.tracks.isEmpty
@@ -320,25 +344,50 @@ struct LibraryView: View {
     private var loadingMessage: String? {
         Self.loadingOverlayMessage(
             selectedTab: selectedTab,
-            loadingSection: viewModel.isLoadingSection,
-            itemCount: selectedItemCount
+            phase: selectedLoadPhase
         )
     }
 
-    private var selectedItemCount: Int {
-        switch selectedTab {
-        case .tracks: viewModel.tracks.count
-        case .albums: viewModel.albums.count
-        case .artists: viewModel.artists.count
-        case .playlists: viewModel.playlists.count
+    private var selectedLoadPhase: LibraryViewModel.LoadPhase {
+        viewModel.loadPhase(for: selectedTab.section)
+    }
+
+    private var libraryRevisionPublisher: AnyPublisher<UInt64, Never> {
+        guard let dataManager else {
+            return Empty(completeImmediately: false).eraseToAnyPublisher()
         }
+        return dataManager.$libraryRevision
+            .dropFirst()
+            .eraseToAnyPublisher()
+    }
+
+    private var isReadOnly: Bool {
+        dataManager?.mutationPolicy == .readOnly
     }
 
     private func primaryToolbarAction() {
+        guard !isReadOnly else { return }
         if selectedTab == .playlists {
             showingCreatePlaylist = true
-        } else {
-            showingImportView = true
+        } else if !importService.isImporting {
+            showingFilePicker = true
+        }
+    }
+
+    private func handleFileSelection(_ result: Result<[URL], Error>) {
+        guard !isReadOnly, !importService.isImporting else { return }
+        switch ImportPickerSelection.resolve(result, surface: .fileSelection) {
+        case let .selected(urls):
+            guard !urls.isEmpty else { return }
+            showingImportProgress = true
+            importService.importFiles(from: urls)
+        case let .failed(failure):
+            if case let .failure(error) = result {
+                Log.logger(.library).error(
+                    "File selection failed: \(error.localizedDescription, privacy: .private)"
+                )
+            }
+            pickerFailure = failure
         }
     }
 
@@ -370,7 +419,6 @@ struct LibraryView: View {
     }
 
     private func playTrack(_ track: TrackEntity) {
-        guard let audioEngine else { return }
         Task {
             let artwork = await artworkService?.artwork(for: track.id)
             let playableTrack = track.asTrackRepresentation(artwork: artwork)
@@ -379,7 +427,10 @@ struct LibraryView: View {
             do {
                 try await audioEngine.play(track: playableTrack)
             } catch {
-                Log.logger(.library).error("Failed to play track: \(error.localizedDescription, privacy: .public)")
+                audioEngine.reportPlaybackControlError(error)
+                audioEngine.setCurrentTrack(nil)
+                showingNowPlaying.wrappedValue = false
+                Log.logger(.library).error("Failed to play track: \(error.localizedDescription, privacy: .private)")
             }
         }
     }
@@ -401,6 +452,7 @@ struct LibraryView: View {
 }
 
 private struct TrackEntityRow: View {
+    @Environment(\.locale) private var locale
     let track: TrackEntity
     let onPlay: () -> Void
     let onInfo: () -> Void
@@ -416,7 +468,11 @@ private struct TrackEntityRow: View {
                             .font(.headline)
                             .lineLimit(2)
 
-                        Text("\(track.artist) • \(track.album)")
+                        Text(verbatim: LocalizedFormatters.artistAlbum(
+                            artist: track.artist,
+                            album: track.album,
+                            locale: locale
+                        ))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -493,6 +549,7 @@ private struct AlbumEntityTile: View {
 }
 
 private struct ArtistEntityRow: View {
+    @Environment(\.locale) private var locale
     let artist: ArtistEntity
 
     var body: some View {
@@ -511,8 +568,22 @@ private struct ArtistEntityRow: View {
                     .lineLimit(1)
 
                 HStack(spacing: 12) {
-                    Label("\(artist.albumCount) Albums", systemImage: "square.stack")
-                    Label("\(artist.trackCount) Tracks", systemImage: "music.note")
+                    Label {
+                        Text(verbatim: LocalizedFormatters.albumCount(
+                            artist.albumCount,
+                            locale: locale
+                        ))
+                    } icon: {
+                        Image(systemName: "square.stack")
+                    }
+                    Label {
+                        Text(verbatim: LocalizedFormatters.trackCount(
+                            artist.trackCount,
+                            locale: locale
+                        ))
+                    } icon: {
+                        Image(systemName: "music.note")
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -528,6 +599,7 @@ private struct ArtistEntityRow: View {
 }
 
 private struct PlaylistEntityRow: View {
+    @Environment(\.locale) private var locale
     let playlist: PlaylistEntity
 
     var body: some View {
@@ -552,7 +624,10 @@ private struct PlaylistEntityRow: View {
                         .lineLimit(2)
                 }
 
-                Text("\(playlist.trackCount) Tracks")
+                Text(verbatim: LocalizedFormatters.trackCount(
+                    playlist.trackCount,
+                    locale: locale
+                ))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -580,6 +655,7 @@ private struct LoadingListRow: View {
 private struct TrackEntityDetailView: View {
     let track: TrackEntity
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
 
     var body: some View {
         NavigationStack {
@@ -607,7 +683,13 @@ private struct TrackEntityDetailView: View {
                     detailSection(title: "Technical") {
                         LibraryDetailRow(label: "Format", value: track.audioFormat)
                         LibraryDetailRow(label: "Duration", value: track.formattedDuration)
-                        LibraryDetailRow(label: "Sample Rate", value: "\(Int(track.sampleRate)) Hz")
+                        LibraryDetailRow(
+                            label: "Sample Rate",
+                            value: LocalizedFormatters.sampleRate(
+                                track.sampleRate,
+                                locale: locale
+                            )
+                        )
                         LibraryDetailRow(label: "Bit Depth", value: "\(track.bitDepth)-bit")
                         LibraryDetailRow(label: "Channels", value: channelDescription)
                         LibraryDetailRow(label: "File Size", value: track.formattedFileSize)
@@ -646,6 +728,7 @@ private struct TrackEntityDetailView: View {
 private struct AlbumEntityDetailView: View {
     let album: AlbumEntity
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
 
     var body: some View {
         NavigationStack {
@@ -671,7 +754,14 @@ private struct AlbumEntityDetailView: View {
                         .foregroundStyle(.secondary)
 
                     HStack(spacing: 12) {
-                        Label("\(album.trackCount) Tracks", systemImage: "music.note")
+                        Label {
+                            Text(verbatim: LocalizedFormatters.trackCount(
+                                album.trackCount,
+                                locale: locale
+                            ))
+                        } icon: {
+                            Image(systemName: "music.note")
+                        }
                         if let year = album.year {
                             Label(String(year), systemImage: "calendar")
                         }
@@ -697,6 +787,7 @@ private struct AlbumEntityDetailView: View {
 private struct ArtistEntityDetailView: View {
     let artist: ArtistEntity
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
 
     var body: some View {
         NavigationStack {
@@ -716,8 +807,22 @@ private struct ArtistEntityDetailView: View {
                     .fontWeight(.semibold)
 
                 HStack(spacing: 16) {
-                    Label("\(artist.albumCount) Albums", systemImage: "square.stack")
-                    Label("\(artist.trackCount) Tracks", systemImage: "music.note")
+                    Label {
+                        Text(verbatim: LocalizedFormatters.albumCount(
+                            artist.albumCount,
+                            locale: locale
+                        ))
+                    } icon: {
+                        Image(systemName: "square.stack")
+                    }
+                    Label {
+                        Text(verbatim: LocalizedFormatters.trackCount(
+                            artist.trackCount,
+                            locale: locale
+                        ))
+                    } icon: {
+                        Image(systemName: "music.note")
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -739,45 +844,26 @@ private struct ArtistEntityDetailView: View {
 private struct PlaylistEntityDetailView: View {
     let playlist: PlaylistEntity
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dataManager) private var dataManager
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.purple.opacity(0.2))
-                    .frame(width: 160, height: 160)
-                    .overlay(
-                        Image(systemName: "music.note.list")
-                            .font(.system(size: 60))
-                            .foregroundStyle(.purple)
+            Group {
+                if let trackDataActor = dataManager?.trackDataActor {
+                    PlaylistEditorView(
+                        playlist: playlist,
+                        store: trackDataActor
                     )
-                    .padding(.top, 40)
-
-                Text(playlist.name)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-
-                if let description = playlist.description, !description.isEmpty {
-                    Text(description)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
+                } else {
+                    ContentUnavailableView(
+                        "Playlist Unavailable",
+                        systemImage: "music.note.list",
+                        description: Text("Playlist storage is unavailable.")
+                    )
                 }
-
-                Text("\(playlist.trackCount) Tracks")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
             }
-            .padding()
-            .navigationTitle("Playlist")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
             }

@@ -38,9 +38,9 @@ public extension DataManager {
         let dirStart = CFAbsoluteTimeGetCurrent()
         Self.ensureAppGroupDirectoriesExist()
         let dirDuration = String(format: "%.3f", CFAbsoluteTimeGetCurrent() - dirStart)
-        Self.initLogger.info("Directory setup: \(dirDuration)s")
+        Self.initLogger.info("Directory setup: \(dirDuration, privacy: .public)s")
 
-        let schema = Schema(SchemaV2.models)
+        let schema = Schema(versionedSchema: SchemaV3.self)
         let modelConfiguration = ModelConfiguration(
             isStoredInMemoryOnly: false,
             allowsSave: true,
@@ -56,22 +56,27 @@ public extension DataManager {
                 logger: Self.initLogger
             )
             let containerDuration = String(format: "%.3f", CFAbsoluteTimeGetCurrent() - containerStart)
-            Self.initLogger.info("Container creation: \(containerDuration)s")
+            Self.initLogger.info("Container creation: \(containerDuration, privacy: .public)s")
 
-            self.init(container: container, isFallback: false)
+            self.init(container: container, isFallback: false, mutationPolicy: .normal)
 
             let totalDuration = String(format: "%.3f", CFAbsoluteTimeGetCurrent() - startTime)
-            Self.initLogger.info("DataManager initialized successfully in \(totalDuration)s")
+            Self.initLogger.info("DataManager initialized successfully in \(totalDuration, privacy: .public)s")
         } catch {
-            Self.initLogger.error("Failed to initialize DataManager: \(error)")
-            Self.initLogger.error("Error details: \(String(reflecting: error))")
+            Self.initLogger.error("Failed to initialize DataManager: \(error, privacy: .private)")
+            Self.initLogger.error("Error details: \(String(reflecting: error), privacy: .private)")
 
             // Try emergency fallback
             Self.initLogger.info("Attempting emergency fallback DataManager")
             if let fallback = try? Self.ensureFallbackDataManager() {
                 Self.initLogger.info("Successfully created emergency fallback DataManager")
                 // Copy the fallback's container
-                self.init(container: fallback.container, isFallback: true, importRecoveryState: fallback.importRecoveryState)
+                self.init(
+                    container: fallback.container,
+                    isFallback: true,
+                    importRecoveryState: fallback.importRecoveryState,
+                    mutationPolicy: fallback.mutationPolicy
+                )
                 return
             }
 
@@ -111,10 +116,10 @@ extension DataManager {
             if !fileManager.fileExists(atPath: url.path) {
                 do {
                     try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
-                    initLogger.info("Created directory: \(LogPrivacy.filename(url.lastPathComponent))")
+                    initLogger.info("Created directory: \(LogPrivacy.filename(url.lastPathComponent), privacy: .private(mask: .hash))")
                 } catch {
                     // Log but don't throw - let SwiftData attempt its own recovery
-                    initLogger.error("Failed to create directory: \(error.localizedDescription)")
+                    initLogger.error("Failed to create directory: \(error.localizedDescription, privacy: .private)")
                 }
             }
         }
@@ -125,59 +130,22 @@ extension DataManager {
         configuration: ModelConfiguration,
         logger: Logger
     ) throws -> ModelContainer {
-        // First attempt: Try creating container normally
+        // The user store must always be opened through the complete production
+        // migration plan. Retrying the same store without a plan can mutate its
+        // metadata before a versioned migration is selected.
         do {
-            logger.info("Creating container without migration plan")
+            logger.info("Creating container with production migration plan")
             let container = try ModelContainer(
                 for: schema,
+                migrationPlan: FonicHiFiMigrationPlan.self,
                 configurations: [configuration]
             )
-            logger.info("Successfully created ModelContainer")
+            logger.info("Successfully created ModelContainer with migration plan")
             return container
         } catch {
-            logger.error("Failed to create ModelContainer without migration plan: \(error)")
-            logger.error("Error details: \(String(reflecting: error))")
-
-            // Second attempt: Try with migration plan (for legacy SchemaV1 → V2 upgrades)
-            do {
-                logger.info("Attempting fallback container with migration plan")
-                let container = try ModelContainer(
-                    for: schema,
-                    migrationPlan: RecentSearchMigrationPlan.self,
-                    configurations: [configuration]
-                )
-                logger.info("Successfully created ModelContainer with migration plan")
-                return container
-            } catch {
-                logger.critical("Failed to create fallback ModelContainer with migration plan: \(error)")
-                logger.critical("Fallback error details: \(String(reflecting: error))")
-
-                // Third attempt: Try individual model validation (DEBUG only)
-                #if DEBUG
-                logger.info("Running model container debugging...")
-                debugModelContainer()
-                #endif
-
-                // Fourth attempt: Try with minimal configuration
-                do {
-                    logger.info("Attempting minimal container configuration")
-                    let minimalConfig = ModelConfiguration(
-                        isStoredInMemoryOnly: true,
-                        allowsSave: false,
-                        cloudKitDatabase: .none
-                    )
-                    let container = try ModelContainer(
-                        for: schema,
-                        configurations: [minimalConfig]
-                    )
-                    logger.info("Successfully created minimal ModelContainer")
-                    return container
-                } catch {
-                    logger.critical("Minimal container creation failed: \(error)")
-                    logger.critical("Minimal error details: \(String(reflecting: error))")
-                    throw error
-                }
-            }
+            logger.critical("Failed to create ModelContainer with migration plan: \(error, privacy: .private)")
+            logger.error("Error details: \(String(reflecting: error), privacy: .private)")
+            throw error
         }
     }
 }
@@ -187,15 +155,25 @@ extension DataManager {
 @MainActor
 public extension DataManager {
     static func previewContainer() -> ModelContainer? {
-        let modelTypes: [any PersistentModel.Type] = [
-            Track.self,
-            Artist.self,
-            Album.self,
-            Playlist.self,
-            RecentSearch.self,
-        ]
+        previewContainerWithPolicy()?.container
+    }
 
-        let schema = Schema(modelTypes)
+    static func makePreviewDataManager() -> DataManager? {
+        initLogger.info("Creating preview DataManager")
+        guard let preview = previewContainerWithPolicy() else {
+            initLogger.error("Unable to create an in-memory preview DataManager")
+            return nil
+        }
+
+        return DataManager(
+            container: preview.container,
+            isFallback: false,
+            mutationPolicy: preview.policy
+        )
+    }
+
+    private static func previewContainerWithPolicy() -> (container: ModelContainer, policy: DataMutationPolicy)? {
+        let schema = Schema(versionedSchema: SchemaV3.self)
         let modelConfiguration = ModelConfiguration(
             isStoredInMemoryOnly: true,
             allowsSave: true,
@@ -207,7 +185,7 @@ public extension DataManager {
             configuration: modelConfiguration,
             logger: initLogger
         ) {
-            return container
+            return (container, .normal)
         }
 
         initLogger.fault("Falling back to read-only preview container")
@@ -221,94 +199,31 @@ public extension DataManager {
             for: schema,
             configurations: [readOnlyConfiguration]
         ) {
-            return container
+            return (container, .readOnly)
         }
 
         initLogger.critical("Unable to create preview container")
         return nil
     }
 
-    static func makePreviewDataManager() -> DataManager? {
-        initLogger.info("Creating preview DataManager")
-        guard let container = previewContainer() else {
-            initLogger.error("Unable to create an in-memory preview DataManager")
-            return nil
-        }
-
-        return DataManager(container: container, isFallback: false)
-    }
-
-    #if DEBUG
-    /// Test creating a container with minimal models to identify which one is problematic
-    static func debugModelContainer() {
-        initLogger.info("Starting model container debugging")
-
-        let modelTypes: [(String, any PersistentModel.Type)] = [
-            ("Track", Track.self),
-            ("Artist", Artist.self),
-            ("Album", Album.self),
-            ("Playlist", Playlist.self),
-            ("RecentSearch", RecentSearch.self),
-        ]
-
-        for (name, modelType) in modelTypes {
-            do {
-                initLogger.info("Testing individual model: \(name)")
-                let container = try ModelContainer(for: modelType)
-                initLogger.info("✓ \(name) model container created successfully")
-
-                // Test creating a context
-                let context = ModelContext(container)
-                initLogger.info("✓ \(name) model context created successfully")
-            } catch {
-                initLogger.error("✗ \(name) model failed: \(error)")
-            }
-        }
-
-        // Test combinations
-        initLogger.info("Testing model combinations...")
-
-        do {
-            let container = try ModelContainer(for: Track.self, Artist.self)
-            initLogger.info("✓ Track + Artist combination works")
-        } catch {
-            initLogger.error("✗ Track + Artist combination failed: \(error)")
-        }
-
-        do {
-            let container = try ModelContainer(for: Track.self, Album.self)
-            initLogger.info("✓ Track + Album combination works")
-        } catch {
-            initLogger.error("✗ Track + Album combination failed: \(error)")
-        }
-    }
-    #endif
-
     static func makePreviewImportService() -> LibraryImportService? {
         guard let container = previewContainer() else {
             return nil
         }
 
-        let trackDataActor = TrackDataActor(modelContainer: container)
+        let trackDataActor = TrackDataActor(modelContainer: container, mutationPolicy: .normal)
         let metadataExtractor = MetadataExtractionService(
             formatDetectionService: AudioFormatDetectionManager()
         )
         return LibraryImportService(
             trackDataActor: trackDataActor,
-            metadataExtractor: metadataExtractor
+            metadataExtractor: metadataExtractor,
+            mutationPolicy: .normal
         )
     }
 
     static func makeFallbackDataManager() -> DataManager? {
-        let modelTypes: [any PersistentModel.Type] = [
-            Track.self,
-            Artist.self,
-            Album.self,
-            Playlist.self,
-            RecentSearch.self,
-        ]
-
-        let schema = Schema(modelTypes)
+        let schema = Schema(versionedSchema: SchemaV3.self)
         let configuration = ModelConfiguration(
             isStoredInMemoryOnly: true,
             allowsSave: true,
@@ -323,7 +238,7 @@ public extension DataManager {
             )
             return makeFallbackManager(container: container, mode: .ephemeralStorage)
         } catch {
-            initLogger.critical("Failed to create fallback DataManager: \(error.localizedDescription)")
+            initLogger.critical("Failed to create fallback DataManager: \(error.localizedDescription, privacy: .private)")
             return nil
         }
     }
@@ -333,19 +248,7 @@ public extension DataManager {
             return fallback
         }
 
-        if let preview = makePreviewDataManager() {
-            return preview
-        }
-
-        let modelTypes: [any PersistentModel.Type] = [
-            Track.self,
-            Artist.self,
-            Album.self,
-            Playlist.self,
-            RecentSearch.self,
-        ]
-
-        let schema = Schema(modelTypes)
+        let schema = Schema(versionedSchema: SchemaV3.self)
         let inMemoryConfiguration = ModelConfiguration(
             isStoredInMemoryOnly: true,
             allowsSave: false,
@@ -367,13 +270,15 @@ public extension DataManager {
             return makeFallbackManager(container: container, mode: .readOnly)
         }
 
-        do {
-            let container = try ModelContainer(for: schema)
-            return makeFallbackManager(container: container, mode: .readOnly)
-        } catch {
-            initLogger.critical("Emergency fallback container creation failed: \(error.localizedDescription)")
-            throw DataManagerError.emergencyFallbackFailed(error)
-        }
+        let error = DataManagerError.emergencyFallbackFailed(
+            NSError(
+                domain: "DataManager",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Unable to create an in-memory recovery container."]
+            )
+        )
+        initLogger.critical("Emergency fallback container creation failed")
+        throw error
     }
 }
 
@@ -385,7 +290,8 @@ private extension DataManager {
         DataManager(
             container: container,
             isFallback: true,
-            importRecoveryState: recoveryState(for: mode)
+            importRecoveryState: recoveryState(for: mode),
+            mutationPolicy: .readOnly
         )
     }
 

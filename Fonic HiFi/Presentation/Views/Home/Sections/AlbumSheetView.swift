@@ -12,16 +12,22 @@ import SwiftUI
 struct AlbumSheetView: View {
     let album: Album
     let onTrackTap: (Track) -> Void
+    let onPlay: (([Track], Int) -> Void)?
+    let onShuffle: (([Track]) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @Query private var tracks: [Track]
 
     init(
         album: Album,
-        onTrackTap: @escaping (Track) -> Void
+        onTrackTap: @escaping (Track) -> Void,
+        onPlay: (([Track], Int) -> Void)? = nil,
+        onShuffle: (([Track]) -> Void)? = nil
     ) {
         self.album = album
         self.onTrackTap = onTrackTap
+        self.onPlay = onPlay
+        self.onShuffle = onShuffle
 
         let albumTitle = album.title
         let albumArtist = album.albumArtist
@@ -101,8 +107,12 @@ struct AlbumSheetView: View {
     private var actionButtons: some View {
         HStack(spacing: 12) {
             Button {
-                if let firstTrack = tracks.first {
-                    onTrackTap(firstTrack)
+                if !tracks.isEmpty {
+                    if let onPlay {
+                        onPlay(tracks, 0)
+                    } else if let firstTrack = tracks.first {
+                        onTrackTap(firstTrack)
+                    }
                 }
             } label: {
                 Label("Play", systemImage: "play.fill")
@@ -112,8 +122,12 @@ struct AlbumSheetView: View {
             .disabled(tracks.isEmpty)
 
             Button {
-                if let randomTrack = tracks.randomElement() {
-                    onTrackTap(randomTrack)
+                if !tracks.isEmpty {
+                    if let onShuffle {
+                        onShuffle(tracks)
+                    } else if let randomTrack = tracks.randomElement() {
+                        onTrackTap(randomTrack)
+                    }
                 }
             } label: {
                 Label("Shuffle", systemImage: "shuffle")

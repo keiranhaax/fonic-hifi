@@ -9,6 +9,7 @@
 import AVFoundation
 import Combine
 import Foundation
+import OSLog
 
 /// AudioKit-based implementation of AudioEngineService with native scheduling
 @MainActor
@@ -35,36 +36,70 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
 
     /// Completion handler for when playback finishes
     private var completionHandler: (() -> Void)?
+    private enum PlayerSlot: Sendable, Equatable {
+        case primary
+        case secondary
+    }
+
+    private var playbackGeneration: UUID?
+    private var pendingCompletion: (generation: UUID, slot: PlayerSlot)?
 
     @Published public private(set) var _isPlaying = false
     @Published public private(set) var _currentTime: TimeInterval = 0
     @Published public private(set) var _duration: TimeInterval = 0
     @Published public private(set) var _volume: Float = 1.0
 
-    private var updateTimer: Timer?
     private var configuration: AudioEngineConfiguration = .default
     private var crossfadeTask: Task<Void, Never>?
+    private var crossfadeGeneration: UUID?
+    private var crossfadeSleeper: @MainActor (Swift.Duration) async throws -> Void = {
+        try await Task.sleep(for: $0)
+    }
     private var currentPlaybackRate: Double = 1.0
     private var currentGainDB: Float = 0
 
     // MARK: - AudioEngineService Properties
 
-    public var currentTime: TimeInterval { get async { _currentTime } }
+    public var currentTime: TimeInterval {
+        get async {
+            _isPlaying ? activePlayer.currentTime : _currentTime
+        }
+    }
     public var duration: TimeInterval { get async { _duration } }
     public var isPlaying: Bool { get async { _isPlaying } }
     public var volume: Float { get async { _volume } }
 
     public var audioFormat: AudioFormat? {
         get async {
-            guard let file = currentFile else { return nil }
-            return AudioFormat.from(avAudioFormat: file.fileFormat)
+            guard let url = currentFile?.url else { return nil }
+            return AudioFormat.from(url: url) ?? .unknown
         }
     }
 
     public var isBitPerfect: Bool {
         get async {
-            configuration.performanceMode == .quality && abs(currentGainDB) < .ulpOfOne
+            // Unified engine contract: loaded track, no engine-side processing,
+            // unity volume, and no detectable file-to-output rate conversion.
+            // Performance mode is a preference, not signal-path evidence.
+            guard let file = currentFile else { return false }
+            let outputSampleRate = engine.avEngine.outputNode.outputFormat(forBus: 0).sampleRate
+            return file.processingFormat.sampleRate == outputSampleRate &&
+                currentPlaybackRate == 1 &&
+                abs(currentGainDB) < .ulpOfOne &&
+                _volume == 1
         }
+    }
+
+    public func playbackFormatEvidence() async -> AudioEngineFormatEvidence? {
+        let outputFormat = engine.avEngine.outputNode.outputFormat(forBus: 0)
+        return AudioEngineFormatEvidence(
+            isTrackLoaded: currentFile != nil,
+            loadedSampleRate: currentFile?.processingFormat.sampleRate,
+            loadedChannelCount: currentFile.map { Int($0.processingFormat.channelCount) },
+            engineOutputSampleRate: outputFormat.sampleRate > 0 ? outputFormat.sampleRate : nil,
+            engineOutputChannelCount: outputFormat.channelCount > 0 ? Int(outputFormat.channelCount) : nil,
+            hasEngineProcessing: currentPlaybackRate != 1 || abs(currentGainDB) >= .ulpOfOne
+        )
     }
 
     // MARK: - Initialization
@@ -82,7 +117,7 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         do {
             try setupAudioKitEngine()
         } catch {
-            Log.logger(.audioEngine).error("AudioKit initialization failed: \(error.localizedDescription)")
+            Log.logger(.audioEngine).error("AudioKit initialization failed: \(error.localizedDescription, privacy: .private)")
         }
     }
 
@@ -103,9 +138,11 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     public func load(url: URL) async throws {
         try checkInitialization()
 
-        crossfadeTask?.cancel()
+        cancelCrossfade(rearmSourceCompletion: false)
+        invalidatePlaybackCompletion()
         activePlayer.stop()
         inactivePlayer.stop()
+        _isPlaying = false
 
         do {
             let avFile = try AVAudioFile(forReading: url)
@@ -135,26 +172,28 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         applyReplayGainImmediately(currentGainDB)
 
         activePlayer.volume = AUValue(_volume)
+        armPlaybackCompletion(for: activePlayerSlot)
         activePlayer.play()
         _isPlaying = true
-        startProgressPolling()
     }
 
     public func pause() async {
-        crossfadeTask?.cancel()
+        cancelCrossfade(rearmSourceCompletion: false)
+        _currentTime = activePlayer.currentTime
+        invalidatePlaybackCompletion()
         activePlayer.pause()
         inactivePlayer.pause()
         _isPlaying = false
-        stopProgressPolling()
     }
 
     public func stop() async {
-        crossfadeTask?.cancel()
+        cancelCrossfade(rearmSourceCompletion: false)
+        invalidatePlaybackCompletion()
         activePlayer.stop()
         inactivePlayer.stop()
+        engine.stop()
         _isPlaying = false
         _currentTime = 0
-        stopProgressPolling()
     }
 
     public func seek(to time: TimeInterval) async throws {
@@ -165,11 +204,28 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         // ✅ Restart engine if stopped before seeking
         try restartEngineIfNeeded()
 
-        activePlayer.play(from: time)
-        _currentTime = time
+        let wasPlaying = _isPlaying
+        let targetTime = min(max(0, time), _duration)
+        cancelCrossfade(rearmSourceCompletion: false)
+        invalidatePlaybackCompletion()
+        activePlayer.stop()
+        _currentTime = targetTime
 
-        if !_isPlaying {
+        guard targetTime < _duration else {
+            _isPlaying = false
+            if wasPlaying {
+                completionHandler?()
+            }
+            return
+        }
+
+        armPlaybackCompletion(for: activePlayerSlot)
+        activePlayer.play(from: targetTime)
+        if wasPlaying {
+            _isPlaying = true
+        } else {
             activePlayer.pause()
+            invalidatePlaybackCompletion()
         }
     }
 
@@ -193,6 +249,46 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         }
     }
 
+    /// Cancel any transition and discard the inactive prepared track without
+    /// disturbing the currently audible source player.
+    public func invalidatePreparedTransition() async {
+        cancelCrossfade(rearmSourceCompletion: true)
+        inactivePlayer.stop()
+        inactivePlayer.volume = 0
+        inactiveFile = nil
+        pendingNextURL = nil
+    }
+
+    public func consumePreparedTransition(to url: URL) async -> PreparedTrackTransition {
+        guard pendingNextURL == url, let preparedFile = inactiveFile else {
+            return .none
+        }
+
+        do {
+            try restartEngineIfNeeded()
+        } catch {
+            return .none
+        }
+
+        invalidatePlaybackCompletion()
+        activePlayer.stop()
+        swap(&activePlayer, &inactivePlayer)
+        swap(&activePitch, &inactivePitch)
+        currentFile = preparedFile
+        inactiveFile = nil
+        pendingNextURL = nil
+        _duration = Double(preparedFile.length) / preparedFile.fileFormat.sampleRate
+        _currentTime = 0
+        applyPlaybackRate(currentPlaybackRate)
+        applyReplayGainImmediately(currentGainDB)
+        activePlayer.volume = AUValue(_volume)
+        inactivePlayer.volume = 0
+        armPlaybackCompletion(for: activePlayerSlot)
+        activePlayer.play()
+        _isPlaying = true
+        return .preloadedFallback
+    }
+
     public func setPlaybackRate(_ rate: Double) async {
         currentPlaybackRate = rate
         applyPlaybackRate(rate)
@@ -203,8 +299,12 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         applyReplayGainImmediately(gainDB)
     }
 
+    public var supportsEQ: Bool {
+        get async { false }
+    }
+
     public func crossfade(to url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float) async throws {
-        crossfadeTask?.cancel()
+        cancelCrossfade(rearmSourceCompletion: true)
 
         let nextFile: AVAudioFile = if pendingNextURL == url, let prepared = inactiveFile {
             prepared
@@ -222,35 +322,26 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         applyReplayGainImmediately(gainDB)
 
         inactivePlayer.volume = 0
+        armPlaybackCompletion(for: inactivePlayerSlot)
         inactivePlayer.play()
         _isPlaying = true
-        startProgressPolling()
+        let generation = UUID()
+        crossfadeGeneration = generation
 
         if duration <= 0 {
-            await finishCrossfade(with: nextFile)
+            await finishCrossfade(with: nextFile, generation: generation)
             return
         }
 
         crossfadeTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            await performCrossfade(with: nextFile, duration: duration)
+            await performCrossfade(
+                with: nextFile,
+                duration: duration,
+                generation: generation
+            )
         }
     }
-
-    public func getMetrics() async -> AudioMetrics {
-        AudioMetrics(
-            cpuUsage: 0.0,
-            memoryUsage: 0,
-            bufferUnderruns: 0,
-            decodingLatency: 0.0,
-            bufferFillLevel: 1.0,
-            droppedFrames: 0,
-            renderLatency: 0.0,
-            timestamp: Date(),
-        )
-    }
-
-    public func collectMetrics() async {}
 
     // MARK: - Private Methods
 
@@ -299,37 +390,10 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
             try engine.start()
             Log.logger(.audioEngine).debug("AudioKit engine start called (may already be running)")
         } catch {
-            Log.logger(.audioEngine).error("Failed to restart AudioKit engine: \(error.localizedDescription)")
+            Log.logger(.audioEngine).error("Failed to restart AudioKit engine: \(error.localizedDescription, privacy: .private)")
             throw AudioError.engineInitializationFailed(
                 reason: "Failed to restart AudioKit engine after interruption: \(error.localizedDescription)",
             )
-        }
-    }
-
-    private func startProgressPolling() {
-        stopProgressPolling()
-        updateTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in
-                await self.updateProgress()
-            }
-        }
-    }
-
-    private func stopProgressPolling() {
-        updateTimer?.invalidate()
-        updateTimer = nil
-    }
-
-    private func updateProgress() async {
-        guard _isPlaying else { return }
-        _currentTime = activePlayer.currentTime
-        _duration = activePlayer.duration
-
-        if _currentTime >= _duration {
-            _isPlaying = false
-            stopProgressPolling()
-            completionHandler?()
         }
     }
 
@@ -341,8 +405,72 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
     }
 
     private func cleanup() {
-        stopProgressPolling()
+        invalidatePlaybackCompletion()
         engine.stop()
+    }
+
+    private var activePlayerSlot: PlayerSlot {
+        activePlayer === primaryPlayer ? .primary : .secondary
+    }
+
+    private var inactivePlayerSlot: PlayerSlot {
+        inactivePlayer === primaryPlayer ? .primary : .secondary
+    }
+
+    private func armPlaybackCompletion(for slot: PlayerSlot) {
+        invalidatePlaybackCompletion()
+        let generation = UUID()
+        playbackGeneration = generation
+
+        let callback = Self.makeCompletionCallback(
+            owner: self,
+            generation: generation,
+            slot: slot
+        )
+
+        switch slot {
+        case .primary:
+            primaryPlayer.completionHandler = callback
+        case .secondary:
+            secondaryPlayer.completionHandler = callback
+        }
+    }
+
+    private func invalidatePlaybackCompletion() {
+        playbackGeneration = nil
+        pendingCompletion = nil
+        primaryPlayer.completionHandler = nil
+        secondaryPlayer.completionHandler = nil
+    }
+
+    private nonisolated static func makeCompletionCallback(
+        owner: AudioKitEngineAdapter,
+        generation: UUID,
+        slot: PlayerSlot
+    ) -> AVAudioNodeCompletionHandler {
+        { [weak owner] in
+            Task { @MainActor [weak owner] in
+                owner?.handlePlaybackCompletion(generation: generation, slot: slot)
+            }
+        }
+    }
+
+    private func handlePlaybackCompletion(generation: UUID, slot: PlayerSlot) {
+        guard playbackGeneration == generation else { return }
+        guard activePlayerSlot == slot else {
+            pendingCompletion = (generation, slot)
+            return
+        }
+
+        deliverPlaybackCompletion(generation: generation)
+    }
+
+    private func deliverPlaybackCompletion(generation: UUID) {
+        guard playbackGeneration == generation else { return }
+        invalidatePlaybackCompletion()
+        _currentTime = _duration
+        _isPlaying = false
+        completionHandler?()
     }
 
     private func applyPlaybackRate(_ rate: Double) {
@@ -355,7 +483,11 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         mixer.volume = AUValue(pow(10, gainDB / 20))
     }
 
-    private func finishCrossfade(with file: AVAudioFile) async {
+    private func finishCrossfade(
+        with file: AVAudioFile,
+        generation: UUID
+    ) async {
+        guard crossfadeGeneration == generation else { return }
         activePlayer.stop()
         swap(&activePlayer, &inactivePlayer)
         swap(&activePitch, &inactivePitch)
@@ -366,9 +498,20 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         _duration = Double(file.length) / file.fileFormat.sampleRate
         _currentTime = 0
         crossfadeTask = nil
+        crossfadeGeneration = nil
+
+        if let pendingCompletion,
+           pendingCompletion.generation == playbackGeneration,
+           pendingCompletion.slot == activePlayerSlot {
+            deliverPlaybackCompletion(generation: pendingCompletion.generation)
+        }
     }
 
-    private func performCrossfade(with file: AVAudioFile, duration: TimeInterval) async {
+    private func performCrossfade(
+        with file: AVAudioFile,
+        duration: TimeInterval,
+        generation: UUID
+    ) async {
         let steps = max(1, Int(duration / 0.02))
         let interval = duration / Double(steps)
         let activeStart = activePlayer.volume
@@ -376,29 +519,78 @@ public final class AudioKitEngineAdapter: NSObject, AudioEngineService, Observab
         let inactiveTarget = AUValue(_volume)
 
         for step in 1 ... steps {
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, crossfadeGeneration == generation else {
+                reconcileCancelledCrossfade(generation: generation)
+                return
+            }
             let progress = AUValue(step) / AUValue(steps)
             activePlayer.volume = activeStart * (1 - progress)
             inactivePlayer.volume = inactiveStart + (inactiveTarget - inactiveStart) * progress
-            try? await Task.sleep(nanoseconds: UInt64(max(interval, 0) * 1_000_000_000))
+            do {
+                try await crossfadeSleeper(Swift.Duration.seconds(max(interval, 0)))
+            } catch {
+                reconcileCancelledCrossfade(generation: generation)
+                return
+            }
         }
 
-        await finishCrossfade(with: file)
+        await finishCrossfade(with: file, generation: generation)
     }
 
-}
+    private func cancelCrossfade(rearmSourceCompletion: Bool) {
+        guard crossfadeTask != nil || crossfadeGeneration != nil else { return }
 
-// MARK: - AudioFormat Extension
+        crossfadeTask?.cancel()
+        crossfadeTask = nil
+        crossfadeGeneration = nil
+        inactivePlayer.stop()
+        activePlayer.volume = AUValue(_volume)
+        inactivePlayer.volume = 0
+        inactiveFile = nil
+        pendingNextURL = nil
+        pendingCompletion = nil
 
-extension AudioFormat {
-    static func from(avAudioFormat: AVAudioFormat) -> AudioFormat {
-        let sampleRate = avAudioFormat.sampleRate
-        let channels = avAudioFormat.channelCount
-
-        if sampleRate > 48000 || channels > 2 {
-            return .flac
+        if rearmSourceCompletion, _isPlaying {
+            armPlaybackCompletion(for: activePlayerSlot)
         } else {
-            return .aac
+            invalidatePlaybackCompletion()
         }
     }
+
+    private func reconcileCancelledCrossfade(generation: UUID) {
+        guard crossfadeGeneration == generation else { return }
+        crossfadeTask = nil
+        crossfadeGeneration = nil
+        inactivePlayer.stop()
+        activePlayer.volume = AUValue(_volume)
+        inactivePlayer.volume = 0
+        inactiveFile = nil
+        pendingNextURL = nil
+        pendingCompletion = nil
+
+        if _isPlaying {
+            armPlaybackCompletion(for: activePlayerSlot)
+        } else {
+            invalidatePlaybackCompletion()
+        }
+    }
+
+    var activePlayerCountForTesting: Int {
+        [primaryPlayer, secondaryPlayer].count(where: \.isPlaying)
+    }
+
+    var currentFileURLForTesting: URL? {
+        currentFile?.url
+    }
+
+    var playerVolumesForTesting: (active: AUValue, inactive: AUValue) {
+        (activePlayer.volume, inactivePlayer.volume)
+    }
+
+    func setCrossfadeSleeperForTesting(
+        _ sleeper: @escaping @MainActor (Swift.Duration) async throws -> Void
+    ) {
+        crossfadeSleeper = sleeper
+    }
+
 }

@@ -22,9 +22,10 @@ final class ImportValidationScenarioTests: XCTestCase {
         XCTAssertEqual(environment.service.filesProcessed, scenario.totalFiles)
         XCTAssertEqual(environment.service.recentlyImported.count, scenario.totalFiles)
         XCTAssertTrue(environment.service.importErrors.isEmpty)
-        XCTAssertEqual(environment.invalidationCount(), scenario.totalFiles)
+        XCTAssertEqual(environment.invalidationCount(), 1)
         XCTAssertEqual(environment.service.importProgress, 1.0, accuracy: 0.0001)
         XCTAssertTrue(environment.service.statusMessage.contains("Import completed"))
+        XCTAssertTrue(environment.service.isImportComplete)
     }
 
     func testDuplicateMixScenarioSkipsPreImportedFiles() async throws {
@@ -48,9 +49,14 @@ final class ImportValidationScenarioTests: XCTestCase {
         XCTAssertEqual(environment.service.totalFiles, scenario.totalFiles)
         XCTAssertEqual(environment.service.filesProcessed, scenario.totalFiles)
         XCTAssertEqual(environment.service.recentlyImported.count, expectedNewImports)
-        XCTAssertEqual(environment.invalidationCount(), expectedNewImports)
-        XCTAssertEqual(environment.service.importErrors.count, scenario.duplicateCandidates.count)
-        XCTAssertTrue(environment.service.importErrors.allSatisfy { $0.message.contains("Duplicate") })
+        XCTAssertEqual(environment.invalidationCount(), 1)
+        XCTAssertTrue(environment.service.importErrors.isEmpty)
+        XCTAssertTrue(
+            environment.service.statusMessage.contains(
+                "\(scenario.duplicateCandidates.count) skipped"
+            )
+        )
+        XCTAssertTrue(environment.service.isImportComplete)
 
         for url in scenario.duplicateCandidates {
             let bookmark = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)

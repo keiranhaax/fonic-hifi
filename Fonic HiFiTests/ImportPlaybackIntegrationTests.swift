@@ -5,6 +5,73 @@ import XCTest
 
 @MainActor
 final class ImportPlaybackIntegrationTests: XCTestCase {
+    func testRealEncodedImportReachesPlayingThroughProductionFacade() async throws {
+        let musicContainer = try makeTemporaryTestDirectory(
+            named: "ImportPlaybackIntegrationTests",
+            testCase: self
+        )
+        let formatDetector = AudioFormatDetectionManager()
+        let metadataExtractor = MetadataExtractionService(
+            formatDetectionService: formatDetector
+        )
+        let environment = try makeImportTestEnvironment(
+            metadataExtractor: metadataExtractor,
+            fileProcessingConcurrency: 1,
+            musicContainerURL: musicContainer
+        )
+        let sourceURL = try makePCMTestAudioFile(
+            duration: 2,
+            sampleRate: 48_000,
+            channels: 2,
+            fileExtension: "wav",
+            testCase: self
+        )
+
+        await environment.service.executeImportPipeline(urls: [sourceURL])
+
+        XCTAssertEqual(environment.service.filesProcessed, 1)
+        XCTAssertTrue(environment.service.importErrors.isEmpty)
+
+        let importedTracks = try environment.container.mainContext.fetch(FetchDescriptor<Track>())
+        let importedTrack = try XCTUnwrap(importedTracks.first)
+        XCTAssertEqual(importedTracks.count, 1)
+        XCTAssertNotEqual(importedTrack.url, sourceURL)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: importedTrack.url.path))
+        XCTAssertEqual(importedTrack.audioFormat, AudioFormat.wav.rawValue)
+        XCTAssertEqual(importedTrack.sampleRate, 48_000)
+        XCTAssertEqual(importedTrack.channels, 2)
+        XCTAssertEqual(importedTrack.duration, 2, accuracy: 0.05)
+
+        let defaultsName = "ImportPlaybackIntegrationTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: defaultsName))
+        defaults.removePersistentDomain(forName: defaultsName)
+        addTeardownBlock {
+            defaults.removePersistentDomain(forName: defaultsName)
+        }
+
+        let queueManager = AudioQueueManager(queueStateSuiteName: defaultsName)
+        let facade = AudioEngineFacade(
+            engineFactory: AudioEngineFactory(preferences: defaults),
+            queueManager: queueManager,
+            playbackSettingsStore: AudioPlaybackSettingsStore(suiteName: defaultsName),
+            runtimeMonitoringEnabled: false
+        )
+
+        do {
+            try await facade.initialize()
+            try await facade.play(track: importedTrack)
+
+            XCTAssertEqual(queueManager.currentTrack?.id, importedTrack.id)
+            XCTAssertEqual(facade.currentTrack?.id, importedTrack.id)
+            XCTAssertTrue(facade.currentState.isPlaying)
+        } catch {
+            await facade.shutdown()
+            throw error
+        }
+
+        await facade.shutdown()
+    }
+
     func testImportPipelineFeedsQueueAndStartsPlayback() async throws {
         // Arrange: simulate high-volume import into an in-memory environment
         let environment = try makeImportTestEnvironment(
@@ -68,6 +135,10 @@ final class ImportPlaybackIntegrationTests: XCTestCase {
 
 @MainActor
 private final class TestPlaybackPipeline {
+    private enum PipelineError: Error {
+        case emptyQueue
+    }
+
     private let queueManager: AudioQueueManager
     private let stateManager: PlaybackStateManager
     private let engine: TestAudioEngineService
@@ -98,7 +169,7 @@ private final class TestPlaybackPipeline {
         }
 
         guard let current = queueManager.currentTrack else {
-            throw XCTSkip("Queue had no tracks to play")
+            throw PipelineError.emptyQueue
         }
 
         stateManager.updateState(.loading())
@@ -146,10 +217,13 @@ private final class TestAudioEngineService: AudioEngineService {
     func configure(with _: AudioEngineConfiguration) async throws {}
 
     func prepareNext(url _: URL) async {}
+    func invalidatePreparedTransition() async {}
 
     func crossfade(to _: URL, duration _: TimeInterval, playbackRate _: Double, gainDB _: Float) async throws {}
 
-    func getMetrics() async -> AudioMetrics {
+    var metricsAvailability: AudioMetricsAvailability { .available }
+
+    func availableMetrics() async -> AudioMetrics? {
         AudioMetrics(
             cpuUsage: 0,
             memoryUsage: 0,

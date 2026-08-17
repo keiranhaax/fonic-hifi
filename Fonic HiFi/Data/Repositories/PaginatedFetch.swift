@@ -25,7 +25,7 @@ struct PaginatedModelFetch<Model: PersistentModel> {
         let hasMore = fetched.count > resolvedPageSize
 
         let totalCount: Int? = if includeTotalCount {
-            try context.batchedFetchCount(descriptor.removingPagination())
+            try context.fetchCount(descriptor.removingPagination())
         } else {
             nil
         }

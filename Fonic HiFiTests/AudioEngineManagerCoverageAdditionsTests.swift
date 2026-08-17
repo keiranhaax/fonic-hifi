@@ -144,7 +144,6 @@ private final class EngineManagerMonitorStub: AudioPerformanceMonitoring {
 
     func startProfiling(duration _: TimeInterval?) async {}
     func stopProfiling() async {}
-    func getProfilingResults() async -> PerformanceProfile? { nil }
     var isProfiling: Bool { get async { false } }
 }
 
@@ -203,7 +202,9 @@ private final class EngineManagerEngineStub: AudioEngineService {
     }
 
     func prepareNext(url _: URL) async {}
+    func invalidatePreparedTransition() async {}
     func crossfade(to _: URL, duration _: TimeInterval, playbackRate _: Double, gainDB _: Float) async throws {}
-    func getMetrics() async -> AudioMetrics { .empty }
+    var metricsAvailability: AudioMetricsAvailability { .available }
+    func availableMetrics() async -> AudioMetrics? { .empty }
     func collectMetrics() async {}
 }

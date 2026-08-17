@@ -17,8 +17,22 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
     private let deviceManager: any BitPerfectDeviceManaging
     private let validationEngine: BitPerfectValidationEngine
 
-    private var lastValidationResult: BitPerfectValidationResult?
-    private var lastValidationTimestamp: Date?
+    private struct ValidationCacheKey: Equatable {
+        let sourceFormat: String
+        let sourceSampleRate: Double
+        let sourceBitDepth: UInt16
+        let sourceChannels: UInt8
+        let outputDevice: AudioDevice?
+        let routeIdentifiers: [String]
+        let sessionSampleRate: Double
+        let sessionChannels: Int
+        let systemVolume: Float
+        let sessionCategory: String
+        let sessionMode: String
+        let context: BitPerfectEligibilityContext
+    }
+
+    private var lastValidation: (key: ValidationCacheKey, result: BitPerfectValidationResult, timestamp: Date)?
     private let validationCacheTimeout: TimeInterval = 5.0
 
     public init(
@@ -44,24 +58,36 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
 
     public func validateBitPerfectPlayback(
         sourceFormat: AudioFileInfo,
-        outputDevice _: AudioDevice?,
+        outputDevice: AudioDevice?,
+        context: BitPerfectEligibilityContext = .unknown
     ) async -> BitPerfectValidationResult {
-        logger.info("Starting bit-perfect validation for \(sourceFormat.format.displayName, privacy: .public) at \(sourceFormat.sampleRate)Hz/\(sourceFormat.bitDepth)-bit")
+        let formatName = sourceFormat.format.displayName
+        let sampleRate = sourceFormat.sampleRate
+        let bitDepth = sourceFormat.bitDepth
+        logger.info("Starting bit-perfect validation for \(formatName, privacy: .public) at \(sampleRate, privacy: .public)Hz/\(bitDepth, privacy: .public)-bit")
 
-        if let cachedResult = getCachedValidationResult() {
+        let cacheKey = makeCacheKey(
+            sourceFormat: sourceFormat,
+            outputDevice: outputDevice,
+            context: context
+        )
+        if let cachedResult = getCachedValidationResult(for: cacheKey) {
             logger.debug("Returning cached validation result")
             return cachedResult
         }
 
         let result = await validationEngine.validate(
             session: audioSession,
-            sourceFormat: sourceFormat
+            sourceFormat: sourceFormat,
+            context: context
         )
 
-        cacheValidationResult(result)
+        cacheValidationResult(result, for: cacheKey)
 
+        let eligibility = result.isValid ? "ELIGIBLE" : "INELIGIBLE"
+        let confidence = String(format: "%.1f%%", result.confidence * 100)
         logger.info(
-            "Validation complete: \(result.isValid ? "VALID" : "INVALID", privacy: .public) (confidence: \(String(format: "%.1f%%", result.confidence * 100)))"
+            "Eligibility assessment complete: \(eligibility, privacy: .public) (confidence: \(confidence, privacy: .public))"
         )
 
         return result
@@ -87,6 +113,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         return await validateBitPerfectPlayback(
             sourceFormat: syntheticFileInfo,
             outputDevice: outputDevice,
+            context: .unknown
         )
     }
 
@@ -100,6 +127,7 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
         return await validateBitPerfectPlayback(
             sourceFormat: sourceFormat,
             outputDevice: audioDevice,
+            context: .unknown
         )
     }
 
@@ -159,19 +187,42 @@ public final class BitPerfectValidator: BitPerfectValidatorService, ObservableOb
 
     // MARK: - Private Helpers
 
-    private func getCachedValidationResult() -> BitPerfectValidationResult? {
-        guard let lastResult = lastValidationResult,
-              let lastTimestamp = lastValidationTimestamp,
-              Date().timeIntervalSince(lastTimestamp) < validationCacheTimeout
+    private func getCachedValidationResult(for key: ValidationCacheKey) -> BitPerfectValidationResult? {
+        guard let lastValidation,
+              lastValidation.key == key,
+              Date().timeIntervalSince(lastValidation.timestamp) < validationCacheTimeout
         else {
             return nil
         }
-        return lastResult
+        return lastValidation.result
     }
 
-    private func cacheValidationResult(_ result: BitPerfectValidationResult) {
-        lastValidationResult = result
-        lastValidationTimestamp = Date()
+    private func cacheValidationResult(_ result: BitPerfectValidationResult, for key: ValidationCacheKey) {
+        lastValidation = (key, result, Date())
+    }
+
+    private func makeCacheKey(
+        sourceFormat: AudioFileInfo,
+        outputDevice: AudioDevice?,
+        context: BitPerfectEligibilityContext
+    ) -> ValidationCacheKey {
+        let routeIdentifiers = audioSession.currentRoute.outputs.map {
+            "\($0.uid)|\($0.portType.rawValue)"
+        }
+        return ValidationCacheKey(
+            sourceFormat: sourceFormat.format.displayName,
+            sourceSampleRate: sourceFormat.sampleRate,
+            sourceBitDepth: sourceFormat.bitDepth,
+            sourceChannels: sourceFormat.channels,
+            outputDevice: outputDevice,
+            routeIdentifiers: routeIdentifiers,
+            sessionSampleRate: audioSession.sampleRate,
+            sessionChannels: Int(audioSession.outputNumberOfChannels),
+            systemVolume: audioSession.outputVolume,
+            sessionCategory: audioSession.category.rawValue,
+            sessionMode: audioSession.mode.rawValue,
+            context: context
+        )
     }
 
 }

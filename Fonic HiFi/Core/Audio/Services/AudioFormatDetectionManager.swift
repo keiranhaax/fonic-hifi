@@ -57,6 +57,9 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
 
         // Get file size
         let fileSize = try getFileSize(at: url)
+        guard fileSize > 0 else {
+            throw DetectionError.invalidFile(reason: "Audio file is empty")
+        }
 
         // Detect format from file extension
         guard let format = AudioFormat.from(url: url) else {
@@ -70,7 +73,11 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
             try Task.checkCancellation()
 
             if let adapter {
-                return try await adapter.detectFormat(at: url)
+                let info = try await adapter.detectFormat(at: url)
+                guard info.isValid else {
+                    throw DetectionError.invalidFile(reason: "Audio file contains invalid format metadata")
+                }
+                return info
             }
 
             return try await manager.detectUsingAVAsset(url: url, format: format, fileSize: fileSize)
@@ -89,10 +96,10 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
     public func isFormatSupported(_ format: AudioFormat) -> Bool {
         // Check if AVAsset supports it or we have an adapter
         switch format {
-        case .mp3, .aac, .alac, .wav, .aiff:
+        case .mp3, .aac, .alac, .flac, .wav, .aiff:
             true // AVAsset supports these
-        case .flac, .ape, .dsd:
-            findAdapter(for: format) != nil
+        case .ape, .dsd:
+            false
         case .unknown:
             false
         }
@@ -224,26 +231,67 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
 
             let sampleRate = Int(audioDescription?.pointee.mSampleRate ?? 44100)
             let channels = Int(audioDescription?.pointee.mChannelsPerFrame ?? 2)
-            let bitDepth = estimateBitDepth(from: audioDescription, format: format)
+            let detectedFormat = detectCodec(
+                from: audioDescription,
+                extensionFormat: format,
+            )
+            let bitDepth = estimateBitDepth(from: audioDescription, format: detectedFormat)
 
             // Calculate bitrate if possible
             let bitrate = try? await calculateBitrate(from: audioTrack, duration: duration, fileSize: fileSize)
             let normalizedBitrate = bitrate.map { UInt64($0) }
 
-            return AudioFileInfo(
+            let info = AudioFileInfo(
                 url: url,
-                format: format,
+                format: detectedFormat,
                 duration: duration.seconds,
                 bitDepth: UInt16(bitDepth),
                 sampleRate: Double(sampleRate),
                 channels: UInt8(channels),
                 fileSize: UInt64(fileSize),
                 bitrate: normalizedBitrate,
+                codec: detectedFormat.displayName,
+                container: url.pathExtension.lowercased(),
             )
 
+            guard info.isValid else {
+                throw DetectionError.invalidFile(reason: "Audio file contains invalid format metadata")
+            }
+
+            return info
+
         } catch {
-            logger.error("avasset.load_failed url=\(url.lastPathComponent, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
-            throw DetectionError.assetLoadingFailed(error)
+            logger.error("avasset.load_failed url=\(url.lastPathComponent, privacy: .private(mask: .hash)) error=\(error.localizedDescription, privacy: .private)")
+            if error is CancellationError {
+                throw error
+            }
+            if let detectionError = error as? DetectionError,
+               case .invalidFile = detectionError {
+                throw detectionError
+            }
+            throw DetectionError.invalidFile(reason: "Audio file could not be decoded")
+        }
+    }
+
+    private func detectCodec(
+        from description: UnsafePointer<AudioStreamBasicDescription>?,
+        extensionFormat: AudioFormat,
+    ) -> AudioFormat {
+        guard let formatID = description?.pointee.mFormatID else {
+            return extensionFormat
+        }
+
+        switch formatID {
+        case kAudioFormatAppleLossless:
+            return .alac
+        case kAudioFormatMPEG4AAC,
+             kAudioFormatMPEG4AAC_HE,
+             kAudioFormatMPEG4AAC_HE_V2,
+             kAudioFormatMPEG4AAC_LD,
+             kAudioFormatMPEG4AAC_ELD:
+            return .aac
+        default:
+            return extensionFormat
         }
     }
 

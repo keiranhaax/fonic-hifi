@@ -72,8 +72,10 @@ public struct AudioFileInfo: Sendable, Equatable, Hashable, Codable {
 
     /// Formatted duration string (e.g., "3:45")
     public var formattedDuration: String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
+        let safeDuration = duration.isFinite ? max(0, duration) : 0
+        let wholeSeconds = Int(safeDuration)
+        let minutes = wholeSeconds / 60
+        let seconds = wholeSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
 
@@ -313,9 +315,9 @@ public extension AudioFileInfo {
     var isValid: Bool {
         !url.path.isEmpty &&
             format != .unknown &&
-            duration > 0 &&
+            duration.isFinite && duration > 0 &&
             bitDepth > 0 &&
-            sampleRate > 0 &&
+            sampleRate.isFinite && sampleRate > 0 &&
             channels > 0
     }
 

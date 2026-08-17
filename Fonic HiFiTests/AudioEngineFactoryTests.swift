@@ -3,7 +3,7 @@ import XCTest
 
 @MainActor
 final class AudioEngineFactoryTests: XCTestCase {
-    private let preferenceKey = "preferredAudioEngine"
+    private let preferenceKey = AudioEnginePreference.storageKey
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: preferenceKey)
@@ -18,6 +18,36 @@ final class AudioEngineFactoryTests: XCTestCase {
 
         XCTAssertEqual(engine, .audioKitEngine)
         XCTAssertTrue(factory.isEngineAvailable(.audioKitEngine))
+    }
+
+    func testEnabledEQRequiresAVAudioEngineForCompatibleFormat() throws {
+        let preferences = try makePreferences()
+        preferences.set(AudioEngineType.audioKitEngine.rawValue, forKey: preferenceKey)
+        let factory = AudioEngineFactory(preferences: preferences)
+        let configuration = AudioEngineConfiguration(
+            performanceMode: .balanced,
+            equalizerEnabled: true
+        )
+
+        XCTAssertEqual(
+            factory.selectEngineType(for: .aac, configuration: configuration),
+            .avAudioEngine
+        )
+    }
+
+    func testEnabledEQPreservesFormatFallbackWhenNoEQEngineCanDecode() throws {
+        let preferences = try makePreferences()
+        preferences.set(AudioEngineType.avAudioEngine.rawValue, forKey: preferenceKey)
+        let factory = AudioEngineFactory(preferences: preferences)
+        let configuration = AudioEngineConfiguration(equalizerEnabled: true)
+
+        // AVAudioEngine intentionally does not claim FLAC decoding. The
+        // factory keeps AudioKit for format compatibility and the manager
+        // reports EQ unsupported rather than lying about capability.
+        XCTAssertEqual(
+            factory.selectEngineType(for: .flac, configuration: configuration),
+            .audioKitEngine
+        )
     }
 
     func testEfficiencyModeFavorsNativeEngine() {
@@ -70,14 +100,81 @@ final class AudioEngineFactoryTests: XCTestCase {
         XCTAssertTrue(factory.availableEngineTypes().contains(.audioKitEngine))
     }
 
-    func testUserPreferenceOverridesPerformanceModeWhenEngineAvailable() {
-        UserDefaults.standard.set("AudioKit", forKey: preferenceKey)
+    func testLegacyAudioKitPreferenceOverridesPerformanceModeAndMigrates() throws {
+        let preferences = try makePreferences()
+        preferences.set("AudioKit", forKey: preferenceKey)
 
-        let factory = AudioEngineFactory()
+        let factory = AudioEngineFactory(preferences: preferences)
         let configuration = AudioEngineConfiguration(performanceMode: .efficiency)
 
         let engine = factory.selectEngineType(for: .aac, configuration: configuration)
 
+        XCTAssertEqual(engine, .audioKitEngine)
+        XCTAssertEqual(preferences.string(forKey: preferenceKey), AudioEngineType.audioKitEngine.rawValue)
+    }
+
+    func testCanonicalAudioKitPreferenceSelectsAudioKit() throws {
+        let preferences = try makePreferences()
+        preferences.set(AudioEngineType.audioKitEngine.rawValue, forKey: preferenceKey)
+
+        let factory = AudioEngineFactory(preferences: preferences)
+        let configuration = AudioEngineConfiguration(performanceMode: .efficiency)
+
+        let engine = factory.selectEngineType(for: .flac, configuration: configuration)
+
+        XCTAssertEqual(engine, .audioKitEngine)
+    }
+
+    func testAVAudioEnginePreferenceOverridesBalancedModeWhenCompatible() throws {
+        let preferences = try makePreferences()
+        preferences.set(AudioEngineType.avAudioEngine.rawValue, forKey: preferenceKey)
+
+        let factory = AudioEngineFactory(preferences: preferences)
+        let configuration = AudioEngineConfiguration(performanceMode: .balanced)
+
+        let engine = factory.selectEngineType(for: .aac, configuration: configuration)
+
+        XCTAssertEqual(engine, .avAudioEngine)
+    }
+
+    func testIncompatibleAVAudioEnginePreferenceFallsBackDeterministically() throws {
+        let preferences = try makePreferences()
+        preferences.set(AudioEngineType.avAudioEngine.rawValue, forKey: preferenceKey)
+
+        let factory = AudioEngineFactory(preferences: preferences)
+        let configuration = AudioEngineConfiguration(performanceMode: .balanced)
+
+        let engine = factory.selectEngineType(for: .flac, configuration: configuration)
+
+        XCTAssertEqual(engine, .audioKitEngine)
+    }
+
+    func testUnavailableAudioKitPreferenceFallsBackToNativeEngine() throws {
+        let preferences = try makePreferences()
+        preferences.set(AudioEngineType.audioKitEngine.rawValue, forKey: preferenceKey)
+
+        let factory = AudioEngineFactory(preferences: preferences)
+        factory.registerEngine(.audioKitEngine, isAvailable: false)
+        let configuration = AudioEngineConfiguration(performanceMode: .balanced)
+
+        let engine = factory.selectEngineType(for: .aac, configuration: configuration)
+
+        XCTAssertEqual(engine, .avAudioEngine)
+    }
+
+    func testUnknownPreferenceProducesTypedFallbackAndUsesAutomaticSelection() throws {
+        let preferences = try makePreferences()
+        preferences.set("FutureEngine", forKey: preferenceKey)
+
+        let storedPreference = AudioEnginePreference(
+            storedValue: preferences.string(forKey: preferenceKey)
+        )
+        let factory = AudioEngineFactory(preferences: preferences)
+        let configuration = AudioEngineConfiguration(performanceMode: .balanced)
+
+        let engine = factory.selectEngineType(for: .aac, configuration: configuration)
+
+        XCTAssertEqual(storedPreference, .unsupported)
         XCTAssertEqual(engine, .audioKitEngine)
     }
 
@@ -104,6 +201,16 @@ final class AudioEngineFactoryTests: XCTestCase {
         XCTAssertTrue(engine is AVAudioEngineAdapter)
         let calls = await detector.detectCallCount()
         XCTAssertEqual(calls, 1)
+    }
+
+    private func makePreferences() throws -> UserDefaults {
+        let suiteName = "AudioEngineFactoryTests.\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        preferences.removePersistentDomain(forName: suiteName)
+        addTeardownBlock {
+            UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
+        }
+        return preferences
     }
 }
 

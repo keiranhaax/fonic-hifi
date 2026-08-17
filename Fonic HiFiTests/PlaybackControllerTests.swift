@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import MediaPlayer
 import Testing
 
 @testable import Fonic_HiFi
@@ -25,8 +26,8 @@ struct PlaybackControllerTests {
     func stopRoutesToEngine() async throws {
         let harness = makeHarness()
         let track = makeDisplayTrack(name: "stop-track")
-        harness.uiState.currentTrack = track
-        harness.uiState.showMiniPlayer = true
+        harness.uiState.setCurrentTrack(track)
+        harness.uiState.revealMiniPlayerAfterPlaybackStarted()
         harness.stateManager.forceUpdateState(.playing(currentTime: 3, duration: 120))
 
         await harness.controller.stop()
@@ -35,6 +36,36 @@ struct PlaybackControllerTests {
         #expect(harness.stateManager.currentState == .stopped)
         #expect(harness.uiState.currentTrack == nil)
         #expect(harness.uiState.showMiniPlayer == false)
+    }
+
+    @Test("Failed playback never reveals the mini player")
+    @MainActor
+    func failedPlaybackKeepsMiniPlayerHidden() async throws {
+        let track = makeDisplayTrack(name: "failed-playback")
+        let info = AudioFileInfo(
+            url: track.url,
+            format: .flac,
+            duration: track.duration,
+            bitDepth: 24,
+            sampleRate: 48_000,
+            channels: 2,
+            fileSize: 1_024
+        )
+        let harness = makeHarness(
+            formatDetectionManager: PlaybackControllerFormatDetectionServiceStub(info: info)
+        )
+        harness.engine.playError = AudioError.playbackFailed(reason: "Injected failure")
+
+        await #expect(throws: (any Error).self) {
+            try await harness.controller.play(track: track)
+        }
+
+        #expect(harness.uiState.currentTrack == nil)
+        #expect(harness.uiState.showMiniPlayer == false)
+        #expect(harness.stateManager.currentState == .error(
+            .playbackFailed(reason: "Injected failure"),
+            lastKnownTime: nil
+        ))
     }
 
     @Test("seek routes to engine and updates playing state on success")
@@ -67,7 +98,43 @@ struct PlaybackControllerTests {
         #expect(harness.stateManager.currentState == .paused(currentTime: 15, duration: 200))
     }
 
-    @Test("crossfade uses engine configuration and prepares upcoming track")
+    @Test("A-B loop seek updates observable progress to point A in the same cycle")
+    @MainActor
+    func abLoopSeekUpdatesProgressToPointA() async {
+        let sessionManager = PlaybackControllerSessionServiceStub()
+        let harness = makeHarness(sessionManager: sessionManager)
+        harness.engine.currentTimeValue = 20
+        harness.engine.durationValue = 120
+        harness.stateManager.forceUpdateState(.playing(currentTime: 19, duration: 120))
+        harness.controller.loopCheckHandler = { _ in 5 }
+
+        await harness.controller.refreshPlaybackProgress(engine: harness.engine)
+
+        #expect(harness.engine.seekPositions == [5])
+        #expect(harness.stateManager.currentState == .playing(currentTime: 5, duration: 120))
+        #expect(
+            sessionManager.nowPlayingInfos.last?[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? TimeInterval == 5
+        )
+    }
+
+    @Test("A-B loop seek failure becomes a typed observable playback error")
+    @MainActor
+    func abLoopSeekFailureBecomesObservableError() async {
+        let harness = makeHarness()
+        let expectedError = AudioError.invalidSeekPosition(5)
+        harness.engine.currentTimeValue = 20
+        harness.engine.durationValue = 120
+        harness.engine.seekError = expectedError
+        harness.stateManager.forceUpdateState(.playing(currentTime: 19, duration: 120))
+        harness.controller.loopCheckHandler = { _ in 5 }
+
+        await harness.controller.refreshPlaybackProgress(engine: harness.engine)
+
+        #expect(harness.engine.seekPositions == [5])
+        #expect(harness.stateManager.currentState == .error(expectedError, lastKnownTime: 20))
+    }
+
+    @Test("crossfade uses engine configuration without arming a gapless transition")
     @MainActor
     func crossfadeUsesConfigurationAndPreparesNextTrack() async throws {
         let configuration = AudioEngineConfiguration.default
@@ -94,8 +161,37 @@ struct PlaybackControllerTests {
         #expect(call.duration == 3.0)
         #expect(call.playbackRate == 1.25)
         #expect(call.gainDB == -4)
-        #expect(harness.engine.preparedURLs == [third.url])
+        #expect(harness.engine.preparedURLs.isEmpty)
         #expect(harness.stateManager.currentState == .playing(currentTime: 0, duration: second.duration))
+    }
+
+    @Test("gapless play prepares the upcoming queue track")
+    @MainActor
+    func gaplessPlayPreparesUpcomingTrack() async throws {
+        let first = makeAudioTrack(name: "gapless-first", duration: 180)
+        let second = makeAudioTrack(name: "gapless-second", duration: 200)
+        let info = AudioFileInfo(
+            url: first.url,
+            format: .flac,
+            duration: first.duration,
+            bitDepth: 24,
+            sampleRate: 48_000,
+            channels: 2,
+            fileSize: 1_024
+        )
+        let harness = makeHarness(
+            sessionManager: PlaybackControllerSessionServiceStub(),
+            formatDetectionManager: PlaybackControllerFormatDetectionServiceStub(info: info)
+        )
+        harness.queueManager.enqueue(tracks: [first, second])
+        _ = harness.queueManager.setCurrentTrack(first)
+
+        try await harness.controller.play(
+            track: makeDisplayTrack(from: first),
+            queueEntry: first
+        )
+
+        #expect(harness.engine.preparedURLs == [second.url])
     }
 
     @Test("play sets preferred sample rate before activating audio session")
@@ -132,19 +228,131 @@ struct PlaybackControllerTests {
         )
     }
 
+    @Test("Route renegotiation reuses the active source sample rate")
+    @MainActor
+    func renegotiatePreferredSampleRateUsesActiveSourceRate() async throws {
+        let track = makeDisplayTrack(name: "route-renegotiation")
+        let sessionManager = PlaybackControllerSessionServiceStub()
+        let detectedInfo = AudioFileInfo(
+            url: track.url,
+            format: .alac,
+            duration: 183,
+            bitDepth: 24,
+            sampleRate: 96_000,
+            channels: 2,
+            fileSize: 1_024
+        )
+        let harness = makeHarness(
+            sessionManager: sessionManager,
+            formatDetectionManager: PlaybackControllerFormatDetectionServiceStub(info: detectedInfo)
+        )
+
+        try await harness.controller.play(track: track)
+        await harness.controller.renegotiatePreferredSampleRate()
+
+        #expect(sessionManager.preferredSampleRates == [96_000, 96_000])
+    }
+
+    @Test("restored playback detects format from the resolved queue URL")
+    @MainActor
+    func restoredPlaybackUsesResolvedQueueURL() async throws {
+        let displayTrack = makeDisplayTrack(name: "stale-display-url")
+        let resolvedURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("resolved-queue-url")
+            .appendingPathExtension("flac")
+        let queueEntry = LegacyTrack(
+            id: displayTrack.id,
+            title: displayTrack.title,
+            artist: displayTrack.artist,
+            album: displayTrack.album,
+            url: resolvedURL,
+            duration: displayTrack.duration,
+            audioFormat: displayTrack.audioFormat
+        )
+        let detectedInfo = AudioFileInfo(
+            url: resolvedURL,
+            format: .flac,
+            duration: displayTrack.duration,
+            bitDepth: 24,
+            sampleRate: 96_000,
+            channels: 2,
+            fileSize: 1_024
+        )
+        let formatDetectionManager = PlaybackControllerFormatDetectionServiceStub(info: detectedInfo)
+        let harness = makeHarness(formatDetectionManager: formatDetectionManager)
+
+        try await harness.controller.play(track: displayTrack, queueEntry: queueEntry)
+
+        let detectedURLs = await formatDetectionManager.detectedURLs
+        #expect(detectedURLs == [resolvedURL])
+        #expect(harness.engine.loadedURLs == [resolvedURL])
+    }
+
+    @Test("Media-services reset restores track and position in paused state")
+    @MainActor
+    func mediaServicesResetRestoresPausedPlaybackAndNowPlaying() async throws {
+        let replacementEngine = PlaybackControllerEngineStub()
+        let sessionManager = PlaybackControllerSessionServiceStub()
+        let harness = makeHarness(
+            sessionManager: sessionManager,
+            replacementEngine: replacementEngine
+        )
+        let track = makeDisplayTrack(name: "reset-recovery")
+        let queueEntry = track.toAudioTrack()
+        harness.queueManager.enqueue(tracks: [queueEntry])
+        _ = harness.queueManager.setCurrentTrack(queueEntry)
+        harness.uiState.setCurrentTrack(track)
+        harness.uiState.revealMiniPlayerAfterPlaybackStarted()
+        harness.stateManager.forceUpdateState(
+            .playing(currentTime: 37, duration: 120)
+        )
+        let info = AudioFileInfo(
+            url: track.url,
+            format: .flac,
+            duration: 120,
+            bitDepth: 24,
+            sampleRate: 48_000,
+            channels: 2,
+            fileSize: 1_024
+        )
+
+        try await harness.controller.recoverAfterMediaServicesReset(
+            track: track,
+            queueEntry: queueEntry,
+            info: info,
+            preservedPosition: 37
+        )
+
+        #expect(replacementEngine.loadedURLs == [track.url])
+        #expect(replacementEngine.seekPositions == [37])
+        #expect(replacementEngine.pauseCallCount == 1)
+        #expect(replacementEngine.isPlayingValue == false)
+        #expect(harness.stateManager.currentState == .paused(currentTime: 37, duration: 120))
+        #expect(harness.uiState.currentTrack?.id == track.id)
+        #expect(harness.uiState.showMiniPlayer)
+
+        let nowPlaying = try #require(sessionManager.nowPlayingInfos.last)
+        #expect(nowPlaying[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? TimeInterval == 37)
+        #expect(nowPlaying[MPNowPlayingInfoPropertyPlaybackRate] as? Float == 0)
+        #expect(nowPlaying[MPMediaItemPropertyPlaybackDuration] as? TimeInterval == 120)
+    }
+
     // MARK: - Helpers
 
     @MainActor
     private func makeHarness(
         configuration: AudioEngineConfiguration = .default,
         sessionManager: (any AudioSessionService)? = nil,
-        formatDetectionManager: (any FormatDetectionService)? = nil
+        formatDetectionManager: (any FormatDetectionService)? = nil,
+        replacementEngine: AudioEngineService? = nil
     ) -> PlaybackControllerHarness {
         let stateManager = PlaybackStateManager(enableTransitionValidation: false)
         let queueManager = AudioQueueManager()
         let uiState = AudioUIState()
         let engine = PlaybackControllerEngineStub()
-        let factory = PlaybackControllerEngineFactoryStub(engine: engine)
+        let factory = PlaybackControllerEngineFactoryStub(
+            engine: replacementEngine ?? engine
+        )
         let monitor = PlaybackControllerMonitorStub()
         let manager = AudioEngineManager(
             configuration: configuration,
@@ -222,6 +430,7 @@ struct PlaybackControllerTests {
 private final class PlaybackControllerSessionServiceStub: AudioSessionService {
     private(set) var preferredSampleRates: [Double] = []
     private(set) var eventLog: [String] = []
+    private(set) var nowPlayingInfos: [[String: Any]] = []
     private var sessionActive = false
 
     func configureAudioSession() async throws {}
@@ -249,7 +458,7 @@ private final class PlaybackControllerSessionServiceStub: AudioSessionService {
     func handleRouteChange(_: AudioRouteChange) async {}
 
     func updateNowPlayingInfo(_ info: [String: Any]) async {
-        _ = info
+        nowPlayingInfos.append(info)
         eventLog.append("updateNowPlayingInfo")
     }
 
@@ -338,7 +547,6 @@ private final class PlaybackControllerMonitorStub: AudioPerformanceMonitoring {
     var currentEngine: AudioEngineService? { get async { nil } }
     func startProfiling(duration _: TimeInterval?) async {}
     func stopProfiling() async {}
-    func getProfilingResults() async -> PerformanceProfile? { nil }
     var isProfiling: Bool { get async { false } }
 }
 
@@ -374,10 +582,12 @@ private final class PlaybackControllerEngineStub: AudioEngineService {
     var volumeValue: Float = 1
     var stopCallCount = 0
     var pauseCallCount = 0
+    var loadedURLs: [URL] = []
     var seekPositions: [TimeInterval] = []
     var preparedURLs: [URL] = []
     var crossfadeCalls: [CrossfadeCall] = []
     var seekError: (any Error)?
+    var playError: (any Error)?
 
     var currentTime: TimeInterval { get async { currentTimeValue } }
     var duration: TimeInterval { get async { durationValue } }
@@ -385,9 +595,14 @@ private final class PlaybackControllerEngineStub: AudioEngineService {
     var volume: Float { get async { volumeValue } }
     var audioFormat: AudioFormat? { get async { .flac } }
 
-    func load(url _: URL) async throws {}
+    func load(url: URL) async throws {
+        loadedURLs.append(url)
+    }
 
     func play() async throws {
+        if let playError {
+            throw playError
+        }
         isPlayingValue = true
     }
 
@@ -421,6 +636,8 @@ private final class PlaybackControllerEngineStub: AudioEngineService {
         preparedURLs.append(url)
     }
 
+    func invalidatePreparedTransition() async {}
+
     func crossfade(to url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float) async throws {
         crossfadeCalls.append(
             CrossfadeCall(url: url, duration: duration, playbackRate: playbackRate, gainDB: gainDB)
@@ -429,7 +646,9 @@ private final class PlaybackControllerEngineStub: AudioEngineService {
         isPlayingValue = true
     }
 
-    func getMetrics() async -> AudioMetrics {
+    var metricsAvailability: AudioMetricsAvailability { .available }
+
+    func availableMetrics() async -> AudioMetrics? {
         .empty
     }
 

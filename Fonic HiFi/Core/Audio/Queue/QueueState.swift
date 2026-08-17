@@ -327,18 +327,18 @@ public extension QueueState {
     /// UserDefaults key for storing queue state
     private static let persistenceKey = "com.fonichifi.queue.state"
 
-    /// Save queue state to UserDefaults
-    func save() throws {
+    /// Save queue state to the supplied defaults store.
+    func save(to defaults: UserDefaults = .standard) throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(self)
-        UserDefaults.standard.set(data, forKey: Self.persistenceKey)
+        defaults.set(data, forKey: Self.persistenceKey)
     }
 
-    /// Load queue state from UserDefaults
+    /// Load queue state from the supplied defaults store.
     /// - Returns: Saved queue state, or nil if not found or invalid
-    static func load() -> QueueState? {
-        guard let data = UserDefaults.standard.data(forKey: persistenceKey) else {
+    static func load(from defaults: UserDefaults = .standard) -> QueueState? {
+        guard let data = defaults.data(forKey: persistenceKey) else {
             return nil
         }
 
@@ -347,13 +347,10 @@ public extension QueueState {
 
         do {
             let state = try decoder.decode(QueueState.self, from: data)
-            // Validate that the state is still recent (within 24 hours)
-            if abs(state.timestamp.timeIntervalSinceNow) < 86400 {
-                return state
-            }
+            return state
         } catch {
             logger.error(
-                "Failed to decode queue state: \(error.localizedDescription, privacy: .public)",
+                "Failed to decode queue state: \(error.localizedDescription, privacy: .private)",
             )
         }
 
@@ -361,19 +358,29 @@ public extension QueueState {
     }
 
     /// Clear saved queue state
-    static func clear() {
-        UserDefaults.standard.removeObject(forKey: persistenceKey)
+    static func clear(from defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: persistenceKey)
     }
 
     /// Create a persistence-safe version of the queue state
     /// This excludes tracks that may no longer be available
-    func validateForPersistence() -> QueueState {
-        // Filter out tracks that no longer exist on disk
-        let validTracks = tracks.filter { track in
-            FileManager.default.fileExists(atPath: track.url.path)
+    func validateForPersistence(
+        fileManager: FileManager = .default,
+        documentsDirectory: URL? = nil
+    ) -> QueueState {
+        // Imported media lives below Documents/Music. Resolve that stable suffix
+        // against the current container before deciding that a track is missing.
+        let validTracks = tracks.compactMap { track in
+            track.resolvingManagedURL(
+                fileManager: fileManager,
+                documentsDirectory: documentsDirectory
+            )
         }
-        let validOriginalTracks = originalTracks?.filter { track in
-            FileManager.default.fileExists(atPath: track.url.path)
+        let validOriginalTracks = originalTracks?.compactMap { track in
+            track.resolvingManagedURL(
+                fileManager: fileManager,
+                documentsDirectory: documentsDirectory
+            )
         }
 
         // Adjust current index if needed
@@ -409,12 +416,48 @@ public extension QueueState {
             repeatMode: repeatMode,
             hasNext: hasNext,
             hasPrevious: hasPrevious,
-            history: history.filter { track in
-                FileManager.default.fileExists(atPath: track.url.path)
+            history: history.compactMap { track in
+                track.resolvingManagedURL(
+                    fileManager: fileManager,
+                    documentsDirectory: documentsDirectory
+                )
             },
             shuffleSequence: validShuffleSequence,
             timestamp: Date(),
+            lastPlaybackPosition: lastPlaybackPosition
         )
+    }
+}
+
+private extension LegacyTrack {
+    func resolvingManagedURL(
+        fileManager: FileManager,
+        documentsDirectory: URL?
+    ) -> LegacyTrack? {
+        guard let resolvedURL = ManagedMediaURLResolver.resolveAvailableURL(
+            url,
+            fileManager: fileManager,
+            documentsDirectory: documentsDirectory
+        ) else {
+            return nil
+        }
+
+        guard resolvedURL != url else { return self }
+
+        var resolvedTrack = LegacyTrack(
+            id: id,
+            title: title,
+            artist: artist,
+            album: album,
+            url: resolvedURL,
+            duration: duration,
+            audioFormat: audioFormat
+        )
+        resolvedTrack.replayGainTrack = replayGainTrack
+        resolvedTrack.replayGainAlbum = replayGainAlbum
+        resolvedTrack.isFavorite = isFavorite
+        resolvedTrack.isAvailable = isAvailable
+        return resolvedTrack
     }
 }
 

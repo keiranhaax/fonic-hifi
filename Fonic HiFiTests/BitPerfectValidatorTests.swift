@@ -84,6 +84,10 @@ final class BitPerfectValidatorTests: XCTestCase {
         XCTAssertEqual(result.performanceImpact, .high)
         XCTAssertEqual(result.deviceInfo, deviceInfo)
         XCTAssertEqual(result.confidence, 0.82, accuracy: 0.0001)
+        XCTAssertTrue(result.actualBitDepthIsEstimated)
+        XCTAssertTrue(result.deviceCapabilitiesAreEstimated)
+        XCTAssertTrue(result.detailedReport.contains("Bit Depth (estimated)"))
+        XCTAssertTrue(result.detailedReport.contains("Supports Format (estimated)"))
         XCTAssertEqual(deviceManager.currentCapabilitiesCallCount, 1)
         XCTAssertEqual(analyzer.detectCallCount, 1)
         XCTAssertEqual(recommendationEngine.recommendedCallCount, 1)
@@ -142,6 +146,344 @@ final class BitPerfectValidatorTests: XCTestCase {
         XCTAssertEqual(deviceManager.currentCapabilitiesCallCount, 1)
         XCTAssertEqual(analyzer.detectCallCount, 1)
         XCTAssertEqual(recommendationEngine.recommendedCallCount, 1)
+
+        let changedDSPContext = BitPerfectEligibilityContext(
+            engineIdentifier: AudioEngineType.avAudioEngine.rawValue,
+            applicationVolume: 1,
+            playbackRate: 1,
+            replayGainEnabled: false,
+            equalizerEnabled: true
+        )
+        _ = await validator.validateBitPerfectPlayback(
+            sourceFormat: sourceFormat,
+            outputDevice: nil,
+            context: changedDSPContext
+        )
+
+        XCTAssertEqual(deviceManager.currentCapabilitiesCallCount, 2)
+        XCTAssertEqual(analyzer.detectCallCount, 2)
+        XCTAssertEqual(recommendationEngine.recommendedCallCount, 2)
+    }
+
+    func testEligibleResultDoesNotClaimMeasuredOutputWithoutCompleteEvidence() {
+        let eligible = BitPerfectValidationResult(
+            isValid: true,
+            expectedSampleRate: 96_000,
+            actualSampleRate: 96_000,
+            expectedBitDepth: 24,
+            actualBitDepth: 24
+        )
+
+        XCTAssertEqual(eligible.claimLevel, .eligible)
+        XCTAssertEqual(eligible.statusSummary, "Bit-perfect eligible (not measured)")
+        XCTAssertTrue(
+            eligible.missingMeasurementEvidence.contains(.physicalOutputBitComparison)
+        )
+
+        let measured = BitPerfectValidationResult(
+            isValid: true,
+            measurementEvidence: Set(BitPerfectMeasurementEvidence.allCases),
+            expectedSampleRate: 96_000,
+            actualSampleRate: 96_000,
+            expectedBitDepth: 24,
+            actualBitDepth: 24
+        )
+
+        XCTAssertEqual(measured.claimLevel, .measured)
+        XCTAssertEqual(measured.statusSummary, "Bit-perfect output measured")
+    }
+
+    func testValidationResultKeepsEligibilityAndFormatDetailsConsistent() {
+        let result = BitPerfectValidationResult(
+            isValid: true,
+            expectedSampleRate: 44100,
+            actualSampleRate: 44150,
+            expectedBitDepth: 16,
+            actualBitDepth: 24,
+            expectedChannels: 1,
+            actualChannels: 2
+        )
+
+        XCTAssertFalse(result.sampleRateMatches)
+        XCTAssertTrue(result.bitDepthMatches)
+        XCTAssertFalse(result.channelCountMatches)
+        XCTAssertFalse(result.isValid)
+        XCTAssertEqual(result.mismatchReason, .sampleRateMismatch)
+    }
+
+    func testCrossfadeConfigurationDisablesEligibility() {
+        let context = BitPerfectEligibilityContext(
+            engineIdentifier: AudioEngineType.avAudioEngine.rawValue,
+            applicationVolume: 1,
+            playbackRate: 1,
+            replayGainEnabled: false,
+            equalizerEnabled: false,
+            crossfadeEnabled: true
+        )
+
+        XCTAssertTrue(context.hasDSP)
+    }
+
+    func testPostLoadEngineEvidenceInvalidatesValidationCache() async {
+        let capabilities = DeviceCapabilities(
+            supportedSampleRates: [44100, 48000, 96000],
+            maxBitDepth: 24,
+            maxChannels: 2
+        )
+        let deviceManager = MockDeviceManager(
+            capabilities: capabilities,
+            deviceInfo: nil,
+            bitDepthEstimate: 24
+        )
+        let analyzer = MockProcessingAnalyzer(
+            detection: BitPerfectProcessingDetection(hasProcessing: false, stages: [])
+        )
+        let recommendationEngine = MockRecommendationEngine(
+            recommendedSettings: BitPerfectSettings(),
+            alternatives: [],
+            performanceImpact: .low,
+            confidence: 0.9
+        )
+        let validator = BitPerfectValidator(
+            audioSession: AVAudioSession.sharedInstance(),
+            deviceManager: deviceManager,
+            processingAnalyzer: analyzer,
+            recommendationEngine: recommendationEngine
+        )
+        let sourceFormat = AudioFileInfo(
+            url: URL(fileURLWithPath: "/music/hires.flac"),
+            format: .flac,
+            duration: 180,
+            bitDepth: 24,
+            sampleRate: 96000,
+            channels: 2,
+            fileSize: 42_000_000
+        )
+        let preLoadContext = makeEvidenceContext(
+            evidence: AudioEngineFormatEvidence(
+                isTrackLoaded: false,
+                loadedSampleRate: nil,
+                loadedChannelCount: nil,
+                engineOutputSampleRate: 48000,
+                engineOutputChannelCount: 2,
+                hasEngineProcessing: false
+            )
+        )
+
+        _ = await validator.validateBitPerfectPlayback(
+            sourceFormat: sourceFormat,
+            outputDevice: nil,
+            context: preLoadContext
+        )
+        _ = await validator.validateBitPerfectPlayback(
+            sourceFormat: sourceFormat,
+            outputDevice: nil,
+            context: preLoadContext
+        )
+        XCTAssertEqual(deviceManager.currentCapabilitiesCallCount, 1)
+
+        let postLoadContext = makeEvidenceContext(
+            evidence: AudioEngineFormatEvidence(
+                isTrackLoaded: true,
+                loadedSampleRate: 96000,
+                loadedChannelCount: 2,
+                engineOutputSampleRate: 96000,
+                engineOutputChannelCount: 2,
+                hasEngineProcessing: false
+            )
+        )
+        _ = await validator.validateBitPerfectPlayback(
+            sourceFormat: sourceFormat,
+            outputDevice: nil,
+            context: postLoadContext
+        )
+
+        XCTAssertEqual(deviceManager.currentCapabilitiesCallCount, 2)
+        XCTAssertEqual(analyzer.detectCallCount, 2)
+    }
+
+    func testLoadedEngineEvidenceOverridesSessionOutputFormat() async {
+        let capabilities = DeviceCapabilities(
+            supportedSampleRates: [44100, 48000, 96000],
+            maxBitDepth: 24,
+            maxChannels: 2
+        )
+        let validator = BitPerfectValidator(
+            audioSession: AVAudioSession.sharedInstance(),
+            deviceManager: MockDeviceManager(
+                capabilities: capabilities,
+                deviceInfo: nil,
+                bitDepthEstimate: 24
+            ),
+            processingAnalyzer: MockProcessingAnalyzer(
+                detection: BitPerfectProcessingDetection(hasProcessing: false, stages: [])
+            ),
+            recommendationEngine: MockRecommendationEngine(
+                recommendedSettings: BitPerfectSettings(),
+                alternatives: [],
+                performanceImpact: .low,
+                confidence: 0.9
+            )
+        )
+        let sourceFormat = AudioFileInfo(
+            url: URL(fileURLWithPath: "/music/hires.flac"),
+            format: .flac,
+            duration: 180,
+            bitDepth: 24,
+            sampleRate: 96000,
+            channels: 2,
+            fileSize: 42_000_000
+        )
+        let context = makeEvidenceContext(
+            evidence: AudioEngineFormatEvidence(
+                isTrackLoaded: true,
+                loadedSampleRate: 96000,
+                loadedChannelCount: 2,
+                engineOutputSampleRate: 48000,
+                engineOutputChannelCount: 2,
+                hasEngineProcessing: false
+            )
+        )
+
+        let result = await validator.validateBitPerfectPlayback(
+            sourceFormat: sourceFormat,
+            outputDevice: nil,
+            context: context
+        )
+
+        XCTAssertEqual(result.actualSampleRate, 48000)
+        XCTAssertFalse(result.sampleRateMatches)
+        XCTAssertFalse(result.isValid)
+        XCTAssertEqual(result.mismatchReason, .sampleRateMismatch)
+        XCTAssertTrue(result.processingStages.contains { $0.type == .sampleRateConversion })
+        XCTAssertTrue(result.measurementEvidence.contains(.sourceFormat))
+        XCTAssertTrue(result.measurementEvidence.contains(.actualEngineOutputFormat))
+        XCTAssertEqual(result.claimLevel, .ineligible)
+    }
+
+    func testEngineProcessingEvidenceForcesIneligibility() async {
+        let capabilities = DeviceCapabilities(
+            supportedSampleRates: [44100, 48000, 96000],
+            maxBitDepth: 24,
+            maxChannels: 2
+        )
+        let validator = BitPerfectValidator(
+            audioSession: AVAudioSession.sharedInstance(),
+            deviceManager: MockDeviceManager(
+                capabilities: capabilities,
+                deviceInfo: nil,
+                bitDepthEstimate: 24
+            ),
+            processingAnalyzer: MockProcessingAnalyzer(
+                detection: BitPerfectProcessingDetection(hasProcessing: false, stages: [])
+            ),
+            recommendationEngine: MockRecommendationEngine(
+                recommendedSettings: BitPerfectSettings(),
+                alternatives: [],
+                performanceImpact: .low,
+                confidence: 0.9
+            )
+        )
+        let sourceFormat = AudioFileInfo(
+            url: URL(fileURLWithPath: "/music/hires.flac"),
+            format: .flac,
+            duration: 180,
+            bitDepth: 24,
+            sampleRate: 96000,
+            channels: 2,
+            fileSize: 42_000_000
+        )
+        let context = makeEvidenceContext(
+            evidence: AudioEngineFormatEvidence(
+                isTrackLoaded: true,
+                loadedSampleRate: 96000,
+                loadedChannelCount: 2,
+                engineOutputSampleRate: 96000,
+                engineOutputChannelCount: 2,
+                hasEngineProcessing: true
+            )
+        )
+
+        let result = await validator.validateBitPerfectPlayback(
+            sourceFormat: sourceFormat,
+            outputDevice: nil,
+            context: context
+        )
+
+        XCTAssertFalse(result.isValid)
+        XCTAssertTrue(result.hasAudioProcessing)
+        XCTAssertTrue(
+            result.validationIssues.contains { $0.description == "Engine-side audio processing is active" }
+        )
+        XCTAssertTrue(
+            result.processingStages.contains { $0.description == "Engine graph processing active" }
+        )
+    }
+
+    private func makeEvidenceContext(
+        evidence: AudioEngineFormatEvidence
+    ) -> BitPerfectEligibilityContext {
+        BitPerfectEligibilityContext(
+            engineIdentifier: AudioEngineType.avAudioEngine.rawValue,
+            applicationVolume: 1,
+            playbackRate: 1,
+            replayGainEnabled: false,
+            equalizerEnabled: false,
+            crossfadeEnabled: false,
+            engineEvidence: evidence
+        )
+    }
+
+    func testChannelMismatchPreventsEligibilityAndRecordsConversion() async {
+        let audioSession = AVAudioSession.sharedInstance()
+        let routeChannels = audioSession.currentRoute.outputs.first?.channels?.count ?? 2
+        let outputChannels = audioSession.outputNumberOfChannels > 0
+            ? Int(audioSession.outputNumberOfChannels)
+            : routeChannels
+        let sourceChannels = UInt8(outputChannels == 1 ? 2 : 1)
+        let sampleRate = Int(audioSession.sampleRate)
+        let capabilities = DeviceCapabilities(
+            supportedSampleRates: [sampleRate],
+            maxBitDepth: 16,
+            maxChannels: max(outputChannels, Int(sourceChannels))
+        )
+        let validator = BitPerfectValidator(
+            audioSession: audioSession,
+            deviceManager: MockDeviceManager(
+                capabilities: capabilities,
+                deviceInfo: nil,
+                bitDepthEstimate: 16
+            ),
+            processingAnalyzer: MockProcessingAnalyzer(
+                detection: BitPerfectProcessingDetection(hasProcessing: false, stages: [])
+            ),
+            recommendationEngine: MockRecommendationEngine(
+                recommendedSettings: BitPerfectSettings(),
+                alternatives: [],
+                performanceImpact: .low,
+                confidence: 0.5
+            )
+        )
+        let sourceFormat = AudioFileInfo(
+            url: URL(fileURLWithPath: "/synthetic/channel-check.wav"),
+            format: .wav,
+            duration: 1,
+            bitDepth: 16,
+            sampleRate: Double(sampleRate),
+            channels: sourceChannels,
+            fileSize: 1
+        )
+
+        let result = await validator.validateBitPerfectPlayback(
+            sourceFormat: sourceFormat,
+            outputDevice: nil
+        )
+
+        XCTAssertFalse(result.channelCountMatches)
+        XCTAssertFalse(result.isValid)
+        XCTAssertEqual(result.mismatchReason, .channelCountMismatch)
+        XCTAssertTrue(result.validationIssues.contains { $0.type == .formatMismatch })
+        XCTAssertTrue(result.processingStages.contains { $0.type == .channelMixing })
     }
 
     func testAnalyzeAudioPathUsesValidationEngineCollaborators() async {

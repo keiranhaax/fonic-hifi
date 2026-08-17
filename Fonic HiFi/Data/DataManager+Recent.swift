@@ -35,7 +35,7 @@ public extension DataManager {
         do {
             return try mainContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to get recently added tracks: \(error.localizedDescription)")
+            logger.error("Failed to get recently added tracks: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }
@@ -52,7 +52,7 @@ public extension DataManager {
         do {
             return try mainContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to get recently played tracks: \(error.localizedDescription)")
+            logger.error("Failed to get recently played tracks: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }
@@ -69,7 +69,7 @@ public extension DataManager {
         do {
             return try mainContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to get most listened tracks: \(error.localizedDescription)")
+            logger.error("Failed to get most listened tracks: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }
@@ -86,7 +86,7 @@ public extension DataManager {
         do {
             return try mainContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to get favorite albums: \(error.localizedDescription)")
+            logger.error("Failed to get favorite albums: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }
@@ -100,7 +100,7 @@ public extension DataManager {
         do {
             return try mainContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to get artists: \(error.localizedDescription)")
+            logger.error("Failed to get artists: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }
@@ -113,7 +113,7 @@ public extension DataManager {
             let genres = Set(tracks.compactMap(\.genre))
             return genres.sorted()
         } catch {
-            logger.error("Failed to get unique genres: \(error.localizedDescription)")
+            logger.error("Failed to get unique genres: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }
@@ -127,7 +127,7 @@ public extension DataManager {
         do {
             return try mainContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to get albums: \(error.localizedDescription)")
+            logger.error("Failed to get albums: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.fetchFailed(error)
         }
     }

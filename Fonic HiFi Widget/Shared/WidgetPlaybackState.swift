@@ -66,12 +66,21 @@ public struct WidgetPlaybackState: Codable, Sendable, Hashable {
     /// Progress as a value from 0.0 to 1.0
     public var progress: Double {
         guard duration > 0 else { return 0 }
-        return min(max(currentTime / duration, 0), 1)
+        return min(max(projectedCurrentTime / duration, 0), 1)
     }
 
     /// Remaining time in seconds
     public var remainingTime: TimeInterval {
-        max(duration - currentTime, 0)
+        max(duration - projectedCurrentTime, 0)
+    }
+
+    /// Current position projected from the last app update while playing.
+    /// A stale snapshot never advances after the app has been force-quit.
+    public var projectedCurrentTime: TimeInterval {
+        guard duration > 0 else { return currentTime }
+        guard isPlaying, !isStale else { return min(max(currentTime, 0), duration) }
+        let elapsed = max(Date().timeIntervalSince(timestamp), 0) * TimeInterval(playbackRate)
+        return min(max(currentTime + elapsed, 0), duration)
     }
 
     /// Whether the track is at the beginning
@@ -114,6 +123,11 @@ public extension WidgetPlaybackState {
     /// Save to App Group UserDefaults
     func save() {
         guard let defaults = UserDefaults.appGroup else { return }
+        save(to: defaults)
+    }
+
+    /// Save to an explicitly provided store.
+    func save(to defaults: UserDefaults) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
 
@@ -125,9 +139,15 @@ public extension WidgetPlaybackState {
 
     /// Load from App Group UserDefaults
     static func load() -> WidgetPlaybackState? {
-        guard let defaults = UserDefaults.appGroup,
-              let data = defaults.data(forKey: WidgetConstants.Keys.playbackState)
-        else { return nil }
+        guard let defaults = UserDefaults.appGroup else { return nil }
+        return load(from: defaults)
+    }
+
+    /// Load from an explicitly provided store.
+    static func load(from defaults: UserDefaults) -> WidgetPlaybackState? {
+        guard let data = defaults.data(forKey: WidgetConstants.Keys.playbackState) else {
+            return nil
+        }
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -138,5 +158,10 @@ public extension WidgetPlaybackState {
     /// Load or return idle state
     static func loadOrIdle() -> WidgetPlaybackState {
         load() ?? .idle
+    }
+
+    /// Load from an explicitly provided store or return idle state.
+    static func loadOrIdle(from defaults: UserDefaults) -> WidgetPlaybackState {
+        load(from: defaults) ?? .idle
     }
 }

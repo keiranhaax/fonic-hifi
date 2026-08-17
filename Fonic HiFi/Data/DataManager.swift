@@ -10,12 +10,33 @@ import Foundation
 import OSLog
 import SwiftData
 
+/// Controls whether persistence authorities may save user-visible changes.
+public enum DataMutationPolicy: Equatable, Sendable {
+    case normal
+    case readOnly
+}
+
+/// Typed failure returned when a recovery-mode authority cannot save changes.
+public enum DataMutationError: Equatable, LocalizedError, Sendable {
+    case readOnly
+
+    public var errorDescription: String? {
+        switch self {
+        case .readOnly:
+            "Changes cannot be saved while Fonic HiFi is in read-only recovery mode."
+        }
+    }
+}
+
 /// Centralized data management for the Fonic HiFi app
 @MainActor
 public final class DataManager: ObservableObject {
     // MARK: - Properties
 
     public let isFallback: Bool
+
+    /// Immutable policy shared by all persistence and import authorities.
+    public let mutationPolicy: DataMutationPolicy
 
     /// The SwiftData model container
     public let container: ModelContainer
@@ -40,8 +61,9 @@ public final class DataManager: ObservableObject {
         LibraryImportService(
             trackDataActor: trackDataActor,
             metadataExtractor: metadataExtractor,
+            mutationPolicy: mutationPolicy,
             statisticsInvalidator: { [weak self] in
-                self?.invalidateLibraryStatisticsCache()
+                self?.invalidateLibrary()
             }
         )
     }()
@@ -61,6 +83,9 @@ public final class DataManager: ObservableObject {
     /// Recovery state surfaced to the UI when operating in limited mode
     @Published public private(set) var importRecoveryState: ImportRecoveryState?
 
+    /// Monotonic signal for repository-backed consumers to refresh after writes.
+    @Published public private(set) var libraryRevision: UInt64 = 0
+
     /// Logger for data operations
     let logger = Log.logger(.dataManager)
     static let initLogger = Log.logger(.dataManagerInit)
@@ -71,11 +96,13 @@ public final class DataManager: ObservableObject {
         container: ModelContainer,
         isFallback: Bool,
         importRecoveryState: ImportRecoveryState? = nil,
+        mutationPolicy: DataMutationPolicy = .normal,
     ) {
         self.container = container
         mainContext = container.mainContext
         backgroundContext = ModelContext(container)
         self.isFallback = isFallback
+        self.mutationPolicy = mutationPolicy
         self.importRecoveryState = importRecoveryState
 
         mainContext.autosaveEnabled = true
@@ -83,9 +110,9 @@ public final class DataManager: ObservableObject {
 
         let formatDetectionService = AudioFormatDetectionManager()
         metadataExtractor = MetadataExtractionService(formatDetectionService: formatDetectionService)
-        trackDataActor = TrackDataActor(modelContainer: container)
-        recentSearchesActor = RecentSearchesActor(modelContainer: container)
-        logger.info("DataManager initialized\(isFallback ? " in fallback mode" : "") successfully")
+        trackDataActor = TrackDataActor(modelContainer: container, mutationPolicy: mutationPolicy)
+        recentSearchesActor = RecentSearchesActor(modelContainer: container, mutationPolicy: mutationPolicy)
+        logger.info("DataManager initialized\(isFallback ? " in fallback mode" : "", privacy: .public) successfully")
     }
 }
 
@@ -110,6 +137,11 @@ extension DataManager: LibraryRepositoryFactory {
                 await repository.invalidateLibraryStatisticsCache()
             }
         }
+    }
+
+    func invalidateLibrary() {
+        libraryRevision &+= 1
+        invalidateLibraryStatisticsCache()
     }
 }
 

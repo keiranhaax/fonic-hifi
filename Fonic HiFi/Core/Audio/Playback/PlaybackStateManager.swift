@@ -29,7 +29,7 @@ public final class PlaybackStateManager {
 
     /// Public read-only publisher for state changes (main thread guaranteed)
     public var statePublisher: AnyPublisher<PlaybackStateChange, Never> {
-        _statePublisher.receive(on: RunLoop.main).eraseToAnyPublisher()
+        _statePublisher.eraseToAnyPublisher()
     }
 
     // MARK: - Private Properties
@@ -63,8 +63,8 @@ public final class PlaybackStateManager {
             if loggingEnabled {
                 logger.warning(
                     """
-                    PlaybackStateManager: Invalid transition from \(self.currentState, privacy: .public)
-                    to \(newState, privacy: .public)
+                    PlaybackStateManager: Invalid transition from \(self.currentState, privacy: .private)
+                    to \(newState, privacy: .private)
                     """,
                 )
             }
@@ -94,8 +94,8 @@ public final class PlaybackStateManager {
         if loggingEnabled {
             logger.debug(
                 """
-                PlaybackStateManager: \(oldState, privacy: .public)
-                -> \(newState, privacy: .public)
+                PlaybackStateManager: \(oldState, privacy: .private)
+                -> \(newState, privacy: .private)
                 """,
             )
         }

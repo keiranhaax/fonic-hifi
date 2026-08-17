@@ -10,11 +10,11 @@ import SwiftUI
 @MainActor
 struct ContentView: View {
     @Environment(\.dataManager) private var dataManager
-    @Environment(\.importService) private var importService
-    @Environment(\.audioEngine) private var audioService
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.libraryRepository) private var libraryRepository
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @ObservedObject private var colorService = DominantColorService.shared
     @AppStorage("artworkThemingEnabled") private var artworkThemingEnabled = true
@@ -23,61 +23,85 @@ struct ContentView: View {
     @Namespace private var miniPlayerNamespace
     @State private var showingNowPlaying = false
     @State private var searchText = ""
+    @State private var isMiniPlayerVisible = false
+
+    private var miniPlayerActive: Bool {
+        audioService.showMiniPlayer && audioService.currentTrack != nil
+    }
 
     var body: some View {
         TabView {
-            Tab("Home", systemImage: "house.fill") {
+            Tab {
                 HomeView()
                     .environment(\.showingNowPlaying, $showingNowPlaying)
+            } label: {
+                tabLabel("Home", systemImage: "house.fill")
             }
 
-            Tab("Library", systemImage: "music.note.list") {
+            Tab {
                 if let repository = libraryRepository {
                     LibraryView(viewModel: LibraryViewModel(repository: repository))
                         .environment(\.showingNowPlaying, $showingNowPlaying)
                 } else {
                     LibraryUnavailableView()
                 }
+            } label: {
+                tabLabel("Library", systemImage: "music.note.list")
             }
 
-            Tab("Settings", systemImage: "gear") {
+            Tab {
                 SettingsView()
+            } label: {
+                tabLabel("Settings", systemImage: "gear")
             }
 
-            Tab("Search", systemImage: "magnifyingglass", role: .search) {
+            Tab(role: .search) {
                 NavigationStack {
                     SearchView(searchText: $searchText)
                         .searchable(text: $searchText, placement: .toolbar, prompt: Text("Search Library"))
                         .environment(\.showingNowPlaying, $showingNowPlaying)
-                        .environment(\.audioEngine, audioService)
-                        .environment(\.importService, importService)
+                        .audioEngine(audioService)
                 }
+            } label: {
+                tabLabel("Search", systemImage: "magnifyingglass")
             }
         }
         .preferredColorScheme(.dark)
         .tabBarMinimizeBehavior(.onScrollDown)
-        .tabViewBottomAccessory {
-            if let audioService {
-                LiquidGlassMiniPlayer(
-                    namespace: miniPlayerNamespace,
-                    onOpen: {
-                        showingNowPlaying = true
-                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                        generator.impactOccurred(intensity: 0.9)
-                    }
-                )
-                    .environment(\.audioEngine, audioService)
-                    .matchedTransitionSource(id: "miniplayer", in: miniPlayerNamespace)
+        .tabViewBottomAccessory(isEnabled: isMiniPlayerVisible) {
+            LiquidGlassMiniPlayer(
+                onOpen: {
+                    showingNowPlaying = true
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred(intensity: 0.9)
+                }
+            )
+                .audioEngine(audioService)
+                .matchedTransitionSource(id: "miniplayer", in: miniPlayerNamespace)
+        }
+        .onChange(of: miniPlayerActive, initial: true) { _, active in
+            // The accessory only animates its glass insertion/removal when the
+            // change happens inside an explicit animated transaction.
+            if reduceMotion {
+                isMiniPlayerVisible = active
+            } else {
+                withAnimation(.smooth(duration: 0.35)) {
+                    isMiniPlayerVisible = active
+                }
             }
         }
+        .playbackErrorOverlay(
+            audioService.playbackError,
+            accessibilityIdentifier: "RootPlaybackErrorBanner",
+            dismiss: { id in audioService.dismissPlaybackControlError(id: id) }
+        )
         .fullScreenCover(isPresented: $showingNowPlaying) {
             ScrollView {}
                 .safeAreaInset(edge: .top, spacing: 0) {
                     NowPlayingContent(
-                        namespace: miniPlayerNamespace,
                         dismiss: { showingNowPlaying = false }
                     )
-                    .environment(\.audioEngine, audioService)
+                    .audioEngine(audioService)
                     .navigationTransition(.zoom(sourceID: "miniplayer", in: miniPlayerNamespace))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -101,6 +125,24 @@ struct ContentView: View {
             colorService.updateColorScheme(colorScheme)
             colorService.updateThemingEnabled(artworkThemingEnabled)
             colorService.updateLightModeThemingEnabled(artworkThemingLightMode)
+        }
+        .onOpenURL { url in
+            guard url.scheme == "fonichifi", url.host == "nowplaying", url.path.isEmpty else {
+                return
+            }
+            showingNowPlaying = true
+        }
+    }
+
+    @ViewBuilder
+    private func tabLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            Label(title, systemImage: systemImage)
+                .labelStyle(.iconOnly)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(title))
+        } else {
+            Label(title, systemImage: systemImage)
         }
     }
 }
@@ -231,8 +273,6 @@ private struct PreviewLibraryRepository: LibraryRepository {
             .audioEngine(AudioEngineFacade())
             .libraryRepository(PreviewLibraryRepository())
     } else {
-        ContentView()
-            .audioEngine(AudioEngineFacade())
-            .libraryRepository(PreviewLibraryRepository())
+        Text("Preview unavailable")
     }
 }

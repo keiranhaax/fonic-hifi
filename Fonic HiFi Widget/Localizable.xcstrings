@@ -1,0 +1,94 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "-%@" : {
+
+    },
+    "%@ — %@" : {
+      "comment" : "Artist and album metadata; translators may reorder placeholders and punctuation",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ — %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "%@ • %@" : {
+      "comment" : "Track title and artist metadata; translators may reorder placeholders and punctuation",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ • %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ • %2$@"
+          }
+        }
+      }
+    },
+    "Fonic HiFi" : {
+      "shouldTranslate" : false
+    },
+    "Not Playing" : {
+
+    },
+    "Nothing playing" : {
+
+    },
+    "Nothing Playing" : {
+
+    },
+    "Now Playing" : {
+
+    },
+    "Open Fonic HiFi to play music" : {
+
+    },
+    "Play or Pause" : {
+
+    },
+    "Queue is empty" : {
+
+    },
+    "See what's playing and control playback." : {
+
+    },
+    "Skip to Next Track" : {
+
+    },
+    "Skip to Previous Track" : {
+
+    },
+    "Skip to the next track in the queue." : {
+
+    },
+    "Skip to the previous track in the queue." : {
+
+    },
+    "Toggle playback of the current track." : {
+
+    },
+    "Toggle Shuffle" : {
+
+    },
+    "Toggle shuffle mode for the playback queue." : {
+
+    },
+    "Up Next" : {
+
+    }
+  },
+  "version" : "1.3"
+}

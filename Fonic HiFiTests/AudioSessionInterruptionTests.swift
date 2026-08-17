@@ -19,48 +19,41 @@ final class AudioSessionInterruptionTests: XCTestCase {
         XCTAssertFalse(ended.suggestsManualResume)
     }
 
-    func testFromNotificationBeganParsesReason() {
-        let userInfo: [AnyHashable: Any] = [
-            AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.began.rawValue,
-            AVAudioSessionInterruptionReasonKey: AVAudioSession.InterruptionReason.routeDisconnected.rawValue,
-        ]
-
-        let notification = Notification(
-            name: AVAudioSession.interruptionNotification,
-            object: nil,
-            userInfo: userInfo
+    func testFromInterruptionReasonMapsCategoryAndContext() {
+        let interruption = AudioSessionInterruption.from(
+            interruptionReason: .routeDisconnected
         )
 
-        let interruption = AudioSessionInterruption.from(notification: notification)
-
-        XCTAssertNotNil(interruption)
-        XCTAssertEqual(interruption?.type, .began)
-        XCTAssertEqual(interruption?.category, .routeChange)
-        XCTAssertEqual(interruption?.contextValue(for: "reason"), String(AVAudioSession.InterruptionReason.routeDisconnected.rawValue))
-        XCTAssertEqual(interruption?.contextValue(for: "notification"), "AudioSessionInterruption")
+        XCTAssertEqual(interruption.type, .began)
+        XCTAssertEqual(interruption.category, .routeChange)
+        XCTAssertEqual(
+            interruption.contextValue(for: "reason"),
+            String(AVAudioSession.InterruptionReason.routeDisconnected.rawValue)
+        )
+        XCTAssertEqual(
+            interruption.contextValue(for: "notification"),
+            "AudioSessionDidBecomeInactive"
+        )
     }
 
-    func testFromNotificationEndedParsesOptions() {
-        let options = AVAudioSession.InterruptionOptions.shouldResume
-        let userInfo: [AnyHashable: Any] = [
-            AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.ended.rawValue,
-            AVAudioSessionInterruptionOptionKey: options.rawValue,
-        ]
-
-        let notification = Notification(
-            name: AVAudioSession.interruptionNotification,
-            object: nil,
-            userInfo: userInfo
+    func testFromResumptionRecommendationMapsBothOutcomes() {
+        let shouldResume = AudioSessionInterruption.from(
+            resumptionRecommendation: .shouldResume
+        )
+        let shouldNotResume = AudioSessionInterruption.from(
+            resumptionRecommendation: .shouldNotResume
         )
 
-        let interruption = AudioSessionInterruption.from(notification: notification)
-
-        XCTAssertNotNil(interruption)
-        XCTAssertEqual(interruption?.type, .ended)
-        XCTAssertTrue(interruption?.shouldResume ?? false)
-        XCTAssertEqual(interruption?.contextValue(for: "options"), String(options.rawValue))
-        XCTAssertFalse(interruption?.suggestsManualResume ?? true)
-        XCTAssertEqual(interruption?.recommendedAction, .resume)
+        XCTAssertEqual(shouldResume.type, .ended)
+        XCTAssertTrue(shouldResume.shouldResume)
+        XCTAssertEqual(
+            shouldResume.contextValue(for: "recommendation"),
+            String(AVAudioSession.ResumptionRecommendation.shouldResume.rawValue)
+        )
+        XCTAssertFalse(shouldResume.suggestsManualResume)
+        XCTAssertEqual(shouldResume.recommendedAction, .resume)
+        XCTAssertFalse(shouldNotResume.shouldResume)
+        XCTAssertTrue(shouldNotResume.suggestsManualResume)
     }
 
     func testSuggestsManualResumeAndDescriptions() {

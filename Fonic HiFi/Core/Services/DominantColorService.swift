@@ -27,7 +27,7 @@ final class DominantColorService: ObservableObject {
     // MARK: - Private State
 
     private var colorCache: [UUID: Color] = [:]
-    private var isExtractingColor = false
+    private var extractionGeneration = 0
     private let maxCacheSize = 50
 
     /// Current color scheme for palette adaptation
@@ -89,6 +89,8 @@ final class DominantColorService: ObservableObject {
     /// Extract dominant color for the given track.
     /// Uses cache if available, otherwise extracts asynchronously.
     func extractColor(for track: Track?) async {
+        extractionGeneration += 1
+        let generation = extractionGeneration
         guard let track else {
             rawDominantColor = .accentColor
             currentTrackID = nil
@@ -107,11 +109,6 @@ final class DominantColorService: ObservableObject {
             return
         }
 
-        // Guard concurrent extractions
-        guard !isExtractingColor else { return }
-        isExtractingColor = true
-        defer { isExtractingColor = false }
-
         // No artwork - use default
         guard let artworkData = track.artwork else {
             rawDominantColor = .accentColor
@@ -124,6 +121,8 @@ final class DominantColorService: ObservableObject {
         let extractedColor = await Task.detached(priority: .utility) {
             UIImage(data: artworkData)?.fastAverageColor ?? Color.accentColor
         }.value
+
+        guard !Task.isCancelled, generation == extractionGeneration else { return }
 
         // Cache result
         colorCache[track.id] = extractedColor
@@ -138,6 +137,8 @@ final class DominantColorService: ObservableObject {
     /// Extract dominant color for the given album.
     /// Uses cache if available, otherwise extracts asynchronously.
     func extractColor(for album: Album?) async {
+        extractionGeneration += 1
+        let generation = extractionGeneration
         guard let album else {
             rawDominantColor = .accentColor
             currentTrackID = nil
@@ -153,11 +154,6 @@ final class DominantColorService: ObservableObject {
             return
         }
 
-        // Guard concurrent extractions
-        guard !isExtractingColor else { return }
-        isExtractingColor = true
-        defer { isExtractingColor = false }
-
         // No artwork - use default
         guard let artworkData = album.artwork else {
             rawDominantColor = .accentColor
@@ -170,6 +166,8 @@ final class DominantColorService: ObservableObject {
         let extractedColor = await Task.detached(priority: .utility) {
             UIImage(data: artworkData)?.fastAverageColor ?? Color.accentColor
         }.value
+
+        guard !Task.isCancelled, generation == extractionGeneration else { return }
 
         // Cache result
         colorCache[album.id] = extractedColor

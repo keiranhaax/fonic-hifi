@@ -181,13 +181,6 @@ public final class Playlist {
         dateModified = Date()
     }
 
-    /// Clear all tracks from the playlist
-    public func clearTracks() {
-        guard type == .static else { return }
-        trackIds.removeAll()
-        dateModified = Date()
-    }
-
     // MARK: - Smart Playlist Management
 
     /// Add a smart filter rule
@@ -197,19 +190,6 @@ public final class Playlist {
         dateModified = Date()
     }
 
-    /// Remove a smart filter rule
-    public func removeSmartFilter(at index: Int) {
-        guard type == .smart, index >= 0, index < smartFilters.count else { return }
-        smartFilters.remove(at: index)
-        dateModified = Date()
-    }
-
-    /// Clear all smart filter rules
-    public func clearSmartFilters() {
-        guard type == .smart else { return }
-        smartFilters.removeAll()
-        dateModified = Date()
-    }
 }
 
 // MARK: - Playlist Types
@@ -410,20 +390,6 @@ public extension Playlist {
         ))
         playlist.sortOrder = .dateAdded
         playlist.maxTracks = 100
-        return playlist
-    }
-
-    /// Create a "Most Played" smart playlist
-    static func mostPlayed() -> Playlist {
-        let playlist = Playlist(name: "Most Played", type: .smart)
-        playlist.systemIcon = "play.circle"
-        playlist.addSmartFilter(SmartPlaylistRule(
-            field: .playCount,
-            operator: .greaterThan,
-            value: "0",
-        ))
-        playlist.sortOrder = .playCount
-        playlist.maxTracks = 50
         return playlist
     }
 

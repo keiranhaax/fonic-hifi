@@ -1,0 +1,21 @@
+[
+  {
+    "album": "Version One",
+    "artist": "Baseline Artist",
+    "audioFormat": "MP3",
+    "duration": 190,
+    "id": "99E45757-4C66-4080-93B1-2AC2E18C74F4",
+    "isLossless": false,
+    "title": "Legacy Next"
+  },
+  {
+    "album": "Version One",
+    "artist": "Archive Artist",
+    "artworkKey": "legacy-lossless-artwork",
+    "audioFormat": "ALAC",
+    "duration": 301.25,
+    "id": "06F6343F-3301-4AB8-A02E-E26032FE7EAF",
+    "isLossless": true,
+    "title": "Legacy Lossless"
+  }
+]

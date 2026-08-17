@@ -64,6 +64,48 @@ public enum AudioEngineType: String, CaseIterable, Sendable {
             .low // AudioKit is optimized and runs on audio thread
         }
     }
+
+    /// Whether this engine type exposes an implemented EQ processing path.
+    /// AudioKit remains deliberately false until its graph owns the DSP node.
+    public var supportsEQ: Bool {
+        switch self {
+        case .avAudioEngine:
+            true
+        case .audioKitEngine:
+            false
+        }
+    }
+}
+
+/// Typed interpretation of the persisted engine preference.
+public enum AudioEnginePreference: Equatable, Sendable {
+    public static let storageKey = "preferredAudioEngine"
+
+    case automatic
+    case requested(AudioEngineType)
+    case unsupported
+
+    public init(storedValue: String?) {
+        switch storedValue {
+        case nil, "":
+            self = .automatic
+        case AudioEngineType.avAudioEngine.rawValue:
+            self = .requested(.avAudioEngine)
+        case "AudioKit", AudioEngineType.audioKitEngine.rawValue:
+            self = .requested(.audioKitEngine)
+        default:
+            self = .unsupported
+        }
+    }
+
+    public var canonicalStoredValue: String? {
+        switch self {
+        case .automatic, .unsupported:
+            nil
+        case .requested(let engineType):
+            engineType.rawValue
+        }
+    }
 }
 
 /// Performance impact of using a specific engine

@@ -22,8 +22,7 @@ public protocol AudioSessionManaging: Sendable {
     func enableRemoteCommands() async
     func disableRemoteCommands() async
 
-    // Interruption Handling
-    func handleInterruption(_ notification: Notification) async
+    // Framework Notifications
     func handleRouteChange(_ notification: Notification) async
 
     // State Query
@@ -36,9 +35,6 @@ public protocol AudioSessionManaging: Sendable {
 @MainActor
 public final class AudioSessionManager: NSObject, AudioSessionService, AudioSessionManaging {
     // MARK: - Properties
-
-    /// Shared instance for global access
-    public static let shared = AudioSessionManager()
 
     /// The underlying AVAudioSession
     private let session = AVAudioSession.sharedInstance()
@@ -55,12 +51,23 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     /// Internal state tracking
     private var _isSessionActive = false
     private var hasRegisteredForNotifications = false
+    private var interruptionObservationTokens = Set<NotificationCenter.ObservationToken>()
+    private var isHandlingMediaServicesReset = false
+    private(set) var remoteCommandRegistrationGeneration = 0
+    /// Internal registration bookkeeping keeps lifecycle tests independent of
+    /// the system-owned MPRemoteCommandCenter (which has no trigger API).
+    private(set) var registeredRemoteCommandDescriptions: [String] = []
+    private var remoteCommandRoutingEnabled = true
+    private(set) var activationTransitionCount = 0
+    private(set) var deactivationTransitionCount = 0
 
     private let logger = Log.logger(.audioSession)
+    private let notificationCenter: NotificationCenter
 
     // MARK: - Initialization
 
-    override public init() {
+    public init(notificationCenter: NotificationCenter = .default) {
+        self.notificationCenter = notificationCenter
         super.init()
     }
 
@@ -71,6 +78,13 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             // The playback category already supports AirPlay. The explicit
             // allowAirPlay option is only valid with playAndRecord.
             try session.setCategory(.playback, mode: .default, options: [])
+
+            // Deliberate: keep the iOS 17+ default of interrupting active
+            // Now Playing sessions when the route disconnects. The unplug then
+            // arrives both as an interruption and as an .oldDeviceUnavailable
+            // route change; StateCoordinator clears the auto-resume intent on
+            // the route path so the pair cannot resume onto the new route.
+            try session.setPrefersInterruptionOnRouteDisconnect(true)
 
             // Register for system notifications
             if !hasRegisteredForNotifications {
@@ -88,13 +102,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         guard !_isSessionActive else { return }
 
         do {
-            let didActivate: Bool
-            if #available(iOS 27.0, *) {
-                didActivate = try await session.activate(options: [])
-            } else {
-                try await Self.setSessionActiveLegacy(true, options: [])
-                didActivate = true
-            }
+            let didActivate = try await session.activate(options: [])
 
             guard didActivate else {
                 throw AudioError.sessionConfigurationFailed(
@@ -103,6 +111,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
 
             _isSessionActive = true
+            activationTransitionCount += 1
             logger.notice(
                 """
                 Audio session activated:
@@ -122,13 +131,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         guard _isSessionActive else { return }
 
         do {
-            let didDeactivate: Bool
-            if #available(iOS 27.0, *) {
-                didDeactivate = try await session.deactivate(options: [.notifyOthersOnDeactivation])
-            } else {
-                try await Self.setSessionActiveLegacy(false, options: .notifyOthersOnDeactivation)
-                didDeactivate = true
-            }
+            let didDeactivate = try await session.deactivate(options: [.notifyOthersOnDeactivation])
 
             guard didDeactivate else {
                 throw AudioError.sessionConfigurationFailed(
@@ -137,6 +140,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
             }
 
             _isSessionActive = false
+            deactivationTransitionCount += 1
             logger.notice("Audio session deactivated")
         } catch {
             throw AudioError.sessionConfigurationFailed(
@@ -162,7 +166,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                 """
             )
         } catch {
-            logger.warning("Failed to set preferred sample rate: \(error.localizedDescription, privacy: .public)")
+            logger.warning("Failed to set preferred sample rate: \(error.localizedDescription, privacy: .private)")
         }
     }
 
@@ -215,61 +219,87 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     // MARK: - Remote Commands
 
     public func enableRemoteCommands() async {
+        // A facade can be re-initialised after shutdown or a media-services
+        // reset. Remove every previous target before installing the one owned
+        // command set so callbacks cannot execute twice.
+        removeRemoteCommandTargets()
+        remoteCommandRoutingEnabled = true
+        remoteCommandRegistrationGeneration += 1
+
         // Play/Pause
         commandCenter.playCommand.isEnabled = true
-        commandCenter.playCommand.addTarget { [weak self] _ in
-            // Remote commands run on real-time audio threads - must dispatch to main safely
-            Task { @MainActor [weak self] in
-                await self?.delegate?.audioSessionDidReceiveCommand(.play)
-            }
-            return .success
-        }
+        commandCenter.playCommand.addTarget(
+            handler: Self.makeRemoteCommandHandler(owner: self, command: .play)
+        )
 
         commandCenter.pauseCommand.isEnabled = true
-        commandCenter.pauseCommand.addTarget { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.delegate?.audioSessionDidReceiveCommand(.pause)
-            }
-            return .success
-        }
+        commandCenter.pauseCommand.addTarget(
+            handler: Self.makeRemoteCommandHandler(owner: self, command: .pause)
+        )
+
+        commandCenter.stopCommand.isEnabled = true
+        commandCenter.stopCommand.addTarget(
+            handler: Self.makeRemoteCommandHandler(owner: self, command: .stop)
+        )
+
+        commandCenter.togglePlayPauseCommand.isEnabled = true
+        commandCenter.togglePlayPauseCommand.addTarget(
+            handler: Self.makeRemoteCommandHandler(owner: self, command: .togglePlayPause)
+        )
 
         // Next/Previous
         commandCenter.nextTrackCommand.isEnabled = true
-        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.delegate?.audioSessionDidReceiveCommand(.nextTrack)
-            }
-            return .success
-        }
+        commandCenter.nextTrackCommand.addTarget(
+            handler: Self.makeRemoteCommandHandler(owner: self, command: .nextTrack)
+        )
 
         commandCenter.previousTrackCommand.isEnabled = true
-        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.delegate?.audioSessionDidReceiveCommand(.previousTrack)
-            }
-            return .success
-        }
+        commandCenter.previousTrackCommand.addTarget(
+            handler: Self.makeRemoteCommandHandler(owner: self, command: .previousTrack)
+        )
 
         // Seek
         commandCenter.changePlaybackPositionCommand.isEnabled = true
-        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-            guard let seekEvent = event as? MPChangePlaybackPositionCommandEvent else {
-                return .commandFailed
-            }
-            Task { @MainActor [weak self] in
-                await self?.delegate?.audioSessionDidReceiveCommand(.seek(to: seekEvent.positionTime))
-            }
-            return .success
-        }
+        commandCenter.changePlaybackPositionCommand.addTarget(
+            handler: Self.makeSeekCommandHandler(owner: self)
+        )
 
         // Relative skip commands are unsupported; keep them hidden from system controls.
         commandCenter.skipForwardCommand.isEnabled = false
         commandCenter.skipBackwardCommand.isEnabled = false
+
+        registeredRemoteCommandDescriptions = [
+            "play",
+            "pause",
+            "stop",
+            "togglePlayPause",
+            "nextTrack",
+            "previousTrack",
+            "changePlaybackPosition",
+        ]
     }
 
     public func disableRemoteCommands() async {
+        removeRemoteCommandTargets()
+        remoteCommandRoutingEnabled = false
+        registeredRemoteCommandDescriptions = []
+    }
+
+    /// Dispatches through the same MainActor handoff used by MPRemoteCommand
+    /// handlers. This is only a deterministic lifecycle seam for tests; it
+    /// does not simulate or claim a system Control Center event.
+    internal func dispatchRegisteredRemoteCommandForTesting(_ command: RemoteCommand) {
+        guard registeredRemoteCommandDescriptions.contains(Self.registrationKey(for: command)) else {
+            return
+        }
+        Self.routeRemoteCommand(command, to: self)
+    }
+
+    private func removeRemoteCommandTargets() {
         commandCenter.playCommand.isEnabled = false
         commandCenter.pauseCommand.isEnabled = false
+        commandCenter.stopCommand.isEnabled = false
+        commandCenter.togglePlayPauseCommand.isEnabled = false
         commandCenter.nextTrackCommand.isEnabled = false
         commandCenter.previousTrackCommand.isEnabled = false
         commandCenter.changePlaybackPositionCommand.isEnabled = false
@@ -279,6 +309,8 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         // Remove all targets
         commandCenter.playCommand.removeTarget(nil)
         commandCenter.pauseCommand.removeTarget(nil)
+        commandCenter.stopCommand.removeTarget(nil)
+        commandCenter.togglePlayPauseCommand.removeTarget(nil)
         commandCenter.nextTrackCommand.removeTarget(nil)
         commandCenter.previousTrackCommand.removeTarget(nil)
         commandCenter.changePlaybackPositionCommand.removeTarget(nil)
@@ -341,16 +373,32 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     // MARK: - Private Methods
 
     private func registerForNotifications() {
-        // Interruption notifications
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleInterruptionNotification(_:)),
-            name: AVAudioSession.interruptionNotification,
-            object: session,
-        )
+        let inactiveObservation = notificationCenter.addObserver(
+            of: session,
+            for: .didBecomeInactive
+        ) { [weak self] message in
+            guard let interruption = Self.interruption(
+                from: message.deactivationResult
+            ) else {
+                return
+            }
+            Self.routeInterruption(interruption, to: self)
+        }
+        interruptionObservationTokens.insert(inactiveObservation)
+
+        let resumptionObservation = notificationCenter.addObserver(
+            of: session,
+            for: .resumptionRecommendation
+        ) { [weak self] message in
+            Self.routeInterruption(
+                Self.interruption(from: message.recommendation),
+                to: self
+            )
+        }
+        interruptionObservationTokens.insert(resumptionObservation)
 
         // Route change notifications
-        NotificationCenter.default.addObserver(
+        notificationCenter.addObserver(
             self,
             selector: #selector(handleRouteChangeNotification(_:)),
             name: AVAudioSession.routeChangeNotification,
@@ -358,7 +406,7 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         )
 
         // Media services reset (rare but important)
-        NotificationCenter.default.addObserver(
+        notificationCenter.addObserver(
             self,
             selector: #selector(handleMediaServicesReset(_:)),
             name: AVAudioSession.mediaServicesWereResetNotification,
@@ -366,61 +414,33 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         )
     }
 
-    @objc private func handleInterruptionNotification(_ notification: Notification) {
-        guard let info = notification.userInfo,
-              let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
-              let type = AVAudioSession.InterruptionType(rawValue: typeValue)
-        else {
-            return
-        }
+    @objc nonisolated private func handleRouteChangeNotification(_ notification: Notification) {
+        guard let payload = Self.routeChangePayload(from: notification) else { return }
 
-        Task { @MainActor [weak self] in
-            switch type {
-            case .began:
-                await self?.handleInterruption(.began)
-
-            case .ended:
-                let interruptionOption = info[AVAudioSessionInterruptionOptionKey] as? UInt
-                let resumeFlag = AVAudioSession.InterruptionOptions.shouldResume.rawValue
-                let shouldResume = interruptionOption == resumeFlag
-                await self?.handleInterruption(.ended(shouldResume: shouldResume))
-
-            @unknown default:
-                break
-            }
-        }
-    }
-
-    @objc private func handleRouteChangeNotification(_ notification: Notification) {
-        guard let info = notification.userInfo,
-              let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
-              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue)
-        else {
-            return
-        }
-
-        let previousRoute = (info[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription)?
-            .outputs.first?.portName
-
-        let currentRoute = session.currentRoute.outputs.first?.portName ?? "Unknown"
-
-        let change = AudioRouteChange(
-            reason: AudioRouteChangeReason(from: reason),
-            previousRoute: previousRoute,
-            currentRoute: currentRoute,
-        )
-
-        Task { @MainActor [weak self] in
-            await self?.handleRouteChange(change)
-        }
-    }
-
-    @objc private func handleMediaServicesReset(_: Notification) {
-        // Re-configure audio session after media services reset
         Task { @MainActor [weak self] in
             guard let self else { return }
+            let currentRoute = self.session.currentRoute.outputs.first?.portName ?? "Unknown"
+            let change = AudioRouteChange(
+                reason: payload.reason,
+                previousRoute: payload.previousRoute,
+                currentRoute: currentRoute
+            )
+            await self.handleRouteChange(change)
+        }
+    }
+
+    @objc nonisolated private func handleMediaServicesReset(_: Notification) {
+        Task { @MainActor [weak self] in
+            guard let self, !self.isHandlingMediaServicesReset else { return }
+            self.isHandlingMediaServicesReset = true
+            defer { self.isHandlingMediaServicesReset = false }
+
             let shouldReactivate = self._isSessionActive
             self._isSessionActive = false
+
+            // Prevent commands from reaching invalid engine objects while the
+            // session and playback graph are being rebuilt.
+            await self.disableRemoteCommands()
 
             do {
                 try await self.configureAudioSession()
@@ -431,19 +451,126 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
                 self.logger.error(
                     """
                     Failed to reconfigure audio session after media services reset:
-                    \(String(describing: error), privacy: .public)
+                    \(String(describing: error), privacy: .private)
                     """
                 )
             }
+
+            // The delegate owns playback orchestration and can now replace its
+            // invalid engine while preserving user-visible playback state.
+            await self.delegate?.audioSessionMediaServicesWereReset()
+
+            // Media services reset invalidates command registrations as well as
+            // audio-engine objects. Register one fresh command set only after
+            // playback recovery has reached a coherent state.
+            await self.enableRemoteCommands()
         }
     }
 
-    @concurrent
-    private static func setSessionActiveLegacy(
-        _ active: Bool,
-        options: AVAudioSession.SetActiveOptions
-    ) async throws {
-        try AVAudioSession.sharedInstance().setActive(active, options: options)
+    private struct RouteChangePayload: Sendable {
+        let reason: AudioRouteChangeReason
+        let previousRoute: String?
+    }
+
+    nonisolated static func interruption(
+        from recommendation: AVAudioSession.ResumptionRecommendation
+    ) -> AudioInterruptionType {
+        .ended(shouldResume: recommendation == .shouldResume)
+    }
+
+    nonisolated static func interruption(
+        from deactivationResult: AVAudioSession.DeactivationResult
+    ) -> AudioInterruptionType? {
+        switch deactivationResult {
+        case .systemInterruption:
+            .began
+        case .appDeactivated:
+            nil
+        @unknown default:
+            nil
+        }
+    }
+
+    nonisolated static func routeInterruption(
+        _ interruption: AudioInterruptionType,
+        to owner: AudioSessionManager?
+    ) {
+        Task { @MainActor [weak owner] in
+            await owner?.handleInterruption(interruption)
+        }
+    }
+
+    private nonisolated static func routeChangePayload(
+        from notification: Notification
+    ) -> RouteChangePayload? {
+        guard let info = notification.userInfo,
+              let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue)
+        else {
+            return nil
+        }
+
+        let previousRoute = (info[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription)?
+            .outputs.first?.portName
+        return RouteChangePayload(
+            reason: AudioRouteChangeReason(from: reason),
+            previousRoute: previousRoute
+        )
+    }
+
+    private nonisolated static func makeRemoteCommandHandler(
+        owner: AudioSessionManager,
+        command: RemoteCommand
+    ) -> (MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
+        { [weak owner] _ in
+            routeRemoteCommand(command, to: owner)
+            return .success
+        }
+    }
+
+    private nonisolated static func registrationKey(for command: RemoteCommand) -> String {
+        switch command {
+        case .play: "play"
+        case .pause: "pause"
+        case .stop: "stop"
+        case .togglePlayPause: "togglePlayPause"
+        case .nextTrack: "nextTrack"
+        case .previousTrack: "previousTrack"
+        case .seek: "changePlaybackPosition"
+        default: "unsupported"
+        }
+    }
+
+    nonisolated static func routeRemoteCommand(
+        _ command: RemoteCommand,
+        to owner: AudioSessionManager?
+    ) {
+        Task { @MainActor [weak owner] in
+            guard let owner, owner.remoteCommandRoutingEnabled else {
+                return
+            }
+            await owner.delegate?.audioSessionDidReceiveCommand(command)
+        }
+    }
+
+    private nonisolated static func makeSeekCommandHandler(
+        owner: AudioSessionManager
+    ) -> (MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
+        { [weak owner] event in
+            guard let event = event as? MPChangePlaybackPositionCommandEvent else {
+                return .commandFailed
+            }
+            let position = event.positionTime
+            Task { @MainActor [weak owner] in
+                guard let owner,
+                      owner.remoteCommandRoutingEnabled
+                else {
+                    return
+                }
+                await owner.delegate?.audioSessionDidReceiveCommand(.seek(to: position))
+            }
+            return .success
+        }
     }
 
     private func audioDeviceType(from portType: AVAudioSession.Port) -> AudioDeviceType {
@@ -477,11 +604,6 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
         } else {
             try await deactivateAudioSession()
         }
-    }
-
-    /// Handle interruption notifications
-    public func handleInterruption(_ notification: Notification) async {
-        handleInterruptionNotification(notification)
     }
 
     /// Handle route change notifications
@@ -522,6 +644,9 @@ public final class AudioSessionManager: NSObject, AudioSessionService, AudioSess
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        for token in interruptionObservationTokens {
+            notificationCenter.removeObserver(token)
+        }
+        notificationCenter.removeObserver(self)
     }
 }

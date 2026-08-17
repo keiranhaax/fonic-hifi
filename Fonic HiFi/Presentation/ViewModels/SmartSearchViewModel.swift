@@ -1,5 +1,6 @@
 // Fonic HiFi/Presentation/ViewModels/SmartSearchViewModel.swift
 import Foundation
+import OSLog
 import SwiftUI
 
 /// ViewModel for smart search functionality
@@ -36,6 +37,7 @@ public final class SmartSearchViewModel {
 
     @ObservationIgnored private let availabilityCheck: @MainActor () async -> Bool
     @ObservationIgnored private let searchOperation: SearchOperation
+    @ObservationIgnored private var requestGeneration: UInt = 0
     private let logger = Log.logger(.smartSearch)
 
     // MARK: - Initialization
@@ -65,7 +67,7 @@ public final class SmartSearchViewModel {
             ? .available
             : .unavailable("Smart Search is unavailable on this device.")
         let enabled = isSmartSearchEnabled
-        logger.info("Smart search available: \(enabled)")
+        logger.info("Smart search available: \(enabled, privacy: .public)")
     }
 
     /// Perform smart search with AI enhancement
@@ -77,16 +79,21 @@ public final class SmartSearchViewModel {
         dataManager: DataManager
     ) async {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            requestGeneration &+= 1
             searchState = .idle
             smartSearchResult = nil
             resultTrackIDs = []
             return
         }
 
+        requestGeneration &+= 1
+        let generation = requestGeneration
         searchState = .searching
 
         do {
             let result = try await searchOperation(query, dataManager)
+            try Task.checkCancellation()
+            guard generation == requestGeneration else { return }
 
             smartSearchResult = result
             resultTrackIDs = result.trackIDs
@@ -97,10 +104,16 @@ public final class SmartSearchViewModel {
                 searchState = .results
             }
 
-            logger.info("Smart search completed: \(result.trackIDs.count) track IDs")
+            logger.info("Smart search completed: \(result.trackIDs.count, privacy: .public) track IDs")
 
+        } catch is CancellationError {
+            guard generation == requestGeneration else { return }
+            searchState = .idle
+            smartSearchResult = nil
+            resultTrackIDs = []
         } catch {
-            logger.error("Smart search failed: \(error.localizedDescription)")
+            guard generation == requestGeneration, !Task.isCancelled else { return }
+            logger.error("Smart search failed: \(error.localizedDescription, privacy: .private)")
             searchState = .error(error.localizedDescription)
             smartSearchResult = nil
             resultTrackIDs = []
@@ -109,6 +122,7 @@ public final class SmartSearchViewModel {
 
     /// Clear search state
     public func clearSearch() {
+        requestGeneration &+= 1
         searchState = .idle
         smartSearchResult = nil
         resultTrackIDs = []
@@ -120,11 +134,23 @@ public final class SmartSearchViewModel {
             let trackIDs = try await dataManager.trackDataActor.getAllTrackIDs(limit: 200)
             let metadata = try await dataManager.trackDataActor.getTrackMetadataForSearch(limit: 100)
             let tuples = metadata.map { ($0.id, $0.title, $0.artist, $0.genre) }
-            return await service.smartSearch(
+            let result = try await service.smartSearch(
                 query: query,
                 sessions: sessions,
                 availableTrackIDs: trackIDs,
                 trackMetadata: tuples
+            )
+
+            guard result.searchStrategy == SmartSearchService.standardFallbackStrategy else {
+                return result
+            }
+
+            let standardTracks = try await dataManager.searchTracks(query)
+            return SmartSearchResult(
+                trackIDs: standardTracks.map(\.id),
+                matchReasons: [],
+                searchStrategy: "Showing standard search results",
+                suggestions: result.suggestions
             )
         }
     }

@@ -1,8 +1,99 @@
+import Combine
 @testable import Fonic_HiFi
 import XCTest
 
 @MainActor
 final class AudioEngineFacadeSettingsTests: XCTestCase {
+    func testInitializationRestoresPersistedEqualizerBeforeEngineCreation() async throws {
+        let store = AudioPlaybackSettingsStore(
+            defaults: makeAudioEngineFacadeDefaults("equalizer-restore")
+        )
+        let persistedConfiguration = try XCTUnwrap(EqualizerConfiguration.presets["Rock"])
+        await store.setEqualizerConfiguration(persistedConfiguration)
+        let facade = AudioEngineFacade(
+            monitor: AudioMonitor(),
+            playbackSettingsStore: store,
+            runtimeMonitoringEnabled: false
+        )
+        let engine = MockAudioEngineService(supportsEqualizer: true)
+        facade.setCurrentEngine(engine, type: .avAudioEngine)
+
+        try await facade.initialize()
+
+        XCTAssertEqual(facade.equalizerConfiguration, persistedConfiguration)
+        XCTAssertEqual(engine.equalizerConfigurations.last, persistedConfiguration)
+        XCTAssertEqual(
+            facade.equalizerApplicationResult,
+            .applied(engine: .avAudioEngine)
+        )
+        await facade.shutdown()
+    }
+
+    func testApplyEqualizerPersistsAndPublishesSupportedResult() async throws {
+        let store = AudioPlaybackSettingsStore(
+            defaults: makeAudioEngineFacadeDefaults("equalizer-supported")
+        )
+        let facade = AudioEngineFacade(playbackSettingsStore: store)
+        let engine = MockAudioEngineService(supportsEqualizer: true)
+        facade.setCurrentEngine(engine, type: .avAudioEngine)
+        await Task.yield()
+        let configuration = try XCTUnwrap(EqualizerConfiguration.presets["Vocal"])
+
+        let result = await facade.applyEQ(configuration)
+        let persistedConfiguration = await store.equalizerConfiguration()
+
+        XCTAssertEqual(result, .applied(engine: .avAudioEngine))
+        XCTAssertEqual(facade.equalizerApplicationResult, result)
+        XCTAssertEqual(engine.equalizerConfigurations.last, configuration)
+        XCTAssertEqual(persistedConfiguration, configuration)
+    }
+
+    func testApplyEqualizerPersistsAndPublishesUnsupportedResult() async throws {
+        let store = AudioPlaybackSettingsStore(
+            defaults: makeAudioEngineFacadeDefaults("equalizer-unsupported")
+        )
+        let facade = AudioEngineFacade(playbackSettingsStore: store)
+        let engine = MockAudioEngineService(supportsEqualizer: false)
+        facade.setCurrentEngine(engine, type: .audioKitEngine)
+        await Task.yield()
+        let configuration = try XCTUnwrap(EqualizerConfiguration.presets["Bass Boost"])
+
+        let result = await facade.applyEQ(configuration)
+        let persistedConfiguration = await store.equalizerConfiguration()
+
+        XCTAssertEqual(result, .unsupported(engine: .audioKitEngine))
+        XCTAssertEqual(facade.equalizerApplicationResult, result)
+        XCTAssertNotNil(result.unavailableMessage)
+        XCTAssertTrue(engine.equalizerConfigurations.isEmpty)
+        XCTAssertEqual(persistedConfiguration, configuration)
+    }
+
+    func testExternalQueueModeChangesInvalidateFacade() {
+        let queueManager = AudioQueueManager()
+        let facade = AudioEngineFacade(
+            sessionManager: AudioSessionManager(),
+            formatDetectionManager: AudioFormatDetectionManager(),
+            stateManager: PlaybackStateManager(),
+            queueManager: queueManager,
+            validator: BitPerfectValidator(),
+            monitor: AudioMonitor(),
+            playbackSettingsStore: AudioPlaybackSettingsStore(defaults: makeAudioEngineFacadeDefaults()),
+        )
+        var observedShuffleModes: [QueueShuffleMode] = []
+        var observedRepeatModes: [QueueRepeatMode] = []
+        let cancellable = facade.objectWillChange.sink {
+            observedShuffleModes.append(queueManager.shuffleMode)
+            observedRepeatModes.append(queueManager.repeatMode)
+        }
+
+        queueManager.shuffleMode = .random
+        queueManager.repeatMode = .one
+
+        XCTAssertEqual(observedShuffleModes, [.random, .random])
+        XCTAssertEqual(observedRepeatModes, [.none, .one])
+        withExtendedLifetime(cancellable) {}
+    }
+
     func testUpdatePlaybackRatePersistsAndUpdatesEngine() async {
         let store = AudioPlaybackSettingsStore(defaults: makeAudioEngineFacadeDefaults())
         let facade = AudioEngineFacade(
@@ -17,6 +108,10 @@ final class AudioEngineFacadeSettingsTests: XCTestCase {
 
         let engine = MockAudioEngineService()
         facade.setCurrentEngine(engine)
+        var playbackRatesAtInvalidation: [Double] = []
+        let cancellable = facade.objectWillChange.sink {
+            playbackRatesAtInvalidation.append(facade.playbackRate)
+        }
 
         await facade.updatePlaybackRate(1.25)
 
@@ -24,6 +119,8 @@ final class AudioEngineFacadeSettingsTests: XCTestCase {
         let storedPlaybackRate = await store.playbackRate()
         XCTAssertEqual(storedPlaybackRate, 1.25, accuracy: 0.0001)
         XCTAssertEqual(engine.playbackRates.last, 1.25)
+        XCTAssertEqual(playbackRatesAtInvalidation.last ?? -1, 1.25, accuracy: 0.0001)
+        withExtendedLifetime(cancellable) {}
     }
 
     func testUpdateReplayGainAppliesToEngine() async {
@@ -40,6 +137,11 @@ final class AudioEngineFacadeSettingsTests: XCTestCase {
 
         let engine = MockAudioEngineService()
         facade.setCurrentEngine(engine)
+        await Task.yield()
+        var replayGainModesAtInvalidation: [ReplayGainMode] = []
+        let cancellable = facade.objectWillChange.sink {
+            replayGainModesAtInvalidation.append(facade.replayGainMode)
+        }
 
         let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("test.flac")
         let track = Track(url: tempURL, title: "Test", artist: "Tester", album: "Album", audioFormat: "FLAC", duration: 180)
@@ -51,11 +153,60 @@ final class AudioEngineFacadeSettingsTests: XCTestCase {
         XCTAssertEqual(facade.replayGainMode, .track)
         let storedReplayGainMode = await store.replayGainMode()
         XCTAssertEqual(storedReplayGainMode, .track)
+        XCTAssertEqual(engine.configurations.last?.replayGainMode, .track)
+        XCTAssertEqual(replayGainModesAtInvalidation.last, .track)
         if let lastGain = engine.replayGains.last {
             XCTAssertEqual(lastGain, -6.0 as Float, accuracy: 0.0001 as Float)
         } else {
             XCTFail("Expected replay gain value to be recorded")
         }
+        withExtendedLifetime(cancellable) {}
+    }
+
+    func testUpdateCrossfadePersistsAndConfiguresActiveEngine() async {
+        let store = AudioPlaybackSettingsStore(defaults: makeAudioEngineFacadeDefaults("crossfade-update"))
+        let facade = AudioEngineFacade(
+            playbackSettingsStore: store,
+        )
+        let engine = MockAudioEngineService()
+        facade.setCurrentEngine(engine)
+        await Task.yield()
+        var crossfadeDurationsAtInvalidation: [TimeInterval] = []
+        let cancellable = facade.objectWillChange.sink {
+            crossfadeDurationsAtInvalidation.append(facade.crossfadeDuration)
+        }
+
+        await facade.updateCrossfadeDuration(5)
+
+        let storedCrossfadeDuration = await store.crossfadeDuration()
+        XCTAssertEqual(facade.crossfadeDuration, 5, accuracy: 0.0001)
+        XCTAssertEqual(storedCrossfadeDuration, 5, accuracy: 0.0001)
+        XCTAssertEqual(engine.configurations.last?.crossfadeDuration ?? -1, 5, accuracy: 0.0001)
+        XCTAssertEqual(crossfadeDurationsAtInvalidation.last ?? -1, 5, accuracy: 0.0001)
+        withExtendedLifetime(cancellable) {}
+    }
+
+    func testUpdateGaplessPersistsAndConfiguresActiveEngine() async {
+        let store = AudioPlaybackSettingsStore(defaults: makeAudioEngineFacadeDefaults("gapless-update"))
+        let facade = AudioEngineFacade(
+            playbackSettingsStore: store,
+        )
+        let engine = MockAudioEngineService()
+        facade.setCurrentEngine(engine)
+        await Task.yield()
+        var gaplessValuesAtInvalidation: [Bool] = []
+        let cancellable = facade.objectWillChange.sink {
+            gaplessValuesAtInvalidation.append(facade.isGaplessEnabled)
+        }
+
+        await facade.updateGaplessEnabled(false)
+
+        let storedGaplessEnabled = await store.isGaplessEnabled()
+        XCTAssertFalse(facade.isGaplessEnabled)
+        XCTAssertFalse(storedGaplessEnabled)
+        XCTAssertEqual(engine.configurations.last?.enableGapless, false)
+        XCTAssertEqual(gaplessValuesAtInvalidation.last, false)
+        withExtendedLifetime(cancellable) {}
     }
 
     func testRefreshDiagnosticsUpdatesStatus() async {
@@ -167,6 +318,13 @@ private final class MockAudioEngineService: AudioEngineService {
     var playbackRates: [Double] = []
     var replayGains: [Float] = []
     var crossfadeCalls: [(url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float)] = []
+    var configurations: [AudioEngineConfiguration] = []
+    var equalizerConfigurations: [EqualizerConfiguration] = []
+    private let supportsEqualizer: Bool
+
+    init(supportsEqualizer: Bool = false) {
+        self.supportsEqualizer = supportsEqualizer
+    }
 
     var currentTime: TimeInterval { get async { 0 } }
     var duration: TimeInterval { get async { 0 } }
@@ -180,15 +338,19 @@ private final class MockAudioEngineService: AudioEngineService {
     func stop() async {}
     func seek(to _: TimeInterval) async throws {}
     func setVolume(_: Float) async {}
-    func configure(with _: AudioEngineConfiguration) async throws {}
+    func configure(with configuration: AudioEngineConfiguration) async throws {
+        configurations.append(configuration)
+    }
     func prepareNext(url _: URL) async {}
+    func invalidatePreparedTransition() async {}
     func crossfade(to url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float) async throws {
         crossfadeCalls.append((url, duration, playbackRate, gainDB))
         await setPlaybackRate(playbackRate)
         await applyReplayGain(gainDB)
     }
 
-    func getMetrics() async -> AudioMetrics { AudioMetrics.empty }
+    var metricsAvailability: AudioMetricsAvailability { .available }
+    func availableMetrics() async -> AudioMetrics? { AudioMetrics.empty }
     func collectMetrics() async {}
 
     func setPlaybackRate(_ rate: Double) async {
@@ -197,6 +359,14 @@ private final class MockAudioEngineService: AudioEngineService {
 
     func applyReplayGain(_ gainDB: Float) async {
         replayGains.append(gainDB)
+    }
+
+    var supportsEQ: Bool {
+        get async { supportsEqualizer }
+    }
+
+    func applyEQ(_ configuration: EqualizerConfiguration) async throws {
+        equalizerConfigurations.append(configuration)
     }
 }
 

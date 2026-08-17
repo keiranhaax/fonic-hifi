@@ -459,11 +459,19 @@ struct PlaylistDetailView: View {
 /// Create playlist view
 struct CreatePlaylistView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dataManager) private var dataManager
 
     @State private var playlistName = ""
     @State private var playlistDescription = ""
     @State private var isSmartPlaylist = false
+    @State private var isSaving = false
+    @State private var alert: PlaylistEditorAlert?
+
+    let onCreated: (PlaylistMutationSnapshot) -> Void
+
+    init(onCreated: @escaping (PlaylistMutationSnapshot) -> Void = { _ in }) {
+        self.onCreated = onCreated
+    }
 
     var body: some View {
         NavigationStack {
@@ -496,23 +504,50 @@ struct CreatePlaylistView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Button("Create") {
-                        createPlaylist()
+                        Task {
+                            await createPlaylist()
+                        }
                     }
-                    .disabled(playlistName.isEmpty)
+                    .disabled(
+                        playlistName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                            isSaving
+                    )
                 }
             }
         }
+        .interactiveDismissDisabled(isSaving)
+        .alert(item: $alert) { alert in
+            Alert(
+                title: Text("Unable to Create Playlist"),
+                message: Text(alert.message),
+                dismissButton: .default(Text("OK"))
+            )
+        }
     }
 
-    private func createPlaylist() {
-        let playlist = Playlist(
-            name: playlistName,
-            playlistDescription: playlistDescription.isEmpty ? nil : playlistDescription,
-            type: isSmartPlaylist ? .smart : .static,
-        )
+    @MainActor
+    private func createPlaylist() async {
+        guard let trackDataActor = dataManager?.trackDataActor else {
+            alert = PlaylistEditorAlert(message: "Playlist storage is unavailable.")
+            return
+        }
 
-        modelContext.insert(playlist)
-        dismiss()
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            let playlist = try await trackDataActor.createPlaylist(
+                name: playlistName,
+                description: playlistDescription,
+                isSmart: isSmartPlaylist
+            )
+            onCreated(playlist)
+            dismiss()
+        } catch {
+            alert = PlaylistEditorAlert(
+                message: (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            )
+        }
     }
 }
 

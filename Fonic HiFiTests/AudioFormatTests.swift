@@ -5,8 +5,11 @@ final class AudioFormatTests: XCTestCase {
     func testFromURLHandlesM4AExtension() {
         let m4aURL = URL(fileURLWithPath: "/test/song.m4a")
         let format = AudioFormat.from(url: m4aURL)
-        // Match AudioFormatType behavior: m4a -> alac
-        XCTAssertEqual(format, .alac, "M4A container should map to ALAC codec (matching AudioFormatType)")
+        XCTAssertEqual(
+            format,
+            .aac,
+            "An M4A extension is only a container hint; codec inspection may refine it to ALAC"
+        )
     }
 
     func testFromURLHandlesMP3Extension() {
@@ -24,6 +27,6 @@ final class AudioFormatTests: XCTestCase {
     func testFromURLIsCaseInsensitive() {
         let upperURL = URL(fileURLWithPath: "/test/song.M4A")
         let format = AudioFormat.from(url: upperURL)
-        XCTAssertEqual(format, .alac, "Extension matching should be case-insensitive")
+        XCTAssertEqual(format, .aac, "Extension matching should be case-insensitive")
     }
 }

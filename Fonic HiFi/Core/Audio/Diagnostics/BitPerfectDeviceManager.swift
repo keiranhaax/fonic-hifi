@@ -116,7 +116,7 @@ public final class BitPerfectDeviceManager: BitPerfectDeviceManaging {
     public func estimateOutputBitDepth(for session: AVAudioSession, capabilities: DeviceCapabilities) -> Int {
         guard let output = session.currentRoute.outputs.first else { return 16 }
 
-        self.logger.debug("Estimating bit depth for device: \(output.portName, privacy: .public)")
+        self.logger.debug("Estimating bit depth for device: \(output.portName, privacy: .private(mask: .hash))")
 
         switch output.portType {
         case .builtInSpeaker, .builtInReceiver:
@@ -313,7 +313,7 @@ public final class BitPerfectDeviceManager: BitPerfectDeviceManaging {
     }
 
     private func saveDACCompatibilityDatabase() {
-        self.logger.debug("Persisted DAC compatibility database entries: \(self.dacCompatibilityCache.count)")
+        self.logger.debug("Persisted DAC compatibility database entries: \(self.dacCompatibilityCache.count, privacy: .public)")
     }
 
     private func defaultDeviceCapabilities() -> DeviceCapabilities {

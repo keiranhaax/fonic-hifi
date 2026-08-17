@@ -42,7 +42,10 @@ struct AboutView: View {
                         .font(.headline)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        FeatureRow(title: "Bit-Perfect Playback", description: "Unaltered digital audio signal")
+                        FeatureRow(
+                            title: "Bit-Perfect Eligibility",
+                            description: "Checks configuration; physical output is not measured"
+                        )
                         FeatureRow(title: "Multiple Audio Engines", description: "Choose your preferred audio backend")
                         FeatureRow(title: "High-Resolution Support", description: "Up to 192kHz/24-bit audio")
                         FeatureRow(title: "File Management", description: "Organize your music collection")
@@ -55,18 +58,21 @@ struct AboutView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var appVersionString: String {
+    private var appVersionString: LocalizedStringResource {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "Version \(version) (\(build))"
+        return LocalizedStringResource(
+            "Version \(version) (\(build))",
+            comment: "App version followed by the build number"
+        )
     }
 }
 
 // MARK: - Feature Row
 
 struct FeatureRow: View {
-    let title: String
-    let description: String
+    let title: LocalizedStringResource
+    let description: LocalizedStringResource
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {

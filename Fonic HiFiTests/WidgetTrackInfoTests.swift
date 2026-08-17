@@ -1,24 +1,23 @@
+@testable import Fonic_HiFi
 import Foundation
 import XCTest
 
-@testable import Fonic_HiFi
-
 @MainActor
 final class WidgetTrackInfoTests: XCTestCase {
-    private var defaults: UserDefaults?
+    private var suiteName = ""
+    private var defaults: UserDefaults!
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        defaults = UserDefaults.appGroup
-        defaults?.removeObject(forKey: WidgetConstants.Keys.trackInfo)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.upNextTracks)
+    override func setUp() async throws {
+        try await super.setUp()
+        suiteName = "WidgetTrackInfoTests.\(UUID().uuidString)"
+        defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 
-    override func tearDownWithError() throws {
-        defaults?.removeObject(forKey: WidgetConstants.Keys.trackInfo)
-        defaults?.removeObject(forKey: WidgetConstants.Keys.upNextTracks)
+    override func tearDown() async throws {
+        defaults?.removePersistentDomain(forName: suiteName)
         defaults = nil
-        try super.tearDownWithError()
+        suiteName = ""
+        try await super.tearDown()
     }
 
     func testComputedPropertiesRenderExpectedValues() {
@@ -52,11 +51,7 @@ final class WidgetTrackInfoTests: XCTestCase {
         XCTAssertNil(info.qualityBadge)
     }
 
-    func testSaveAndLoadRoundTrip() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
-
+    func testSaveAndLoadRoundTrip() {
         let expected = makeTrackInfo(
             title: "Round Trip",
             artist: "Verifier",
@@ -66,50 +61,38 @@ final class WidgetTrackInfoTests: XCTestCase {
             isLossless: true
         )
 
-        expected.save()
-        let loaded = WidgetTrackInfo.load()
+        expected.save(to: defaults)
+        let loaded = WidgetTrackInfo.load(from: defaults)
 
         XCTAssertEqual(loaded, expected)
     }
 
-    func testLoadOrEmptyFallsBackWhenMissing() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
+    func testLoadOrEmptyFallsBackWhenMissing() {
+        defaults.removeObject(forKey: WidgetConstants.Keys.trackInfo)
 
-        defaults?.removeObject(forKey: WidgetConstants.Keys.trackInfo)
-
-        let loaded = WidgetTrackInfo.loadOrEmpty()
+        let loaded = WidgetTrackInfo.loadOrEmpty(from: defaults)
 
         XCTAssertEqual(loaded.title, WidgetTrackInfo.empty.title)
         XCTAssertEqual(loaded.artist, WidgetTrackInfo.empty.artist)
     }
 
-    func testUpNextSaveAndLoadRoundTrip() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
-
+    func testUpNextSaveAndLoadRoundTrip() {
         let tracks = [
             makeTrackInfo(title: "A", artist: "One", album: "X", duration: 120, audioFormat: "flac", isLossless: true),
             makeTrackInfo(title: "B", artist: "Two", album: "Y", duration: 180, audioFormat: "mp3", isLossless: false),
             makeTrackInfo(title: "C", artist: "Three", album: "Z", duration: 240, audioFormat: "alac", isLossless: true),
         ]
 
-        tracks.saveAsUpNext()
-        let loaded = [WidgetTrackInfo].loadUpNext()
+        tracks.saveAsUpNext(to: defaults)
+        let loaded = [WidgetTrackInfo].loadUpNext(from: defaults)
 
         XCTAssertEqual(loaded, tracks)
     }
 
-    func testLoadUpNextReturnsEmptyWhenUnset() throws {
-        guard defaults != nil else {
-            throw XCTSkip("App Group defaults unavailable")
-        }
+    func testLoadUpNextReturnsEmptyWhenUnset() {
+        defaults.removeObject(forKey: WidgetConstants.Keys.upNextTracks)
 
-        defaults?.removeObject(forKey: WidgetConstants.Keys.upNextTracks)
-
-        XCTAssertTrue([WidgetTrackInfo].loadUpNext().isEmpty)
+        XCTAssertTrue([WidgetTrackInfo].loadUpNext(from: defaults).isEmpty)
     }
 
     private func makeTrackInfo(

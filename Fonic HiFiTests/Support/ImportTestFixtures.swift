@@ -14,17 +14,23 @@ struct ImportTestEnvironment {
 @MainActor
 func makeImportTestEnvironment(
     metadataExtractor: MetadataExtracting = TestMetadataExtractor(),
-    fileProcessingConcurrency: Int = 2
+    fileProcessingConcurrency: Int = 2,
+    isStoredInMemoryOnly: Bool = true,
+    musicContainerURL: URL? = nil
 ) throws -> ImportTestEnvironment {
     let schema = Schema([Track.self])
-    let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+    let configuration = ModelConfiguration(isStoredInMemoryOnly: isStoredInMemoryOnly)
     let container = try ModelContainer(for: schema, configurations: [configuration])
     let trackActor = TrackDataActor(modelContainer: container)
 
     var invalidations = 0
-    let service = LibraryImportService(
+    let fileProcessor = FileImportProcessor(
         trackDataActor: trackActor,
         metadataExtractor: metadataExtractor,
+        musicContainerURL: musicContainerURL
+    )
+    let service = LibraryImportService(
+        fileProcessor: fileProcessor,
         fileProcessingConcurrency: fileProcessingConcurrency,
         statisticsInvalidator: { invalidations += 1 }
     )
@@ -35,6 +41,22 @@ func makeImportTestEnvironment(
         trackActor: trackActor,
         invalidationCount: { invalidations }
     )
+}
+
+func makeTemporaryTestDirectory(
+    named name: String,
+    testCase: XCTestCase
+) throws -> URL {
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent(name, isDirectory: true)
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    testCase.addTeardownBlock {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    return directory
 }
 
 func makeTemporaryAudioFiles(
@@ -50,10 +72,9 @@ func makeTemporaryAudioFiles(
     urls.reserveCapacity(count)
 
     for index in 0..<count {
-        let url = directory.appendingPathComponent("\(prefix)\(index).flac")
-        let byteCount = max(1024, (index + 1) * sizeMultiplier * 256)
-        let data = Data(repeating: UInt8((index + 31) % 255), count: byteCount)
-        try data.write(to: url)
+        let url = directory.appendingPathComponent("\(prefix)\(index).wav")
+        let frameCount = max(441, (index + 1) * sizeMultiplier * 256)
+        try makeValidPCMTestWAVData(frameCount: frameCount).write(to: url)
         urls.append(url)
     }
 
@@ -81,11 +102,10 @@ func makeNestedAudioDirectory(
 
     func populate(directory: URL, remainingDepth: Int, branchIndex: Int) throws {
         for index in 0..<fileCountPerFolder {
-            let audioURL = directory.appendingPathComponent("track_\(remainingDepth)_\(branchIndex)_\(index).flac")
+            let audioURL = directory.appendingPathComponent("track_\(remainingDepth)_\(branchIndex)_\(index).wav")
             let sizeSeed = remainingDepth * (index + 1)
-            let byteCount = max(1024, (sizeSeed + 1) * 768)
-            let data = Data(repeating: UInt8((sizeSeed + 17) % 255), count: byteCount)
-            try data.write(to: audioURL)
+            let frameCount = max(441, (sizeSeed + 1) * 256)
+            try makeValidPCMTestWAVData(frameCount: frameCount).write(to: audioURL)
             audioFiles.append(audioURL)
         }
 
@@ -109,6 +129,53 @@ func makeNestedAudioDirectory(
 
     let duplicateCandidates = Array(audioFiles.prefix(min(duplicateCount, audioFiles.count)))
     return (root, audioFiles.count, duplicateCandidates)
+}
+
+/// Writes a small, valid little-endian PCM WAV payload for import tests.
+///
+/// Import tests must exercise media validation and never rely on arbitrary bytes
+/// renamed with an audio extension. The payload is intentionally silent so the
+/// fixture remains deterministic while still being decodable by AVFoundation.
+func makeValidPCMTestWAVData(
+    sampleRate: UInt32 = 44_100,
+    channels: UInt16 = 2,
+    frameCount: Int = 4_410,
+) -> Data {
+    let bytesPerSample = MemoryLayout<Int16>.size
+    let dataSize = UInt32(frameCount * Int(channels) * bytesPerSample)
+    let riffSize = 36 + dataSize
+    let byteRate = sampleRate * UInt32(channels) * UInt32(bytesPerSample)
+    let blockAlign = channels * UInt16(bytesPerSample)
+
+    var data = Data()
+
+    func appendASCII(_ value: String) {
+        data.append(contentsOf: value.utf8)
+    }
+
+    func appendLittleEndian<T: FixedWidthInteger>(_ value: T) {
+        var littleEndian = value.littleEndian
+        Swift.withUnsafeBytes(of: &littleEndian) { bytes in
+            data.append(contentsOf: bytes)
+        }
+    }
+
+    appendASCII("RIFF")
+    appendLittleEndian(riffSize)
+    appendASCII("WAVE")
+    appendASCII("fmt ")
+    appendLittleEndian(UInt32(16))
+    appendLittleEndian(UInt16(1))
+    appendLittleEndian(channels)
+    appendLittleEndian(sampleRate)
+    appendLittleEndian(byteRate)
+    appendLittleEndian(blockAlign)
+    appendLittleEndian(UInt16(16))
+    appendASCII("data")
+    appendLittleEndian(dataSize)
+    data.append(contentsOf: repeatElement(UInt8(0), count: Int(dataSize)))
+
+    return data
 }
 
 @MainActor
@@ -160,7 +227,12 @@ struct TestMetadataExtractor: MetadataExtracting {
     }
 
     func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
-        try await urls.asyncMap { try await extractTrackMetadata(from: $0) }
+        var results: [TrackMetadata] = []
+        results.reserveCapacity(urls.count)
+        for url in urls {
+            results.append(try await extractTrackMetadata(from: url))
+        }
+        return results
     }
 }
 
@@ -173,17 +245,11 @@ struct SlowMetadataExtractor: MetadataExtracting {
     }
 
     func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
-        try await urls.asyncMap { try await extractTrackMetadata(from: $0) }
-    }
-}
-
-extension Array {
-    func asyncMap<T>(_ transform: (Element) async throws -> T) async rethrows -> [T] {
-        var result: [T] = []
-        result.reserveCapacity(count)
-        for element in self {
-            result.append(try await transform(element))
+        var results: [TrackMetadata] = []
+        results.reserveCapacity(urls.count)
+        for url in urls {
+            results.append(try await extractTrackMetadata(from: url))
         }
-        return result
+        return results
     }
 }

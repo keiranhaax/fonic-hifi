@@ -48,6 +48,17 @@ public final class Track: TrackProtocol {
     /// Hash of the original security-scoped bookmark for resilient duplicate detection
     public var sourceBookmarkHash: String?
 
+    // MARK: - File Availability
+
+    /// Number of consecutive library-integrity checks that could not reach the managed file.
+    public var unavailableCheckCount: Int = 0
+
+    /// First time in the current consecutive-miss window that the file was unavailable.
+    public var unavailableSince: Date?
+
+    /// Most recent time the library-integrity check evaluated this file.
+    public var availabilityLastCheckedAt: Date?
+
     // MARK: - Basic Metadata
 
     /// Track title
@@ -224,9 +235,27 @@ public final class Track: TrackProtocol {
         return formatter.string(fromByteCount: fileSize)
     }
 
+    /// User-visible availability derived from the persisted quarantine state.
+    public var fileAvailability: TrackFileAvailability {
+        guard unavailableCheckCount > 0, let unavailableSince, let availabilityLastCheckedAt else {
+            return .available
+        }
+
+        return .temporarilyUnavailable(
+            consecutiveMisses: unavailableCheckCount,
+            since: unavailableSince,
+            lastCheckedAt: availabilityLastCheckedAt
+        )
+    }
+
+    public var isAvailable: Bool {
+        fileAvailability.isAvailable
+    }
+
     // MARK: - Initialization
 
     public init(
+        id: UUID = UUID(),
         url: URL,
         title: String = "",
         artist: String = "",
@@ -239,7 +268,7 @@ public final class Track: TrackProtocol {
         isLossless: Bool = false,
     ) {
         // Initialize basic properties first
-        id = UUID()
+        self.id = id
         self.url = url
 
         // Compute derived values
@@ -262,6 +291,10 @@ public final class Track: TrackProtocol {
         sourceURLBookmark = nil
         sourceURLString = nil
         sourceURLHash = nil
+        sourceBookmarkHash = nil
+        unavailableCheckCount = 0
+        unavailableSince = nil
+        availabilityLastCheckedAt = nil
 
         // File attributes
         let resourceValues = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
@@ -276,6 +309,23 @@ public final class Track: TrackProtocol {
         supportsGapless = false
         replayGainTrack = nil
         replayGainAlbum = nil
+    }
+}
+
+/// Sendable availability state rendered by the library and safe to pass across actor boundaries.
+public enum TrackFileAvailability: Equatable, Sendable {
+    case available
+    case temporarilyUnavailable(
+        consecutiveMisses: Int,
+        since: Date,
+        lastCheckedAt: Date
+    )
+
+    public var isAvailable: Bool {
+        if case .available = self {
+            return true
+        }
+        return false
     }
 }
 
@@ -361,6 +411,8 @@ public extension Track {
         )
         track.replayGainTrack = replayGainTrack
         track.replayGainAlbum = replayGainAlbum
+        track.isFavorite = isFavorite
+        track.isAvailable = isAvailable
         return track
     }
 }

@@ -15,14 +15,16 @@ func makePCMTestAudioFile(
 
     let url = directory.appendingPathComponent("test-audio.").appendingPathExtension(fileExtension)
 
-    guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: channels) else {
-        throw XCTSkip("Unable to create audio format")
-    }
+    let format = try XCTUnwrap(
+        AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: channels),
+        "The standard test environment must create a PCM audio format"
+    )
 
     let frameCount = AVAudioFrameCount(duration * sampleRate)
-    guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
-        throw XCTSkip("Unable to allocate audio buffer")
-    }
+    let buffer = try XCTUnwrap(
+        AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount),
+        "The standard test environment must allocate a PCM buffer"
+    )
 
     buffer.frameLength = frameCount
     if let channelData = buffer.floatChannelData {

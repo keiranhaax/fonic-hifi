@@ -9,38 +9,40 @@ import SwiftUI
 
 /// View showing import progress with cancel option
 struct ImportProgressView: View {
-    @Environment(\.importService) private var importService
+    @EnvironmentObject private var importService: LibraryImportService
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        let presentation = ImportProgressPresentationState(importService: importService)
+
         NavigationStack {
             VStack(spacing: 30) {
                 // Progress indicator
                 ProgressSection(
-                    progress: importService?.importProgress ?? 0.0,
-                    filesProcessed: importService?.filesProcessed ?? 0,
-                    totalFiles: importService?.totalFiles ?? 0,
+                    progress: presentation.progress,
+                    filesProcessed: presentation.filesProcessed,
+                    totalFiles: presentation.totalFiles
                 )
 
                 // Status message
-                Text(importService?.statusMessage ?? "No import service available")
+                Text(presentation.statusMessage)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
 
                 // Error summary if any
-                if !(importService?.importErrors.isEmpty ?? true) {
-                    ErrorSummaryView(errors: importService?.importErrors ?? [])
+                if !presentation.errors.isEmpty {
+                    ErrorSummaryView(errors: presentation.errors)
                 }
 
                 Spacer()
 
                 // Action buttons
                 HStack(spacing: 16) {
-                    if importService?.isImporting == true {
+                    if presentation.isImporting {
                         Button("Cancel Import") {
-                            importService?.cancelImport()
+                            importService.cancelImport()
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.large)
@@ -58,7 +60,7 @@ struct ImportProgressView: View {
             .navigationTitle("Importing Music")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if importService?.isImporting != true {
+                if !presentation.isImporting {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Done") {
                             dismiss()
@@ -67,6 +69,22 @@ struct ImportProgressView: View {
                 }
             }
         }
+        .accessibilityIdentifier("ImportProgressView")
+        .onAppear {
+            dismissAfterCleanCompletionIfNeeded()
+        }
+        .onChange(of: importService.isImporting) { wasImporting, isImporting in
+            // Successful imports finish hands-free; the sheet stays up only
+            // when cancellation, errors, or empty discovery need review.
+            guard wasImporting, !isImporting else { return }
+            dismissAfterCleanCompletionIfNeeded()
+        }
+    }
+
+    private func dismissAfterCleanCompletionIfNeeded() {
+        let completion = ImportProgressPresentationState(importService: importService)
+        guard completion.shouldAutoDismiss else { return }
+        dismiss()
     }
 }
 
@@ -112,6 +130,7 @@ struct ProgressSection: View {
 
 /// Error summary view
 struct ErrorSummaryView: View {
+    @Environment(\.locale) private var locale
     let errors: [ImportError]
     @State private var showingErrorDetails = false
 
@@ -121,7 +140,10 @@ struct ErrorSummaryView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
 
-                Text("\(errors.count) files failed to import")
+                Text(verbatim: LocalizedFormatters.failedImportCount(
+                    errors.count,
+                    locale: locale
+                ))
                     .font(.subheadline)
                     .foregroundColor(.orange)
             }
@@ -183,6 +205,6 @@ struct ImportErrorDetailsView: View {
         ImportProgressView()
             .importService(importService)
     } else {
-        ImportProgressView()
+        Text("Preview unavailable")
     }
 }

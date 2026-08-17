@@ -32,6 +32,14 @@ public struct TrackEntity: Identifiable, Hashable, Sendable {
     public let bitrate: Int?
     public let isLossless: Bool
     public let dateAdded: Date
+    /// ReplayGain values travel with the transport entity so playback does not
+    /// silently reset gain when a SwiftData row is projected into the queue.
+    public let replayGainTrack: Float?
+    public let replayGainAlbum: Float?
+    /// A transport-level availability bit; the persisted miss counters remain
+    /// owned by SwiftData and are not exposed as a second source of truth.
+    public let isAvailable: Bool
+    public let isFavorite: Bool
 
     public init(
         id: UUID,
@@ -54,6 +62,10 @@ public struct TrackEntity: Identifiable, Hashable, Sendable {
         bitrate: Int?,
         isLossless: Bool,
         dateAdded: Date,
+        replayGainTrack: Float? = nil,
+        replayGainAlbum: Float? = nil,
+        isAvailable: Bool = true,
+        isFavorite: Bool = false,
     ) {
         self.id = id
         self.title = title
@@ -75,13 +87,19 @@ public struct TrackEntity: Identifiable, Hashable, Sendable {
         self.bitrate = bitrate
         self.isLossless = isLossless
         self.dateAdded = dateAdded
+        self.replayGainTrack = replayGainTrack
+        self.replayGainAlbum = replayGainAlbum
+        self.isAvailable = isAvailable
+        self.isFavorite = isFavorite
     }
 }
 
 public extension TrackEntity {
     var formattedDuration: String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
+        let safeDuration = duration.isFinite ? max(0, duration) : 0
+        let wholeSeconds = Int(safeDuration)
+        let minutes = wholeSeconds / 60
+        let seconds = wholeSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
 
@@ -104,6 +122,7 @@ public extension TrackEntity {
 
     func asTrackRepresentation(artwork: Data? = nil) -> Track {
         let track = Track(
+            id: id,
             url: fileURL,
             title: title,
             artist: artist,
@@ -122,7 +141,14 @@ public extension TrackEntity {
         track.fileSize = fileSize
         track.bitrate = bitrate
         track.albumArtist = albumArtist
-        track.isFavorite = false
+        track.replayGainTrack = replayGainTrack
+        track.replayGainAlbum = replayGainAlbum
+        track.isFavorite = isFavorite
+        if !isAvailable {
+            track.unavailableCheckCount = 1
+            track.unavailableSince = track.dateAdded
+            track.availabilityLastCheckedAt = track.dateAdded
+        }
         track.artwork = artwork
         return track
     }
@@ -149,6 +175,10 @@ public extension TrackEntity {
             bitrate: track.bitrate,
             isLossless: track.isLossless,
             dateAdded: track.dateAdded,
+            replayGainTrack: track.replayGainTrack,
+            replayGainAlbum: track.replayGainAlbum,
+            isAvailable: track.fileAvailability.isAvailable,
+            isFavorite: track.isFavorite,
         )
     }
 }

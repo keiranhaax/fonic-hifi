@@ -7,6 +7,63 @@
 
 import Foundation
 
+/// Describes the transition that was adopted for a previously prepared track.
+///
+/// Only `renderBoundary` represents an engine-scheduled gapless boundary.
+/// `preloadedFallback` avoids redundant decoding but still starts the track
+/// after the prior completion callback and must not be presented as gapless
+/// evidence.
+public enum PreparedTrackTransition: Sendable, Equatable {
+    case none
+    case preloadedFallback
+    case renderBoundary
+
+    public var wasAdopted: Bool {
+        self != .none
+    }
+}
+
+/// Measured snapshot of an engine's loaded format and engine-side processing
+/// state. Captured after `load(url:)` so eligibility validation can use graph
+/// evidence instead of session-only inference; also serves as cache-key input
+/// so pre-load and post-load validations are never conflated.
+public struct AudioEngineFormatEvidence: Sendable, Equatable {
+    /// Whether the engine currently has a track loaded.
+    public let isTrackLoaded: Bool
+
+    /// Sample rate of the loaded file's decoded processing format, in Hz.
+    public let loadedSampleRate: Double?
+
+    /// Channel count of the loaded file's decoded processing format.
+    public let loadedChannelCount: Int?
+
+    /// Sample rate of the engine's output node, in Hz.
+    public let engineOutputSampleRate: Double?
+
+    /// Channel count of the engine's output node.
+    public let engineOutputChannelCount: Int?
+
+    /// Whether the engine graph applies processing (playback-rate, EQ, or gain
+    /// stages). Engine volume is reported separately through `volume`.
+    public let hasEngineProcessing: Bool
+
+    public init(
+        isTrackLoaded: Bool,
+        loadedSampleRate: Double?,
+        loadedChannelCount: Int?,
+        engineOutputSampleRate: Double?,
+        engineOutputChannelCount: Int?,
+        hasEngineProcessing: Bool
+    ) {
+        self.isTrackLoaded = isTrackLoaded
+        self.loadedSampleRate = loadedSampleRate
+        self.loadedChannelCount = loadedChannelCount
+        self.engineOutputSampleRate = engineOutputSampleRate
+        self.engineOutputChannelCount = engineOutputChannelCount
+        self.hasEngineProcessing = hasEngineProcessing
+    }
+}
+
 /// Core protocol defining the interface for all audio playback engines.
 /// Implementations may use AVAudioEngine, AudioKit, or other vetted engines
 /// based on format requirements and performance characteristics.
@@ -29,8 +86,22 @@ public protocol AudioEngineService: Sendable {
     /// Current audio format being played
     var audioFormat: AudioFormat? { get async }
 
-    /// Indicates if bit-perfect playback is active
+    /// Indicates whether the current software configuration is eligible for
+    /// bit-perfect playback. This is not physical-output measurement.
+    ///
+    /// Unified contract for every engine: `true` only when a track is loaded,
+    /// the engine's own graph applies no processing (playback rate 1.0, no
+    /// active EQ or gain stage), engine volume is at unity, and no sample-rate
+    /// conversion is detectable between the loaded file and the engine output.
+    /// Engines that cannot verify their graph state must return `false`.
     var isBitPerfect: Bool { get async }
+
+    /// Measured evidence of the engine's current graph state for eligibility
+    /// validation. Returns `nil` when the engine cannot report its graph.
+    func playbackFormatEvidence() async -> AudioEngineFormatEvidence?
+
+    /// Declares whether this engine can provide measured diagnostics.
+    var metricsAvailability: AudioMetricsAvailability { get }
 
     // MARK: - Playback Control
 
@@ -77,6 +148,15 @@ public protocol AudioEngineService: Sendable {
     /// - Parameter url: The file URL of the next track
     func prepareNext(url: URL) async
 
+    /// Invalidate any next-track preparation after the queue changes.
+    func invalidatePreparedTransition() async
+
+    /// Adopt a previously prepared next track.
+    ///
+    /// - Returns: The quality of the adopted transition. Callers must not treat
+    ///   a `.preloadedFallback` result as render-boundary gapless evidence.
+    func consumePreparedTransition(to url: URL) async -> PreparedTrackTransition
+
     /// Crossfade to the given track with configurable parameters
     /// - Parameters:
     ///   - url: File URL of the next track
@@ -85,9 +165,11 @@ public protocol AudioEngineService: Sendable {
     ///   - gainDB: Replay gain offset in decibels
     func crossfade(to url: URL, duration: TimeInterval, playbackRate: Double, gainDB: Float) async throws
 
-    /// Get current audio metrics for monitoring
-    /// - Returns: Current performance metrics
-    func getMetrics() async -> AudioMetrics
+    /// Get the currently available measured audio metrics.
+    ///
+    /// Engines that declare `.unavailable` return `nil`; callers must not
+    /// substitute zero-valued metrics and present them as measurements.
+    func availableMetrics() async -> AudioMetrics?
 
     /// Collect and store audio metrics for analysis
     func collectMetrics() async
@@ -100,7 +182,7 @@ public protocol AudioEngineService: Sendable {
 
     /// Apply equalizer configuration to the audio output
     /// Default implementation is no-op for engines that don't support EQ
-    func applyEQ(_ configuration: EqualizerConfiguration) async
+    func applyEQ(_ configuration: EqualizerConfiguration) async throws
 
     /// Whether this engine supports EQ processing
     var supportsEQ: Bool { get async }
@@ -113,27 +195,31 @@ public extension AudioEngineService {
         get async { false }
     }
 
+    /// Default implementation reports no measurable graph evidence
+    func playbackFormatEvidence() async -> AudioEngineFormatEvidence? {
+        nil
+    }
+
+    var metricsAvailability: AudioMetricsAvailability {
+        .unavailable
+    }
+
+    func availableMetrics() async -> AudioMetrics? {
+        nil
+    }
+
     /// Default implementation does nothing for prepareNext
     func prepareNext(url _: URL) async {
         // Optional implementation
     }
 
+    func consumePreparedTransition(to _: URL) async -> PreparedTrackTransition {
+        .none
+    }
+
     /// Default playback rate setter does nothing
     func setPlaybackRate(_: Double) async {
         // Optional implementation
-    }
-
-    /// Default replay gain application does nothing
-    func applyReplayGain(_: Float) async {
-        // Optional implementation
-    }
-
-    /// Default crossfade loads and plays the new track immediately
-    func crossfade(to url: URL, duration _: TimeInterval, playbackRate: Double, gainDB: Float) async throws {
-        try await load(url: url)
-        await setPlaybackRate(playbackRate)
-        await applyReplayGain(gainDB)
-        try await play()
     }
 
     /// Default implementation does nothing for collectMetrics
@@ -147,7 +233,7 @@ public extension AudioEngineService {
     }
 
     /// Default implementation does nothing for applyEQ
-    func applyEQ(_: EqualizerConfiguration) async {
+    func applyEQ(_: EqualizerConfiguration) async throws {
         // Default no-op for engines that don't support EQ
     }
 

@@ -11,15 +11,22 @@
 
 import Foundation
 import Observation
+import OSLog
 import SwiftUI
 
 @MainActor
 final class LibraryViewModel: ObservableObject {
-    enum Section {
+    enum Section: Hashable, Sendable {
         case tracks
         case albums
         case artists
         case playlists
+    }
+
+    enum LoadPhase: Equatable, Sendable {
+        case idle
+        case initial
+        case pagination
     }
 
     @Published private(set) var tracks: [TrackEntity] = []
@@ -28,13 +35,12 @@ final class LibraryViewModel: ObservableObject {
     @Published private(set) var playlists: [PlaylistEntity] = []
     @Published private(set) var statistics: LibraryStatisticsEntity?
     @Published var lastError: LibraryViewModelError?
-    @Published private(set) var isLoadingSection: Section?
+    @Published private var loadPhases: [Section: LoadPhase] = [:]
 
     private struct PaginationState<Item: Sendable> {
         var items: [Item] = []
         var nextPage: Int = 0
         var hasMore: Bool = true
-        var isLoading: Bool = false
         var lastQuery: String?
     }
 
@@ -42,6 +48,8 @@ final class LibraryViewModel: ObservableObject {
     private var albumState = PaginationState<AlbumEntity>()
     private var artistState = PaginationState<ArtistEntity>()
     private var playlistState = PaginationState<PlaylistEntity>()
+    private var requestGenerations: [Section: UInt] = [:]
+    private var requestTasks: [Section: Task<Void, Never>] = [:]
 
     private let configuration: LibraryPaginationConfiguration
     private let tracksUseCase: FetchTracksPageUseCase
@@ -70,12 +78,24 @@ final class LibraryViewModel: ObservableObject {
     func loadNextPageIfNeeded(section: Section, currentItemIndex: Int, query: String?) async {
         let state = state(for: section)
         guard state.hasMore else { return }
-        guard state.isLoading == false else { return }
+        guard loadPhase(for: section) == .idle else { return }
+        guard state.lastQuery == normalized(query) else { return }
 
         let thresholdIndex = max(0, state.count - configuration.prefetchThreshold)
         if currentItemIndex >= thresholdIndex {
             await fetch(section: section, query: normalized(query), reset: false)
         }
+    }
+
+    func loadPhase(for section: Section) -> LoadPhase {
+        loadPhases[section] ?? .idle
+    }
+
+    func cancelRequest(for section: Section) {
+        requestTasks[section]?.cancel()
+        requestTasks[section] = nil
+        requestGenerations[section, default: 0] &+= 1
+        loadPhases[section] = .idle
     }
 
     func ensureStatisticsLoaded() async {
@@ -85,7 +105,7 @@ final class LibraryViewModel: ObservableObject {
         } catch {
             let wrapped = LibraryViewModelError.statistics(error.localizedDescription)
             lastError = wrapped
-            logger.error("Failed to load library statistics: \(error.localizedDescription)")
+            logger.error("Failed to load library statistics: \(error.localizedDescription, privacy: .private)")
         }
     }
 
@@ -96,108 +116,218 @@ final class LibraryViewModel: ObservableObject {
     // MARK: - Internal Fetching
 
     private func fetch(section: Section, query: String?, reset: Bool) async {
-        switch section {
-        case .tracks:
-            trackState = await fetchPage(
-                state: trackState,
-                section: .tracks,
-                query: query,
-                reset: reset,
-            ) { page, searchQuery in
-                try await tracksUseCase.tracksPage(page: page, query: searchQuery)
-            }
-            tracks = trackState.items
-        case .albums:
-            albumState = await fetchPage(
-                state: albumState,
-                section: .albums,
-                query: query,
-                reset: reset,
-            ) { page, searchQuery in
-                try await albumsUseCase.albumsPage(page: page, query: searchQuery)
-            }
-            albums = albumState.items
-        case .artists:
-            artistState = await fetchPage(
-                state: artistState,
-                section: .artists,
-                query: query,
-                reset: reset,
-            ) { page, searchQuery in
-                try await artistsUseCase.artistsPage(page: page, query: searchQuery)
-            }
-            artists = artistState.items
-        case .playlists:
-            playlistState = await fetchPage(
-                state: playlistState,
-                section: .playlists,
-                query: query,
-                reset: reset,
-            ) { page, searchQuery in
-                try await playlistsUseCase.playlistsPage(page: page, query: searchQuery)
-            }
-            playlists = playlistState.items
-        }
-    }
-
-    private func fetchPage<Item>(
-        state: PaginationState<Item>,
-        section: Section,
-        query: String?,
-        reset: Bool,
-        loader: (Int, String?) async throws -> Page<Item>,
-    ) async -> PaginationState<Item> where Item: Sendable {
-        if state.isLoading { return state }
-
         let effectiveQuery = query?.isEmpty == true ? nil : query
-        var nextState = state
+        let currentState = state(for: section)
 
-        if reset || nextState.lastQuery != effectiveQuery {
-            nextState.items = []
-            nextState.nextPage = 0
-            nextState.hasMore = true
-            nextState.lastQuery = effectiveQuery
+        if reset || currentState.lastQuery != effectiveQuery {
+            cancelRequest(for: section)
+            resetState(for: section, query: effectiveQuery)
+        } else {
+            guard loadPhase(for: section) == .idle else { return }
         }
 
-        guard nextState.hasMore else { return nextState }
+        guard state(for: section).hasMore else { return }
 
-        nextState.isLoading = true
-        isLoadingSection = section
+        let targetPage = state(for: section).nextPage
+        let generation = nextRequestGeneration(for: section)
+        loadPhases[section] = targetPage == 0 ? .initial : .pagination
 
-        do {
-            let targetPage = nextState.nextPage
-            let page = try await loader(targetPage, effectiveQuery)
-            if targetPage == 0 {
-                nextState.items = page.items
-            } else {
-                nextState.items.append(contentsOf: page.items)
-            }
-            nextState.nextPage = page.nextPage
-            nextState.hasMore = page.hasMore
-        } catch {
-            let wrapped = LibraryViewModelError.fetchFailed(section: section, reason: error.localizedDescription)
-            lastError = wrapped
-            logger.error("Failed to fetch section \(String(describing: section)): \(error.localizedDescription)")
-        }
-
-        nextState.isLoading = false
-        if isLoadingSection == section {
-            isLoadingSection = nil
-        }
-
-        return nextState
-    }
-
-    private func state(for section: Section) -> (count: Int, hasMore: Bool, isLoading: Bool) {
+        let task: Task<Void, Never>
         switch section {
         case .tracks:
-            (trackState.items.count, trackState.hasMore, trackState.isLoading)
+            let useCase = tracksUseCase
+            task = Task { [weak self] in
+                do {
+                    let page = try await useCase.tracksPage(page: targetPage, query: effectiveQuery)
+                    guard !Task.isCancelled else { return }
+                    self?.commitTracks(
+                        page,
+                        targetPage: targetPage,
+                        query: effectiveQuery,
+                        generation: generation
+                    )
+                } catch is CancellationError {
+                    self?.finishCancelledRequest(section: .tracks, generation: generation)
+                } catch {
+                    self?.finishFailedRequest(section: .tracks, generation: generation, error: error)
+                }
+            }
         case .albums:
-            (albumState.items.count, albumState.hasMore, albumState.isLoading)
+            let useCase = albumsUseCase
+            task = Task { [weak self] in
+                do {
+                    let page = try await useCase.albumsPage(page: targetPage, query: effectiveQuery)
+                    guard !Task.isCancelled else { return }
+                    self?.commitAlbums(
+                        page,
+                        targetPage: targetPage,
+                        query: effectiveQuery,
+                        generation: generation
+                    )
+                } catch is CancellationError {
+                    self?.finishCancelledRequest(section: .albums, generation: generation)
+                } catch {
+                    self?.finishFailedRequest(section: .albums, generation: generation, error: error)
+                }
+            }
         case .artists:
-            (artistState.items.count, artistState.hasMore, artistState.isLoading)
+            let useCase = artistsUseCase
+            task = Task { [weak self] in
+                do {
+                    let page = try await useCase.artistsPage(page: targetPage, query: effectiveQuery)
+                    guard !Task.isCancelled else { return }
+                    self?.commitArtists(
+                        page,
+                        targetPage: targetPage,
+                        query: effectiveQuery,
+                        generation: generation
+                    )
+                } catch is CancellationError {
+                    self?.finishCancelledRequest(section: .artists, generation: generation)
+                } catch {
+                    self?.finishFailedRequest(section: .artists, generation: generation, error: error)
+                }
+            }
         case .playlists:
-            (playlistState.items.count, playlistState.hasMore, playlistState.isLoading)
+            let useCase = playlistsUseCase
+            task = Task { [weak self] in
+                do {
+                    let page = try await useCase.playlistsPage(page: targetPage, query: effectiveQuery)
+                    guard !Task.isCancelled else { return }
+                    self?.commitPlaylists(
+                        page,
+                        targetPage: targetPage,
+                        query: effectiveQuery,
+                        generation: generation
+                    )
+                } catch is CancellationError {
+                    self?.finishCancelledRequest(section: .playlists, generation: generation)
+                } catch {
+                    self?.finishFailedRequest(section: .playlists, generation: generation, error: error)
+                }
+            }
+        }
+
+        requestTasks[section] = task
+        await task.value
+    }
+
+    private func commitTracks(
+        _ page: Page<TrackEntity>,
+        targetPage: Int,
+        query: String?,
+        generation: UInt
+    ) {
+        guard ownsRequest(section: .tracks, query: query, generation: generation) else { return }
+        update(&trackState, with: page, targetPage: targetPage)
+        tracks = trackState.items
+        finishRequest(section: .tracks, generation: generation)
+    }
+
+    private func commitAlbums(
+        _ page: Page<AlbumEntity>,
+        targetPage: Int,
+        query: String?,
+        generation: UInt
+    ) {
+        guard ownsRequest(section: .albums, query: query, generation: generation) else { return }
+        update(&albumState, with: page, targetPage: targetPage)
+        albums = albumState.items
+        finishRequest(section: .albums, generation: generation)
+    }
+
+    private func commitArtists(
+        _ page: Page<ArtistEntity>,
+        targetPage: Int,
+        query: String?,
+        generation: UInt
+    ) {
+        guard ownsRequest(section: .artists, query: query, generation: generation) else { return }
+        update(&artistState, with: page, targetPage: targetPage)
+        artists = artistState.items
+        finishRequest(section: .artists, generation: generation)
+    }
+
+    private func commitPlaylists(
+        _ page: Page<PlaylistEntity>,
+        targetPage: Int,
+        query: String?,
+        generation: UInt
+    ) {
+        guard ownsRequest(section: .playlists, query: query, generation: generation) else { return }
+        update(&playlistState, with: page, targetPage: targetPage)
+        playlists = playlistState.items
+        finishRequest(section: .playlists, generation: generation)
+    }
+
+    private func ownsRequest(section: Section, query: String?, generation: UInt) -> Bool {
+        requestGenerations[section] == generation && state(for: section).lastQuery == query
+    }
+
+    private func update<Item: Sendable>(
+        _ state: inout PaginationState<Item>,
+        with page: Page<Item>,
+        targetPage: Int
+    ) {
+        if targetPage == 0 {
+            state.items = page.items
+        } else {
+            state.items.append(contentsOf: page.items)
+        }
+        state.nextPage = page.nextPage
+        state.hasMore = page.hasMore
+    }
+
+    private func finishCancelledRequest(section: Section, generation: UInt) {
+        finishRequest(section: section, generation: generation)
+    }
+
+    private func finishFailedRequest(section: Section, generation: UInt, error: Error) {
+        guard requestGenerations[section] == generation else { return }
+        let wrapped = LibraryViewModelError.fetchFailed(section: section, reason: error.localizedDescription)
+        lastError = wrapped
+        logger.error("Failed to fetch section \(String(describing: section), privacy: .public): \(error.localizedDescription, privacy: .private)")
+        finishRequest(section: section, generation: generation)
+    }
+
+    private func finishRequest(section: Section, generation: UInt) {
+        guard requestGenerations[section] == generation else { return }
+        requestTasks[section] = nil
+        loadPhases[section] = .idle
+    }
+
+    private func nextRequestGeneration(for section: Section) -> UInt {
+        requestGenerations[section, default: 0] &+= 1
+        return requestGenerations[section, default: 0]
+    }
+
+    private func resetState(for section: Section, query: String?) {
+        switch section {
+        case .tracks:
+            trackState = PaginationState(lastQuery: query)
+            tracks = []
+        case .albums:
+            albumState = PaginationState(lastQuery: query)
+            albums = []
+        case .artists:
+            artistState = PaginationState(lastQuery: query)
+            artists = []
+        case .playlists:
+            playlistState = PaginationState(lastQuery: query)
+            playlists = []
+        }
+    }
+
+    private func state(for section: Section) -> (count: Int, nextPage: Int, hasMore: Bool, lastQuery: String?) {
+        switch section {
+        case .tracks:
+            (trackState.items.count, trackState.nextPage, trackState.hasMore, trackState.lastQuery)
+        case .albums:
+            (albumState.items.count, albumState.nextPage, albumState.hasMore, albumState.lastQuery)
+        case .artists:
+            (artistState.items.count, artistState.nextPage, artistState.hasMore, artistState.lastQuery)
+        case .playlists:
+            (playlistState.items.count, playlistState.nextPage, playlistState.hasMore, playlistState.lastQuery)
         }
     }
 

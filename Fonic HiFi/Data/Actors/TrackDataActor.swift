@@ -9,12 +9,71 @@ import Foundation
 import OSLog
 import SwiftData
 
+/// Injected boundary for file-provider and protected-data availability checks.
+public struct TrackFileAvailabilityChecker: Sendable {
+    private let check: @Sendable (URL) -> Bool
+
+    public init(check: @escaping @Sendable (URL) -> Bool) {
+        self.check = check
+    }
+
+    public func isAvailable(_ url: URL) -> Bool {
+        check(url)
+    }
+
+    public static let live = TrackFileAvailabilityChecker { url in
+        FileManager.default.fileExists(atPath: url.path)
+    }
+}
+
+/// Conservative policy for converting repeated, long-lived misses into record removal.
+public struct MissingFileQuarantinePolicy: Equatable, Sendable {
+    public let requiredConsecutiveMisses: Int
+    public let minimumUnavailableDuration: TimeInterval
+
+    public init(
+        requiredConsecutiveMisses: Int = 3,
+        minimumUnavailableDuration: TimeInterval = 7 * 24 * 60 * 60
+    ) {
+        self.requiredConsecutiveMisses = max(1, requiredConsecutiveMisses)
+        self.minimumUnavailableDuration = max(0, minimumUnavailableDuration)
+    }
+
+    public static let `default` = MissingFileQuarantinePolicy()
+
+    func permitsRemoval(consecutiveMisses: Int, unavailableSince: Date, now: Date) -> Bool {
+        consecutiveMisses >= requiredConsecutiveMisses &&
+            now.timeIntervalSince(unavailableSince) >= minimumUnavailableDuration
+    }
+}
+
 /// ModelActor for handling Track data operations in a concurrency-safe manner
 @ModelActor
 public actor TrackDataActor {
+    static let listeningSessionRetentionInterval: TimeInterval = 365 * 24 * 60 * 60
+
+    // The macro-generated initializer uses the normal policy. The explicit policy
+    // initializer below sets this once for recovery-mode authorities.
+    private var mutationPolicy: DataMutationPolicy = .normal
     private let logger = Log.logger(.dataTrackActor)
     private let unknownArtistName = "Unknown Artist"
     private let unknownAlbumTitle = "Unknown Album"
+
+    public init(
+        modelContainer: ModelContainer,
+        mutationPolicy: DataMutationPolicy
+    ) {
+        let modelContext = ModelContext(modelContainer)
+        self.modelExecutor = DefaultSerialModelExecutor(modelContext: modelContext)
+        self.modelContainer = modelContainer
+        self.mutationPolicy = mutationPolicy
+    }
+
+    func requireMutationAllowed() throws {
+        guard mutationPolicy == .normal else {
+            throw DataMutationError.readOnly
+        }
+    }
 
     // MARK: - Helpers
 
@@ -81,13 +140,17 @@ public actor TrackDataActor {
         track.genre = metadata.genre
         track.year = metadata.year
         track.trackNumber = metadata.trackNumber
+        track.totalTracks = metadata.totalTracks
         track.discNumber = metadata.discNumber
+        track.totalDiscs = metadata.totalDiscs
         track.composer = metadata.composer
         track.conductor = metadata.conductor
         track.comments = metadata.comment
         track.lyrics = metadata.lyrics
         track.artwork = metadata.artwork
         track.bitrate = metadata.bitrate
+        track.replayGainTrack = metadata.replayGainTrack
+        track.replayGainAlbum = metadata.replayGainAlbum
         track.sourceURLBookmark = metadata.sourceBookmark
         track.sourceURLString = metadata.sourceURL?.absoluteString
         track.sourceURLHash = metadata.sourceURLHash ?? metadata.sourceURL?.librarySourceHash()
@@ -255,13 +318,11 @@ public actor TrackDataActor {
 
     // MARK: - Track Creation
 
-    /// Create a new Track from extracted metadata
-    /// - Parameter metadata: Sendable metadata extracted from audio file
-    /// - Returns: PersistentIdentifier of the created Track
-    /// - Throws: TrackDataError if creation fails
-    public func createTrack(from metadata: TrackMetadata) throws -> PersistentIdentifier {
-        logger.info("Creating imported track record")
-
+    private func insertTrackWithoutSaving(
+        from metadata: TrackMetadata,
+        artistCache: inout [String: Artist],
+        albumCache: inout [String: Album]
+    ) throws -> Track {
         let resolvedArtist = resolvedArtistName(metadata.artist)
         let resolvedAlbum = resolvedAlbumTitle(metadata.album)
         let resolvedAlbumArtist = resolvedAlbumArtistName(
@@ -283,11 +344,8 @@ public actor TrackDataActor {
         )
 
         applyTrackMetadata(metadata, to: track)
-
         modelContext.insert(track)
 
-        var artistCache: [String: Artist] = [:]
-        var albumCache: [String: Album] = [:]
         _ = try linkAlbumArtistRelationships(
             track: track,
             albumTitle: resolvedAlbum,
@@ -301,12 +359,58 @@ public actor TrackDataActor {
             albumCache: &albumCache
         )
 
+        return track
+    }
+
+    /// Create a new Track from extracted metadata
+    /// - Parameter metadata: Sendable metadata extracted from audio file
+    /// - Returns: PersistentIdentifier of the created Track
+    /// - Throws: TrackDataError if creation fails
+    public func createTrack(from metadata: TrackMetadata) throws -> PersistentIdentifier {
+        try requireMutationAllowed()
+        logger.info("Creating imported track record")
+
+        var artistCache: [String: Artist] = [:]
+        var albumCache: [String: Album] = [:]
+        let track = try insertTrackWithoutSaving(
+            from: metadata,
+            artistCache: &artistCache,
+            albumCache: &albumCache
+        )
+
         do {
             try modelContext.save()
-            logger.info("Successfully created track: \(track.id)")
+            logger.info("Successfully created track: \(track.id, privacy: .private(mask: .hash))")
             return track.persistentModelID
         } catch {
-            logger.error("Failed to save track: \(error.localizedDescription)")
+            logger.error("Failed to save track: \(error.localizedDescription, privacy: .private)")
+            throw TrackDataError.saveFailed(error)
+        }
+    }
+
+    /// Atomically checks and claims an imported source within this actor's save boundary.
+    func claimImportedTrack(from metadata: TrackMetadata) throws -> TrackImportClaimResult {
+        try requireMutationAllowed()
+        if let sourceURL = metadata.sourceURL,
+           try trackExists(for: sourceURL, bookmark: metadata.sourceBookmark) != nil {
+            logger.notice("Duplicate imported source claim rejected")
+            return .duplicate
+        }
+
+        var artistCache: [String: Artist] = [:]
+        var albumCache: [String: Album] = [:]
+        let track = try insertTrackWithoutSaving(
+            from: metadata,
+            artistCache: &artistCache,
+            albumCache: &albumCache
+        )
+
+        do {
+            try modelContext.save()
+            logger.info("Successfully claimed imported track: \(track.id, privacy: .private(mask: .hash))")
+            return .created(track.persistentModelID)
+        } catch {
+            logger.error("Failed to save claimed track: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.saveFailed(error)
         }
     }
@@ -316,45 +420,16 @@ public actor TrackDataActor {
     /// - Returns: Array of PersistentIdentifiers for created tracks
     /// - Throws: TrackDataError if any creation fails
     public func createTracks(from metadataArray: [TrackMetadata]) throws -> [PersistentIdentifier] {
-        logger.info("Creating \(metadataArray.count) tracks")
+        try requireMutationAllowed()
+        logger.info("Creating \(metadataArray.count, privacy: .public) tracks")
 
         var identifiers: [PersistentIdentifier] = []
         var artistCache: [String: Artist] = [:]
         var albumCache: [String: Album] = [:]
 
         for metadata in metadataArray {
-            let resolvedArtist = resolvedArtistName(metadata.artist)
-            let resolvedAlbum = resolvedAlbumTitle(metadata.album)
-            let resolvedAlbumArtist = resolvedAlbumArtistName(
-                albumArtist: metadata.albumArtist,
-                artist: metadata.artist
-            )
-
-            let track = Track(
-                url: metadata.url,
-                title: metadata.title,
-                artist: resolvedArtist,
-                album: resolvedAlbum,
-                audioFormat: metadata.audioFormat,
-                duration: metadata.duration,
-                sampleRate: metadata.sampleRate,
-                bitDepth: metadata.bitDepth,
-                channels: metadata.channels,
-                isLossless: metadata.isLossless,
-            )
-
-            applyTrackMetadata(metadata, to: track)
-
-            modelContext.insert(track)
-            _ = try linkAlbumArtistRelationships(
-                track: track,
-                albumTitle: resolvedAlbum,
-                artistName: resolvedArtist,
-                albumArtistName: resolvedAlbumArtist,
-                genre: metadata.genre,
-                year: metadata.year,
-                artwork: metadata.artwork,
-                overwriteTrackRelations: true,
+            let track = try insertTrackWithoutSaving(
+                from: metadata,
                 artistCache: &artistCache,
                 albumCache: &albumCache
             )
@@ -363,10 +438,10 @@ public actor TrackDataActor {
 
         do {
             try modelContext.save()
-            logger.info("Successfully created \(identifiers.count) tracks")
+            logger.info("Successfully created \(identifiers.count, privacy: .public) tracks")
             return identifiers
         } catch {
-            logger.error("Failed to save tracks: \(error.localizedDescription)")
+            logger.error("Failed to save tracks: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.batchSaveFailed(error)
         }
     }
@@ -375,8 +450,9 @@ public actor TrackDataActor {
     /// - Parameter batchSize: Number of updated tracks to save per transaction.
     /// - Returns: Summary of backfill work performed.
     public func backfillAlbumArtistRelationships(batchSize: Int = 200) throws -> AlbumArtistBackfillResult {
+        try requireMutationAllowed()
         let effectiveBatchSize = max(1, batchSize)
-        logger.info("Starting relationship backfill (batch size: \(effectiveBatchSize))")
+        logger.info("Starting relationship backfill (batch size: \(effectiveBatchSize, privacy: .public))")
 
         let descriptor = FetchDescriptor<Track>(
             predicate: #Predicate<Track> { track in
@@ -388,7 +464,9 @@ public actor TrackDataActor {
         do {
             tracks = try modelContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to fetch tracks for relationship backfill: \(error.localizedDescription)")
+            logger.error(
+                "Failed to fetch tracks for relationship backfill: \(error.localizedDescription, privacy: .private)"
+            )
             throw TrackDataError.fetchFailed(error)
         }
 
@@ -445,7 +523,9 @@ public actor TrackDataActor {
                     try modelContext.save()
                     pendingUpdatedTracks = 0
                 } catch {
-                    logger.error("Failed to save relationship backfill batch: \(error.localizedDescription)")
+                    logger.error(
+                        "Failed to save relationship backfill batch: \(error.localizedDescription, privacy: .private)"
+                    )
                     throw TrackDataError.saveFailed(error)
                 }
             }
@@ -455,13 +535,21 @@ public actor TrackDataActor {
             do {
                 try modelContext.save()
             } catch {
-                logger.error("Failed to save final relationship backfill batch: \(error.localizedDescription)")
+                logger.error(
+                    "Failed to save final relationship backfill batch: \(error.localizedDescription, privacy: .private)"
+                )
                 throw TrackDataError.saveFailed(error)
             }
         }
 
         logger.info(
-            "Relationship backfill complete - scanned: \(tracks.count), updated: \(updatedTracks), created albums: \(createdAlbums), created artists: \(createdArtists)"
+            """
+            Relationship backfill complete - \
+            scanned: \(tracks.count, privacy: .public), \
+            updated: \(updatedTracks, privacy: .public), \
+            created albums: \(createdAlbums, privacy: .public), \
+            created artists: \(createdArtists, privacy: .public)
+            """
         )
 
         return AlbumArtistBackfillResult(
@@ -504,7 +592,7 @@ public actor TrackDataActor {
             let tracks = try modelContext.fetch(fetchDescriptor)
             return tracks.first?.persistentModelID
         } catch {
-            logger.error("Failed to check track existence: \(error.localizedDescription)")
+            logger.error("Failed to check track existence: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.fetchFailed(error)
         }
     }
@@ -547,7 +635,9 @@ public actor TrackDataActor {
             offset += tracks.count
         }
 
-        logger.info("Loaded \(urlHashes.count) URL hashes, \(bookmarkHashes.count) bookmark hashes")
+        logger.info(
+            "Loaded \(urlHashes.count, privacy: .public) URL hashes, \(bookmarkHashes.count, privacy: .public) bookmark hashes"
+        )
 
         return SourceHashCache(
             urlHashes: urlHashes,
@@ -572,7 +662,9 @@ public actor TrackDataActor {
             genre: track.genre,
             year: track.year,
             trackNumber: track.trackNumber,
+            totalTracks: track.totalTracks,
             discNumber: track.discNumber,
+            totalDiscs: track.totalDiscs,
             composer: track.composer,
             conductor: track.conductor,
             audioFormat: track.audioFormat,
@@ -589,6 +681,8 @@ public actor TrackDataActor {
             sourceBookmark: track.sourceURLBookmark,
             sourceURLHash: track.sourceURLHash,
             sourceBookmarkHash: track.sourceBookmarkHash,
+            replayGainTrack: track.replayGainTrack,
+            replayGainAlbum: track.replayGainAlbum,
             isFavorite: track.isFavorite,
         )
     }
@@ -602,7 +696,7 @@ public actor TrackDataActor {
             let tracks = try modelContext.fetch(fetchDescriptor)
             return tracks.count
         } catch {
-            logger.error("Failed to get tracks count: \(error.localizedDescription)")
+            logger.error("Failed to get tracks count: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.fetchFailed(error)
         }
     }
@@ -611,15 +705,16 @@ public actor TrackDataActor {
     /// - Parameter id: PersistentIdentifier of the track to delete
     /// - Throws: TrackDataError if deletion fails
     public func deleteTrack(_ id: PersistentIdentifier) throws {
+        try requireMutationAllowed()
         let track = try resolveTrack(with: id)
 
         modelContext.delete(track)
 
         do {
             try modelContext.save()
-            logger.info("Successfully deleted track: \(track.id)")
+            logger.info("Successfully deleted track: \(track.id, privacy: .private(mask: .hash))")
         } catch {
-            logger.error("Failed to delete track: \(error.localizedDescription)")
+            logger.error("Failed to delete track: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.deleteFailed(error)
         }
     }
@@ -639,7 +734,9 @@ public actor TrackDataActor {
         do {
             return try modelContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to fetch recently played tracks: \(error.localizedDescription)")
+            logger.error(
+                "Failed to fetch recently played tracks: \(error.localizedDescription, privacy: .private)"
+            )
             throw TrackDataError.fetchFailed(error)
         }
     }
@@ -659,7 +756,9 @@ public actor TrackDataActor {
         do {
             return try modelContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to fetch most listened tracks: \(error.localizedDescription)")
+            logger.error(
+                "Failed to fetch most listened tracks: \(error.localizedDescription, privacy: .private)"
+            )
             throw TrackDataError.fetchFailed(error)
         }
     }
@@ -679,35 +778,90 @@ public actor TrackDataActor {
         do {
             return try modelContext.fetch(descriptor)
         } catch {
-            logger.error("Failed to fetch favorite albums: \(error.localizedDescription)")
+            logger.error("Failed to fetch favorite albums: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.fetchFailed(error)
         }
     }
 
-    /// Remove tracks that have missing files
-    /// - Returns: Number of tracks removed
-    public func cleanupMissingFiles() throws -> Int {
+    /// Quarantine temporarily unavailable tracks and remove only records that exceed the policy.
+    ///
+    /// Managed media is never deleted here. A successful check resets any prior miss window.
+    /// - Returns: Number of track records removed after exceeding both thresholds.
+    public func cleanupMissingFiles(
+        checker: TrackFileAvailabilityChecker = .live,
+        policy: MissingFileQuarantinePolicy = .default,
+        now: Date = Date(),
+        documentsDirectory: URL? = nil
+    ) throws -> Int {
+        try requireMutationAllowed()
         let fetchDescriptor = FetchDescriptor<Track>()
 
         do {
             let tracks = try modelContext.fetch(fetchDescriptor)
             var removedCount = 0
+            var changedCount = 0
 
             for track in tracks {
-                if !FileManager.default.fileExists(atPath: track.url.path) {
+                if checker.isAvailable(track.url) {
+                    if track.unavailableCheckCount > 0 ||
+                        track.unavailableSince != nil ||
+                        track.availabilityLastCheckedAt != nil {
+                        track.unavailableCheckCount = 0
+                        track.unavailableSince = nil
+                        track.availabilityLastCheckedAt = nil
+                        changedCount += 1
+                    }
+                    continue
+                }
+
+                if let rebasedURL = ManagedMediaURLResolver.resolveAvailableURL(
+                    track.url,
+                    documentsDirectory: documentsDirectory
+                ),
+                    rebasedURL.standardizedFileURL != track.url.standardizedFileURL {
+                    track.url = rebasedURL
+                    track.unavailableCheckCount = 0
+                    track.unavailableSince = nil
+                    track.availabilityLastCheckedAt = nil
+                    changedCount += 1
+                    continue
+                }
+
+                let unavailableSince = track.unavailableSince ?? now
+                track.unavailableSince = unavailableSince
+                track.unavailableCheckCount += 1
+                track.availabilityLastCheckedAt = now
+                changedCount += 1
+
+                if policy.permitsRemoval(
+                    consecutiveMisses: track.unavailableCheckCount,
+                    unavailableSince: unavailableSince,
+                    now: now
+                ) {
+                    // Preserve the playlist's scalar ordering contract alongside
+                    // SwiftData's nullified relationships.
+                    for playlist in track.playlists {
+                        playlist.trackIds.removeAll { $0 == track.id }
+                        playlist.dateModified = now
+                    }
                     modelContext.delete(track)
                     removedCount += 1
                 }
             }
 
-            if removedCount > 0 {
+            if changedCount > 0 {
                 try modelContext.save()
-                logger.info("Cleaned up \(removedCount) missing files")
+                logger.info(
+                    """
+                    Missing-file check changed \(changedCount, privacy: .public) records; \
+                    removed \(removedCount, privacy: .public) records past policy
+                    """
+                )
             }
 
             return removedCount
         } catch {
-            logger.error("Failed to cleanup missing files: \(error.localizedDescription)")
+            logger.error("Failed to cleanup missing files: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.cleanupFailed(error)
         }
     }
@@ -720,6 +874,7 @@ public actor TrackDataActor {
     ///   - playCount: New play count
     ///   - lastPlayed: Last played date
     public func updatePlaybackStats(for id: PersistentIdentifier, playCount: Int, lastPlayed: Date) throws {
+        try requireMutationAllowed()
         let track = try resolveTrack(with: id)
 
         track.playCount = playCount
@@ -729,7 +884,7 @@ public actor TrackDataActor {
             try modelContext.save()
             logger.debug("Updated track playback stats")
         } catch {
-            logger.error("Failed to update playback stats: \(error.localizedDescription)")
+            logger.error("Failed to update playback stats: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.updateFailed(error)
         }
     }
@@ -741,6 +896,7 @@ public actor TrackDataActor {
     ///   - isFavorite: Favorite status
     ///   - userTags: User-defined tags
     public func updateUserData(for id: PersistentIdentifier, rating: Int?, isFavorite: Bool, userTags: [String]) throws {
+        try requireMutationAllowed()
         let track = try resolveTrack(with: id)
 
         track.rating = rating
@@ -751,23 +907,27 @@ public actor TrackDataActor {
             try modelContext.save()
             logger.debug("Updated track user data")
         } catch {
-            logger.error("Failed to update user data: \(error.localizedDescription)")
+            logger.error("Failed to update user data: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.updateFailed(error)
         }
     }
 
     /// Toggle the favorite status of a track
     /// - Parameter trackId: PersistentIdentifier of the track
+    /// - Returns: The persisted favorite status after the toggle
     /// - Throws: TrackDataError if track not found or update fails
-    public func toggleFavorite(trackId: PersistentIdentifier) throws {
+    @discardableResult
+    public func toggleFavorite(trackId: PersistentIdentifier) throws -> Bool {
+        try requireMutationAllowed()
         let track = try resolveTrack(with: trackId)
         track.isFavorite.toggle()
 
         do {
             try modelContext.save()
             Log.logger(.data).info("Toggled favorite for track")
+            return track.isFavorite
         } catch {
-            logger.error("Failed to toggle favorite: \(error.localizedDescription)")
+            logger.error("Failed to toggle favorite: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.updateFailed(error)
         }
     }
@@ -784,6 +944,7 @@ public actor TrackDataActor {
         wasSkipped: Bool,
         wasCompleted: Bool
     ) throws {
+        try requireMutationAllowed()
         let session = ListeningSession(
             trackId: trackId,
             startedAt: startedAt,
@@ -799,11 +960,27 @@ public actor TrackDataActor {
 
         do {
             try modelContext.save()
+            try enforceListeningSessionRetentionPolicy()
             logger.debug("Recorded listening session")
         } catch {
-            logger.error("Failed to record listening session: \(error.localizedDescription)")
+            logger.error("Failed to record listening session: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.insertFailed(error)
         }
+    }
+
+    private func enforceListeningSessionRetentionPolicy() throws {
+        let cutoff = Date().addingTimeInterval(-Self.listeningSessionRetentionInterval)
+        let descriptor = FetchDescriptor<ListeningSession>(
+            predicate: #Predicate<ListeningSession> { session in
+                session.startedAt < cutoff
+            }
+        )
+        let expiredSessions = try modelContext.fetch(descriptor)
+        guard !expiredSessions.isEmpty else { return }
+        for session in expiredSessions {
+            modelContext.delete(session)
+        }
+        try modelContext.save()
     }
 
     /// Get recent listening sessions
@@ -852,23 +1029,27 @@ public actor TrackDataActor {
             to: Date()
         ) ?? Date()
 
-        var descriptor = FetchDescriptor<Track>(
+        let descriptor = FetchDescriptor<Track>(
             predicate: #Predicate<Track> { track in
-                track.playCount >= minimumPlayCount &&
-                    // swiftlint:disable:next force_unwrapping
-                    (track.lastPlayed == nil || track.lastPlayed! < cutoffDate)
+                track.playCount >= minimumPlayCount
             },
             sortBy: [SortDescriptor(\Track.playCount, order: .reverse)]
         )
-        descriptor.fetchLimit = limit
 
-        let tracks = try modelContext.fetch(descriptor)
-        return tracks.map { $0.id }
+        let candidates = try modelContext.fetch(descriptor)
+        return candidates.lazy
+            .filter { track in
+                guard let lastPlayed = track.lastPlayed else { return true }
+                return lastPlayed < cutoffDate
+            }
+            .prefix(limit)
+            .map(\.id)
     }
 
     /// Increment play count and update last played for a track
     /// - Parameter trackId: UUID of the track
     public func incrementPlayCount(for trackId: UUID) throws {
+        try requireMutationAllowed()
         var descriptor = FetchDescriptor<Track>(
             predicate: #Predicate<Track> { track in
                 track.id == trackId
@@ -888,7 +1069,7 @@ public actor TrackDataActor {
             try modelContext.save()
             logger.debug("Incremented track play count to \(track.playCount, privacy: .public)")
         } catch {
-            logger.error("Failed to increment play count: \(error.localizedDescription)")
+            logger.error("Failed to increment play count: \(error.localizedDescription, privacy: .private)")
             throw TrackDataError.updateFailed(error)
         }
     }
@@ -1006,6 +1187,11 @@ public struct TrackSearchMetadata: Sendable {
 
 // MARK: - Supporting Types
 
+enum TrackImportClaimResult: Sendable {
+    case created(PersistentIdentifier)
+    case duplicate
+}
+
 /// Cache of known source identifiers for fast duplicate detection
 /// Sendable because it crosses actor boundary when returned from TrackDataActor
 /// Task-confined within FileImportProcessor - no locks needed
@@ -1059,7 +1245,9 @@ public struct TrackMetadata: Sendable {
     public let genre: String?
     public let year: Int?
     public let trackNumber: Int?
+    public let totalTracks: Int?
     public let discNumber: Int?
+    public let totalDiscs: Int?
     public let composer: String?
     public let conductor: String?
     public let audioFormat: String
@@ -1089,7 +1277,9 @@ public struct TrackMetadata: Sendable {
         genre: String? = nil,
         year: Int? = nil,
         trackNumber: Int? = nil,
+        totalTracks: Int? = nil,
         discNumber: Int? = nil,
+        totalDiscs: Int? = nil,
         composer: String? = nil,
         conductor: String? = nil,
         audioFormat: String,
@@ -1118,7 +1308,9 @@ public struct TrackMetadata: Sendable {
         self.genre = genre
         self.year = year
         self.trackNumber = trackNumber
+        self.totalTracks = totalTracks
         self.discNumber = discNumber
+        self.totalDiscs = totalDiscs
         self.composer = composer
         self.conductor = conductor
         self.audioFormat = audioFormat
@@ -1160,7 +1352,9 @@ public extension TrackMetadata {
             genre: genre,
             year: year,
             trackNumber: trackNumber,
+            totalTracks: totalTracks,
             discNumber: discNumber,
+            totalDiscs: totalDiscs,
             composer: composer,
             conductor: conductor,
             audioFormat: audioFormat,

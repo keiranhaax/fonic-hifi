@@ -11,15 +11,11 @@ import Foundation
 protocol AudioMonitorRuntimeControlling: AnyObject {
     var updateInterval: TimeInterval { get }
     var isMonitoring: Bool { get }
-    var isProfiling: Bool { get }
 
     func startMonitoring(updateInterval: TimeInterval, engine: AudioEngineService?) async
     func stopMonitoring() async
     func updateMonitoringInterval(to interval: TimeInterval)
     func collectCurrentMetrics() async -> AudioMetrics
-    func evaluateAlerts() async
-    func startProfiling(duration: TimeInterval?) async
-    func stopProfiling() async
     func updateEngine(_ engine: AudioEngineService?)
     func invalidate()
 }
@@ -30,20 +26,6 @@ protocol AudioMonitorEngineHooking: AnyObject {
     func startMonitoring(interval: TimeInterval)
     func stopMonitoring()
     func updateMonitoringInterval(to interval: TimeInterval)
-}
-
-@MainActor
-protocol AudioMonitorDiagnosticsBuilding: AnyObject {
-    func makeDiagnostics(
-        currentMetrics: AudioMetrics,
-        latestMetric: AudioMetrics?,
-        sessionSummary: AudioSessionSummary,
-        alertHistory: [PlaybackAlert],
-        runtime: AudioMonitorDiagnosticsBuilder.RuntimeSnapshot,
-        engine: AudioEngineService?,
-        metricsSampleCount: Int,
-        systemHealth: DiagnosticHealthStatus
-    ) async -> PlaybackDiagnostics
 }
 
 /// Lightweight container for system resource metrics captured by the audio monitor.
@@ -67,6 +49,7 @@ public struct SystemMetrics: Sendable {
 
 /// Container for engine-specific playback metrics used during monitoring.
 public struct EngineMetrics: Sendable {
+    public var availability: AudioMetricsAvailability = .available
     public let bufferUnderruns: Int
     public let decodingLatency: TimeInterval
     public let bufferFillLevel: Float
@@ -94,7 +77,7 @@ public struct EngineMetrics: Sendable {
     public let lastRecoveryTime: TimeInterval?
 
     public static var `default`: EngineMetrics {
-        EngineMetrics(
+        var metrics = EngineMetrics(
             bufferUnderruns: 0,
             decodingLatency: 0,
             bufferFillLevel: 1.0,
@@ -121,6 +104,8 @@ public struct EngineMetrics: Sendable {
             recoverySuccessRate: 1.0,
             lastRecoveryTime: nil,
         )
+        metrics.availability = .unavailable
+        return metrics
     }
 }
 
@@ -134,6 +119,7 @@ struct InterruptionRecord: Sendable {
 
 /// Codable representation used when exporting metrics archives.
 struct EncodedMetric: Codable, Sendable {
+    let engineMetricsAvailability: AudioMetricsAvailability
     let timestamp: Date
     let cpuUsage: Float
     let memoryUsage: Int64
@@ -145,6 +131,7 @@ struct EncodedMetric: Codable, Sendable {
     let bufferUnderruns: Int
 
     init(_ metric: AudioMetrics) {
+        engineMetricsAvailability = metric.engineMetricsAvailability
         timestamp = metric.timestamp
         cpuUsage = metric.cpuUsage
         memoryUsage = metric.memoryUsage
@@ -154,88 +141,5 @@ struct EncodedMetric: Codable, Sendable {
         qualityScore = metric.qualityScore
         isBitPerfect = metric.isBitPerfect
         bufferUnderruns = metric.bufferUnderruns
-    }
-}
-
-@MainActor
-final class ProfilingData {
-    var cpuSamples: [Float] = []
-    var memorySamples: [Int64] = []
-    var latencySamples: [TimeInterval] = []
-    var bufferFillSamples: [Float] = []
-    var sampleTimestamps: [Date] = []
-    var underrunCount: Int = 0
-    var lastKnownBufferUnderrunTotal: Int?
-
-    var cpuProfile: CPUProfile {
-        let avg = cpuSamples.isEmpty ? 0 : cpuSamples.reduce(0, +) / Float(cpuSamples.count)
-        let peak = cpuSamples.max() ?? 0
-
-        return CPUProfile(
-            averageUsage: avg,
-            peakUsage: peak,
-            usageDistribution: cpuSamples,
-            performanceStates: [:],
-        )
-    }
-
-    var memoryProfile: MemoryProfile {
-        let avg = memorySamples.isEmpty ? 0 : memorySamples.reduce(0, +) / Int64(memorySamples.count)
-        let peak = memorySamples.max() ?? 0
-
-        return MemoryProfile(
-            averageUsage: avg,
-            peakUsage: peak,
-            allocationPatterns: [],
-            leakIndicators: [],
-        )
-    }
-
-    var latencyProfile: LatencyProfile {
-        let avg = latencySamples.isEmpty ? 0 : latencySamples.reduce(0, +) / Double(latencySamples.count)
-        let maxLatency = latencySamples.max() ?? 0
-        let threshold = max(avg * 1.5, avg + 0.01)
-
-        var spikes: [LatencySpike] = []
-        for index in latencySamples.indices where latencySamples[index] > threshold {
-            let timestamp = sampleTimestamps.indices.contains(index) ? sampleTimestamps[index] : Date()
-            let previousTimestamp = index > 0 && sampleTimestamps.indices.contains(index - 1) ? sampleTimestamps[index - 1] : timestamp
-            let duration = max(timestamp.timeIntervalSince(previousTimestamp), 0.1)
-            let latency = latencySamples[index]
-            let possibleCause: String? = if latency > 0.08 {
-                "Decoder back-pressure"
-            } else if latency > 0.05 {
-                "Render scheduling delay"
-            } else {
-                nil
-            }
-            spikes.append(
-                LatencySpike(
-                    timestamp: timestamp,
-                    duration: duration,
-                    peakLatency: latency,
-                    possibleCause: possibleCause,
-                ),
-            )
-        }
-
-        return LatencyProfile(
-            averageLatency: avg,
-            maxLatency: maxLatency,
-            latencyDistribution: latencySamples,
-            spikes: spikes,
-        )
-    }
-
-    var bufferProfile: BufferProfile {
-        let avg = bufferFillSamples.isEmpty ? 1.0 : bufferFillSamples.reduce(0, +) / Float(bufferFillSamples.count)
-        let min = bufferFillSamples.min() ?? 1.0
-
-        return BufferProfile(
-            averageBufferFill: avg,
-            minBufferFill: min,
-            underrunCount: underrunCount,
-            fillDistribution: bufferFillSamples,
-        )
     }
 }

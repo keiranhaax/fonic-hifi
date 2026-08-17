@@ -5,18 +5,70 @@
 //  Created by Claude on 5/28/25.
 //
 
+import OSLog
 import SwiftData
 import SwiftUI
+
+enum StandardSearchFailure: Equatable {
+    case serviceUnavailable(query: String)
+    case requestFailed(query: String)
+
+    var query: String {
+        switch self {
+        case let .serviceUnavailable(query), let .requestFailed(query):
+            query
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .serviceUnavailable:
+            "Search Unavailable"
+        case .requestFailed:
+            "Search Failed"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .serviceUnavailable:
+            "Your library isn't available to search right now. Try again."
+        case .requestFailed:
+            "Fonic HiFi couldn't search your library. Try again."
+        }
+    }
+}
+
+struct StandardSearchPresentationState: Equatable {
+    private(set) var failure: StandardSearchFailure?
+
+    mutating func beginSearch() {
+        failure = nil
+    }
+
+    mutating func recordUnavailable(query: String) {
+        failure = .serviceUnavailable(query: query)
+    }
+
+    mutating func recordFailure(query: String) {
+        failure = .requestFailed(query: query)
+    }
+
+    mutating func recordSuccess() {
+        failure = nil
+    }
+}
 
 /// Main search interface for Fonic HiFi
 @MainActor
 struct SearchView: View {
     @Binding var searchText: String
-    @Environment(\.audioEngine) private var audioService
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.dataManager) private var dataManager
     @State private var searchResults = SearchResults()
     @State private var searchTask: Task<Void, Never>?
     @State private var isSearching = false
+    @State private var standardSearchPresentation = StandardSearchPresentationState()
     @State private var recentSearches: [RecentSearchData] = []
     @State private var showingRecentSearches = true
     @State private var selectedAlbum: Album?
@@ -71,6 +123,11 @@ struct SearchView: View {
                     Button("Try Again") { scheduleSearch(searchText) }
                         .buttonStyle(.borderedProminent)
                 }
+            } else if !useSmartSearch,
+                      let standardSearchFailure = standardSearchPresentation.failure {
+                StandardSearchFailureView(failure: standardSearchFailure) {
+                    scheduleSearch(standardSearchFailure.query)
+                }
             } else if searchResults.isEmpty, !searchText.isEmpty, !isSearching {
                 // Show no results message
                 NoResultsView(query: searchText, isSmartSearch: false)
@@ -115,6 +172,12 @@ struct SearchView: View {
                 } label: {
                     Label("Search Mode", systemImage: useSmartSearch ? "sparkles" : "magnifyingglass")
                 }
+                .accessibilityIdentifier("SearchModeMenu")
+                .accessibilityLabel(
+                    useSmartSearch
+                        ? "Search Mode, Smart Search"
+                        : "Search Mode, Standard Search"
+                )
                 .accessibilityValue(useSmartSearch ? "Smart Search" : "Standard Search")
             }
         }
@@ -154,17 +217,18 @@ struct SearchView: View {
 
     private func scheduleSearch(_ query: String) {
         searchTask?.cancel()
-        searchTask = Task {
-            if query.isEmpty {
-                showingRecentSearches = true
-                searchResults = SearchResults()
-                smartSearchViewModel.clearSearch()
-                isSearching = false
-                return
-            }
+        standardSearchPresentation.beginSearch()
+        if query.isEmpty {
+            showingRecentSearches = true
+            searchResults = SearchResults()
+            smartSearchViewModel.clearSearch()
+            isSearching = false
+            return
+        }
 
-            showingRecentSearches = false
-            isSearching = true
+        showingRecentSearches = false
+        isSearching = true
+        searchTask = Task {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
 
@@ -189,33 +253,38 @@ struct SearchView: View {
 
     private func performSearch(_ query: String) async {
         guard let dataManager else {
+            guard query == searchText else { return }
+            if !useSmartSearch {
+                standardSearchPresentation.recordUnavailable(query: query)
+            }
             isSearching = false
             return
         }
 
         do {
             let results = try await searchAllContent(query, dataManager: dataManager)
+            guard !Task.isCancelled, query == searchText, !useSmartSearch else { return }
 
-            // Update UI on main actor
-            await MainActor.run {
-                searchResults = results
-                isSearching = false
+            searchResults = results
+            standardSearchPresentation.recordSuccess()
+            isSearching = false
 
-                // Add to recent searches and update count
-                Task {
-                    try? await dataManager.addRecentSearch(query)
-                    try? await dataManager.updateSearchResultCount(
-                        query: query,
-                        count: results.totalCount,
-                    )
-                }
+            // Add to recent searches and update count
+            Task {
+                try? await dataManager.addRecentSearch(query)
+                try? await dataManager.updateSearchResultCount(
+                    query: query,
+                    count: results.totalCount,
+                )
             }
+        } catch is CancellationError {
+            return
         } catch {
-            logger.error("Search failed: \(error.localizedDescription, privacy: .public)")
-            await MainActor.run {
-                searchResults = SearchResults()
-                isSearching = false
-            }
+            logger.error("Search failed: \(error.localizedDescription, privacy: .private)")
+            guard !Task.isCancelled, query == searchText, !useSmartSearch else { return }
+            searchResults = SearchResults()
+            standardSearchPresentation.recordFailure(query: query)
+            isSearching = false
         }
     }
 
@@ -239,7 +308,7 @@ struct SearchView: View {
         do {
             recentSearches = try await dataManager.getRecentSearches()
         } catch {
-            logger.error("Failed to load recent searches: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to load recent searches: \(error.localizedDescription, privacy: .private)")
             recentSearches = []
         }
     }
@@ -247,14 +316,27 @@ struct SearchView: View {
     private func playTrack(_ track: Track) {
         logger.info("Starting Smart Search result playback")
         Task { @MainActor in
-            guard let audioService else {
-                smartSearchPlaybackState.reportUnavailable()
-                return
-            }
             await smartSearchPlaybackState.play(track) { selectedTrack in
                 try await audioService.play(track: selectedTrack)
             }
         }
+    }
+}
+
+private struct StandardSearchFailureView: View {
+    let failure: StandardSearchFailure
+    let onRetry: () -> Void
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(failure.title, systemImage: "exclamationmark.magnifyingglass")
+        } description: {
+            Text(failure.message)
+        } actions: {
+            Button("Try Again", action: onRetry)
+                .buttonStyle(.borderedProminent)
+        }
+        .accessibilityIdentifier("StandardSearchError")
     }
 }
 

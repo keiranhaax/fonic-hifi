@@ -12,43 +12,55 @@ import SwiftUI
 @MainActor
 struct NowPlayingContent: View {
     private let logger = Log.logger(.nowPlaying)
-    @Environment(\.audioEngine) private var audioService: AudioEngineFacade?
+    @EnvironmentObject private var audioService: AudioEngineFacade
     @Environment(\.dataManager) private var dataManager: DataManager?
-    @Environment(\.sizeCategory) private var sizeCategory
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.themePalette) private var theme
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    let namespace: Namespace.ID
     let dismiss: () -> Void
 
     // UI State
     @State private var showingQueue = false
     @State private var trackDetailItem: TrackDetailItem?
-    @State private var isFavorite = false
     @State private var showSleepTimerSheet = false
     @State private var showingLyrics = false
-    @State private var playbackSpeed: Double = 1.0
+    @State private var showingSignalPath = false
     @AccessibilityFocusState private var overflowMenuFocused: Bool
 
-    // Sleep Timer
-    @StateObject private var sleepTimerManager = SleepTimerManager()
-
-    // Shared color service for gradient
+    /// Shared color service for gradient
     @ObservedObject private var colorService = DominantColorService.shared
 
-    // Persistence
-    @AppStorage("volume") private var volumeStorage: Double = 1.0
-    @AppStorage("isShuffleEnabled") private var isShuffleEnabled: Bool = false
-    @AppStorage("repeatMode") private var repeatModeRawValue: String = QueueRepeatMode.none.rawValue
+    #if targetEnvironment(simulator)
+    /// Simulator-only volume state. The simulator has no system volume service,
+    /// so the volume row drives the engine mixer directly there; on device the
+    /// system volume control owns volume and this storage is unused.
+    @AppStorage("volume") private var simulatorVolumeStorage: Double = 1.0
+    #endif
 
-    private var volume: Float {
-        get { Float(volumeStorage) }
-        set { volumeStorage = Double(newValue) }
+    private var sleepTimerManager: SleepTimerManager {
+        audioService.sleepTimerManager
+    }
+
+    private var playbackSpeed: Double {
+        audioService.playbackRate
+    }
+
+    private var shuffleMode: QueueShuffleMode {
+        audioService.queueManager.shuffleMode
     }
 
     private var repeatMode: QueueRepeatMode {
-        get { QueueRepeatMode(rawValue: repeatModeRawValue) ?? .none }
-        set { repeatModeRawValue = newValue.rawValue }
+        audioService.queueManager.repeatMode
+    }
+
+    private var isFavorite: Bool {
+        audioService.currentTrack?.isFavorite ?? false
+    }
+
+    private var signalPathEligibility: SignalPathEligibility {
+        audioService.diagnosticsStatus.signalPath?.eligibility ?? .unavailable
     }
 
     static func lyricsTransitionAnimation(reduceMotion: Bool) -> Animation? {
@@ -59,7 +71,7 @@ struct NowPlayingContent: View {
     @State private var sliderProgress: Double = 0.0
     @State private var isUserDragging: Bool = false
 
-    // Dynamic artwork sizing
+    /// Container-driven artwork sizing
     @State private var artworkSize: CGFloat = 280
 
     var body: some View {
@@ -71,40 +83,15 @@ struct NowPlayingContent: View {
 
             Color.clear.frame(height: 6)
 
-            VStack(spacing: 0) {
-                albumArtworkView
-
-                Spacer()
-                    .frame(minHeight: 24, maxHeight: 40)
-
-                trackInfoView
-
-                Spacer()
-                    .frame(minHeight: 16, maxHeight: 32)
-
-                progressView
-
-                Spacer()
-                    .frame(minHeight: 20, maxHeight: 36)
-
-                playbackControlsView
-
-                Spacer()
-                    .frame(minHeight: 24, maxHeight: 48)
-
-                volumeView
-
-                Spacer()
-                    .frame(minHeight: 20, maxHeight: 60)
-            }
-            .padding(.horizontal, DesignTokens.Spacing.xLarge)
-            .padding(.bottom, DesignTokens.Spacing.large)
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                // 24pt padding each side, max 400pt
-                min(proxy.size.width - (DesignTokens.Spacing.xLarge * 2), 400)
-            } action: { newSize in
-                artworkSize = newSize
-            }
+            adaptivePlaybackContent
+        }
+        .onGeometryChange(for: CGSize.self) { proxy in
+            proxy.size
+        } action: { newSize in
+            artworkSize = Self.adaptiveArtworkSize(
+                for: newSize,
+                accessibilityText: dynamicTypeSize.isAccessibilitySize
+            )
         }
         .background(
             LinearGradient(
@@ -120,22 +107,21 @@ struct NowPlayingContent: View {
         )
         .modifier(
             LyricsOverlayModifier(
-                lyrics: audioService?.currentTrack?.lyrics,
+                lyrics: audioService.currentTrack?.lyrics,
                 isPresented: $showingLyrics
             )
         )
+        .playbackErrorOverlay(
+            audioService.playbackError,
+            accessibilityIdentifier: "NowPlayingPlaybackErrorBanner",
+            dismiss: { id in audioService.dismissPlaybackControlError(id: id) }
+        )
         .animation(Self.lyricsTransitionAnimation(reduceMotion: reduceMotion), value: showingLyrics)
-        .task {
-            await colorService.extractColor(for: audioService?.currentTrack)
-            // Sync favorite state on appear
-            isFavorite = audioService?.currentTrack?.isFavorite ?? false
-        }
-        .onChange(of: audioService?.currentTrack?.id) { _, _ in
-            // Sync favorite state on track change
-            isFavorite = audioService?.currentTrack?.isFavorite ?? false
+        .task(id: audioService.currentTrack?.id) {
+            await colorService.extractColor(for: audioService.currentTrack)
         }
         .onChange(of: showingLyrics) { wasShowing, isShowing in
-            if wasShowing && !isShowing {
+            if wasShowing, !isShowing {
                 overflowMenuFocused = true
             }
         }
@@ -145,28 +131,113 @@ struct NowPlayingContent: View {
             }
         }
         .sheet(isPresented: $showSleepTimerSheet) {
-            SleepTimerSheet(timerManager: sleepTimerManager)
-                .presentationDetents([.medium])
+            SleepTimerSheet(
+                timerManager: sleepTimerManager,
+                startTimer: { seconds, fadeOutDuration in
+                    await audioService.startSleepTimer(
+                        seconds: seconds,
+                        fadeOutDuration: fadeOutDuration
+                    )
+                }
+            )
+            .presentationDetents([.medium])
         }
         .sheet(isPresented: $showingQueue) {
             QueueView()
         }
-        .onAppear {
-            // Wire sleep timer to audio engine
-            sleepTimerManager.onComplete = { [weak audioService] in
-                Task { @MainActor in
-                    await audioService?.pause()
-                }
-            }
-            sleepTimerManager.onVolumeChange = { [weak audioService] volume in
-                Task { @MainActor in
-                    await audioService?.setVolume(volume)
-                }
+        .sheet(isPresented: $showingSignalPath) {
+            NavigationStack {
+                SignalPathView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showingSignalPath = false
+                            }
+                        }
+                    }
             }
         }
         .accessibilityAction(.escape) {
             dismiss()
         }
+    }
+
+    static func adaptiveArtworkSize(
+        for containerSize: CGSize,
+        accessibilityText: Bool
+    ) -> CGFloat {
+        let horizontalLimit = max(
+            0,
+            containerSize.width - (DesignTokens.Spacing.xLarge * 2)
+        )
+        let verticalFraction = accessibilityText ? 0.28 : 0.42
+        let verticalLimit = containerSize.height * verticalFraction
+        let minimumSize = min(120, horizontalLimit)
+        return max(minimumSize, min(horizontalLimit, verticalLimit, 400))
+    }
+
+    static func playbackModeVisualState(
+        isActive: Bool,
+        differentiateWithoutColor: Bool
+    ) -> PlaybackModeVisualState {
+        PlaybackModeVisualState(
+            showsBadge: isActive,
+            showsOutline: isActive || differentiateWithoutColor,
+            outlineWidth: isActive ? 2 : 1
+        )
+    }
+
+    @ViewBuilder
+    private var adaptivePlaybackContent: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            scrollingPlaybackContent
+        } else {
+            ViewThatFits(in: .vertical) {
+                playbackContent
+                    .fixedSize(horizontal: false, vertical: true)
+
+                scrollingPlaybackContent
+            }
+        }
+    }
+
+    private var scrollingPlaybackContent: some View {
+        ScrollView {
+            playbackContent
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .accessibilityIdentifier("NowPlayingScrollableContent")
+    }
+
+    private var playbackContent: some View {
+        VStack(spacing: 0) {
+            albumArtworkView
+
+            Color.clear
+                .frame(height: dynamicTypeSize.isAccessibilitySize ? 16 : 32)
+
+            trackInfoView
+
+            Color.clear
+                .frame(height: dynamicTypeSize.isAccessibilitySize ? 12 : 24)
+
+            progressView
+
+            Color.clear
+                .frame(height: dynamicTypeSize.isAccessibilitySize ? 16 : 28)
+
+            playbackControlsView
+
+            Color.clear
+                .frame(height: dynamicTypeSize.isAccessibilitySize ? 20 : 36)
+
+            volumeView
+
+            Color.clear
+                .frame(height: DesignTokens.Spacing.large)
+        }
+        .padding(.horizontal, DesignTokens.Spacing.xLarge)
+        .padding(.bottom, DesignTokens.Spacing.large)
     }
 
     // MARK: - Drag Indicator
@@ -182,8 +253,44 @@ struct NowPlayingContent: View {
     // MARK: - Header Bar
 
     private var headerBar: some View {
-        HStack(spacing: DesignTokens.Spacing.medium) {
-            // Queue button (moved to LEFT for symmetry)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: DesignTokens.Spacing.small) {
+                dismissButton
+                Spacer(minLength: DesignTokens.Spacing.small)
+                nowPlayingTitle
+                    .fixedSize()
+                Spacer(minLength: DesignTokens.Spacing.small)
+                trailingHeaderControls
+            }
+
+            VStack(spacing: 0) {
+                HStack(spacing: DesignTokens.Spacing.small) {
+                    dismissButton
+                    Spacer()
+                    trailingHeaderControls
+                }
+                nowPlayingTitle
+            }
+        }
+        .padding(.vertical, DesignTokens.Spacing.xSmall)
+    }
+
+    private var dismissButton: some View {
+        Button(action: dismiss) {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.plain)
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(.rect)
+        .accessibilityLabel("Dismiss Now Playing")
+        .accessibilityIdentifier("DismissNowPlayingButton")
+    }
+
+    private var trailingHeaderControls: some View {
+        HStack(spacing: DesignTokens.Spacing.small) {
             Button {
                 showingQueue = true
             } label: {
@@ -195,30 +302,26 @@ struct NowPlayingContent: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Show queue")
 
-            Spacer()
-
-            Text("Now Playing")
-                .font(.headline)
-                .fontWeight(.medium)
-                .foregroundStyle(.white)
-
-            Spacer()
-
-            // AirPlay button (stays on RIGHT)
             AirPlayRouteButton()
                 .frame(width: 44, height: 44)
                 .tint(.white)
         }
-        .padding(.vertical, DesignTokens.Spacing.xSmall)
+    }
+
+    private var nowPlayingTitle: some View {
+        Text("Now Playing")
+            .font(.headline)
+            .fontWeight(.medium)
+            .foregroundStyle(.white)
     }
 
     private func formatSpeed(_ speed: Double) -> String {
         if speed == 1.0 {
-            return "1×"
+            "1×"
         } else if speed.truncatingRemainder(dividingBy: 1.0) == 0 {
-            return "\(Int(speed))×"
+            "\(Int(speed))×"
         } else {
-            return String(format: "%.2g×", speed)
+            String(format: "%.2g×", speed)
         }
     }
 
@@ -230,9 +333,15 @@ struct NowPlayingContent: View {
 
     private var overflowMenuAccessibilityLabel: String {
         var activeItems: [String] = []
-        if sleepTimerManager.isActive { activeItems.append("Sleep timer active") }
-        if playbackSpeed != 1.0 { activeItems.append("Speed \(formatSpeed(playbackSpeed))") }
-        if showingLyrics { activeItems.append("Lyrics showing") }
+        if sleepTimerManager.isActive {
+            activeItems.append("Sleep timer active")
+        }
+        if playbackSpeed != 1.0 {
+            activeItems.append("Speed \(formatSpeed(playbackSpeed))")
+        }
+        if showingLyrics {
+            activeItems.append("Lyrics showing")
+        }
         return activeItems.isEmpty ? "More options" : "More options: \(activeItems.joined(separator: ", "))"
     }
 
@@ -260,9 +369,8 @@ struct NowPlayingContent: View {
             Menu {
                 ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { speed in
                     Button {
-                        playbackSpeed = speed
                         Task {
-                            await audioService?.updatePlaybackRate(speed)
+                            await audioService.updatePlaybackRate(speed)
                         }
                     } label: {
                         HStack {
@@ -290,10 +398,16 @@ struct NowPlayingContent: View {
 
             Divider()
 
+            Button {
+                showingSignalPath = true
+            } label: {
+                Label("Signal Path", systemImage: "waveform.path.ecg")
+            }
+
             // Lyrics Toggle
             Button {
                 showingLyrics.toggle()
-                logger.info("Lyrics toggled: \(showingLyrics)")
+                logger.info("Lyrics toggled: \(showingLyrics, privacy: .public)")
             } label: {
                 Label {
                     HStack {
@@ -311,7 +425,7 @@ struct NowPlayingContent: View {
 
             // Track Info
             Button {
-                guard let track = audioService?.currentTrack else { return }
+                guard let track = audioService.currentTrack else { return }
                 trackDetailItem = TrackDetailItem(track: track)
             } label: {
                 Label("Track Info", systemImage: "info.circle")
@@ -331,36 +445,46 @@ struct NowPlayingContent: View {
 
     private var albumArtworkView: some View {
         Button {
-            guard let track = audioService?.currentTrack else { return }
+            guard let track = audioService.currentTrack else { return }
             trackDetailItem = TrackDetailItem(track: track)
         } label: {
-            MorphableArtwork(size: artworkSize, namespace: namespace, isSource: false)
+            MorphableArtwork(size: artworkSize)
                 .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
         }
-            .buttonStyle(.plain)
-            .disabled(audioService?.currentTrack == nil)
-            .accessibilityLabel(
-                audioService?.currentTrack.map { "Track information for \($0.title)" }
-                    ?? "Track information"
-            )
-            .accessibilityHint("Shows details for the current track")
+        .buttonStyle(.plain)
+        .disabled(audioService.currentTrack == nil)
+        .accessibilityLabel(
+            audioService.currentTrack.map { "Track information for \($0.title)" }
+                ?? "Track information"
+        )
+        .accessibilityHint("Shows details for the current track")
     }
 
     // MARK: - Track Info
 
     private var trackInfoView: some View {
-        HStack(alignment: .center, spacing: DesignTokens.Spacing.medium) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(audioService?.currentTrack?.title ?? "Not Playing")
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: DesignTokens.Spacing.small))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: DesignTokens.Spacing.medium))
+
+        return layout {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xSmall) {
+                Text(audioService.currentTrack?.title ?? "Not Playing")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.white)
 
-                Text(audioService?.currentTrack?.artist ?? "No Artist")
+                Text(audioService.currentTrack?.artist ?? "No Artist")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if !dynamicTypeSize.isAccessibilitySize {
+                    signalPathBadge()
+                }
             }
 
             Spacer()
@@ -382,9 +506,20 @@ struct NowPlayingContent: View {
                 // Overflow menu (replaces Lyrics + Ellipsis buttons)
                 overflowMenu
             }
+            .frame(
+                maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil,
+                alignment: .trailing
+            )
         }
         .padding(.horizontal, DesignTokens.Spacing.large)
         .padding(.vertical, DesignTokens.Spacing.small)
+    }
+
+    private func signalPathBadge() -> some View {
+        SignalPathBadge(
+            eligibility: signalPathEligibility,
+            action: { showingSignalPath = true }
+        )
     }
 
     // MARK: - Progress View
@@ -395,9 +530,7 @@ struct NowPlayingContent: View {
                 progress: $sliderProgress,
                 onEditingChanged: { editing in
                     isUserDragging = editing
-                    guard !editing,
-                          let audioService,
-                          audioService.duration > 0 else { return }
+                    guard !editing, audioService.duration > 0 else { return }
 
                     let targetTime = sliderProgress * audioService.duration
                     Task {
@@ -405,24 +538,24 @@ struct NowPlayingContent: View {
                             try await audioService.seek(to: targetTime)
                             logger.debug("Seek committed at \(targetTime, privacy: .public)s")
                         } catch {
-                            logger.error("Seek failed: \(error.localizedDescription, privacy: .public)")
+                            logger.error("Seek failed: \(error.localizedDescription, privacy: .private)")
                         }
                     }
                 },
-                abLoopState: audioService?.abLoopState,
-                duration: audioService?.duration
+                abLoopState: audioService.abLoopState,
+                duration: audioService.duration
             )
             .onAppear {
-                sliderProgress = audioService?.playbackProgress ?? 0.0
+                sliderProgress = audioService.playbackProgress
             }
-            .onChange(of: audioService?.playbackProgress) { _, newValue in
-                if !isUserDragging, let newValue {
+            .onChange(of: audioService.playbackProgress) { _, newValue in
+                if !isUserDragging {
                     sliderProgress = newValue
                 }
             }
 
             HStack {
-                Text(formatTime(audioService?.currentTime ?? 0))
+                Text(formatTime(audioService.currentTime))
                     .font(.footnote)
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.8))
@@ -444,7 +577,7 @@ struct NowPlayingContent: View {
 
                 Spacer()
 
-                Text(formatTime(audioService?.duration ?? 0))
+                Text(formatTime(audioService.duration))
                     .font(.footnote)
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.8))
@@ -456,80 +589,132 @@ struct NowPlayingContent: View {
     // MARK: - Playback Controls
 
     private var playbackControlsView: some View {
-        HStack(spacing: 0) {
-            // Shuffle
-            Button(action: toggleShuffle) {
-                Image(systemName: "shuffle")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.white.opacity(isShuffleEnabled ? 1.0 : 0.6))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: DesignTokens.Spacing.small) {
+                shuffleButton
+                previousButton
+                playPauseButton
+                nextButton
+                repeatButton
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Shuffle")
-            .accessibilityValue(isShuffleEnabled ? "On" : "Off")
-            .accessibilityIdentifier("ShuffleButton")
+            .fixedSize(horizontal: true, vertical: false)
 
-            Spacer()
-
-            // Previous
-            Button(action: playPrevious) {
-                Image(systemName: "backward.fill")
-                    .font(.system(size: 28, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Previous track")
-
-            Spacer()
-
-            // Play/Pause
-            Button(action: togglePlayPause) {
-                ZStack {
-                    Circle()
-                        .fill(theme.accent)
-                        .shadow(color: theme.accent.opacity(0.3), radius: 6, x: 0, y: 2)
-                    Image(systemName: audioService?.isPlaying == true ? "pause.fill" : "play.fill")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.black.opacity(0.85))
+            VStack(spacing: DesignTokens.Spacing.small) {
+                HStack(spacing: DesignTokens.Spacing.section) {
+                    previousButton
+                    playPauseButton
+                    nextButton
                 }
-                .frame(width: 56, height: 56)
+
+                HStack(spacing: DesignTokens.Spacing.section) {
+                    shuffleButton
+                    repeatButton
+                }
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(audioService?.isPlaying == true ? "Pause" : "Play")
-
-            Spacer()
-
-            // Next
-            Button(action: playNext) {
-                Image(systemName: "forward.fill")
-                    .font(.system(size: 28, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Next track")
-
-            Spacer()
-
-            // Repeat
-            Button(action: cycleRepeatMode) {
-                Image(systemName: repeatModeIcon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.white.opacity(repeatMode != .none ? 1.0 : 0.6))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Repeat")
-            .accessibilityValue(repeatModeAccessibilityValue)
-            .accessibilityIdentifier("RepeatButton")
         }
-        .frame(height: 56)
+        .frame(maxWidth: .infinity, minHeight: 56)
         .padding(.horizontal, DesignTokens.Spacing.large)
+    }
+
+    private var shuffleButton: some View {
+        Button(action: toggleShuffle) {
+            playbackModeIcon(
+                systemName: "shuffle",
+                isActive: shuffleMode.isActive
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Shuffle")
+        .accessibilityValue(shuffleMode.isActive ? "On" : "Off")
+        .accessibilityIdentifier("ShuffleButton")
+    }
+
+    private var previousButton: some View {
+        Button(action: playPrevious) {
+            Image(systemName: "backward.fill")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Previous track")
+    }
+
+    private var playPauseButton: some View {
+        Button(action: togglePlayPause) {
+            ZStack {
+                Circle()
+                    .fill(theme.accent)
+                    .shadow(color: theme.accent.opacity(0.3), radius: 6, x: 0, y: 2)
+                Image(systemName: audioService.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.black.opacity(0.85))
+            }
+            .frame(width: 56, height: 56)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(audioService.isPlaying ? "Pause" : "Play")
+    }
+
+    private var nextButton: some View {
+        Button(action: playNext) {
+            Image(systemName: "forward.fill")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Next track")
+    }
+
+    private var repeatButton: some View {
+        Button(action: cycleRepeatMode) {
+            playbackModeIcon(
+                systemName: repeatModeIcon,
+                isActive: repeatMode != .none
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Repeat")
+        .accessibilityValue(repeatModeAccessibilityValue)
+        .accessibilityIdentifier("RepeatButton")
+    }
+
+    private func playbackModeIcon(systemName: String, isActive: Bool) -> some View {
+        let visualState = Self.playbackModeVisualState(
+            isActive: isActive,
+            differentiateWithoutColor: differentiateWithoutColor
+        )
+
+        return ZStack(alignment: .topTrailing) {
+            Image(systemName: systemName)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.white.opacity(isActive ? 1.0 : 0.6))
+
+            if visualState.showsBadge {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.black, .white)
+                    .offset(x: 7, y: -7)
+                    .accessibilityHidden(true)
+            }
+        }
+        .frame(width: 44, height: 44)
+        .background {
+            if visualState.showsOutline {
+                Circle()
+                    .strokeBorder(
+                        .white.opacity(isActive ? 0.9 : 0.45),
+                        lineWidth: visualState.outlineWidth
+                    )
+                    .padding(4)
+                    .accessibilityHidden(true)
+            }
+        }
+        .contentShape(Rectangle())
     }
 
     // MARK: - Volume View
@@ -539,14 +724,17 @@ struct NowPlayingContent: View {
             Image(systemName: "speaker.fill")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
 
+            #if targetEnvironment(simulator)
+            // The simulator has no system volume service, so MPVolumeView
+            // exposes no slider there. Drive the engine mixer directly instead.
             Slider(
                 value: Binding(
-                    get: { volume },
+                    get: { simulatorVolumeStorage },
                     set: { newValue in
-                        volumeStorage = Double(newValue)
+                        simulatorVolumeStorage = newValue
                         Task {
-                            guard let audioService else { return }
                             await audioService.setVolume(Float(newValue))
                         }
                     }
@@ -555,14 +743,22 @@ struct NowPlayingContent: View {
             )
             .tint(theme.accent)
             .accessibilityLabel("Playback Volume")
-            .accessibilityValue("\(Int((volume * 100).rounded())) percent")
-            .accessibilityIdentifier("PlaybackVolumeSlider")
+            .accessibilityValue("\(Int((simulatorVolumeStorage * 100).rounded())) percent")
+            #else
+            // System volume, not the engine mixer: it tracks hardware-button
+            // changes bidirectionally and keeps digital gain at unity.
+            SystemVolumeSlider()
+                .tint(theme.accent)
+            #endif
 
             Image(systemName: "speaker.wave.3.fill")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, DesignTokens.Spacing.large)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("PlaybackVolumeControl")
     }
 
     // MARK: - Helpers
@@ -584,42 +780,52 @@ struct NowPlayingContent: View {
     }
 
     private var hasLyrics: Bool {
-        guard let lyrics = audioService?.currentTrack?.lyrics else { return false }
+        guard let lyrics = audioService.currentTrack?.lyrics else { return false }
         return !lyrics.isEmpty
     }
 
     // MARK: - A-B Loop Helpers
 
     private var loopButtonIcon: String {
-        guard let state = audioService?.abLoopState else { return "a.square" }
-        if state.isEnabled { return "repeat.circle.fill" }
-        if state.pointA != nil { return "b.square" }
+        let state = audioService.abLoopState
+        if state.isEnabled {
+            return "repeat.circle.fill"
+        }
+        if state.pointA != nil {
+            return "b.square"
+        }
         return "a.square"
     }
 
     private var loopButtonTint: Color {
-        guard let state = audioService?.abLoopState else { return .white.opacity(0.6) }
-        if state.isEnabled { return .orange }
-        if state.pointA != nil { return .orange.opacity(0.8) }
+        let state = audioService.abLoopState
+        if state.isEnabled {
+            return .orange
+        }
+        if state.pointA != nil {
+            return .orange.opacity(0.8)
+        }
         return .white.opacity(0.6)
     }
 
     private var loopAccessibilityLabel: String {
-        guard let state = audioService?.abLoopState else { return "Set loop point A" }
-        if state.isEnabled { return "Clear loop" }
-        if state.pointA != nil { return "Set loop point B" }
+        let state = audioService.abLoopState
+        if state.isEnabled {
+            return "Clear loop"
+        }
+        if state.pointA != nil {
+            return "Set loop point B"
+        }
         return "Set loop point A"
     }
 
     private func handleLoopTap() {
-        guard let service = audioService else { return }
-
-        if service.abLoopState.isEnabled {
-            service.clearLoop()
-        } else if service.abLoopState.pointA != nil {
-            service.setLoopPointB()
+        if audioService.abLoopState.isEnabled {
+            audioService.clearLoop()
+        } else if audioService.abLoopState.pointA != nil {
+            audioService.setLoopPointB()
         } else {
-            service.setLoopPointA()
+            audioService.setLoopPointA()
         }
     }
 
@@ -642,21 +848,16 @@ struct NowPlayingContent: View {
 
     private func togglePlayPause() {
         // Diagnostic logging for debugging controls issue
-        if let audioService {
-            let serviceID = String(describing: ObjectIdentifier(audioService))
-            logger.debug("""
-                togglePlayPause called
-                - audioService ID: \(serviceID, privacy: .public)
-                - isReady: \(audioService.isReady)
-                - isPlaying: \(audioService.isPlaying)
-                - currentTrack: \(audioService.currentTrack != nil ? "present" : "nil")
-                """)
-        } else {
-            logger.error("togglePlayPause: audioService is NIL")
-        }
+        let serviceID = String(describing: ObjectIdentifier(audioService))
+        logger.debug("""
+        togglePlayPause called
+        - audioService ID: \(serviceID, privacy: .private(mask: .hash))
+        - isReady: \(audioService.isReady, privacy: .public)
+        - isPlaying: \(audioService.isPlaying, privacy: .public)
+        - currentTrack: \(audioService.currentTrack != nil ? "present" : "nil", privacy: .public)
+        """)
 
         Task { @MainActor in
-            guard let audioService else { return }
             do {
                 if audioService.isPlaying {
                     await audioService.pause()
@@ -664,76 +865,80 @@ struct NowPlayingContent: View {
                     try await audioService.resume()
                 }
             } catch {
-                logger.error("Failed to toggle playback: \(error.localizedDescription, privacy: .public)")
+                logger.error("Failed to toggle playback: \(error.localizedDescription, privacy: .private)")
+                audioService.reportPlaybackControlError(error)
             }
         }
     }
 
     private func playNext() {
         Task { @MainActor in
-            guard let audioService else { return }
             do {
                 try await audioService.playNext()
             } catch {
-                logger.error("Failed to play next: \(error.localizedDescription, privacy: .public)")
+                logger.error("Failed to play next: \(error.localizedDescription, privacy: .private)")
+                audioService.reportPlaybackControlError(error)
             }
         }
     }
 
     private func playPrevious() {
         Task { @MainActor in
-            guard let audioService else { return }
             do {
                 try await audioService.playPrevious()
             } catch {
-                logger.error("Failed to play previous: \(error.localizedDescription, privacy: .public)")
+                logger.error("Failed to play previous: \(error.localizedDescription, privacy: .private)")
+                audioService.reportPlaybackControlError(error)
             }
         }
     }
 
     private func toggleShuffle() {
         Task { @MainActor in
-            guard let audioService else { return }
-            let newMode: QueueShuffleMode = isShuffleEnabled ? .off : .random
+            let newMode: QueueShuffleMode = shuffleMode.isActive ? .off : .random
             audioService.setShuffleMode(newMode)
-            isShuffleEnabled = newMode != .off
         }
     }
 
     private func cycleRepeatMode() {
         Task { @MainActor in
-            guard let audioService else { return }
             let newMode: QueueRepeatMode = switch repeatMode {
             case .none: .all
             case .all: .one
             case .one: .none
             }
             audioService.setRepeatMode(newMode)
-            repeatModeRawValue = newMode.rawValue
         }
     }
 
     private func toggleFavorite() {
-        guard let track = audioService?.currentTrack,
+        guard let track = audioService.currentTrack,
               let trackDataActor = dataManager?.trackDataActor else { return }
 
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
 
-        Task {
+        Task { @MainActor in
             do {
-                try await trackDataActor.toggleFavorite(trackId: track.persistentModelID)
-                isFavorite.toggle()
-                logger.info("Favorite toggled: \(isFavorite)")
+                let persistedValue = try await trackDataActor.toggleFavorite(trackId: track.persistentModelID)
+                guard audioService.currentTrack?.persistentModelID == track.persistentModelID else { return }
+                track.isFavorite = persistedValue
+                logger.info("Favorite toggled: \(persistedValue, privacy: .public)")
             } catch {
-                logger.error("Failed to toggle favorite: \(error.localizedDescription)")
+                logger.error("Failed to toggle favorite: \(error.localizedDescription, privacy: .private)")
             }
         }
     }
 }
 
 // MARK: - Supporting Types
+
+struct PlaybackModeVisualState: Equatable {
+    let showsBadge: Bool
+    let showsOutline: Bool
+    let outlineWidth: CGFloat
+}
 
 private struct LyricsOverlayModifier: ViewModifier {
     let lyrics: String?
@@ -774,7 +979,6 @@ private struct TrackDetailItem: Identifiable {
 // MARK: - Preview
 
 #Preview {
-    @Previewable @Namespace var namespace
-    NowPlayingContent(namespace: namespace, dismiss: {})
+    NowPlayingContent(dismiss: {})
         .audioEngine(AudioEngineFacade())
 }

@@ -113,7 +113,33 @@ build_errors.log
 build_verify.log
 log.md
 
-# Machine-local tool configuration
-.claude/settings.local.json
-.claude/skills/ios-simulator-skill/
-.kilocode/mcp.json
+# Retired Claude configuration
+.claude/
+/CLAUDE.md
+.kilocode/
+
+# Local test media (user-owned; never commit)
+/music-file/
+
+# Local embedded skill checkouts
+/.agents/skills/ios-simulator-skill/
+
+# Local environments, planning, archives, and agent tooling
+venv/
+/audits/
+/audits-1/
+/docs/
+/Files/
+/sample/
+/.factory/
+/.agents/
+/.vscode/
+
+# Agent-instruction and internal status documents
+# Existing tracked files are removed from the index separately; these rules
+# keep local copies and future files out of the public repository.
+**/AGENTS.md
+/STATUS.md
+/summary.md
+/Files-analysis.md
+/EQ.md

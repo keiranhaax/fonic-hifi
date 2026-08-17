@@ -1,4 +1,6 @@
 @testable import Fonic_HiFi
+import Combine
+import Foundation
 import os
 import SwiftData
 import XCTest
@@ -7,11 +9,61 @@ import XCTest
 final class LibraryImportServiceTests: XCTestCase {
     private let metricsDefaultsKey = "com.fonichifi.metrics.enabled"
 
-    override func tearDown() {
+    override func tearDown() async throws {
         Metrics.setSinkForTesting(nil)
         Metrics.enable(false)
         UserDefaults.standard.removeObject(forKey: metricsDefaultsKey)
-        super.tearDown()
+        try await super.tearDown()
+    }
+
+    func testCancellingNoResultPipelineCancelsDiscoveryProducer() async throws {
+        let schema = Schema([Track.self])
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [configuration])
+        let trackActor = TrackDataActor(modelContainer: container)
+        let checkpoint = ControlledDiscoveryCheckpoint()
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let managedDirectory = root.appendingPathComponent("Music", isDirectory: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: root)
+        }
+
+        let sourceURL = try makePCMTestAudioFile(fileExtension: "wav", testCase: self)
+        let processor = FileImportProcessor(
+            trackDataActor: trackActor,
+            metadataExtractor: TestMetadataExtractor(),
+            musicContainerURL: managedDirectory,
+            discoveryCheckpoint: {
+                await checkpoint.wait()
+            },
+        )
+        let service = LibraryImportService(fileProcessor: processor, fileProcessingConcurrency: 1)
+        let pipelineFinished = expectation(description: "Cancelled no-result pipeline finished")
+        let pipelineTask = Task { @MainActor in
+            await service.executeImportPipeline(urls: [sourceURL])
+            pipelineFinished.fulfill()
+        }
+
+        let discoveryStarted = await waitForDiscoveryCheckpoint(checkpoint)
+        XCTAssertTrue(discoveryStarted)
+
+        pipelineTask.cancel()
+        await fulfillment(of: [pipelineFinished], timeout: 1)
+
+        let checkpointSnapshot = await checkpoint.snapshot()
+        await checkpoint.releaseAll()
+        _ = await pipelineTask.result
+
+        XCTAssertEqual(checkpointSnapshot.startedCount, 1)
+        XCTAssertEqual(checkpointSnapshot.cancelledCount, 1)
+        XCTAssertNil(checkpointSnapshot.unexpectedErrorDescription)
+        XCTAssertEqual(service.statusMessage, "Import cancelled")
+        XCTAssertFalse(service.isImportComplete)
+        XCTAssertFalse(service.isImporting)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: sourceURL.path))
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: managedDirectory.path).isEmpty)
+        let trackCount = try await trackActor.getTracksCount()
+        XCTAssertEqual(trackCount, 0)
     }
 
     func testImportFilesSkipsDuplicates() async throws {
@@ -37,20 +89,65 @@ final class LibraryImportServiceTests: XCTestCase {
         }
     }
 
+    func testReadOnlyPolicyRejectsBulkAndSingleImportBeforeCopying() async throws {
+        let root = try makeTemporaryTestDirectory(named: "read-only-import", testCase: self)
+        let musicDirectory = root.appendingPathComponent("Music", isDirectory: true)
+        try FileManager.default.createDirectory(at: musicDirectory, withIntermediateDirectories: true)
+        let sourceURL = try makePCMTestAudioFile(fileExtension: "wav", testCase: self)
+        let schema = Schema([Track.self])
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [configuration])
+        let trackActor = TrackDataActor(modelContainer: container, mutationPolicy: .readOnly)
+        let processor = FileImportProcessor(
+            trackDataActor: trackActor,
+            metadataExtractor: TestMetadataExtractor(),
+            musicContainerURL: musicDirectory
+        )
+        let service = LibraryImportService(
+            fileProcessor: processor,
+            fileProcessingConcurrency: 1,
+            mutationPolicy: .readOnly
+        )
+
+        service.importFiles(from: [sourceURL])
+        XCTAssertEqual(service.importErrors.first?.error as? ImportServiceError, .readOnly)
+        XCTAssertTrue(service.statusMessage.localizedCaseInsensitiveContains("read-only"))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: musicDirectory.path), [])
+
+        let singleImport = await service.importSingleFile(sourceURL)
+        XCTAssertNil(singleImport)
+        XCTAssertEqual(service.importErrors.last?.error as? ImportServiceError, .readOnly)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: musicDirectory.path), [])
+    }
+
     func testCancelImportStopsProcessing() async throws {
-        let environment = try makeImportTestEnvironment(metadataExtractor: SlowMetadataExtractor(delay: 0.05))
+        let metadataExtractor = ControlledMetadataExtractor()
+        let environment = try makeImportTestEnvironment(metadataExtractor: metadataExtractor)
         let service = environment.service
         let files = try makeTemporaryAudioFiles(count: 6, testCase: self)
+        let discoveryStarted = expectation(description: "At least one file discovered")
+        let discoveryObservation = service.$totalFiles
+            .filter { $0 > 0 }
+            .prefix(1)
+            .sink { _ in
+                discoveryStarted.fulfill()
+            }
+        defer { discoveryObservation.cancel() }
 
         service.importFiles(from: files)
-        try await waitUntil({ service.isImporting })
+        await fulfillment(of: [discoveryStarted], timeout: 2)
 
         service.cancelImport()
-        try await waitForCancellation(service)
 
         XCTAssertEqual(service.statusMessage, "Import cancelled")
-        XCTAssertFalse(service.isImporting)
+        XCTAssertFalse(service.isImportComplete)
+        XCTAssertTrue(service.isImporting)
         XCTAssertLessThan(service.filesProcessed, service.totalFiles)
+
+        await metadataExtractor.releaseAll()
+        try await waitForCancellation(service)
+        XCTAssertFalse(service.isImporting)
+        XCTAssertFalse(service.isImportComplete)
     }
 
     func testImportPipelineStreamsDiscoveryCounts() async throws {
@@ -64,8 +161,9 @@ final class LibraryImportServiceTests: XCTestCase {
 
         XCTAssertEqual(service.totalFiles, files.count)
         XCTAssertEqual(service.filesProcessed, files.count)
-        XCTAssertEqual(environment.invalidationCount(), files.count)
+        XCTAssertEqual(environment.invalidationCount(), 1)
         XCTAssertFalse(service.isImporting)
+        XCTAssertTrue(service.isImportComplete)
     }
 
     func testImportPipelineHandlesNestedDirectoriesAndLargeVolume() async throws {
@@ -86,7 +184,7 @@ final class LibraryImportServiceTests: XCTestCase {
         )
         var enumeratedAudio = 0
         while let url = enumerator?.nextObject() as? URL {
-            if url.pathExtension.lowercased() == "flac" {
+            if url.pathExtension.lowercased() == "wav" {
                 enumeratedAudio += 1
             }
         }
@@ -105,9 +203,10 @@ final class LibraryImportServiceTests: XCTestCase {
         XCTAssertEqual(service.filesProcessed, scenario.totalFiles)
         XCTAssertEqual(service.recentlyImported.count, scenario.totalFiles)
         XCTAssertTrue(service.importErrors.isEmpty)
-        XCTAssertEqual(environment.invalidationCount(), scenario.totalFiles)
+        XCTAssertEqual(environment.invalidationCount(), 1)
         XCTAssertEqual(service.importProgress, 1.0, accuracy: 0.0001)
         XCTAssertTrue(service.statusMessage.contains("Import completed"))
+        XCTAssertTrue(service.isImportComplete)
     }
 
     func testImportMetricsEmitsDiscoveryAndCompletionCounters() async throws {
@@ -204,7 +303,12 @@ private struct PartiallyFailingMetadataExtractor: MetadataExtracting {
     }
 
     func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
-        try await urls.asyncMap { try await extractTrackMetadata(from: $0) }
+        var results: [TrackMetadata] = []
+        results.reserveCapacity(urls.count)
+        for url in urls {
+            results.append(try await extractTrackMetadata(from: url))
+        }
+        return results
     }
 }
 
@@ -212,4 +316,121 @@ private struct SyntheticMetadataError: LocalizedError {
     var errorDescription: String? {
         String(repeating: "x", count: 80)
     }
+}
+
+private actor ControlledMetadataExtractor: MetadataExtracting {
+    private var isReleased = false
+    private var waiters: [UUID: CheckedContinuation<Void, Never>] = [:]
+
+    func extractTrackMetadata(from url: URL) async throws -> TrackMetadata {
+        let waiterID = UUID()
+
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                guard !isReleased, !Task.isCancelled else {
+                    continuation.resume()
+                    return
+                }
+                waiters[waiterID] = continuation
+            }
+        } onCancel: {
+            Task {
+                await self.resumeWaiter(id: waiterID)
+            }
+        }
+
+        try Task.checkCancellation()
+        return try await TestMetadataExtractor().extractTrackMetadata(from: url)
+    }
+
+    func extractMetadata(from urls: [URL], maxConcurrentTasks: Int) async throws -> [TrackMetadata] {
+        var metadata: [TrackMetadata] = []
+        metadata.reserveCapacity(urls.count)
+        for url in urls {
+            metadata.append(try await extractTrackMetadata(from: url))
+        }
+        return metadata
+    }
+
+    func releaseAll() {
+        isReleased = true
+        let continuations = Array(waiters.values)
+        waiters.removeAll()
+        continuations.forEach { $0.resume() }
+    }
+
+    private func resumeWaiter(id: UUID) {
+        guard let continuation = waiters.removeValue(forKey: id) else { return }
+        continuation.resume()
+    }
+}
+
+private actor ControlledDiscoveryCheckpoint {
+    struct Snapshot: Sendable {
+        let startedCount: Int
+        let cancelledCount: Int
+        let unexpectedErrorDescription: String?
+    }
+
+    private var startedCount = 0
+    private var cancelledCount = 0
+    private var unexpectedErrorDescription: String?
+    private var waiters: [UUID: CheckedContinuation<Void, Error>] = [:]
+
+    func wait() async {
+        let waiterID = UUID()
+        startedCount += 1
+
+        do {
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    guard !Task.isCancelled else {
+                        continuation.resume(throwing: CancellationError())
+                        return
+                    }
+                    waiters[waiterID] = continuation
+                }
+            } onCancel: {
+                Task {
+                    await self.cancelWaiter(id: waiterID)
+                }
+            }
+            try Task.checkCancellation()
+        } catch is CancellationError {
+            cancelledCount += 1
+        } catch {
+            unexpectedErrorDescription = error.localizedDescription
+        }
+    }
+
+    func snapshot() -> Snapshot {
+        Snapshot(
+            startedCount: startedCount,
+            cancelledCount: cancelledCount,
+            unexpectedErrorDescription: unexpectedErrorDescription,
+        )
+    }
+
+    func releaseAll() {
+        let continuations = Array(waiters.values)
+        waiters.removeAll()
+        continuations.forEach { $0.resume() }
+    }
+
+    private func cancelWaiter(id: UUID) {
+        guard let continuation = waiters.removeValue(forKey: id) else { return }
+        continuation.resume(throwing: CancellationError())
+    }
+}
+
+private func waitForDiscoveryCheckpoint(_ checkpoint: ControlledDiscoveryCheckpoint) async -> Bool {
+    let clock = ContinuousClock()
+    let deadline = clock.now.advanced(by: .seconds(2))
+    while clock.now < deadline {
+        if await checkpoint.snapshot().startedCount > 0 {
+            return true
+        }
+        await Task.yield()
+    }
+    return await checkpoint.snapshot().startedCount > 0
 }

@@ -10,6 +10,21 @@ import Combine
 import Foundation
 import OSLog
 
+@MainActor
+protocol AudioStateCoordinatorOwner: AnyObject {
+    var isRuntimeMonitoringEnabled: Bool { get }
+    var stateCoordinatorMonitor: any AudioPerformanceMonitoring { get }
+
+    func resume() async throws
+    func pause() async
+    func stop() async
+    func playNext() async throws
+    func playPrevious() async throws
+    func seek(to time: TimeInterval) async throws
+    func renegotiatePreferredSampleRate() async
+    func reportPlaybackControlError(_ error: Error)
+}
+
 /// Handles state synchronization and notifications across the audio system
 @MainActor
 public final class StateCoordinator {
@@ -19,12 +34,14 @@ public final class StateCoordinator {
     private let queueManager: AudioQueueManager
     private let sessionManager: AudioSessionManager
     private let uiStateStore: AudioUIState
-    private weak var facade: AudioEngineFacade?
+    private let monitor: any AudioPerformanceMonitoring
+    private weak var facade: (any AudioStateCoordinatorOwner)?
 
     // MARK: - State Publishing
 
     private var cancellables = Set<AnyCancellable>()
     private let logger = Log.logger(.audioStateCoordinator)
+    private var shouldResumeAfterInterruption = false
 
     // MARK: - Initialization
 
@@ -33,13 +50,15 @@ public final class StateCoordinator {
         queueManager: AudioQueueManager,
         sessionManager: AudioSessionManager,
         uiStateStore: AudioUIState,
-        facade: AudioEngineFacade,
+        facade: any AudioStateCoordinatorOwner,
+        monitor: (any AudioPerformanceMonitoring)? = nil,
     ) {
         self.stateManager = stateManager
         self.queueManager = queueManager
         self.sessionManager = sessionManager
         self.uiStateStore = uiStateStore
         self.facade = facade
+        self.monitor = monitor ?? facade.stateCoordinatorMonitor
 
         setupStateObservation()
         setupServiceIntegrations()
@@ -81,20 +100,24 @@ public final class StateCoordinator {
 
     // MARK: - State Updates
 
-    /// Update the current track and show mini player
+    /// Update the current track without revealing playback UI prematurely.
     public func setCurrentTrack(_ track: Track?) {
-        uiStateStore.currentTrack = track
-        uiStateStore.showMiniPlayer = true
+        uiStateStore.setCurrentTrack(track)
     }
 
     /// Handle playback state changes and update UI accordingly
     public func handlePlaybackStateChange(_ change: PlaybackStateChange) {
-        // Always keep mini player visible (Apple Music style)
-        // Don't hide it based on state - it shows placeholder when idle
-        uiStateStore.showMiniPlayer = true
+        // Reveal the mini player only once playback is actually running.
+        // Paused/idle transitions (such as restored launch state) must not
+        // surface it, and it stays visible after a pause mid-session.
+        if change.nextState.isPlaying {
+            uiStateStore.revealMiniPlayerAfterPlaybackStarted()
+        }
 
         // Log state transitions for debugging
-        logger.debug("State transition: \(change.from) → \(change.nextState)")
+        logger.debug(
+            "State transition: \(change.from, privacy: .private) → \(change.nextState, privacy: .private)"
+        )
 
         // Notify observers of state changes (handled automatically by @Observable)
     }
@@ -106,7 +129,7 @@ public final class StateCoordinator {
         logger.debug("Setting up service integrations...")
 
         // Session delegate for interruption handling
-        sessionManager.delegate = facade
+        sessionManager.delegate = facade as? any AudioSessionDelegate
 
         logger.debug("Service integrations complete")
     }
@@ -114,7 +137,6 @@ public final class StateCoordinator {
     /// Setup observation of playback state changes for UI updates
     private func setupStateObservation() {
         stateManager.statePublisher
-            .receive(on: RunLoop.main)
             .sink { [weak self] change in
                 // Update derived UI state when playback state changes
                 self?.handlePlaybackStateChange(change)
@@ -135,7 +157,7 @@ public final class StateCoordinator {
             }
             .sink { [weak self] state in
                 guard let self, let facade = self.facade else { return }
-                let monitor = facade.monitor
+                let monitor = self.monitor
                 Task { @MainActor in
                     guard facade.isRuntimeMonitoringEnabled else {
                         await monitor.stopMonitoring()
@@ -171,34 +193,64 @@ public final class StateCoordinator {
     public func handleSessionInterruption(_ interruption: AudioInterruptionType) async {
         switch interruption {
         case .began:
-            logger.info("Audio session interrupted - pausing playback")
-            // Delegate to playback coordinator through facade
+            shouldResumeAfterInterruption = stateManager.currentState.isPlaying
+            guard shouldResumeAfterInterruption else {
+                logger.info("Audio session interrupted while playback was not active")
+                return
+            }
+
+            logger.info("Audio session interrupted - preserving play intent and pausing")
             if let facade {
                 await facade.pause()
             }
         case let .ended(shouldResume):
-            if shouldResume {
-                logger.info("Audio session interruption ended - resuming playback")
-                // Delegate to playback coordinator through facade
-                if let facade {
-                    try? await facade.resume()
+            let resumeWasIntended = shouldResumeAfterInterruption
+            shouldResumeAfterInterruption = false
+            guard shouldResume, resumeWasIntended else {
+                logger.info("Audio session interruption ended without automatic resume")
+                return
+            }
+
+            logger.info("Audio session interruption ended - restoring prior play intent")
+            if let facade {
+                do {
+                    try await facade.resume()
+                } catch {
+                    logger.error("Failed to resume after interruption: \(error.localizedDescription, privacy: .private)")
+                    facade.reportPlaybackControlError(error)
                 }
             }
         }
     }
 
     /// Handle audio route changes
-    public func handleRouteChange(_ change: AudioRouteChange) {
-        logger.info("Audio route changed: \(change.currentRoute) (reason: \(change.reason))")
+    public func handleRouteChange(_ change: AudioRouteChange) async {
+        logger.info(
+            "Audio route changed: \(change.currentRoute, privacy: .private) (reason: \(change.reason, privacy: .public))"
+        )
 
         // Handle specific route change scenarios
         switch change.reason {
         case .oldDeviceUnavailable:
-            // Headphones were unplugged, might want to pause
             logger.info("Output device became unavailable")
+            // On iOS 17+ an unplug also interrupts active Now Playing sessions
+            // (prefersInterruptionOnRouteDisconnect defaults to true), so the
+            // interruption path may already have paused and armed the resume
+            // intent before this route change arrives. Clear the intent even
+            // when playback is no longer running; otherwise an interruption
+            // .ended(shouldResume:) would resume onto the new route.
+            shouldResumeAfterInterruption = false
+            guard stateManager.currentState.isPlaying, let facade else { return }
+            await facade.pause()
         case .newDeviceAvailable:
             // New device connected
             logger.info("New output device available")
+            await facade?.renegotiatePreferredSampleRate()
+        case .routeConfigurationChange:
+            // The route may have retained the track while changing the
+            // hardware clock. Re-assert the active source rate without
+            // deactivating the session or changing transport state.
+            await facade?.renegotiatePreferredSampleRate()
         default:
             break
         }
@@ -212,19 +264,60 @@ public final class StateCoordinator {
 
         switch command {
         case .play:
-            try? await facade.resume()
+            do {
+                try await facade.resume()
+            } catch {
+                logger.error("Remote play command failed: \(error.localizedDescription, privacy: .private)")
+                facade.reportPlaybackControlError(error)
+            }
         case .pause:
             await facade.pause()
+        case .togglePlayPause:
+            if stateManager.currentState.isPlaying {
+                await facade.pause()
+            } else {
+                do {
+                    try await facade.resume()
+                } catch {
+                    logger.error("Remote toggle command failed: \(error.localizedDescription, privacy: .private)")
+                    facade.reportPlaybackControlError(error)
+                }
+            }
         case .stop:
             await facade.stop()
         case .nextTrack:
-            try? await facade.playNext()
+            do {
+                try await facade.playNext()
+            } catch {
+                logger.error("Remote next-track command failed: \(error.localizedDescription, privacy: .private)")
+                facade.reportPlaybackControlError(error)
+            }
         case .previousTrack:
-            try? await facade.playPrevious()
+            do {
+                try await facade.playPrevious()
+            } catch {
+                logger.error("Remote previous-track command failed: \(error.localizedDescription, privacy: .private)")
+                facade.reportPlaybackControlError(error)
+            }
         case let .seek(time):
-            try? await facade.seek(to: time)
+            do {
+                try await facade.seek(to: time)
+            } catch {
+                logger.error("Remote seek command failed: \(error.localizedDescription, privacy: .private)")
+                facade.reportPlaybackControlError(error)
+            }
         default:
-            logger.debug("Unhandled remote command: \(command)")
+            logger.debug("Unhandled remote command: \(command, privacy: .private)")
         }
+    }
+}
+
+extension AudioEngineFacade: AudioStateCoordinatorOwner {
+    var stateCoordinatorMonitor: any AudioPerformanceMonitoring {
+        monitor
+    }
+
+    func renegotiatePreferredSampleRate() async {
+        await renegotiatePreferredSampleRateForRoute()
     }
 }

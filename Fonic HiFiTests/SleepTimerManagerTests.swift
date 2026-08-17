@@ -5,54 +5,72 @@ import XCTest
 @MainActor
 final class SleepTimerManagerTests: XCTestCase {
 
-    func testStartTimerSetsActiveState() async throws {
-        let manager = SleepTimerManager()
+    func testStartTimerSetsActiveState() async {
+        let clock = ControlledTestClock()
+        let manager = SleepTimerManager(clock: clock)
 
         XCTAssertFalse(manager.isActive)
         XCTAssertEqual(manager.remainingSeconds, 0)
 
-        manager.start(seconds: 60)
+        manager.start(seconds: 60, currentVolume: 0.8)
 
         XCTAssertTrue(manager.isActive)
         XCTAssertEqual(manager.remainingSeconds, 60)
     }
 
     func testTimerCountsDown() async throws {
-        let manager = SleepTimerManager()
+        let clock = ControlledTestClock()
+        var now = Date(timeIntervalSinceReferenceDate: 0)
+        let manager = SleepTimerManager(clock: clock, now: { now })
 
-        manager.start(seconds: 3)
+        manager.start(seconds: 3, currentVolume: 0.8)
+        try await clock.waitUntilSleeperCount()
 
-        // Wait 1.5 seconds
-        try await Task.sleep(for: .milliseconds(1500))
+        now.addTimeInterval(1)
+        clock.advance(by: .seconds(1))
+        try await clock.waitUntilSleeperCount()
 
-        // Should have counted down by ~1-2 seconds
         XCTAssertTrue(manager.isActive)
-        XCTAssertLessThanOrEqual(manager.remainingSeconds, 2)
-        XCTAssertGreaterThanOrEqual(manager.remainingSeconds, 1)
+        XCTAssertEqual(manager.remainingSeconds, 2)
 
         manager.stop()
     }
 
     func testTimerTriggersOnComplete() async throws {
-        let manager = SleepTimerManager()
+        let clock = ControlledTestClock()
+        var now = Date(timeIntervalSinceReferenceDate: 0)
+        let manager = SleepTimerManager(clock: clock, now: { now })
         var didComplete = false
+        let (completionEvents, completionContinuation) = AsyncStream<Void>.makeStream()
 
         manager.onComplete = {
             didComplete = true
+            completionContinuation.yield()
+            completionContinuation.finish()
         }
 
-        manager.start(seconds: 1)
+        manager.start(seconds: 1, currentVolume: 0.8)
+        try await clock.waitUntilSleeperCount()
 
-        // Wait for timer to complete
-        try await Task.sleep(for: .milliseconds(1500))
+        now.addTimeInterval(1)
+        clock.advance(by: .seconds(1))
+        for await _ in completionEvents {
+            break
+        }
 
         XCTAssertTrue(didComplete, "onComplete should have been called")
         XCTAssertFalse(manager.isActive)
         XCTAssertEqual(manager.remainingSeconds, 0)
+
+        // Finish the post-completion volume-restoration sleep before teardown.
+        try await clock.waitUntilSleeperCount()
+        clock.advance(by: .milliseconds(500))
     }
 
     func testFadeOutCallsVolumeCallback() async throws {
-        let manager = SleepTimerManager()
+        let clock = ControlledTestClock()
+        var now = Date(timeIntervalSinceReferenceDate: 0)
+        let manager = SleepTimerManager(clock: clock, now: { now })
         var volumeChanges: [Float] = []
 
         manager.onVolumeChange = { volume in
@@ -60,17 +78,58 @@ final class SleepTimerManagerTests: XCTestCase {
         }
         manager.fadeOutDuration = 2  // 2 second fade
 
-        manager.start(seconds: 3, currentVolume: 1.0)
+        manager.start(seconds: 3, currentVolume: 0.4)
+        try await clock.waitUntilSleeperCount()
 
-        // Wait for fade-out to begin (starts at 2 seconds remaining)
-        try await Task.sleep(for: .milliseconds(2500))
+        now.addTimeInterval(1)
+        clock.advance(by: .seconds(1))
+        try await clock.waitUntilSleeperCount()
 
-        // Should have at least one volume change
-        XCTAssertFalse(volumeChanges.isEmpty, "Should have volume changes during fade")
-        if let lastVolume = volumeChanges.last {
-            XCTAssertLessThan(lastVolume, 1.0, "Volume should decrease during fade")
-        }
+        now.addTimeInterval(1)
+        clock.advance(by: .seconds(1))
+        try await clock.waitUntilSleeperCount()
+
+        XCTAssertEqual(volumeChanges, [0.4, 0.2])
 
         manager.stop()
+        XCTAssertEqual(volumeChanges, [0.4, 0.2, 0.4])
+    }
+
+    func testElapsedBackgroundTimeIsReflectedOnNextTick() async throws {
+        let clock = ControlledTestClock()
+        var now = Date(timeIntervalSinceReferenceDate: 0)
+        let manager = SleepTimerManager(clock: clock, now: { now })
+        var volumeChanges: [Float] = []
+        manager.onVolumeChange = { volumeChanges.append($0) }
+        manager.fadeOutDuration = 10
+
+        manager.start(seconds: 60, currentVolume: 0.4)
+        try await clock.waitUntilSleeperCount()
+
+        now.addTimeInterval(55)
+        clock.advance(by: .seconds(1))
+        try await clock.waitUntilSleeperCount()
+
+        XCTAssertEqual(manager.remainingSeconds, 5)
+        XCTAssertEqual(volumeChanges, [0.2])
+
+        manager.stop()
+    }
+
+    func testFacadeOwnsInjectedTimerAcrossPresentations() {
+        let manager = SleepTimerManager()
+        let facade = AudioEngineFacade(
+            runtimeMonitoringEnabled: false,
+            sleepTimerManager: manager
+        )
+
+        let firstPresentation = facade.sleepTimerManager
+        firstPresentation.start(seconds: 60, currentVolume: 0.8)
+        let reopenedPresentation = facade.sleepTimerManager
+
+        XCTAssertTrue(firstPresentation === reopenedPresentation)
+        XCTAssertTrue(reopenedPresentation.isActive)
+
+        reopenedPresentation.cancel(restoreVolume: false)
     }
 }

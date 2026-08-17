@@ -3,14 +3,14 @@ import XCTest
 
 @MainActor
 final class AudioMonitoringCollectorsTests: XCTestCase {
-    func testEngineMetricsCollectorReturnsDefaultWhenEngineMissing() async {
+    func testEngineMetricsCollectorReportsUnavailableWhenEngineMissing() async {
         let collector = EngineMetricsCollector()
 
         let metrics = await collector.metrics(for: nil)
 
         XCTAssertEqual(metrics.bufferUnderruns, 0)
         XCTAssertFalse(metrics.isBitPerfect)
-        XCTAssertEqual(metrics.bufferFillLevel, 1.0, accuracy: 0.0001)
+        XCTAssertEqual(metrics.availability, .unavailable)
     }
 
     func testEngineMetricsCollectorMapsAudioMetrics() async {
@@ -69,6 +69,7 @@ final class AudioMonitoringCollectorsTests: XCTestCase {
         XCTAssertEqual(metrics.threadUtilization.audioThreadCPU, expected.threadUtilization.audioThreadCPU)
         XCTAssertEqual(metrics.recoverySuccessRate, expected.recoverySuccessRate, accuracy: 0.0001)
         XCTAssertEqual(metrics.lastRecoveryTime, expected.lastRecoveryTime)
+        XCTAssertEqual(metrics.availability, .available)
     }
 
     func testSystemMetricsCollectorProvidesRuntimeValues() async {
@@ -197,51 +198,6 @@ final class AudioMonitoringCollectorsTests: XCTestCase {
         XCTAssertGreaterThan(analytics.sessionPerformanceScore(), 0)
     }
 
-    func testSessionSummaryAggregatesAlertsAndMetrics() {
-        let analytics = AudioSessionAnalytics()
-        analytics.startNewSession(at: Date(timeIntervalSince1970: 0))
-
-        analytics.append(
-            AudioMetrics(
-                cpuUsage: 35,
-                memoryUsage: 240_000_000,
-                bufferUnderruns: 2,
-                decodingLatency: 0.02,
-                bufferFillLevel: 0.8,
-                droppedFrames: 1,
-                renderLatency: 0.015
-            )
-        )
-
-        let alerts = [
-            PlaybackAlert(
-                type: .bufferUnderrun,
-                severity: .high,
-                message: "Underrun",
-                technicalDetails: "",
-                timestamp: Date(),
-                triggerValues: [:],
-                suggestedActions: []
-            ),
-            PlaybackAlert(
-                type: .highCPUUsage,
-                severity: .medium,
-                message: "High CPU",
-                technicalDetails: "",
-                timestamp: Date(),
-                triggerValues: [:],
-                suggestedActions: []
-            ),
-        ]
-
-        let summary = analytics.sessionSummary(alertHistory: alerts)
-
-        XCTAssertEqual(summary.totalAlerts, 2)
-        XCTAssertEqual(summary.alertsByType[.bufferUnderrun], 1)
-        XCTAssertEqual(summary.sampleCount, 1)
-        XCTAssertGreaterThan(summary.duration, 0)
-        XCTAssertEqual(summary.averageMetrics.cpuUsage, 35, accuracy: 0.001)
-    }
 }
 
 @MainActor
@@ -257,6 +213,7 @@ private final class StubAudioEngine: AudioEngineService {
     var isPlaying: Bool { get async { false } }
     var volume: Float { get async { 1 } }
     var audioFormat: AudioFormat? { get async { nil } }
+    var metricsAvailability: AudioMetricsAvailability { .available }
 
     func load(url _: URL) async throws {}
     func play() async throws {}
@@ -266,8 +223,9 @@ private final class StubAudioEngine: AudioEngineService {
     func setVolume(_: Float) async {}
     func configure(with _: AudioEngineConfiguration) async throws {}
     func prepareNext(url _: URL) async {}
+    func invalidatePreparedTransition() async {}
     func crossfade(to _: URL, duration _: TimeInterval, playbackRate _: Double, gainDB _: Float) async throws {}
-    func getMetrics() async -> AudioMetrics { storedMetrics }
+    func availableMetrics() async -> AudioMetrics? { storedMetrics }
     func collectMetrics() async {}
     func setPlaybackRate(_: Double) async {}
     func applyReplayGain(_: Float) async {}

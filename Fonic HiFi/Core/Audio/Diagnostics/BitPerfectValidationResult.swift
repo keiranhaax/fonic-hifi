@@ -7,12 +7,35 @@
 
 import Foundation
 
-/// Comprehensive result of bit-perfect validation
+/// Claim strength supported by the evidence attached to an assessment.
+public enum BitPerfectClaimLevel: String, Sendable, Equatable {
+    case ineligible
+    case eligible
+    case measured
+}
+
+/// Evidence required before eligibility may be upgraded to a measured
+/// bit-perfect claim on the intended physical output.
+public enum BitPerfectMeasurementEvidence: String, Sendable, CaseIterable, Hashable {
+    case sourceFormat
+    case actualEngineOutputFormat
+    case activePhysicalRoute
+    case unitySystemAndApplicationVolume
+    case noSampleRateBitDepthOrChannelConversion
+    case allDSPStagesBypassed
+    case physicalOutputBitComparison
+}
+
+/// Comprehensive result of bit-perfect eligibility analysis.
 public struct BitPerfectValidationResult: Sendable, Equatable {
     // MARK: - Core Validation Results
 
-    /// Whether bit-perfect playback is possible/active
+    /// Whether the observed software configuration is eligible. This is not
+    /// proof of the bits emitted by the physical output.
     public let isValid: Bool
+
+    /// Measurement evidence captured for the intended physical output.
+    public let measurementEvidence: Set<BitPerfectMeasurementEvidence>
 
     /// Overall validation confidence (0.0 to 1.0)
     public let confidence: Double
@@ -36,11 +59,14 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
     /// Expected source bit depth
     public let expectedBitDepth: Int
 
-    /// Actual output bit depth
+    /// Reported or estimated output bit depth
     public let actualBitDepth: Int
 
-    /// Whether bit depths match exactly
+    /// Whether the output word length can preserve the source without truncation
     public let bitDepthMatches: Bool
+
+    /// Whether `actualBitDepth` was inferred rather than reported by the output path
+    public let actualBitDepthIsEstimated: Bool
 
     // MARK: - Channel Configuration
 
@@ -72,6 +98,9 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
     /// Whether the device supports the required format natively
     public let deviceSupportsFormat: Bool
 
+    /// Whether device format support was inferred from route type or cached metadata
+    public let deviceCapabilitiesAreEstimated: Bool
+
     // MARK: - Processing Chain Analysis
 
     /// Whether any audio processing is detected in the chain
@@ -101,12 +130,14 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
 
     public init(
         isValid: Bool,
+        measurementEvidence: Set<BitPerfectMeasurementEvidence> = [],
         confidence: Double = 1.0,
         timestamp: Date = Date(),
         expectedSampleRate: Int,
         actualSampleRate: Int,
         expectedBitDepth: Int,
         actualBitDepth: Int,
+        actualBitDepthIsEstimated: Bool = false,
         expectedChannels: Int = 2,
         actualChannels: Int = 2,
         mismatchReason: BitPerfectMismatchReason? = nil,
@@ -114,6 +145,7 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
         warnings: [ValidationWarning] = [],
         deviceInfo: DeviceValidationInfo? = nil,
         deviceSupportsFormat: Bool = true,
+        deviceCapabilitiesAreEstimated: Bool = false,
         hasAudioProcessing: Bool = false,
         processingStages: [AudioProcessingStage] = [],
         systemVolume: Float = 1.0,
@@ -122,23 +154,48 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
         alternatives: [AlternativeConfiguration] = [],
         performanceImpact: PerformanceImpact = .low,
     ) {
-        self.isValid = isValid
+        let sampleRateMatches = expectedSampleRate == actualSampleRate
+        let bitDepthMatches = expectedBitDepth <= actualBitDepth
+        let channelCountMatches = expectedChannels == actualChannels
+        let inferredMismatchReason: BitPerfectMismatchReason? = if !sampleRateMatches {
+            .sampleRateMismatch
+        } else if !bitDepthMatches {
+            .bitDepthMismatch
+        } else if !channelCountMatches {
+            .channelCountMismatch
+        } else if !deviceSupportsFormat {
+            .deviceNotCapable
+        } else if systemVolume != 1 {
+            .systemVolumeNotUnity
+        } else if applicationVolume != 1 {
+            .applicationVolumeNotUnity
+        } else if hasAudioProcessing {
+            .audioProcessingActive
+        } else {
+            nil
+        }
+        let resolvedMismatchReason = inferredMismatchReason ?? mismatchReason
+
+        self.isValid = isValid && resolvedMismatchReason == nil
+        self.measurementEvidence = measurementEvidence
         self.confidence = confidence
         self.timestamp = timestamp
         self.expectedSampleRate = expectedSampleRate
         self.actualSampleRate = actualSampleRate
-        sampleRateMatches = expectedSampleRate == actualSampleRate
+        self.sampleRateMatches = sampleRateMatches
         self.expectedBitDepth = expectedBitDepth
         self.actualBitDepth = actualBitDepth
-        bitDepthMatches = expectedBitDepth == actualBitDepth
+        self.bitDepthMatches = bitDepthMatches
+        self.actualBitDepthIsEstimated = actualBitDepthIsEstimated
         self.expectedChannels = expectedChannels
         self.actualChannels = actualChannels
-        channelCountMatches = expectedChannels == actualChannels
-        self.mismatchReason = mismatchReason
+        self.channelCountMatches = channelCountMatches
+        self.mismatchReason = resolvedMismatchReason
         self.validationIssues = validationIssues
         self.warnings = warnings
         self.deviceInfo = deviceInfo
         self.deviceSupportsFormat = deviceSupportsFormat
+        self.deviceCapabilitiesAreEstimated = deviceCapabilitiesAreEstimated
         self.hasAudioProcessing = hasAudioProcessing
         self.processingStages = processingStages
         self.systemVolume = systemVolume
@@ -174,33 +231,54 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
 
     /// Quick summary of validation status
     public var statusSummary: String {
-        if isValid {
-            "Bit-perfect playback active"
+        if claimLevel == .measured {
+            "Bit-perfect output measured"
+        } else if isValid {
+            "Bit-perfect eligible (not measured)"
         } else if let reason = mismatchReason {
             reason.userFriendlyDescription
         } else {
-            "Bit-perfect validation failed"
+            "Not bit-perfect eligible"
         }
+    }
+
+    /// Current claim strength. Eligibility is upgraded only when every required
+    /// evidence item, including a physical-output bit comparison, is present.
+    public var claimLevel: BitPerfectClaimLevel {
+        guard isValid else { return .ineligible }
+        let required = Set(BitPerfectMeasurementEvidence.allCases)
+        return required.isSubset(of: measurementEvidence) ? .measured : .eligible
+    }
+
+    public var missingMeasurementEvidence: Set<BitPerfectMeasurementEvidence> {
+        Set(BitPerfectMeasurementEvidence.allCases).subtracting(measurementEvidence)
     }
 
     /// Detailed validation report for debugging
     public var detailedReport: String {
-        var report = "Bit-Perfect Validation Report\n"
+        var report = "Bit-Perfect Eligibility Report\n"
         report += "==============================\n"
         report += "Timestamp: \(timestamp)\n"
-        report += "Result: \(isValid ? "VALID" : "INVALID")\n"
+        let resultLabel = switch claimLevel {
+        case .ineligible: "INELIGIBLE"
+        case .eligible: "ELIGIBLE (NOT MEASURED)"
+        case .measured: "MEASURED"
+        }
+        report += "Result: \(resultLabel)\n"
         report += "Confidence: \(String(format: "%.1f%%", confidence * 100))\n\n"
 
         report += "Format Comparison:\n"
         report += "- Sample Rate: \(expectedSampleRate)Hz → \(actualSampleRate)Hz (\(sampleRateMatches ? "MATCH" : "MISMATCH"))\n"
-        report += "- Bit Depth: \(expectedBitDepth)-bit → \(actualBitDepth)-bit (\(bitDepthMatches ? "MATCH" : "MISMATCH"))\n"
+        let bitDepthQualifier = actualBitDepthIsEstimated ? " (estimated)" : ""
+        report += "- Bit Depth\(bitDepthQualifier): \(expectedBitDepth)-bit → \(actualBitDepth)-bit (\(bitDepthMatches ? "SUPPORTED" : "INSUFFICIENT"))\n"
         report += "- Channels: \(expectedChannels) → \(actualChannels) (\(channelCountMatches ? "MATCH" : "MISMATCH"))\n\n"
 
         if let deviceInfo {
             report += "Output Device:\n"
             report += "- Name: \(deviceInfo.name)\n"
             report += "- Type: \(deviceInfo.type.displayName)\n"
-            report += "- Supports Format: \(deviceSupportsFormat ? "YES" : "NO")\n\n"
+            let capabilitiesQualifier = deviceCapabilitiesAreEstimated ? " (estimated)" : ""
+            report += "- Supports Format\(capabilitiesQualifier): \(deviceSupportsFormat ? "YES" : "NO")\n\n"
         }
 
         report += "Audio Processing:\n"
@@ -225,6 +303,13 @@ public struct BitPerfectValidationResult: Sendable, Equatable {
             report += "\nWarnings:\n"
             for warning in warnings {
                 report += "- \(warning.description)\n"
+            }
+        }
+
+        if claimLevel != .measured {
+            report += "\nEvidence still required for a measured claim:\n"
+            for evidence in missingMeasurementEvidence.sorted(by: { $0.rawValue < $1.rawValue }) {
+                report += "- \(evidence.rawValue)\n"
             }
         }
 

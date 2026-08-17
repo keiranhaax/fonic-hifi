@@ -32,6 +32,12 @@ public final class AudioEngineFactory {
     /// Format detection service
     private let formatDetector: any FormatDetectionService
 
+    /// Persisted user preference source
+    private let preferences: UserDefaults
+
+    /// Optional diagnostics sink for AVAudioEngine route-recovery failures.
+    private let configurationRecoveryFailureHandler: ConfigurationRecoveryFailureHandler?
+
     /// Registered engine types and their availability
     private var availableEngines: [AudioEngineType: Bool] = [
         .avAudioEngine: true,
@@ -40,8 +46,14 @@ public final class AudioEngineFactory {
 
     // MARK: - Initialization
 
-    public init(formatDetector: any FormatDetectionService = AudioFormatDetectionManager.shared) {
+    public init(
+        formatDetector: any FormatDetectionService = AudioFormatDetectionManager.shared,
+        preferences: UserDefaults = .standard,
+        configurationRecoveryFailureHandler: ConfigurationRecoveryFailureHandler? = nil,
+    ) {
         self.formatDetector = formatDetector
+        self.preferences = preferences
+        self.configurationRecoveryFailureHandler = configurationRecoveryFailureHandler
     }
 
     // MARK: - Factory Methods
@@ -59,7 +71,9 @@ public final class AudioEngineFactory {
         // Determine the best engine type
         let engineType = selectEngineType(for: format, configuration: configuration)
 
-        Self.logger.info("Selected \(engineType.rawValue) for format: \(format.displayName)")
+        Self.logger.info(
+            "Selected \(engineType.rawValue, privacy: .public) for format: \(format.displayName, privacy: .public)"
+        )
 
         // Create and configure the engine
         let engine = try await createEngine(of: engineType)
@@ -91,58 +105,115 @@ public final class AudioEngineFactory {
         for format: AudioFormat,
         configuration: AudioEngineConfiguration,
     ) -> AudioEngineType {
-        // Check user preference first - it overrides performance mode selection
-        let preferredEngine = UserDefaults.standard.string(forKey: "preferredAudioEngine")
-        if let preferredEngine {
-            switch preferredEngine {
-            case "AudioKit", "AudioKitEngine":
-                if availableEngines[.audioKitEngine] == true, AudioEngineType.audioKitEngine.canHandle(format) {
-                    return .audioKitEngine
-                }
-            default:
-                break
-            }
+        let requiresEQ = configuration.equalizerEnabled
+
+        // A compatible user preference overrides performance-mode selection.
+        if let preferredEngine = preferredEngineType(for: format, requiringEQ: requiresEQ) {
+            return preferredEngine
         }
 
         // Performance mode influences selection
         switch configuration.performanceMode {
         case .efficiency:
             // Prefer native engine for battery life
-            if canUseAVAudioEngine(for: format) {
+            if canUseAVAudioEngine(for: format), !requiresEQ || AudioEngineType.avAudioEngine.supportsEQ {
                 return .avAudioEngine
             }
 
         case .quality:
             // Prefer high-quality engines for quality mode
-            if availableEngines[.audioKitEngine] == true, AudioEngineType.audioKitEngine.canHandle(format) {
+            if availableEngines[.audioKitEngine] == true,
+               AudioEngineType.audioKitEngine.canHandle(format),
+               !requiresEQ || AudioEngineType.audioKitEngine.supportsEQ {
                 return .audioKitEngine
             }
-            if canUseAVAudioEngine(for: format) {
+            if canUseAVAudioEngine(for: format), !requiresEQ || AudioEngineType.avAudioEngine.supportsEQ {
                 return .avAudioEngine
             }
 
         case .balanced:
             // Use AudioKit for balanced performance if available
-            if availableEngines[.audioKitEngine] == true, AudioEngineType.audioKitEngine.canHandle(format) {
+            if availableEngines[.audioKitEngine] == true,
+               AudioEngineType.audioKitEngine.canHandle(format),
+               !requiresEQ || AudioEngineType.audioKitEngine.supportsEQ {
                 return .audioKitEngine
             }
-            if canUseAVAudioEngine(for: format) {
+            if canUseAVAudioEngine(for: format), !requiresEQ || AudioEngineType.avAudioEngine.supportsEQ {
                 return .avAudioEngine
             }
         }
 
         // Standard selection logic - try AudioKit first if available
-        if availableEngines[.audioKitEngine] == true, AudioEngineType.audioKitEngine.canHandle(format) {
+        if availableEngines[.audioKitEngine] == true,
+           AudioEngineType.audioKitEngine.canHandle(format),
+           !requiresEQ || AudioEngineType.audioKitEngine.supportsEQ {
             return .audioKitEngine
         }
 
-        if canUseAVAudioEngine(for: format) {
+        if canUseAVAudioEngine(for: format), !requiresEQ || AudioEngineType.avAudioEngine.supportsEQ {
             return .avAudioEngine
         }
 
+        if requiresEQ {
+            Self.logger.error(
+                "No EQ-capable engine can decode \(format.displayName, privacy: .public); preserving format fallback"
+            )
+            if availableEngines[.audioKitEngine] == true,
+               AudioEngineType.audioKitEngine.canHandle(format) {
+                return .audioKitEngine
+            }
+        }
+
         // Last resort: try AVAudioEngine anyway
-        Self.logger.warning("No specialized engine available for \(format.displayName), attempting AVAudioEngine")
+        Self.logger.warning(
+            "No specialized engine available for \(format.displayName, privacy: .public), attempting AVAudioEngine"
+        )
         return .avAudioEngine
+    }
+
+    private func preferredEngineType(
+        for format: AudioFormat,
+        requiringEQ: Bool = false
+    ) -> AudioEngineType? {
+        let storedValue = preferences.string(forKey: AudioEnginePreference.storageKey)
+        let preference = AudioEnginePreference(storedValue: storedValue)
+
+        if let canonicalValue = preference.canonicalStoredValue,
+           canonicalValue != storedValue {
+            preferences.set(canonicalValue, forKey: AudioEnginePreference.storageKey)
+            Self.logger.info("Migrated legacy audio engine preference")
+        }
+
+        switch preference {
+        case .automatic:
+            return nil
+        case .unsupported:
+            Self.logger.warning("Unsupported audio engine preference; using automatic engine selection")
+            return nil
+        case .requested(let requestedEngine):
+            guard availableEngines[requestedEngine] == true else {
+                Self.logger.warning(
+                    "Requested \(requestedEngine.rawValue, privacy: .public) is unavailable; using automatic engine selection"
+                )
+                return nil
+            }
+
+            guard requestedEngine.canHandle(format) else {
+                Self.logger.warning(
+                    "Requested \(requestedEngine.rawValue, privacy: .public) cannot handle \(format.displayName, privacy: .public); using automatic engine selection"
+                )
+                return nil
+            }
+
+            guard !requiringEQ || requestedEngine.supportsEQ else {
+                Self.logger.warning(
+                    "Requested \(requestedEngine.rawValue, privacy: .public) does not support enabled EQ; using automatic EQ-capable selection"
+                )
+                return nil
+            }
+
+            return requestedEngine
+        }
     }
 
     private func canUseAVAudioEngine(for format: AudioFormat) -> Bool {
@@ -160,7 +231,9 @@ public final class AudioEngineFactory {
 
         switch type {
         case .avAudioEngine:
-            return AVAudioEngineAdapter()
+            return try AVAudioEngineAdapter(
+                configurationRecoveryFailureHandler: configurationRecoveryFailureHandler
+            )
 
         case .audioKitEngine:
             let adapter = AudioKitEngineAdapter()
@@ -171,12 +244,16 @@ public final class AudioEngineFactory {
                 return adapter
             } catch {
                 // AudioKit failed to initialize, mark as unavailable and fall back
-                Self.logger.error("AudioKit initialization failed: \(error.localizedDescription)")
+                Self.logger.error(
+                    "AudioKit initialization failed: \(error.localizedDescription, privacy: .private)"
+                )
                 registerEngine(.audioKitEngine, isAvailable: false)
 
                 // Fall back to AVAudioEngine
                 Self.logger.info("Falling back to AVAudioEngine due to AudioKit failure")
-                return AVAudioEngineAdapter()
+                return try AVAudioEngineAdapter(
+                    configurationRecoveryFailureHandler: configurationRecoveryFailureHandler
+                )
             }
         }
     }
@@ -189,7 +266,9 @@ public final class AudioEngineFactory {
     ///   - isAvailable: Whether the engine is available
     public func registerEngine(_ type: AudioEngineType, isAvailable: Bool) {
         availableEngines[type] = isAvailable
-        Self.logger.info("Registered \(type.rawValue): \(isAvailable ? "available" : "unavailable")")
+        Self.logger.info(
+            "Registered \(type.rawValue, privacy: .public): \(isAvailable ? "available" : "unavailable", privacy: .public)"
+        )
     }
 
     /// Check if an engine type is available

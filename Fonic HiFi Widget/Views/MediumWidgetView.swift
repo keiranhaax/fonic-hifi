@@ -15,6 +15,7 @@ import WidgetKit
 struct MediumWidgetView: View {
     @Environment(\.showsWidgetContainerBackground) private var showsBackground
     @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.locale) private var locale
 
     let entry: NowPlayingEntry
 
@@ -69,7 +70,11 @@ struct MediumWidgetView: View {
                 }
             }
 
-            Text(entry.trackInfo.artistAlbum)
+            Text(verbatim: LocalizedWidgetText.artistAlbum(
+                artist: entry.trackInfo.artist,
+                album: entry.trackInfo.album,
+                locale: locale
+            ))
                 .font(fonts.caption)
                 .foregroundStyle(colors.secondary)
                 .lineLimit(1)
@@ -95,7 +100,7 @@ struct MediumWidgetView: View {
 
             // Time labels
             HStack {
-                Text(formatTime(entry.playbackState.currentTime))
+                Text(formatTime(entry.playbackState.projectedCurrentTime))
                     .font(fonts.monospacedTime(size: 9))
                     .foregroundStyle(colors.secondary)
 

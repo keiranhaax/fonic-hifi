@@ -15,47 +15,26 @@ import OSLog
 
 /// Comprehensive audio monitoring implementation with periodic polling and real-time metrics
 @MainActor
-public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioPerformanceMonitoring, AudioDiagnosticsReporting, AudioSessionMonitoring {
+public final class AudioMonitor: ObservableObject, AudioPerformanceMonitoring, PlaybackHealthEventLogging {
     // MARK: - Publishers
 
     private let _metricsSubject = PassthroughSubject<AudioMetrics, Never>()
     private let _healthStatusSubject = PassthroughSubject<PlaybackHealthStatus, Never>()
     private let _alertsSubject = PassthroughSubject<PlaybackAlert, Never>()
 
-    public var metricsPublisher: AnyPublisher<AudioMetrics, Never> {
-        _metricsSubject.eraseToAnyPublisher()
-    }
-
-    public var healthStatusPublisher: AnyPublisher<PlaybackHealthStatus, Never> {
-        _healthStatusSubject.eraseToAnyPublisher()
-    }
-
-    public var alertsPublisher: AnyPublisher<PlaybackAlert, Never> {
-        _alertsSubject.eraseToAnyPublisher()
-    }
-
     // MARK: - Private Properties
 
-    private var cancellables = Set<AnyCancellable>()
+    private var interruptionObservationTokens = Set<NotificationCenter.ObservationToken>()
     private var _currentEngine: AudioEngineService?
     private let alertManager: any AudioAlertManaging
-    private let performanceProfiler: AudioPerformanceProfiler
     private let runtime: any AudioMonitorRuntimeControlling
 
     // MARK: - Data Storage
 
+    private let playbackHealthEventLog = PlaybackHealthEventLog()
     private let analytics = AudioSessionAnalytics()
-    private let reportBuilder = AudioMonitoringReportBuilder()
-    private let performanceAdvisor = AudioPerformanceAdvisor()
     private let metricsCollector: AudioMonitorMetricsCollector
-    private let insights: AudioMonitorInsights
-    private let reporter: AudioMonitorReporter
     private let engineHooks: any AudioMonitorEngineHooking
-    private let diagnosticsBuilder: any AudioMonitorDiagnosticsBuilding
-
-    private var alertHistory: [PlaybackAlert] {
-        alertManager.alertHistory
-    }
 
     // MARK: - Performance Tracking
 
@@ -72,7 +51,6 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
 
     public convenience init(
         performanceMonitor: PerformanceMonitor? = nil,
-        performanceProfiler: AudioPerformanceProfiler? = nil,
         systemMetricsCollector: (any SystemMetricsCollecting)? = nil,
         thermalStateMonitor: (any ThermalStateMonitoring)? = nil,
         interruptionStatsTracker: (any InterruptionStatsTracking)? = nil,
@@ -81,62 +59,37 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
     ) {
         self.init(
             performanceMonitor: performanceMonitor,
-            performanceProfiler: performanceProfiler,
             systemMetricsCollector: systemMetricsCollector,
             thermalStateMonitor: thermalStateMonitor,
             interruptionStatsTracker: interruptionStatsTracker,
             engineMetricsCollector: engineMetricsCollector,
             alertManager: alertManager,
             runtimeController: nil,
-            engineHookController: nil,
-            diagnosticsBuilderOverride: nil
+            engineHookController: nil
         )
     }
 
     init(
         performanceMonitor: PerformanceMonitor? = nil,
-        performanceProfiler: AudioPerformanceProfiler? = nil,
         systemMetricsCollector: (any SystemMetricsCollecting)? = nil,
         thermalStateMonitor: (any ThermalStateMonitoring)? = nil,
         interruptionStatsTracker: (any InterruptionStatsTracking)? = nil,
         engineMetricsCollector: (any EngineMetricsCollecting)? = nil,
         alertManager: (any AudioAlertManaging)? = nil,
         runtimeController: (any AudioMonitorRuntimeControlling)? = nil,
-        engineHookController: (any AudioMonitorEngineHooking)? = nil,
-        diagnosticsBuilderOverride: (any AudioMonitorDiagnosticsBuilding)? = nil
+        engineHookController: (any AudioMonitorEngineHooking)? = nil
     ) {
         self.systemMetricsCollector = systemMetricsCollector ?? SystemMetricsCollector()
         self.thermalStateMonitor = thermalStateMonitor ?? ThermalStateMonitor()
         self.interruptionStatsTracker = interruptionStatsTracker ?? InterruptionStatsTracker()
         self.engineMetricsCollector = engineMetricsCollector ?? EngineMetricsCollector()
         let performanceMonitorInstance = performanceMonitor ?? PerformanceMonitor()
-        self.performanceProfiler = performanceProfiler ?? AudioPerformanceProfiler()
         self.alertManager = alertManager ?? AudioAlertManager()
 
         self.metricsCollector = AudioMonitorMetricsCollector(
             systemMetricsCollector: self.systemMetricsCollector,
             thermalStateMonitor: self.thermalStateMonitor,
             engineMetricsCollector: self.engineMetricsCollector
-        )
-
-        let alertManagerInstance = self.alertManager
-        self.insights = AudioMonitorInsights(
-            analytics: analytics,
-            reportBuilder: reportBuilder,
-            performanceAdvisor: performanceAdvisor,
-            performanceProfiler: self.performanceProfiler,
-            thermalStateMonitor: self.thermalStateMonitor,
-            alertHistoryProvider: {
-                MainActor.assumeIsolated { alertManagerInstance.alertHistory }
-            }
-        )
-
-        self.reporter = AudioMonitorReporter(
-            analytics: analytics,
-            thermalStateMonitor: self.thermalStateMonitor,
-            alertHistoryProvider: {
-                MainActor.assumeIsolated { alertManagerInstance.alertHistory }
-            }
         )
 
         let metricsSubject = _metricsSubject
@@ -154,7 +107,6 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
                 metricsCollector: metricsCollector,
                 alertManager: self.alertManager,
                 performanceMonitor: performanceMonitorInstance,
-                performanceProfiler: self.performanceProfiler,
                 logger: logger,
                 publishMetrics: { metricsSubject.send($0) },
                 publishHealthStatus: { healthStatusSubject.send($0) },
@@ -166,25 +118,15 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
         let engineHooksInstance = engineHookController ?? AudioMonitorEngineHooks(logger: logger)
         self.engineHooks = engineHooksInstance
 
-        let diagnosticsBuilderInstance: any AudioMonitorDiagnosticsBuilding
-        if let diagnosticsBuilderOverride {
-            diagnosticsBuilderInstance = diagnosticsBuilderOverride
-        } else {
-            diagnosticsBuilderInstance = AudioMonitorDiagnosticsBuilder(
-                insights: self.insights,
-                reporter: self.reporter,
-                performanceProfiler: self.performanceProfiler,
-                engineMetricsCollector: self.engineMetricsCollector
-            )
-        }
-        self.diagnosticsBuilder = diagnosticsBuilderInstance
-
         setupMonitoring()
         setupInterruptionHandling()
     }
 
     deinit {
         MainActor.assumeIsolated {
+            for token in interruptionObservationTokens {
+                NotificationCenter.default.removeObserver(token)
+            }
             runtime.invalidate()
         }
     }
@@ -201,10 +143,6 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
         engineHooks.stopMonitoring()
     }
 
-    public var isMonitoring: Bool {
-        get async { runtime.isMonitoring }
-    }
-
     public func updateMonitoringInterval(_ interval: TimeInterval) async {
         runtime.updateMonitoringInterval(to: interval)
         engineHooks.updateMonitoringInterval(to: interval)
@@ -216,26 +154,10 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
         await runtime.collectCurrentMetrics()
     }
 
-    public func getHistoricalMetrics(from startTime: Date, to endTime: Date) async -> [AudioMetrics] {
-        analytics.historySnapshot.filter { metrics in
-            metrics.timestamp >= startTime && metrics.timestamp <= endTime
-        }
-    }
-
-    public func getSessionSummary() async -> AudioSessionSummary {
-        analytics.sessionSummary(alertHistory: alertHistory)
-    }
-
-    public func clearHistory() async {
-        logger.info("Clearing metrics history")
-        analytics.reset()
-        alertManager.reset()
-    }
-
     // MARK: - Engine Integration
 
     public func attachToEngine(_ engine: AudioEngineService) async {
-        logger.info("Attaching to audio engine: \(type(of: engine))")
+        logger.info("Attaching to audio engine: \(type(of: engine), privacy: .public)")
         _currentEngine = engine
         runtime.updateEngine(engine)
         engineHooks.setEngine(engine)
@@ -248,149 +170,6 @@ public final class AudioMonitor: ObservableObject, AudioHealthMonitoring, AudioP
         runtime.updateEngine(nil)
     }
 
-    public var currentEngine: AudioEngineService? {
-        get async { _currentEngine }
-    }
-
-    // MARK: - Diagnostics & Health
-
-    public func performDiagnosticsCheck() async -> PlaybackDiagnostics {
-        logger.info("Performing comprehensive diagnostics check")
-
-        let currentMetrics = await runtime.collectCurrentMetrics()
-        let sessionSummary = await getSessionSummary()
-        let snapshot = AudioMonitorDiagnosticsBuilder.RuntimeSnapshot(
-            updateInterval: runtime.updateInterval,
-            isMonitoring: runtime.isMonitoring,
-            isProfiling: runtime.isProfiling
-        )
-
-        return await diagnosticsBuilder.makeDiagnostics(
-            currentMetrics: currentMetrics,
-            latestMetric: analytics.latestMetric,
-            sessionSummary: sessionSummary,
-            alertHistory: alertHistory,
-            runtime: snapshot,
-            engine: _currentEngine,
-            metricsSampleCount: analytics.metricsCount,
-            systemHealth: mapHealthStatus(currentMetrics.healthStatus)
-        )
-    }
-
-    public func checkPlaybackHealth() async -> PlaybackHealthStatus {
-        let metrics = await runtime.collectCurrentMetrics()
-        return metrics.healthStatus
-    }
-
-    public func getPerformanceRecommendations() async -> [PerformanceRecommendation] {
-        insights.recommendations()
-    }
-
-    // MARK: - Alerting & Thresholds
-
-    public func configureAlerts(_ configuration: AlertConfiguration) async {
-        logger.info("Configuring alert thresholds")
-        alertManager.updateConfiguration(configuration)
-    }
-
-    public func getAlertConfiguration() async -> AlertConfiguration {
-        alertManager.alertConfiguration
-    }
-
-    public func evaluateAlerts() async {
-        await runtime.evaluateAlerts()
-    }
-
-    // MARK: - System Resource Monitoring
-
-    public func getSystemAudioMetrics() async -> SystemAudioMetrics {
-        async let metricsTask = systemMetricsCollector.collectSystemMetrics()
-        async let interruptionStatsTask = interruptionStatsTracker.getStatistics()
-
-        let systemMetrics = await metricsTask
-        let interruptionStats = await interruptionStatsTask
-
-        return systemMetrics.updatingInterruptionCount(interruptionStats.totalInterruptions)
-    }
-
-    public func getThermalState() async -> ThermalMonitoringInfo {
-        await thermalStateMonitor.getCurrentState()
-    }
-
-    public func getInterruptionStatistics() async -> InterruptionStatistics {
-        await interruptionStatsTracker.getStatistics()
-    }
-
-    // MARK: - Performance Profiling
-
-    public func startProfiling(duration: TimeInterval? = nil) async {
-        await runtime.startProfiling(duration: duration)
-    }
-
-    public func stopProfiling() async {
-        await runtime.stopProfiling()
-    }
-
-    public func getProfilingResults() async -> PerformanceProfile? {
-        guard let profilingData = performanceProfiler.profilingData,
-              let startTime = performanceProfiler.profilingStartTime
-        else {
-            return nil
-        }
-
-        let duration = performanceProfiler.profilingDuration ?? Date().timeIntervalSince(startTime)
-
-        return PerformanceProfile(
-            startTime: startTime,
-            duration: duration,
-            cpuProfile: profilingData.cpuProfile,
-            memoryProfile: profilingData.memoryProfile,
-            latencyProfile: profilingData.latencyProfile,
-            bufferProfile: profilingData.bufferProfile,
-            bottlenecks: await insights.bottlenecks(from: profilingData),
-            optimizations: insights.optimizationOpportunities(from: profilingData),
-        )
-    }
-
-    public var isProfiling: Bool {
-        get async { runtime.isProfiling }
-    }
-
-    // MARK: - Export & Reporting
-
-    public func exportMetrics(format: ExportFormat, timeRange: DateInterval? = nil) async -> Data {
-        let metrics: [AudioMetrics] = if let timeRange {
-            await getHistoricalMetrics(from: timeRange.start, to: timeRange.end)
-        } else {
-            analytics.historySnapshot
-        }
-
-        return reporter.export(metrics: metrics, format: format)
-    }
-
-    public func generateReport(for timeRange: DateInterval) async -> MonitoringReport {
-        let metrics = await getHistoricalMetrics(from: timeRange.start, to: timeRange.end)
-        let alerts = alertHistory.filter { alert in
-            timeRange.contains(alert.timestamp)
-        }
-
-        let summary = reportBuilder.summary(metrics: metrics, alerts: alerts)
-        let keyFindings = reportBuilder.keyFindings(metrics: metrics, alerts: alerts)
-        let trends = insights.performanceTrends(for: metrics)
-        let recommendations = insights.recommendations()
-        let sessionData = await getSessionSummary()
-
-        return MonitoringReport(
-            generatedAt: Date(),
-            timeRange: timeRange,
-            summary: summary,
-            keyFindings: keyFindings,
-            trends: trends,
-            recommendations: recommendations,
-            metricsData: sessionData,
-            alertHistory: alerts,
-        )
-    }
 }
 
 // MARK: - Private Implementation
@@ -405,21 +184,45 @@ private extension AudioMonitor {
     }
 
     func setupInterruptionHandling() {
-        NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
-            .sink { [weak self] notification in
-                Task { @MainActor [weak self] in
-                    await self?.handleAudioInterruption(notification)
-                }
+        let notificationCenter = NotificationCenter.default
+        let session = AVAudioSession.sharedInstance()
+
+        let inactiveObservation = notificationCenter.addObserver(
+            of: session,
+            for: .didBecomeInactive
+        ) { [weak self] message in
+            guard case let .systemInterruption(context) = message.deactivationResult else {
+                return
             }
-            .store(in: &cancellables)
+            let interruption = AudioSessionInterruption.from(
+                interruptionReason: context.reason
+            )
+            Self.routeAudioInterruption(interruption, to: self)
+        }
+        interruptionObservationTokens.insert(inactiveObservation)
+
+        let resumptionObservation = notificationCenter.addObserver(
+            of: session,
+            for: .resumptionRecommendation
+        ) { [weak self] message in
+            let interruption = AudioSessionInterruption.from(
+                resumptionRecommendation: message.recommendation
+            )
+            Self.routeAudioInterruption(interruption, to: self)
+        }
+        interruptionObservationTokens.insert(resumptionObservation)
     }
 
-    func handleAudioInterruption(_ notification: Notification) async {
-        guard let interruption = AudioSessionInterruption.from(notification: notification) else {
-            logger.warning("Received audio interruption without parsable payload")
-            return
+    nonisolated static func routeAudioInterruption(
+        _ interruption: AudioSessionInterruption,
+        to owner: AudioMonitor?
+    ) {
+        Task { @MainActor [weak owner] in
+            await owner?.handleAudioInterruption(interruption)
         }
+    }
 
+    func handleAudioInterruption(_ interruption: AudioSessionInterruption) async {
         await interruptionStatsTracker.recordInterruption(interruption)
 
         let severity: AlertSeverity = interruption.type == .began ? .medium : .low
@@ -439,30 +242,19 @@ private extension AudioMonitor {
 
 }
 
-private extension SystemAudioMetrics {
-    func updatingInterruptionCount(_ count: Int) -> SystemAudioMetrics {
-        SystemAudioMetrics(
-            systemAudioCPU: systemAudioCPU,
-            activeAudioSessions: activeAudioSessions,
-            systemAudioMemory: systemAudioMemory,
-            deviceInfo: deviceInfo,
-            interruptionCount: count,
-            audioUnitLoad: audioUnitLoad
-        )
+// MARK: - PlaybackHealthEventLogging
+
+extension AudioMonitor {
+    public var playbackHealthEvents: [PlaybackHealthEvent] {
+        playbackHealthEventLog.events
     }
-}
 
-// MARK: - Monitoring Helpers
+    public var playbackHealthEventsPublisher: AnyPublisher<[PlaybackHealthEvent], Never> {
+        playbackHealthEventLog.eventsPublisher
+    }
 
-private extension AudioMonitor {
-    func mapHealthStatus(_ status: PlaybackHealthStatus) -> DiagnosticHealthStatus {
-        switch status {
-        case .excellent: .excellent
-        case .good: .good
-        case .fair: .fair
-        case .poor: .poor
-        case .critical: .critical
-        }
+    public func recordPlaybackHealthEvent(_ kind: PlaybackHealthEvent.Kind, detail: String?) {
+        playbackHealthEventLog.record(kind, detail: detail)
     }
 }
 

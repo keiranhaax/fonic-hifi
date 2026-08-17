@@ -34,27 +34,10 @@ public extension DataManager {
         )
     }
 
-    func searchTracks(_ query: String, limit: Int = 100) async throws -> [Track] {
-        let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !searchQuery.isEmpty else { return [] }
-
-        var descriptor = FetchDescriptor<Track>(
-            predicate: #Predicate<Track> { track in
-                track.title.localizedStandardContains(searchQuery) ||
-                    track.artist.localizedStandardContains(searchQuery) ||
-                    track.album.localizedStandardContains(searchQuery) ||
-                    (track.albumArtist?.localizedStandardContains(searchQuery) ?? false) ||
-                    (track.genre?.localizedStandardContains(searchQuery) ?? false)
-            },
-            sortBy: [SortDescriptor(\.title)],
-        )
-        descriptor.fetchLimit = limit
-
-        do {
-            return try mainContext.fetch(descriptor)
-        } catch {
-            logger.error("Failed to search tracks: \(error.localizedDescription)")
-            throw DataManagerError.searchFailed(error)
+    func searchTracks(_ query: String) async throws -> [Track] {
+        try await collectAllSearchPages { page, pageSize in
+            let result = try await searchTracks(query, page: page, pageSize: pageSize)
+            return (result.tracks, result.hasMore)
         }
     }
 
@@ -79,24 +62,10 @@ public extension DataManager {
         )
     }
 
-    func searchAlbums(_ query: String, limit: Int = 50) async throws -> [Album] {
-        let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !searchQuery.isEmpty else { return [] }
-
-        var descriptor = FetchDescriptor<Album>(
-            predicate: #Predicate<Album> { album in
-                album.title.localizedStandardContains(searchQuery) ||
-                    album.albumArtist.localizedStandardContains(searchQuery)
-            },
-            sortBy: [SortDescriptor(\.title)],
-        )
-        descriptor.fetchLimit = limit
-
-        do {
-            return try mainContext.fetch(descriptor)
-        } catch {
-            logger.error("Failed to search albums: \(error.localizedDescription)")
-            throw DataManagerError.searchFailed(error)
+    func searchAlbums(_ query: String) async throws -> [Album] {
+        try await collectAllSearchPages { page, pageSize in
+            let result = try await searchAlbums(query, page: page, pageSize: pageSize)
+            return (result.albums, result.hasMore)
         }
     }
 
@@ -125,29 +94,15 @@ public extension DataManager {
             let result = try fetch.execute(in: mainContext)
             return (result.items, result.hasMore)
         } catch {
-            logger.error("Failed to search artists with pagination: \(error.localizedDescription)")
+            logger.error("Failed to search artists with pagination: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.searchFailed(error)
         }
     }
 
-    func searchArtists(_ query: String, limit: Int = 50) async throws -> [Artist] {
-        let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !searchQuery.isEmpty else { return [] }
-
-        var descriptor = FetchDescriptor<Artist>(
-            predicate: #Predicate<Artist> { artist in
-                artist.name.localizedStandardContains(searchQuery) ||
-                    artist.sortName.localizedStandardContains(searchQuery)
-            },
-            sortBy: [SortDescriptor(\.sortName)],
-        )
-        descriptor.fetchLimit = limit
-
-        do {
-            return try mainContext.fetch(descriptor)
-        } catch {
-            logger.error("Failed to search artists: \(error.localizedDescription)")
-            throw DataManagerError.searchFailed(error)
+    func searchArtists(_ query: String) async throws -> [Artist] {
+        try await collectAllSearchPages { page, pageSize in
+            let result = try await searchArtists(query, page: page, pageSize: pageSize)
+            return (result.artists, result.hasMore)
         }
     }
 
@@ -176,29 +131,34 @@ public extension DataManager {
             let result = try fetch.execute(in: mainContext)
             return (result.items, result.hasMore)
         } catch {
-            logger.error("Failed to search playlists with pagination: \(error.localizedDescription)")
+            logger.error("Failed to search playlists with pagination: \(error.localizedDescription, privacy: .private)")
             throw DataManagerError.searchFailed(error)
         }
     }
 
-    func searchPlaylists(_ query: String, limit: Int = 50) async throws -> [Playlist] {
-        let searchQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !searchQuery.isEmpty else { return [] }
-
-        var descriptor = FetchDescriptor<Playlist>(
-            predicate: #Predicate<Playlist> { playlist in
-                playlist.name.localizedStandardContains(searchQuery) ||
-                    playlist.playlistDescription?.localizedStandardContains(searchQuery) ?? false
-            },
-            sortBy: [SortDescriptor(\.name)],
-        )
-        descriptor.fetchLimit = limit
-
-        do {
-            return try mainContext.fetch(descriptor)
-        } catch {
-            logger.error("Failed to search playlists: \(error.localizedDescription)")
-            throw DataManagerError.searchFailed(error)
+    func searchPlaylists(_ query: String) async throws -> [Playlist] {
+        try await collectAllSearchPages { page, pageSize in
+            let result = try await searchPlaylists(query, page: page, pageSize: pageSize)
+            return (result.playlists, result.hasMore)
         }
+    }
+
+    private func collectAllSearchPages<Model>(
+        pageSize: Int = defaultPageSize,
+        loadPage: (_ page: Int, _ pageSize: Int) async throws -> (items: [Model], hasMore: Bool),
+    ) async throws -> [Model] {
+        var allItems: [Model] = []
+        var page = 0
+        var hasMore = true
+
+        while hasMore {
+            try Task.checkCancellation()
+            let result = try await loadPage(page, pageSize)
+            allItems.append(contentsOf: result.items)
+            hasMore = result.hasMore
+            page += 1
+        }
+
+        return allItems
     }
 }
