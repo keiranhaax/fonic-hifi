@@ -103,12 +103,11 @@ make format       # SwiftFormat auto-formatting
 make clean        # Delete only repository-local build artifacts
 ```
 
-### Agent Tooling
+### Development Environment
 
 - Use `make` for the repository's canonical lint, build, test, coverage, artifact, and cleanup behavior.
-- `.factory/mcp.json` gives XcodeBuildMCP explicit defaults for this project, scheme, iOS 27 simulator, and `build/DerivedData`.
-- XcodeMCP is restricted to Xcode project state and XCResult inspection so it does not duplicate XcodeBuildMCP's build and test controls.
-- Native Xcode tools require the project to be open and **Allow external agents to use Xcode tools** enabled in Xcode Settings > Intelligence.
+- Open `Fonic HiFi.xcodeproj` in Xcode and select the `Fonic HiFi` scheme for local development.
+- Keep generated build products under the ignored `build/` directory.
 
 ### Project Structure
 
@@ -155,7 +154,7 @@ Contributions are welcome! Please follow these guidelines:
 - Logging routes through `Log.logger(_:)` using the category taxonomy defined in `Utils/Logging/Log.swift`.
 - Redact file paths and long user-provided strings with `LogPrivacy` helpers before emitting log or metric metadata.
 - Optional counters for imports, engine switches, and queue mutations reside in `Utils/Logging/Metrics.swift`; enable them in debug/testing contexts via `Metrics.enable(true)`.
-- See `docs/refactor/observability-walkthrough.md` for an end-to-end walkthrough of instrumentation, privacy guards, and validation steps.
+- Instrumentation behavior is covered by the source-level logging and metrics tests.
 
 ## Performance
 

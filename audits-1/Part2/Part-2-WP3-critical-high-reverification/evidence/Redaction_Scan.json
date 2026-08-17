@@ -1,8 +1,0 @@
-{
-  "status": "PASS",
-  "filesScanned": 15,
-  "knownSensitiveScalarsChecked": 5,
-  "rawSensitiveMatches": [],
-  "emailAddressFileHits": [],
-  "note": "Raw credential values and the sensitive non-public address were compared in memory and never emitted. Email scanning prevents accidental inclusion of commit-author or user contact data."
-}

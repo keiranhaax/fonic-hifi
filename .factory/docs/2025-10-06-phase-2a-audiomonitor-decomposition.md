@@ -1,5 +1,0 @@
-1. Add `AudioMonitoringTypes.swift` that namespaces the internal helper structs (`SystemMetrics`, `EngineMetrics`, `InterruptionRecord`, `EncodedMetric`) plus their convenience factories so they can be shared while staying scoped.
-2. Create new `SystemMetricsCollector.swift` defining `SystemMetricsCollecting`, `ThermalStateMonitoring`, and `InterruptionStatsTracking` protocols with default `@MainActor` implementations that encapsulate the existing logic; add `EngineMetricsCollector.swift` with an `EngineMetricsCollecting` protocol wrapping the previous `collectEngineMetrics` behavior.
-3. Refactor `AudioMonitor` to accept these collectors (with default arguments), replace direct instantiations/usages with dependency calls, and remove now-duplicated nested type/logic.
-4. Write unit tests (`AudioMonitoringCollectorsTests`) covering default collectors (system + engine) using stub engines/interruption data to ensure calculations and defaults behave as before.
-5. Run `make test` to verify everything still passes.

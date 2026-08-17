@@ -1,3 +1,0 @@
-1. Add `AudioSessionServiceTests` covering `AudioRouteChangeReason.init(from:)` for all AVAudioSession route change reasons, plus `description` for route reasons and `RemoteCommand`, ensuring associated values format correctly.
-2. Introduce `AudioErrorTests` to validate `errorDescription`, `failureReason`, and `recoverySuggestion` across representative cases (unsupported format, file not found, permission denied, device error, queue empty, and `bitPerfectNotPossible` variants).
-3. Run `make lint`, `make test`, and `make coverage-check` to confirm quality gates and capture updated coverage metrics; report remaining gap vs. 65% thresholds.
