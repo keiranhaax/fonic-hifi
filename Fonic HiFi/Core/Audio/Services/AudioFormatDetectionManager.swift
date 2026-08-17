@@ -5,6 +5,7 @@
 //  Created by Keiran on 5/27/25.
 //
 
+import AudioToolbox
 @preconcurrency import AVFoundation
 import Foundation
 import OSLog
@@ -235,7 +236,11 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
                 from: audioDescription,
                 extensionFormat: format,
             )
-            let bitDepth = estimateBitDepth(from: audioDescription, format: detectedFormat)
+            let bitDepth = estimateBitDepth(
+                at: url,
+                from: audioDescription,
+                format: detectedFormat
+            )
 
             // Calculate bitrate if possible
             let bitrate = try? await calculateBitrate(from: audioTrack, duration: duration, fileSize: fileSize)
@@ -295,28 +300,82 @@ public actor AudioFormatDetectionManager: FormatDetectionService {
         }
     }
 
-    private func estimateBitDepth(from description: UnsafePointer<AudioStreamBasicDescription>?, format: AudioFormat) -> Int {
-        guard let desc = description?.pointee else {
-            return format.maxBitDepth
+    private func estimateBitDepth(
+        at url: URL,
+        from description: UnsafePointer<AudioStreamBasicDescription>?,
+        format: AudioFormat
+    ) -> Int {
+        if format == .flac || format == .alac,
+           let sourceBitDepth = sourceBitDepth(at: url) {
+            return sourceBitDepth
         }
 
-        // For PCM formats, we can calculate bit depth
-        if desc.mFormatID == kAudioFormatLinearPCM {
+        guard let desc = description?.pointee else {
+            return fallbackBitDepth(for: format)
+        }
+
+        if desc.mFormatID == kAudioFormatLinearPCM, desc.mBitsPerChannel > 0 {
             return Int(desc.mBitsPerChannel)
         }
 
-        // For compressed formats, return typical bit depth
+        if format == .flac, desc.mBitsPerChannel > 0 {
+            return Int(desc.mBitsPerChannel)
+        }
+
+        if format == .alac {
+            if desc.mBitsPerChannel > 0 {
+                return Int(desc.mBitsPerChannel)
+            }
+            switch desc.mFormatFlags {
+            case kAppleLosslessFormatFlag_16BitSourceData:
+                return 16
+            case kAppleLosslessFormatFlag_20BitSourceData:
+                return 20
+            case kAppleLosslessFormatFlag_24BitSourceData:
+                return 24
+            case kAppleLosslessFormatFlag_32BitSourceData:
+                return 32
+            default:
+                break
+            }
+        }
+
+        return fallbackBitDepth(for: format)
+    }
+
+    private func sourceBitDepth(at url: URL) -> Int? {
+        var audioFile: AudioFileID?
+        guard AudioFileOpenURL(url as CFURL, .readPermission, 0, &audioFile) == noErr,
+              let audioFile else {
+            return nil
+        }
+        defer { AudioFileClose(audioFile) }
+
+        var sourceBitDepth: Int32 = 0
+        var propertySize = UInt32(MemoryLayout.size(ofValue: sourceBitDepth))
+        guard AudioFileGetProperty(
+            audioFile,
+            kAudioFilePropertySourceBitDepth,
+            &propertySize,
+            &sourceBitDepth
+        ) == noErr else {
+            return nil
+        }
+
+        let normalizedBitDepth = Int(sourceBitDepth.magnitude)
+        return normalizedBitDepth > 0 ? normalizedBitDepth : nil
+    }
+
+    private func fallbackBitDepth(for format: AudioFormat) -> Int {
         switch format {
         case .mp3, .aac:
             return 16
         case .alac:
-            // ALAC can be 16, 20, 24, or 32 bit
-            let bytesPerFrame = desc.mBytesPerFrame
-            let channelsPerFrame = desc.mChannelsPerFrame
-            if channelsPerFrame > 0 {
-                let bytesPerChannel = bytesPerFrame / channelsPerFrame
-                return Int(bytesPerChannel * 8)
-            }
+            // Source depth is normally available through the AudioFile property
+            // or the Apple Lossless ASBD flags. Stay conservative if neither is present.
+            return 16
+        case .flac:
+            // A format family's maximum is not evidence of the encoded source depth.
             return 16
         default:
             return format.maxBitDepth

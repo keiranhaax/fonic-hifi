@@ -268,6 +268,9 @@ struct FonicHiFiApp: App {
                 DeferredStartupOperation(delay: .seconds(8)) {
                     await dataManager.backfillAlbumArtistRelationshipsIfNeeded()
                 },
+                DeferredStartupOperation(delay: .seconds(10)) {
+                    await dataManager.repairLosslessSourceBitDepthsIfNeeded()
+                },
             ]
         )
 

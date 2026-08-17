@@ -11,6 +11,7 @@ final class FormatDetectionServiceConcurrencyTests: XCTestCase {
         let info = try await AudioFormatDetectionManager().detectFormat(at: url)
 
         XCTAssertEqual(info.format, .aac)
+        XCTAssertEqual(info.bitDepth, 16)
         XCTAssertFalse(info.isLossless)
         XCTAssertEqual(info.codec, AudioFormat.aac.displayName)
         XCTAssertEqual(info.container, "m4a")
@@ -21,9 +22,24 @@ final class FormatDetectionServiceConcurrencyTests: XCTestCase {
         let info = try await AudioFormatDetectionManager().detectFormat(at: url)
 
         XCTAssertEqual(info.format, .alac)
+        XCTAssertEqual(info.bitDepth, 16)
         XCTAssertTrue(info.isLossless)
         XCTAssertEqual(info.codec, AudioFormat.alac.displayName)
         XCTAssertEqual(info.container, "m4a")
+    }
+
+    func test24BitAppleLosslessReportsSourceBitDepth() async throws {
+        let url = try makeAudioFixture(
+            formatID: kAudioFormatAppleLossless,
+            fileExtension: "m4a",
+            bitDepth: 24
+        )
+
+        let info = try await AudioFormatDetectionManager().detectFormat(at: url)
+
+        XCTAssertEqual(info.format, .alac)
+        XCTAssertEqual(info.bitDepth, 24)
+        XCTAssertTrue(info.isLossless)
     }
 
     func testFLACFixtureHasDetectionAndPlaybackContract() async throws {
@@ -55,9 +71,37 @@ final class FormatDetectionServiceConcurrencyTests: XCTestCase {
         let isSupported = await detector.isFormatSupported(.flac)
 
         XCTAssertEqual(info.format, .flac)
+        XCTAssertEqual(info.bitDepth, 16)
         XCTAssertTrue(info.isLossless)
         XCTAssertTrue(isSupported)
         XCTAssertTrue(AudioEngineType.audioKitEngine.canHandle(.flac))
+    }
+
+    func test24BitFLACFixtureReportsSourceBitDepth() async throws {
+        let url = try makeEncodedFixture(
+            base64: """
+            ZkxhQwAAACISABIAAAQSAAQSCsRDcAAAEToMPcixQichkkHQW3CG9gkLhAAALg0AAABMYXZmNjIuMTIuMTAxAQAAABUAAABlbmNvZGVyPUxhdmY2Mi4xMi4x
+            MDH/+HmMABE55U4AAAAAAAEAAAIAAAMAAAQAAAQAAAUAAAbnIsZFXg2D6ugagTqdSLhZoAk5nJ5ZOcmZP5MkzzOTz+ZJmc/yTPMyfz5kmZz/JM8zJ/Pk5mc/
+            yZkzyfzzOZnP8mZM8n88zmZz/JmTOfyTzOcySfyZkyZ8kk8znMkn8mZMmfJJOc/Mkn85k5nk3yZ+ZJ5MlmTmcnlk5yZk/kyTPM5PP5kmZz/JM8zJ/PmSZnP8
+            kzzMn8+TmZz/JmTPJ/PM5mc/yZkzyfzzOZnP8mZM5/JPM5zJJ/JmTJnySTzOcySfyZkyZ8kk5z8ySfzmTmeTfJn5knkyWZOZyeWTnJmT+TJM8zk8/mSZnP8k
+            zzMn8+ZJmc/yTPMyfz5OZnP8mZM8n88zmZz/JmTPJ/PM5mc/yZkzn8k8znMkn8mZMmfJJPM5zJJ/JmTJnySTnPzJJ/OZOZ5N8mfmSeTJZk5nJ5ZOcmZP5Mkz
+            zOTz+ZJmc/yTPMyfz5kmZz/JM8zJ/Pk5mc/yZkzyfzzOZnP8mZM8n88zmZz/JmTOfyTzOcySfyZkyZ8kk8znMkn8mZMmfJJOc/Mkn85k5nk3yZ+ZJ5MlmTmc
+            nlk5yZk/kyTPM5PP5kmZz/JM8zJ/PmSZnP8kzzMn8+TmZz/JmTPJ/PM5mc/yZkzyfzzOZnP8mZM5/JPM5zJJ/JmTJnySTzOcySfyZkyZ8kk5z8ySfzmTmeTf
+            Jn5knkyWZOZyeWTnJmT+TJM8zk8/mSZnP8kzzMn8+ZJmc/yTPMyfz5OZnP8mZM8n88zmZz/JmTPJ/PM5mc/yZkzn8k8znMkn8mZMmfJJPM5zJJ/JmTJnySTn
+            PzJJ/OZOZ5N8mfmSeTJZk5nJ5ZOcmZP5MkzzOTz+ZJmc/yTPMyfz5kmZz/JM8zJ/Pk5mc/yZkzyfzzOZnP8mZM8n88zmZz/JmTOfyTzOcySfyZkyZ8kk8znM
+            kn8mZMmfJJOc/Mkn85k5nk3yZ+ZJ5MlmTmcnlk5yZk/kyTPM5PP5kmZz/JM8zJ/PmSZnP8kzzMn8+TmZz/JmTPJ/PM5mc/yZkzyfzzOZnP8mZM5/JPM5zJJ/
+            JmTJnySTzOcySfyZkyZ8kk5z8ySfzmTmeTfJn5knkyWZOZyeWTnJmT+TJM8zk8/mSZnP8kzzMn8+ZJmc/yTPMyfz5OZnP8mZM8n88zmZz/JmTPJ/PM5mc/yZ
+            kzn8k8znMkn8mZMmfJJPM5zJJ/JmTJnySTnPzJJ/OZOZ5N8mfmSeTJZk5nJ5ZOcmZP5MkzzOTz+ZJmc/yTPMyfz5kmZz/JM8zJ/Pk5mc/yZkzyfzzOZnP8mZ
+            M8n88zmZz/JmTOfyTzOcySfyZkyZ8kk8znMkn8mZMmfJJOc/Mkn85k5nk3yZ+ZJ4AAAAABOj
+            """,
+            fileExtension: "flac"
+        )
+
+        let info = try await AudioFormatDetectionManager().detectFormat(at: url)
+
+        XCTAssertEqual(info.format, .flac)
+        XCTAssertEqual(info.bitDepth, 24)
+        XCTAssertTrue(info.isLossless)
     }
 
     func testValidUnsupportedOpusFixtureIsRejected() async throws {
@@ -288,7 +332,8 @@ final class FormatDetectionServiceConcurrencyTests: XCTestCase {
 
     private func makeAudioFixture(
         formatID: AudioFormatID,
-        fileExtension: String
+        fileExtension: String,
+        bitDepth: Int = 16
     ) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
@@ -301,13 +346,13 @@ final class FormatDetectionServiceConcurrencyTests: XCTestCase {
         if formatID == kAudioFormatMPEG4AAC {
             settings[AVEncoderBitRateKey] = 128_000
         } else {
-            settings[AVEncoderBitDepthHintKey] = 16
+            settings[AVEncoderBitDepthHintKey] = bitDepth
         }
 
         let file = try AVAudioFile(
             forWriting: url,
             settings: settings,
-            commonFormat: .pcmFormatFloat32,
+            commonFormat: bitDepth > 16 ? .pcmFormatInt32 : .pcmFormatFloat32,
             interleaved: false,
         )
         let buffer = try XCTUnwrap(
