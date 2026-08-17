@@ -1,3 +1,0 @@
-1. Summarize current completion state per phase based on tasks.md, highlighting newly completed Phase 3C items and remaining open tasks.
-2. Cross-check repository context (git status and recent code updates) to confirm Phase 3C implementation and identify outstanding work for Phase 4/5 without modifying files.
-3. Produce a verification checklist covering manual import validation, CI wiring, coverage tracking, and documentation tasks to ensure tasks.md aligns with actual project status.
