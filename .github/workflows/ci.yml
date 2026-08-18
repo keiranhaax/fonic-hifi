@@ -1,0 +1,90 @@
+# PR gate: fast, deterministic lanes only (lint -> Debug build -> unit tests).
+# Runs on GitHub's Xcode 27 preview image (arm64), which ships the iOS 27 SDK,
+# the iOS 27 simulator runtime, and the iPhone 17 Pro device the Makefile
+# destination resolves. UI tests, Release checks, and the toolchain canary live
+# in main-verification.yml; the coverage gate is intentionally not enforced in
+# CI while app coverage is below its threshold.
+#
+# Every step delegates to the checked-in Makefile so CI and local verification
+# cannot diverge. SwiftLint is pinned and installed into /usr/local/bin because
+# the Makefile exports a fixed PATH that only searches Homebrew and /usr/local.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in sync with the version used locally; bump deliberately.
+  SWIFTLINT_VERSION: 0.65.0
+
+jobs:
+  lint:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned SwiftLint
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          unzip -o "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
+          sudo install -m 0755 "$RUNNER_TEMP/swiftlint/swiftlint" /usr/local/bin/swiftlint
+          swiftlint --version
+
+      - name: Lint
+        run: make lint
+
+  build-and-unit-tests:
+    needs: lint
+    runs-on: xcode-27
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned SwiftLint
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          unzip -o "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
+          sudo install -m 0755 "$RUNNER_TEMP/swiftlint/swiftlint" /usr/local/bin/swiftlint
+          swiftlint --version
+
+      - name: Install SwiftFormat
+        run: |
+          brew install swiftformat
+          swiftformat --version
+
+      # Fails fast with a clear environment message when the runner image
+      # changes underneath us (new beta, missing runtime, renamed simulator),
+      # so toolchain drift never reads as a code regression.
+      - name: Verify toolchain and environment
+        run: make check-deps
+
+      - name: Cache SwiftPM checkouts
+        uses: actions/cache@v4
+        with:
+          path: build/DerivedData/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('Fonic HiFi.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      - name: Build (Debug)
+        run: make build
+
+      - name: Unit tests
+        run: make test-unit
+
+      - name: Upload results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-results-${{ github.run_id }}
+          path: build/Results
+          retention-days: 7
+          if-no-files-found: ignore
